@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { SearchInput, Button } from '../common/FormElements';
 import { PlusIcon, EditIcon, DeleteIcon, FilterIcon } from '../common/Icons';
+import { useNavigate } from 'react-router-dom';
 
 const DoctorNurseList = ({ setCurrentPage }) => {
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRole, setFilterRole] = useState('all');
   const [filterDepartment, setFilterDepartment] = useState('all');
@@ -126,12 +128,12 @@ const DoctorNurseList = ({ setCurrentPage }) => {
         <div className="p-6 border-b border-gray-100">
           <div className="flex justify-between items-center mb-4">
             <div>
-              <h2 className="text-2xl font-bold text-gray-900">Staff Directory</h2>
+              <h2 className="text-2xl font-bold text-gray-900">Doctors List</h2>
               <p className="text-gray-600 mt-1">Manage doctors, nurses, and medical staff</p>
             </div>
             <Button
               variant="primary"
-              onClick={() => setCurrentPage('AddDoctorNurse')}
+              onClick={() => navigate('/dashboard/admin/add-doctor')}
             >
               <PlusIcon />
               Add Staff Member

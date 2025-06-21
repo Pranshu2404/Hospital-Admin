@@ -78,7 +78,7 @@ const AddDoctorNurseForm = () => {
     <div className="p-6">
       <div className="bg-white rounded-xl shadow-sm border border-gray-100">
         <div className="p-6 border-b border-gray-100">
-          <h2 className="text-2xl font-bold text-gray-900">Add Staff Member</h2>
+          <h2 className="text-2xl font-bold text-gray-900">Add Doctor</h2>
           <p className="text-gray-600 mt-1">Enter staff information to create a new record</p>
         </div>
 

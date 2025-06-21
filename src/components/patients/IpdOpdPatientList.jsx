@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { SearchInput, Button } from '../common/FormElements';
 import { EditIcon, DeleteIcon, FilterIcon } from '../common/Icons';
+import { useNavigate } from 'react-router-dom';
 
 const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient }) => {
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
 
@@ -95,7 +97,7 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient }) => {
             </div>
             <Button 
               variant="primary"
-              onClick={() => setCurrentPage('AddPatient')}
+              onClick={() => navigate('/dashboard/admin/add-patient')}
             >
               Add New Patient
             </Button>
