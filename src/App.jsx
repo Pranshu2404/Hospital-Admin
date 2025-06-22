@@ -26,7 +26,7 @@ import SettingsPage from './pages/dashboard/admin/settings';
 // Doctor pages
 import DoctorDashboard from './pages/dashboard/doctor/index';
 import Appointments from './pages/dashboard/doctor/appointments';
-import Records from './pages/dashboard/doctor/records.tsx';
+import Records from './pages/dashboard/doctor/records.jsx';
 import Prescriptions from './pages/dashboard/doctor/prescriptions';
 
 // Staff pages

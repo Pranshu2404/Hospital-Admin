@@ -8,7 +8,7 @@ const CustomersPage = () => {
   const [currentPage, setCurrentPage] = useState('CustomerList');
 
   return (
-    <Layout sidebarItems={pharmacySidebar}>
+    <Layout sidebarItems={pharmacySidebar}section="Pharmacy">
       <CustomerList/>
     </Layout>
   );

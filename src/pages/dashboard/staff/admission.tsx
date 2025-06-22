@@ -5,7 +5,7 @@ import AddPatientForm from '../../../components/patients/AddPatientForm'
 
 function Admission() {
   return (
-    <Layout sidebarItems={staffSidebar}>
+    <Layout sidebarItems={staffSidebar} section="Staff">
       <h1 className="text-2xl font-bold mb-4">Patient Admission</h1>
       <AddPatientForm />
     </Layout>
