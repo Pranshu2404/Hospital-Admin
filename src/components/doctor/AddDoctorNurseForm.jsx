@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import axios from 'axios';
 import { FormInput, FormSelect, FormTextarea, FormCheckbox, Button } from '../common/FormElements';
 
 const AddDoctorNurseForm = () => {
@@ -6,6 +7,7 @@ const AddDoctorNurseForm = () => {
     firstName: '',
     lastName: '',
     email: '',
+    password: '',
     phone: '',
     dateOfBirth: '',
     gender: '',
@@ -36,10 +38,22 @@ const AddDoctorNurseForm = () => {
     }));
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    console.log('Staff data:', formData);
-  };
+  const handleSubmit = async (e) => {
+  e.preventDefault();
+
+  try {
+    const response = await axios.post(
+      `${import.meta.env.VITE_BACKEND_URL}/api/doctors`,
+      formData
+    );
+    console.log('✅ Doctor added successfully:', response.data);
+    alert('Doctor added successfully!');
+  } catch (err) {
+    console.error('❌ Error adding doctor:', err.response?.data || err.message);
+    alert(err.response?.data?.error || 'Failed to add doctor.');
+  }
+};
+
 
   const roleOptions = [
     { value: 'Doctor', label: 'Doctor' },
@@ -109,6 +123,15 @@ const AddDoctorNurseForm = () => {
                 placeholder="Enter email address"
                 required
               />
+              <FormInput
+  label="Password"
+  type="password"
+  value={formData.password}
+  onChange={(e) => handleInputChange('password', e.target.value)}
+  placeholder="Create password"
+  required
+/>
+
               <FormInput
                 label="Phone Number"
                 type="tel"
