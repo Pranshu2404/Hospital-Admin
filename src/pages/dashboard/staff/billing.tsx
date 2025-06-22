@@ -62,7 +62,7 @@ function Billing() {
   );
 
   return (
-    <Layout sidebarItems={staffSidebar}>
+    <Layout sidebarItems={staffSidebar} section="Staff">
       <div className="bg-gray-50 min-h-full p-8">
         {/* Header */}
         <div className="flex justify-between items-center mb-8">

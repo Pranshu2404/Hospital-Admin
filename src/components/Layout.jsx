@@ -36,10 +36,10 @@
 import Sidebar from './Sidebar';
 import Header from './Header';
 
-const Layout = ({ sidebarItems, children }) => {
+const Layout = ({ sidebarItems, section, children }) => {
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
-      <Sidebar sidebarItems={sidebarItems} />
+      <Sidebar sidebarItems={sidebarItems} section={section} />
       <main className="flex-1 flex flex-col overflow-hidden">
         <Header />
         <div className="flex-1 overflow-auto p-4">

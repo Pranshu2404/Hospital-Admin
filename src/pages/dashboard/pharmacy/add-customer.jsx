@@ -4,7 +4,7 @@ import { pharmacySidebar } from '../../../constants/sidebarItems/pharmacySidebar
 
 const AddCustomerPage = () => {
   return (
-    <Layout sidebarItems={pharmacySidebar}>
+    <Layout sidebarItems={pharmacySidebar}section="Pharmacy">
       <AddCustomerForm />
     </Layout>
   );

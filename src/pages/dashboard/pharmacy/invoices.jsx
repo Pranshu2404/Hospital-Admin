@@ -6,7 +6,7 @@ import { pharmacySidebar } from '../../../constants/sidebarItems/pharmacySidebar
 
 const Expense = () => {
   return (
-    <Layout sidebarItems={pharmacySidebar}>
+    <Layout sidebarItems={pharmacySidebar}section="Pharmacy">
       <ExpensePage />
     </Layout>
   );

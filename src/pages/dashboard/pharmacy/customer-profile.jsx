@@ -8,7 +8,7 @@ const CustomerProfilePage = () => {
   const [currentPage, setCurrentPage] = useState('CustomerProfile');
 
   return (
-    <Layout sidebarItems={pharmacySidebar}>
+    <Layout sidebarItems={pharmacySidebar}section="Pharmacy">
       <CustomerProfile/>
     </Layout>
   );
