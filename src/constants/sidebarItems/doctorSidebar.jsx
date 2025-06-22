@@ -48,56 +48,23 @@
 //   },
 //   { text: 'Profile', icon: UserProfileIcon, page: 'UserProfilePage' },
 //   { text: 'Settings', icon: SettingsIcon, page: 'SettingsPage' }
-// ];
+// };
 
-
-
-import {
-  HomeIcon,
-  AppointmentIcon,
-  DoctorsIcon,
-  PatientIcon,
-  MonitorIcon,
-  UserProfileIcon
-} from '../../components/common/Icons';
+import { FaChartLine, FaCalendarCheck, FaFileAlt, FaUserMd, FaFileMedical, FaUsers, FaUserCircle } from 'react-icons/fa';
 
 export const doctorSidebar = [
+  { label: 'Dashboard', path: '/dashboard/doctor', icon: FaChartLine },
+  { label: 'Appointments', path: '/dashboard/doctor/appointments', icon: FaCalendarCheck },
+  { label: 'Schedule', path: '/dashboard/doctor/schedule', icon: FaFileAlt },
   {
-    text: 'Dashboard',
-    icon: HomeIcon,
-    page: 'DoctorDashboard'
+    label: 'Doctors',
+    icon: FaUserMd,
+    submenu: [
+      { label: 'All Doctors', path: '/dashboard/doctor/all-doctors' },
+      { label: 'Doctor Details', path: '/dashboard/doctor/doctor-details/1' },
+    ],
   },
-  {
-    text: 'Appointments',
-    icon: AppointmentIcon,
-    page: 'DoctorAppointments'
-  },
-  {
-    text: 'Schedule',
-    icon: MonitorIcon,
-    page: 'DoctorSchedule'
-  },
-  {
-    text: 'Doctors',
-    icon: DoctorsIcon,
-    subItems: [
-      { label: 'All Doctors', page: 'AllDoctors' },
-      { label: 'Doctor Details', page: 'DoctorDetails' } // Can be dynamically passed ID
-    ]
-  },
-  {
-    text: 'Patient Files',
-    icon: PatientIcon,
-    page: 'DoctorPatientFiles'
-  },
-  {
-    text: 'Reports & Tests',
-    icon: MonitorIcon,
-    page: 'DoctorReports'
-  },
-  {
-    text: 'Profile',
-    icon: UserProfileIcon,
-    page: 'DoctorProfile'
-  }
+  { label: 'Patient Files', path: '/dashboard/doctor/patient-files', icon: FaFileMedical },
+  { label: 'Reports & Tests', path: '/dashboard/doctor/reports', icon: FaUsers },
+  { label: 'Profile', path: '/dashboard/doctor/profile', icon: FaUserCircle },
 ];
