@@ -209,20 +209,15 @@
 
 
 import React from 'react';
-import SidebarDoctor from '../../../components/SidebarDoctor';
+import { doctorSidebar } from '../../../constants/sidebarItems/doctorSidebar';
+import Layout from '../../../components/Layout';
 import DoctorDashboard from './DoctorDashboard'; // adjust if path is different
 
 const DoctorDashboardPage = () => {
   return (
-    <div className="flex">
-      {/* Sidebar */}
-      <SidebarDoctor />
-
-      {/* Main dashboard content */}
-      <main className="flex-1 bg-gray-100 min-h-screen  overflow-y-auto">
-        <DoctorDashboard />
-      </main>
-    </div>
+    <Layout sidebarItems={doctorSidebar} section="Doctor">
+      <DoctorDashboard />
+    </Layout>
   );
 };
 
