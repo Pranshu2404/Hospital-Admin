@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { FormInput, FormSelect, Button } from '../common/FormElements';
+import axios from 'axios';
 
 const AddStaffForm = () => {
   const [formData, setFormData] = useState({
@@ -15,21 +16,32 @@ const AddStaffForm = () => {
   });
 
   const handleInputChange = (field, value) => {
-    setFormData((prev) => ({
+    setFormData(prev => ({
       ...prev,
-      [field]: value,
+      [field]: value
     }));
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    console.log('New staff data:', formData);
-    // TODO: Send this to backend
-  };
+  const handleSubmit = async (e) => {
+  e.preventDefault();
+
+  try {
+    console.log('Submitting form data:', formData);
+    const response = await axios.post(
+      `${import.meta.env.VITE_BACKEND_URL}/api/staff`,
+      formData
+    );
+    console.log('✅ Staff added successfully:', response.data);
+    alert('Staff added successfully!');
+  } catch (err) {
+    console.error('❌ Error adding staff:', err.response?.data || err.message);
+    alert(err.response?.data?.error || 'Failed to add staff.');
+  }
+};
 
   const roleOptions = [
     { value: 'Doctor', label: 'Doctor' },
-    { value: 'Nurse', label: 'Nurse' },
+    { value: 'Staff', label: 'Staff' },
     { value: 'Admin', label: 'Admin' },
   ];
 
@@ -42,9 +54,9 @@ const AddStaffForm = () => {
   ];
 
   const genderOptions = [
-    { value: 'Male', label: 'Male' },
-    { value: 'Female', label: 'Female' },
-    { value: 'Other', label: 'Other' },
+    { value: 'male', label: 'Male' },
+    { value: 'female', label: 'Female' },
+    { value: 'other', label: 'Other' },
   ];
 
   return (
@@ -72,6 +84,16 @@ const AddStaffForm = () => {
             required
             placeholder="Enter email"
           />
+
+          <FormInput
+  label="Password"
+  type="password"
+  value={formData.password || ''}
+  onChange={(e) => handleInputChange('password', e.target.value)}
+  required
+  placeholder="Enter password"
+/>
+
 
           <FormInput
             label="Phone"

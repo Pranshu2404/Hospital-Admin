@@ -2,91 +2,42 @@ import { useState } from 'react';
 import { SearchInput, Button } from '../common/FormElements';
 import { PlusIcon, EditIcon, DeleteIcon, FilterIcon } from '../common/Icons';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import { useEffect } from 'react';
 
 const DoctorNurseList = ({ setCurrentPage }) => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRole, setFilterRole] = useState('all');
   const [filterDepartment, setFilterDepartment] = useState('all');
+  const [staff, setStaff] = useState([]);
 
-  const [staff] = useState([
-    {
-      id: 1,
-      name: 'Dr. Sarah Wilson',
-      role: 'Doctor',
-      specialization: 'General Medicine',
-      department: 'General Medicine',
-      email: 'sarah.wilson@hospital.com',
-      phone: '+1 234-567-8900',
-      experience: '8 years',
-      status: 'Active',
-      shift: 'Morning',
-      license: 'MD12345'
-    },
-    {
-      id: 2,
-      name: 'Dr. Michael Chen',
-      role: 'Doctor',
-      specialization: 'Cardiology',
-      department: 'Cardiology',
-      email: 'michael.chen@hospital.com',
-      phone: '+1 234-567-8901',
-      experience: '12 years',
-      status: 'Active',
-      shift: 'Evening',
-      license: 'MD23456'
-    },
-    {
-      id: 3,
-      name: 'Nurse Jennifer Brown',
-      role: 'Nurse',
-      specialization: 'Critical Care',
-      department: 'ICU',
-      email: 'jennifer.brown@hospital.com',
-      phone: '+1 234-567-8902',
-      experience: '5 years',
-      status: 'Active',
-      shift: 'Night',
-      license: 'RN34567'
-    },
-    {
-      id: 4,
-      name: 'Dr. Lisa Anderson',
-      role: 'Doctor',
-      specialization: 'Orthopedics',
-      department: 'Orthopedics',
-      email: 'lisa.anderson@hospital.com',
-      phone: '+1 234-567-8903',
-      experience: '10 years',
-      status: 'On Leave',
-      shift: 'Morning',
-      license: 'MD45678'
-    },
-    {
-      id: 5,
-      name: 'Nurse Robert Taylor',
-      role: 'Nurse',
-      specialization: 'Emergency Care',
-      department: 'Emergency',
-      email: 'robert.taylor@hospital.com',
-      phone: '+1 234-567-8904',
-      experience: '7 years',
-      status: 'Active',
-      shift: 'Rotating',
-      license: 'RN56789'
+ useEffect(() => {
+  const fetchDoctors = async () => {
+    try {
+      const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/doctors`);
+      const staffList = res.data;
+
+    setStaff(staffList);
+    } catch (err) {
+      console.error('Failed to fetch doctors:', err);
     }
-  ]);
+  };
 
-  const filteredStaff = staff.filter(member => {
-    const matchesSearch = member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         member.specialization.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         member.department.toLowerCase().includes(searchTerm.toLowerCase());
+  fetchDoctors();
+}, []);
+
+
+  // const filteredStaff = staff.filter(member => {
+  //   const matchesSearch = member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  //                        member.specialization.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  //                        member.department.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesRole = filterRole === 'all' || member.role === filterRole;
-    const matchesDepartment = filterDepartment === 'all' || member.department === filterDepartment;
+  //   const matchesRole = filterRole === 'all' || member.role === filterRole;
+  //   const matchesDepartment = filterDepartment === 'all' || member.department === filterDepartment;
     
-    return matchesSearch && matchesRole && matchesDepartment;
-  });
+  //   return matchesSearch && matchesRole && matchesDepartment;
+  // });
 
   const getStatusBadge = (status) => {
     const statusClasses = {
@@ -116,9 +67,9 @@ const DoctorNurseList = ({ setCurrentPage }) => {
     return `px-2 py-1 text-xs font-medium rounded-full ${shiftClasses[shift] || 'bg-gray-100 text-gray-800'}`;
   };
 
-  const getInitials = (name) => {
-    return name.split(' ').map(n => n[0]).join('');
-  };
+  // const getInitials = (name) => {
+  //   return name.split(' ').map(n => n[0]).join('');
+  // };
 
   const departments = [...new Set(staff.map(member => member.department))];
 
@@ -204,13 +155,13 @@ const DoctorNurseList = ({ setCurrentPage }) => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredStaff.map((member) => (
+              {staff.map((member) => (
                 <tr key={member.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <div className="w-10 h-10 bg-teal-100 rounded-full flex items-center justify-center">
                         <span className="text-teal-600 font-medium text-sm">
-                          {getInitials(member.name)}
+                          {member.firstName+" "+member.lastName}
                         </span>
                       </div>
                       <div className="ml-4">
@@ -264,7 +215,7 @@ const DoctorNurseList = ({ setCurrentPage }) => {
           </table>
         </div>
 
-        {filteredStaff.length === 0 && (
+        {staff.length === 0 && (
           <div className="text-center py-12">
             <div className="text-gray-500">
               <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
