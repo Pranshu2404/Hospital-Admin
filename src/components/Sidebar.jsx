@@ -116,7 +116,7 @@ const Sidebar = ({ sidebarItems }) => {
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4" />
           </svg>
         </div>
-        <h1 className="text-xl font-bold ml-3 text-gray-800">Staff</h1>
+        <h1 className="text-xl font-bold ml-3 text-gray-800">Hospital Management</h1>
       </div>
 
       <nav className="flex-1 p-4 overflow-y-auto space-y-2">
