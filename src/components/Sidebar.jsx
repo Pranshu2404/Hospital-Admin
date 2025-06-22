@@ -113,28 +113,28 @@ const Sidebar = ({ sidebarItems }) => {
       <div className="flex items-center p-6 border-b border-gray-100">
         <div className="p-2 bg-teal-600 rounded-lg">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4..." />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4" />
           </svg>
         </div>
-        <h1 className="text-xl font-bold ml-3 text-gray-800">Hospital Admin</h1>
+        <h1 className="text-xl font-bold ml-3 text-gray-800">Staff</h1>
       </div>
 
       <nav className="flex-1 p-4 overflow-y-auto space-y-2">
-        {sidebarItems.map((item) => (
-          <div key={item.label}>
+        {sidebarItems.map((item, idx) => (
+          <div key={item.label || item.text || idx}>
             <SidebarItem
               icon={item.icon}
-              text={item.label}
+              text={item.label || item.text}
               onClick={() => handleClick(item)}
               hasSubmenu={!!item.submenu}
-              isOpen={openMenu === item.label}
+              isOpen={openMenu === (item.label || item.text)}
               active={isActive(item.path)}
             />
-            {item.submenu && openMenu === item.label && (
+            {item.submenu && openMenu === (item.label || item.text) && (
               <div className="ml-8 border-l border-gray-200 pl-4 py-2 space-y-1">
-                {item.submenu.map((subItem) => (
+                {item.submenu.map((subItem, subIdx) => (
                   <button
-                    key={subItem.label}
+                    key={subItem.label || subIdx}
                     onClick={() => handleSubItemClick(subItem)}
                     className={`block w-full text-left text-sm py-1.5 transition-colors ${
                       isActive(subItem.path)

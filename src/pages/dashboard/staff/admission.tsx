@@ -1,9 +1,15 @@
 import React from 'react'
+import Layout from '../../../components/Layout'
+import { staffSidebar } from '../../../constants/sidebarItems/staffSidebar'
+import AddPatientForm from '../../../components/patients/AddPatientForm'
 
-function admission() {
+function Admission() {
   return (
-    <div>admission</div>
+    <Layout sidebarItems={staffSidebar}>
+      <h1 className="text-2xl font-bold mb-4">Patient Admission</h1>
+      <AddPatientForm />
+    </Layout>
   )
 }
 
-export default admission
+export default Admission

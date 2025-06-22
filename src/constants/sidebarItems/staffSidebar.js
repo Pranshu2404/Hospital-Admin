@@ -1,51 +1,28 @@
 import {
   HomeIcon,
-  AppointmentIcon,
-  PatientIcon,
-  DoctorsIcon,
   FinanceIcon,
-  MonitorIcon,
-  UserProfileIcon,
-  SettingsIcon
+  UserProfileIcon
 } from '../../components/common/Icons';
 
-export const adminSidebar = [
-  { text: 'Dashboard', icon: HomeIcon, page: 'Dashboard' },
-  { text: 'Appointments', icon: AppointmentIcon, page: 'AppointmentList' },
+export const staffSidebar = [
   {
-    text: 'Patients',
-    icon: PatientIcon,
-    subItems: [
-      { label: 'Add Patient', page: 'AddPatient' },
-      { label: 'Patient List', page: 'IpdOpdPatientList' }
-    ]
+    label: 'Dashboard',
+    icon: HomeIcon,
+    path: '/dashboard/staff',
   },
   {
-    text: 'Staff',
-    icon: DoctorsIcon,
-    subItems: [
-      { label: 'Add Staff', page: 'AddDoctorNurse' },
-      { label: 'Staff List', page: 'DoctorNurseList' }
-    ]
+    label: 'Admission',
+    icon: HomeIcon,
+    path: '/dashboard/staff/admission',
   },
   {
-    text: 'Finance',
+    label: 'Billing',
     icon: FinanceIcon,
-    subItems: [
-      { label: 'Income', page: 'IncomePage' },
-      { label: 'Expense', page: 'ExpensePage' },
-      { label: 'Invoices', page: 'InvoiceListPage' }
-    ]
+    path: '/dashboard/staff/billing',
   },
   {
-    text: 'Reports',
-    icon: MonitorIcon,
-    subItems: [
-      { label: 'Inventory', page: 'InventoryItemsPage' },
-      { label: 'Birth Report', page: 'BirthReportPage' },
-      { label: 'Blood Bank', page: 'BloodBankPage' }
-    ]
+    label: 'Discharges',
+    icon: UserProfileIcon,
+    path: '/dashboard/staff/discharges',
   },
-  { text: 'Profile', icon: UserProfileIcon, page: 'UserProfilePage' },
-  { text: 'Settings', icon: SettingsIcon, page: 'SettingsPage' }
 ];
