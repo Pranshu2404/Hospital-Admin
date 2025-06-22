@@ -1,7 +1,17 @@
 import { SearchIcon, BellIcon, ChevronDownIcon } from './common/Icons';
 
-const Header = ({ currentPage }) => {
+const Header = ({ currentPage, section = 'Hospital Management', sidebarItems = [] }) => {
   const getPageTitle = () => {
+    // Try to find the current page in sidebarItems
+    let found = null;
+    for (const item of sidebarItems) {
+      if ((item.path && window.location.pathname === item.path) || (item.page && currentPage === item.page)) {
+        found = item.label || item.text;
+        break;
+      }
+    }
+    if (found) return found;
+    // fallback to default
     switch (currentPage) {
       case 'Dashboard': return 'Dashboard';
       case 'AppointmentList': return 'Appointments';
@@ -19,7 +29,7 @@ const Header = ({ currentPage }) => {
       case 'BloodBankPage': return 'Blood Bank';
       case 'UserProfilePage': return 'Profile';
       case 'SettingsPage': return 'Settings';
-      default: return 'Hospital Management';
+      default: return section;
     }
   };
 
@@ -27,7 +37,7 @@ const Header = ({ currentPage }) => {
     const title = getPageTitle();
     return (
       <nav className="flex space-x-1">
-        <span className="text-sm text-gray-500">Hospital</span>
+        <span className="text-sm text-gray-500">{section}</span>
         <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
         </svg>
@@ -49,7 +59,7 @@ const Header = ({ currentPage }) => {
           <div className="relative">
             <input 
               type="text" 
-              placeholder="Search patients, staff, appointments..." 
+              placeholder={`Search in ${section.toLowerCase()}...`} 
               className="w-96 pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
             />
             <div className="absolute left-3 top-2.5">
