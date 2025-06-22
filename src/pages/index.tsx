@@ -13,7 +13,7 @@ export default function Login() {
     setError('');
 
     try {
-      const res = await axios.post('/api/auth/login', { email, password });
+      const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/auth/login`, { email, password });
 
       const { token, role } = res.data;
 
