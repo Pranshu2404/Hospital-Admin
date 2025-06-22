@@ -1,14 +1,14 @@
 import React from 'react';
 import { doctorSidebar } from '../../../constants/sidebarItems/doctorSidebar';
 import Layout from '../../../components/Layout';
-import DoctorDashboard from './DoctorDashboard'; // adjust if path is different
+import DoctorDetails from './DoctorDetails'; // adjust if path is different
 
-const DoctorDashboardPage = () => {
+const Details = () => {
   return (
     <Layout sidebarItems={doctorSidebar} section="Doctor">
-      <DoctorDashboard />
+      <DoctorDetails />
     </Layout>
   );
 };
 
-export default DoctorDashboardPage;
+export default Details;
