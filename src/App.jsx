@@ -262,6 +262,7 @@ import DoctorDetails from './pages/dashboard/doctor/Details.jsx';
 import DoctorAllList from './pages/dashboard/doctor/DoctorAllList.jsx';
 import Reports from './pages/dashboard/doctor/Reports.jsx';
 import Schedule from './pages/dashboard/doctor/Schedule.jsx'
+import PatientList from './pages/dashboard/doctor/PatientList.jsx'
 
 
 
@@ -377,6 +378,15 @@ export default function App() {
             element={
               <ProtectedRoute role="doctor">
                 <DoctorAllList/>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/dashboard/doctor/patients"
+            element={
+              <ProtectedRoute role="doctor">
+                <PatientList />
               </ProtectedRoute>
             }
           />
