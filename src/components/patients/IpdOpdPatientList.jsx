@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import axios from 'axios';
 import { SearchInput, Button } from '../common/FormElements';
 import { EditIcon, DeleteIcon, FilterIcon } from '../common/Icons';
 import { useNavigate } from 'react-router-dom';
@@ -7,65 +8,51 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient }) => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
+  const [patients, setPatients] = useState([]);
 
-  const [patients] = useState([
-    {
-      id: 1,
-      name: 'John Doe',
-      age: 45,
-      gender: 'Male',
-      phone: '+1 234-567-8900', 
-      email: 'john.doe@email.com',
-      type: 'OPD',
-      bloodGroup: 'A+',
-      lastVisit: '2024-01-15',
-      status: 'Active'
-    },
-    {
-      id: 2,
-      name: 'Maria Santos',
-      age: 32,
-      gender: 'Female', 
-      phone: '+1 234-567-8901',
-      email: 'maria.santos@email.com',
-      type: 'IPD',
-      bloodGroup: 'O-',
-      lastVisit: '2024-01-14',
-      status: 'Active'
-    },
-    {
-      id: 3,
-      name: 'Robert Taylor',
-      age: 58,
-      gender: 'Male',
-      phone: '+1 234-567-8902',
-      email: 'robert.taylor@email.com', 
-      type: 'OPD',
-      bloodGroup: 'B+',
-      lastVisit: '2024-01-13',
-      status: 'Inactive'
-    },
-    {
-      id: 4,
-      name: 'Sarah Wilson',
-      age: 28,
-      gender: 'Female',
-      phone: '+1 234-567-8903',
-      email: 'sarah.wilson@email.com',
-      type: 'IPD', 
-      bloodGroup: 'AB+',
-      lastVisit: '2024-01-12',
-      status: 'Active'
-    }
-  ]);
+  // Fetch patient data from API
+  useEffect(() => {
+    const fetchPatients = async () => {
+      try {
+        const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/patients`);
+        const data = response.data;
 
-  const filteredPatients = patients.filter(patient => {
-    const matchesSearch = patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         patient.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         patient.phone.includes(searchTerm);
-    
+        // Optional: transform backend fields to frontend format
+        const formatted = data.map(p => ({
+          id: p._id,
+          name: `${p.first_name} ${p.last_name}`,
+          age: calculateAge(p.dob),
+          gender: p.gender,
+          phone: p.phone,
+          email: p.email,
+          type: p.patient_type || 'OPD',
+          bloodGroup: p.blood_group || 'N/A',
+          lastVisit: new Date(p.registered_at).toISOString().split('T')[0],
+          status: 'Active', // You can map a real status if available
+        }));
+
+        setPatients(formatted);
+      } catch (error) {
+        console.error('❌ Error fetching patients:', error);
+      }
+    };
+
+    fetchPatients();
+  }, []);
+
+  const calculateAge = (dob) => {
+    const birthDate = new Date(dob);
+    const ageDiff = Date.now() - birthDate.getTime();
+    const ageDate = new Date(ageDiff);
+    return Math.abs(ageDate.getUTCFullYear() - 1970);
+  };
+
+  const filteredPatients = patients.filter((patient) => {
+    const matchesSearch =
+      patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      patient.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      patient.phone.includes(searchTerm);
     const matchesFilter = filterType === 'all' || patient.type === filterType;
-    
     return matchesSearch && matchesFilter;
   });
 
@@ -74,17 +61,15 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient }) => {
     setCurrentPage('PatientProfile');
   };
 
-  const getStatusBadge = (status) => {
-    return status === 'Active' 
+  const getStatusBadge = (status) =>
+    status === 'Active'
       ? 'px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full'
       : 'px-2 py-1 bg-red-100 text-red-800 text-xs font-medium rounded-full';
-  };
 
-  const getTypeBadge = (type) => {
-    return type === 'IPD'
+  const getTypeBadge = (type) =>
+    type === 'IPD'
       ? 'px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full'
       : 'px-2 py-1 bg-purple-100 text-purple-800 text-xs font-medium rounded-full';
-  };
 
   return (
     <div className="p-6">

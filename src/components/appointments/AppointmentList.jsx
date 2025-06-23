@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import axios from 'axios';
 import { SearchInput, Button } from '../common/FormElements';
 import { PlusIcon, FilterIcon, EditIcon, DeleteIcon } from '../common/Icons';
-import { useModal, Modal } from '../common/Modals';
+import { useModal } from '../common/Modals';
 import AddAppointmentModal from './AddAppointmentModal';
 
 const AppointmentList = () => {
@@ -9,94 +10,58 @@ const AppointmentList = () => {
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterDate, setFilterDate] = useState('');
   const { isOpen, openModal, closeModal } = useModal();
+  const [appointments, setAppointments] = useState([]);
 
-  const [appointments] = useState([
-    {
-      id: 1,
-      patientName: 'John Doe',
-      patientId: 'P001',
-      doctorName: 'Dr. Sarah Wilson',
-      department: 'General Medicine',
-      date: '2024-01-15',
-      time: '10:30 AM',
-      duration: '30 min',
-      type: 'Consultation',
-      status: 'Confirmed',
-      phone: '+1 234-567-8900',
-      notes: 'Follow-up appointment for hypertension'
-    },
-    {
-      id: 2,
-      patientName: 'Maria Santos',
-      patientId: 'P002',
-      doctorName: 'Dr. Michael Chen',
-      department: 'Cardiology',
-      date: '2024-01-15',
-      time: '11:15 AM',
-      duration: '45 min',
-      type: 'Consultation',
-      status: 'Pending',
-      phone: '+1 234-567-8901',
-      notes: 'First visit for chest pain evaluation'
-    },
-    {
-      id: 3,
-      patientName: 'Robert Taylor',
-      patientId: 'P003',
-      doctorName: 'Dr. Lisa Anderson',
-      department: 'Orthopedics',
-      date: '2024-01-15',
-      time: '2:00 PM',
-      duration: '60 min',
-      type: 'Surgery Consultation',
-      status: 'In Progress',
-      phone: '+1 234-567-8902',
-      notes: 'Pre-surgical evaluation for knee replacement'
-    },
-    {
-      id: 4,
-      patientName: 'Sarah Wilson',
-      patientId: 'P004',
-      doctorName: 'Dr. James Brown',
-      department: 'Pediatrics',
-      date: '2024-01-16',
-      time: '9:00 AM',
-      duration: '30 min',
-      type: 'Checkup',
-      status: 'Scheduled',
-      phone: '+1 234-567-8903',
-      notes: 'Annual pediatric checkup'
-    }
-  ]);
+  useEffect(() => {
+    const fetchAppointments = async () => {
+      try {
+        const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/appointments`);
+        const data = response.data;
 
-  const filteredAppointments = appointments.filter(appointment => {
-    const matchesSearch = appointment.patientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         appointment.doctorName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         appointment.department.toLowerCase().includes(searchTerm.toLowerCase());
-    
+        const enriched = data.map((appt) => ({
+          ...appt,
+          patientName: `${appt.patient_id.first_name} ${appt.patient_id.last_name}`,
+          doctorName: `${appt.doctor_id.firstName} ${appt.doctor_id.lastName}`,
+          date: appt.appointment_date.slice(0, 10),
+          time: appt.time_slot?.split(' - ')[0],
+          duration: appt.time_slot?.split(' - ')[1] || 'N/A',
+        }));
+
+        setAppointments(enriched);
+      } catch (error) {
+        console.error('Error fetching appointments:', error);
+      }
+    };
+
+    fetchAppointments();
+  }, []);
+
+  const filteredAppointments = appointments.filter((appointment) => {
+    const matchesSearch =
+      appointment.patientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      appointment.doctorName.toLowerCase().includes(searchTerm.toLowerCase());
+
     const matchesStatus = filterStatus === 'all' || appointment.status === filterStatus;
     const matchesDate = !filterDate || appointment.date === filterDate;
-    
+
     return matchesSearch && matchesStatus && matchesDate;
   });
 
   const getStatusBadge = (status) => {
     const statusClasses = {
-      'Scheduled': 'bg-blue-100 text-blue-800',
-      'Confirmed': 'bg-green-100 text-green-800',
-      'Pending': 'bg-yellow-100 text-yellow-800',
+      Scheduled: 'bg-blue-100 text-blue-800',
+      Confirmed: 'bg-green-100 text-green-800',
+      Pending: 'bg-yellow-100 text-yellow-800',
       'In Progress': 'bg-purple-100 text-purple-800',
-      'Completed': 'bg-gray-100 text-gray-800',
-      'Cancelled': 'bg-red-100 text-red-800',
-      'No Show': 'bg-orange-100 text-orange-800'
+      Completed: 'bg-gray-100 text-gray-800',
+      Cancelled: 'bg-red-100 text-red-800',
+      'No Show': 'bg-orange-100 text-orange-800',
     };
-    
     return `px-2 py-1 text-xs font-medium rounded-full ${statusClasses[status] || 'bg-gray-100 text-gray-800'}`;
   };
 
-  const getPatientInitials = (name) => {
-    return name.split(' ').map(n => n[0]).join('');
-  };
+  const getPatientInitials = (name) =>
+    name?.split(' ').map((n) => n[0]).join('');
 
   return (
     <div className="p-6">
@@ -118,7 +83,7 @@ const AppointmentList = () => {
             <SearchInput
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search by patient, doctor, or department..."
+              placeholder="Search by patient or doctor..."
               className="flex-1"
             />
             <div className="flex gap-2">
@@ -153,29 +118,17 @@ const AppointmentList = () => {
           <table className="w-full">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Patient
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Doctor
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Date & Time
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Type
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Patient</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Doctor</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date & Time</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredAppointments.map((appointment) => (
-                <tr key={appointment.id} className="hover:bg-gray-50">
+                <tr key={appointment._id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <div className="w-10 h-10 bg-teal-100 rounded-full flex items-center justify-center">
@@ -185,37 +138,29 @@ const AppointmentList = () => {
                       </div>
                       <div className="ml-4">
                         <div className="text-sm font-medium text-gray-900">{appointment.patientName}</div>
-                        <div className="text-sm text-gray-500">ID: {appointment.patientId}</div>
+                        <div className="text-sm text-gray-500">ID: {appointment.patient_id._id}</div>
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">{appointment.doctorName}</div>
-                    <div className="text-sm text-gray-500">{appointment.department}</div>
+                    <div className="text-sm text-gray-500">{appointment.department_id}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">{appointment.date}</div>
                     <div className="text-sm text-gray-500">{appointment.time} ({appointment.duration})</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {appointment.type}
+                    {appointment.type || 'Consultation'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={getStatusBadge(appointment.status)}>
-                      {appointment.status}
-                    </span>
+                    <span className={getStatusBadge(appointment.status)}>{appointment.status}</span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex space-x-2">
-                      <button className="text-teal-600 hover:text-teal-900 p-1 rounded">
-                        View
-                      </button>
-                      <button className="text-gray-400 hover:text-gray-600 p-1 rounded">
-                        <EditIcon />
-                      </button>
-                      <button className="text-red-400 hover:text-red-600 p-1 rounded">
-                        <DeleteIcon />
-                      </button>
+                      <button className="text-teal-600 hover:text-teal-900 p-1 rounded">View</button>
+                      <button className="text-gray-400 hover:text-gray-600 p-1 rounded"><EditIcon /></button>
+                      <button className="text-red-400 hover:text-red-600 p-1 rounded"><DeleteIcon /></button>
                     </div>
                   </td>
                 </tr>

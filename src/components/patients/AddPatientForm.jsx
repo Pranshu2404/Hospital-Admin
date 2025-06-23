@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { FormInput, FormSelect, FormTextarea, Button } from '../common/FormElements';
+import axios from 'axios';
 
 const AddPatientForm = () => {
   const [formData, setFormData] = useState({
@@ -29,11 +30,43 @@ const AddPatientForm = () => {
     }));
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    // Handle form submission
-    console.log('Patient data:', formData);
-  };
+const handleSubmit = async (e) => {
+  e.preventDefault();
+
+  try {
+    const payload = {
+      first_name: formData.firstName,
+      last_name: formData.lastName,
+      email: formData.email,
+      phone: formData.phone,
+      gender: formData.gender,
+      dob: formData.dateOfBirth,
+      address: formData.address,
+      city: formData.city,
+      state: formData.state,
+      zipCode: formData.zipCode,
+      emergency_contact: formData.emergencyContact,
+      emergency_phone: formData.emergencyPhone,
+      medical_history: formData.medicalHistory,
+      allergies: formData.allergies,
+      medications: formData.medications,
+      blood_group: formData.bloodGroup,
+      patient_type: formData.patientType,
+    };
+
+    const response = await axios.post(
+      `${import.meta.env.VITE_BACKEND_URL}/api/patients`,
+      payload
+    );
+
+    console.log('✅ Patient added:', response.data);
+    alert('Patient added successfully!');
+  } catch (err) {
+    console.error('❌ Error adding patient:', err.response?.data || err.message);
+    alert(err.response?.data?.error || 'Failed to add patient.');
+  }
+};
+
 
   const genderOptions = [
     { value: 'male', label: 'Male' },

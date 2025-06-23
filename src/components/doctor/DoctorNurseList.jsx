@@ -127,93 +127,76 @@ const DoctorNurseList = ({ setCurrentPage }) => {
         </div>
 
         {/* Staff Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Staff Member
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Role & Department
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Contact
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Experience
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Shift
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {staff.map((member) => (
-                <tr key={member.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="w-10 h-10 bg-teal-100 rounded-full flex items-center justify-center">
-                        <span className="text-teal-600 font-medium text-sm">
-                          {member.firstName+" "+member.lastName}
-                        </span>
-                      </div>
-                      <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">{member.name}</div>
-                        <div className="text-sm text-gray-500">License: {member.license}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex flex-col space-y-1">
-                      <span className={getRoleBadge(member.role)}>
-                        {member.role}
-                      </span>
-                      <div className="text-sm text-gray-900">{member.department}</div>
-                      <div className="text-sm text-gray-500">{member.specialization}</div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{member.phone}</div>
-                    <div className="text-sm text-gray-500">{member.email}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {member.experience}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={getShiftBadge(member.shift)}>
-                      {member.shift}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={getStatusBadge(member.status)}>
-                      {member.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex space-x-2">
-                      <button className="text-teal-600 hover:text-teal-900 p-1 rounded">
-                        View
-                      </button>
-                      <button className="text-gray-400 hover:text-gray-600 p-1 rounded">
-                        <EditIcon />
-                      </button>
-                      <button className="text-red-400 hover:text-red-600 p-1 rounded">
-                        <DeleteIcon />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+<div className="overflow-x-auto">
+  <table className="min-w-[1000px] w-full table-auto">
+    <thead className="bg-gray-50">
+      <tr>
+        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Staff Member</th>
+        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role & Department</th>
+        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
+        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Experience</th>
+        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Shift</th>
+        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+      </tr>
+    </thead>
+    <tbody className="bg-white divide-y divide-gray-200">
+      {staff.map((member) => (
+        <tr key={member._id} className="hover:bg-gray-50">
+          <td className="px-6 py-4 whitespace-nowrap">
+            <div className="flex items-center">
+              <div className="w-10 h-10 bg-teal-100 rounded-full flex items-center justify-center text-sm font-semibold text-teal-700">
+                {member.firstName?.[0]}{member.lastName?.[0]}
+              </div>
+              <div className="ml-4">
+                <div className="text-sm font-medium text-gray-900 truncate max-w-xs">
+                  {member.firstName} {member.lastName}
+                </div>
+                <div className="text-sm text-gray-500 truncate max-w-xs">
+                  License: {member.licenseNumber || 'N/A'}
+                </div>
+              </div>
+            </div>
+          </td>
+
+          <td className="px-6 py-4 whitespace-nowrap">
+            <div className="flex flex-col space-y-1">
+              <span className={getRoleBadge(member.role)}>{member.role}</span>
+              <div className="text-sm text-gray-900">{member.department || '—'}</div>
+              <div className="text-sm text-gray-500">{member.specialization || '—'}</div>
+            </div>
+          </td>
+
+          <td className="px-6 py-4 whitespace-nowrap">
+            <div className="text-sm text-gray-900 truncate max-w-xs">{member.phone}</div>
+            <div className="text-sm text-gray-500 truncate max-w-xs">{member.email}</div>
+          </td>
+
+          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+            {member.experience ? `${member.experience} yrs` : 'N/A'}
+          </td>
+
+          <td className="px-6 py-4 whitespace-nowrap">
+            <span className={getShiftBadge(member.shift)}>{member.shift || 'N/A'}</span>
+          </td>
+
+          <td className="px-6 py-4 whitespace-nowrap">
+            <span className={getStatusBadge(member.status || 'Active')}>{member.status || 'Active'}</span>
+          </td>
+
+          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+            <div className="flex space-x-2">
+              <button className="text-teal-600 hover:text-teal-900 p-1 rounded">View</button>
+              <button className="text-gray-400 hover:text-gray-600 p-1 rounded"><EditIcon /></button>
+              <button className="text-red-400 hover:text-red-600 p-1 rounded"><DeleteIcon /></button>
+            </div>
+          </td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+</div>
+
 
         {staff.length === 0 && (
           <div className="text-center py-12">

@@ -7,11 +7,11 @@ const AddStaffForm = () => {
     fullName: '',
     email: '',
     phone: '',
-    role: '',
+    role: 'staff',
     department: '',
     specialization: '',
     joiningDate: '',
-    gender: '',
+    gender: 'male',
     status: 'Active',
   });
 
@@ -39,11 +39,11 @@ const AddStaffForm = () => {
   }
 };
 
-  const roleOptions = [
-    { value: 'Doctor', label: 'Doctor' },
-    { value: 'Staff', label: 'Staff' },
-    { value: 'Admin', label: 'Admin' },
-  ];
+  // const roleOptions = [
+  //   { value: 'Doctor', label: 'Doctor' },
+  //   { value: 'Staff', label: 'Staff' },
+  //   { value: 'Admin', label: 'Admin' },
+  // ];
 
   const departmentOptions = [
     { value: 'Cardiology', label: 'Cardiology' },
@@ -102,14 +102,6 @@ const AddStaffForm = () => {
             onChange={(e) => handleInputChange('phone', e.target.value)}
             required
             placeholder="Enter phone number"
-          />
-
-          <FormSelect
-            label="Role"
-            value={formData.role}
-            onChange={(e) => handleInputChange('role', e.target.value)}
-            options={roleOptions}
-            required
           />
 
           <FormSelect

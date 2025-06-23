@@ -1,64 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import axios from 'axios';
 import { Modal } from '../common/Modals';
 import { FormInput, FormSelect, FormTextarea, Button } from '../common/FormElements';
 
-const AddAppointmentModal = ({ isOpen, onClose }) => {
-  const [formData, setFormData] = useState({
-    patientId: '',
-    doctorId: '',
-    department: '',
-    date: '',
-    time: '',
-    duration: '30',
-    type: '',
-    priority: 'Normal',
-    notes: ''
-  });
-
-  const handleInputChange = (field, value) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    console.log('Appointment data:', formData);
-    onClose();
-    // Reset form
-    setFormData({
-      patientId: '',
-      doctorId: '',
-      department: '',
-      date: '',
-      time: '',
-      duration: '30',
-      type: '',
-      priority: 'Normal',
-      notes: ''
-    });
-  };
-
-  const departmentOptions = [
-    { value: 'general', label: 'General Medicine' },
-    { value: 'cardiology', label: 'Cardiology' },
-    { value: 'orthopedics', label: 'Orthopedics' },
-    { value: 'pediatrics', label: 'Pediatrics' },
-    { value: 'neurology', label: 'Neurology' },
-    { value: 'dermatology', label: 'Dermatology' },
-    { value: 'emergency', label: 'Emergency' }
-  ];
-
-  const doctorOptions = [
-    { value: 'dr-wilson', label: 'Dr. Sarah Wilson' },
-    { value: 'dr-chen', label: 'Dr. Michael Chen' },
-    { value: 'dr-anderson', label: 'Dr. Lisa Anderson' },
-    { value: 'dr-brown', label: 'Dr. James Brown' },
-    { value: 'dr-davis', label: 'Dr. Emily Davis' }
-  ];
-
-  const typeOptions = [
+ const typeOptions = [
     { value: 'consultation', label: 'Consultation' },
     { value: 'follow-up', label: 'Follow-up' },
     { value: 'checkup', label: 'Checkup' },
@@ -74,47 +19,132 @@ const AddAppointmentModal = ({ isOpen, onClose }) => {
     { value: 'Urgent', label: 'Urgent' }
   ];
 
-  const durationOptions = [
-    { value: '15', label: '15 minutes' },
-    { value: '30', label: '30 minutes' },
-    { value: '45', label: '45 minutes' },
-    { value: '60', label: '1 hour' },
-    { value: '90', label: '1.5 hours' },
-    { value: '120', label: '2 hours' }
-  ];
+const AddAppointmentModal = ({ isOpen, onClose }) => {
+  const [formData, setFormData] = useState({
+    patientId: '',
+    doctorId: '',
+    department: '',
+    date: '',
+    time: '',
+    duration: '30',
+    type: '',
+    priority: 'Normal',
+    notes: ''
+  });
+
+  const [patients, setPatients] = useState([]);
+  const [doctors, setDoctors] = useState([]);
+
+  const handleInputChange = (field, value) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  useEffect(() => {
+    const fetchOptions = async () => {
+      try {
+        const [patientRes, doctorRes] = await Promise.all([
+          axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/patients`),
+          axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/doctors`)
+        ]);
+
+        setPatients(patientRes.data);
+        setDoctors(doctorRes.data);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      }
+    };
+
+    if (isOpen) fetchOptions();
+  }, [isOpen]);
+
+  const handleSubmit = async (e) => {
+  e.preventDefault();
+  console.log('Submitting appointment data:', formData);
+  const payload = {
+    patient_id: formData.patientId,
+    doctor_id: formData.doctorId,
+    department_id: formData.department,
+    appointment_date: formData.date,
+    time_slot: `${formData.time} - ${calculateEndTime(formData.time, formData.duration)}`,
+    type: formData.type,
+    priority: formData.priority,
+    notes: formData.notes,
+    status: 'Scheduled'
+  };
+
+  try {
+    await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/appointments`, payload);
+    onClose();
+    setFormData({
+      patientId: '',
+      doctorId: '',
+      department: '',
+      date: '',
+      time: '',
+      duration: '30',
+      type: '',
+      priority: 'Normal',
+      notes: ''
+    });
+  } catch (err) {
+    console.error('Error posting appointment:', err);
+  }
+};
+
+  const calculateEndTime = (startTime, durationMinutes) => {
+    const [hours, minutes] = startTime.split(':').map(Number);
+    const start = new Date();
+    start.setHours(hours);
+    start.setMinutes(minutes + parseInt(durationMinutes));
+    return start.toTimeString().slice(0, 5);
+  };
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Schedule New Appointment" maxWidth="max-w-2xl">
       <form onSubmit={handleSubmit} className="space-y-4">
+
         {/* Patient and Doctor Selection */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormInput
-            label="Patient ID"
+          <FormSelect
+            label="Select Patient"
             value={formData.patientId}
             onChange={(e) => handleInputChange('patientId', e.target.value)}
-            placeholder="Enter patient ID or search"
+            options={patients.map(p => ({
+              value: p._id,
+              label: `${p.first_name} ${p.last_name}`
+            }))}
+            placeholder="Search by name"
             required
           />
+
           <FormSelect
-            label="Department"
+            label="Select Department"
             value={formData.department}
             onChange={(e) => handleInputChange('department', e.target.value)}
-            options={departmentOptions}
-            placeholder="Select department"
+            options={[
+              { value: 'cardiology', label: 'Cardiology' },
+              { value: 'orthopedics', label: 'Orthopedics' },
+              { value: 'neurology', label: 'Neurology' },
+              { value: 'general', label: 'General Medicine' }
+              // Replace these with dynamic department _ids if needed
+            ]}
             required
           />
         </div>
 
         <FormSelect
-          label="Doctor"
+          label="Select Doctor"
           value={formData.doctorId}
           onChange={(e) => handleInputChange('doctorId', e.target.value)}
-          options={doctorOptions}
-          placeholder="Select doctor"
+          options={doctors.map(d => ({
+            value: d._id,
+            label: `Dr. ${d.firstName} ${d.lastName}`
+          }))}
+          placeholder="Search doctor by name"
           required
         />
 
-        {/* Date and Time */}
+        {/* Date and Time Selection */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <FormInput
             label="Date"
@@ -124,7 +154,7 @@ const AddAppointmentModal = ({ isOpen, onClose }) => {
             required
           />
           <FormInput
-            label="Time"
+            label="Start Time"
             type="time"
             value={formData.time}
             onChange={(e) => handleInputChange('time', e.target.value)}
@@ -134,11 +164,15 @@ const AddAppointmentModal = ({ isOpen, onClose }) => {
             label="Duration"
             value={formData.duration}
             onChange={(e) => handleInputChange('duration', e.target.value)}
-            options={durationOptions}
+            options={[
+              { value: '15', label: '15 minutes' },
+              { value: '30', label: '30 minutes' },
+              { value: '45', label: '45 minutes' },
+              { value: '60', label: '1 hour' }
+            ]}
             required
           />
         </div>
-
         {/* Appointment Details */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormSelect
@@ -161,18 +195,12 @@ const AddAppointmentModal = ({ isOpen, onClose }) => {
           label="Notes"
           value={formData.notes}
           onChange={(e) => handleInputChange('notes', e.target.value)}
-          placeholder="Additional notes or special instructions"
           rows={3}
         />
 
-        {/* Submit Buttons */}
         <div className="flex justify-end space-x-3 pt-4">
-          <Button variant="secondary" type="button" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button variant="primary" type="submit">
-            Schedule Appointment
-          </Button>
+          <Button variant="secondary" type="button" onClick={onClose}>Cancel</Button>
+          <Button variant="primary" type="submit">Schedule Appointment</Button>
         </div>
       </form>
     </Modal>
