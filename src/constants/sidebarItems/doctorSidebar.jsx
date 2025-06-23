@@ -97,6 +97,7 @@ import {
   FaFileMedical,
   FaUsers,
   FaUserCircle,
+  FaUserFriends,
 } from 'react-icons/fa';
 
 export const doctorSidebar = [
@@ -112,6 +113,7 @@ export const doctorSidebar = [
     ],
   },
   // { label: 'Patient Files', path: '/dashboard/doctor/patient-files', icon: FaFileMedical },
+  { label: 'My Patients', path: '/dashboard/doctor/patients', icon: FaUserFriends },
   { label: 'Reports & Tests', path: '/dashboard/doctor/reports', icon: FaUsers },
   // { label: 'Profile', path: '/dashboard/doctor/profile', icon: FaUserCircle },
 ];
