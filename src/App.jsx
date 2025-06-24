@@ -252,6 +252,12 @@ import DoctorListPage from './pages/dashboard/admin/doctor-list.jsx';
 import StaffProfilePage from './pages/dashboard/admin/staff-profile.jsx';
 import DoctorProfilePage from './pages/dashboard/admin/doctor-profile.jsx';
 
+import AddPatientOPD from "./pages/dashboard/admin/AddPatientOPD.jsx";
+import AddPatientIPD from "./pages/dashboard/admin/AddPatientIPD.jsx";
+
+// import AddPatientOPD from "../pages/dashboard/admin/AddPatientOPD"; // path relative to router file
+
+
 
 // Doctor pages
 import DoctorDashboard from './pages/dashboard/doctor/index';
@@ -315,6 +321,14 @@ export default function App() {
           <Route path="/dashboard/admin/blood-bank" element={<BloodBankPage />} />
           <Route path="/dashboard/admin/profile" element={<UserProfilePage />} />
           <Route path="/dashboard/admin/settings" element={<SettingsPage />} />
+          
+          {/* <Route path="/dashboard/admin/AddPatientOPD" element={<AddPatientOPD/>} /> */}
+          <Route path="/dashboard/admin/patients/add-opd" element={<AddPatientOPD />} />
+          {/* <Route path="/dashboard/admin/patients/add-ipd" element={<AddPatientForm />} /> */}
+          <Route path="/dashboard/admin/patients/add-ipd" element={<AddPatientIPD />} />
+
+
+          
 
           {/* Doctor Routes */}
           <Route

@@ -208,13 +208,7 @@ const handleSubmit = async (e) => {
           <div className="mb-8">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Medical Information</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormSelect
-                label="Blood Group"
-                value={formData.bloodGroup}
-                onChange={(e) => handleInputChange('bloodGroup', e.target.value)}
-                options={bloodGroupOptions}
-                placeholder="Select blood group"
-              />
+              
               <FormSelect
                 label="Patient Type"
                 value={formData.patientType}
@@ -222,28 +216,7 @@ const handleSubmit = async (e) => {
                 options={patientTypeOptions}
                 required
               />
-              <FormTextarea
-                label="Medical History"
-                value={formData.medicalHistory}
-                onChange={(e) => handleInputChange('medicalHistory', e.target.value)}
-                placeholder="Enter medical history"
-                rows={3}
-                className="md:col-span-2"
-              />
-              <FormTextarea
-                label="Allergies"
-                value={formData.allergies}
-                onChange={(e) => handleInputChange('allergies', e.target.value)}
-                placeholder="Enter known allergies"
-                rows={2}
-              />
-              <FormTextarea
-                label="Current Medications"
-                value={formData.medications}
-                onChange={(e) => handleInputChange('medications', e.target.value)}
-                placeholder="Enter current medications"
-                rows={2}
-              />
+              
             </div>
           </div>
 

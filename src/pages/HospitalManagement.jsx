@@ -2,7 +2,7 @@ import { useState } from 'react';
 import Layout from '../components/Layout';
 import Dashboard from '../components/dashboard/Dashboard';
 import AppointmentList from '../components/appointments/AppointmentList';
-import AddPatientForm from '../components/patients/AddPatientForm';
+// import AddPatientForm from '../components/patients/AddPatientForm';
 import IpdOpdPatientList from '../components/patients/IpdOpdPatientList';
 import PatientProfile from '../components/patients/PatientProfile/PatientProfile';
 import AddDoctorNurseForm from '../components/staff/AddDoctorNurseForm';
@@ -28,8 +28,8 @@ const HospitalManagement = () => {
         return <Dashboard />;
       case 'AppointmentList':
         return <AppointmentList />;
-      case 'AddPatient':
-        return <AddPatientForm />;
+      // case 'AddPatient':
+      //   return <AddPatientForm />;
       case 'IpdOpdPatientList':
         return (
           <IpdOpdPatientList 
