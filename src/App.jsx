@@ -255,8 +255,10 @@ import DoctorProfilePage from './pages/dashboard/admin/doctor-profile.jsx';
 import AddPatientOPD from "./pages/dashboard/admin/AddPatientOPD.jsx";
 import AddPatientIPD from "./pages/dashboard/admin/AddPatientIPD.jsx";
 
-// import AddPatientOPD from "../pages/dashboard/admin/AddPatientOPD"; // path relative to router file
-
+import DepartmentList from "./pages/dashboard/admin/DepartmentList.jsx";
+import DepartmentAdd from "./pages/dashboard/admin/add-department.jsx";
+import AddHodPage from './pages/dashboard/admin/AddHod.jsx';
+// import DepartmentList from './pages/admin/department/DepartmentList';
 
 
 // Doctor pages
@@ -322,13 +324,22 @@ export default function App() {
           <Route path="/dashboard/admin/profile" element={<UserProfilePage />} />
           <Route path="/dashboard/admin/settings" element={<SettingsPage />} />
           
-          {/* <Route path="/dashboard/admin/AddPatientOPD" element={<AddPatientOPD/>} /> */}
           <Route path="/dashboard/admin/patients/add-opd" element={<AddPatientOPD />} />
-          {/* <Route path="/dashboard/admin/patients/add-ipd" element={<AddPatientForm />} /> */}
           <Route path="/dashboard/admin/patients/add-ipd" element={<AddPatientIPD />} />
-
+          
 
           
+          
+
+          {/* <Route path="/dashboard/admin/departments" element={<DepartmentList />} /> */}
+          <Route path="/dashboard/admin/departments/:deptName" element={<DepartmentAdd />} />
+          <Route path="/dashboard/admin/add-department" element={<DepartmentAdd />} /> 
+          <Route path="/dashboard/admin/add-department" element={<DepartmentAdd />} />  
+          <Route path="/dashboard/admin/add-hod/:deptId" element={<AddHodPage />} />
+          <Route path="/dashboard/admin/DepartmentList" element={<DepartmentList />} />
+
+ 
+
 
           {/* Doctor Routes */}
           <Route

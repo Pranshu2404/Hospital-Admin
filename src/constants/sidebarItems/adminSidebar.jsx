@@ -81,6 +81,19 @@ export const adminSidebar = [
       { label: 'Patient List', path: '/dashboard/admin/patient-list' },
     ],
   },
+
+   {
+    label: 'Department',
+    icon: DoctorsIcon,
+    submenu: [
+      { label: 'Add Department', path: '/dashboard/admin/add-department' },
+      // { label: 'HOD List', path: '/dashboard/admin/department-list' },
+      { label: 'HOD List', path: '/dashboard/admin/DepartmentList' },
+      
+    ],
+  },
+
+  
   {
     label: 'Doctors',
     icon: DoctorsIcon,
@@ -89,6 +102,9 @@ export const adminSidebar = [
       { label: 'Doctor List', path: '/dashboard/admin/doctor-list' },
     ],
   },
+
+ 
+
   {
     label: 'Staff',
     icon: DoctorsIcon,
