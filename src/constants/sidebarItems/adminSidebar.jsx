@@ -1,65 +1,17 @@
-// import {
-//   HomeIcon,
-//   AppointmentIcon,
-//   PatientIcon,
-//   DoctorsIcon,
-//   FinanceIcon,
-//   MonitorIcon,
-//   UserProfileIcon,
-//   SettingsIcon
-// } from '../../components/common/Icons';
 
-// export const adminSidebar = [
-//   { text: 'Dashboard', icon: HomeIcon, page: 'Dashboard' },
-//   { text: 'Appointments', icon: AppointmentIcon, page: 'AppointmentList' },
-//   {
-//     text: 'Patients',
-//     icon: PatientIcon,
-//     subItems: [
-//       { label: 'Add Patient', page: 'AddPatient' },
-//       { label: 'Patient List', page: 'IpdOpdPatientList' }
-//     ]
-//   },
-//   {
-//     text: 'Staff',
-//     icon: DoctorsIcon,
-//     subItems: [
-//       { label: 'Add Staff', page: 'AddDoctorNurse' },
-//       { label: 'Staff List', page: 'DoctorNurseList' }
-//     ]
-//   },
-//   {
-//     text: 'Finance',
-//     icon: FinanceIcon,
-//     subItems: [
-//       { label: 'Income', page: 'IncomePage' },
-//       { label: 'Expense', page: 'ExpensePage' },
-//       { label: 'Invoices', page: 'InvoiceListPage' }
-//     ]
-//   },
-//   {
-//     text: 'Reports',
-//     icon: MonitorIcon,
-//     subItems: [
-//       { label: 'Inventory', page: 'InventoryItemsPage' },
-//       { label: 'Birth Report', page: 'BirthReportPage' },
-//       { label: 'Blood Bank', page: 'BloodBankPage' }
-//     ]
-//   },
-//   { text: 'Profile', icon: UserProfileIcon, page: 'UserProfilePage' },
-//   { text: 'Settings', icon: SettingsIcon, page: 'SettingsPage' }
-// ];
-
-// constants/sidebarItems/adminSidebar.js
 import {
   HomeIcon,
   AppointmentIcon,
   PatientIcon,
-  DoctorsIcon,
+  // DoctorsIcon,
   FinanceIcon,
   MonitorIcon,
   UserProfileIcon,
   SettingsIcon,
+  DoctorsIcon,
+  DepartmentIcon,
+  StaffIcon,
+  RegistrarIcon,
 } from '../../components/common/Icons';
 
 export const adminSidebar = [
@@ -82,18 +34,49 @@ export const adminSidebar = [
     ],
   },
 
-   {
+  //  {
+  //   label: 'Department',
+  //   icon: DoctorsIcon,
+  //   submenu: [
+  //     { label: 'Add Department', path: '/dashboard/admin/add-department' },
+  //     // { label: 'HOD List', path: '/dashboard/admin/department-list' },
+  //     { label: 'HOD List', path: '/dashboard/admin/DepartmentList' },
+  //   ],
+  // },
+  // {
+  //   label: 'Doctors',
+  //   icon: DoctorsIcon,
+  //   submenu: [
+  //     { label: 'Add Doctor', path: '/dashboard/admin/add-doctor' },
+  //     { label: 'Doctor List', path: '/dashboard/admin/doctor-list' },
+  //   ],
+  // },
+  // {
+  //   label: 'staff',
+  //   icon: DoctorsIcon,
+  //   submenu: [
+  //     // { label: 'Add Registrar', path: '/dashboard/admin/add-staff' },
+  //     // { label: 'Staff List', path: '/dashboard/admin/staff-list' },
+  //   ],
+  // },
+  // {
+  //   label: 'Registrar',
+  //   icon: DoctorsIcon,
+  //   submenu: [
+  //     { label: 'Add Staff', path: '/dashboard/admin/add-staff' },
+  //     { label: 'Staff List', path: '/dashboard/admin/staff-list' },
+  //   ],
+  // },
+
+
+  {
     label: 'Department',
-    icon: DoctorsIcon,
+    icon: DepartmentIcon,
     submenu: [
       { label: 'Add Department', path: '/dashboard/admin/add-department' },
-      // { label: 'HOD List', path: '/dashboard/admin/department-list' },
       { label: 'HOD List', path: '/dashboard/admin/DepartmentList' },
-      
     ],
   },
-
-  
   {
     label: 'Doctors',
     icon: DoctorsIcon,
@@ -102,17 +85,23 @@ export const adminSidebar = [
       { label: 'Doctor List', path: '/dashboard/admin/doctor-list' },
     ],
   },
-
- 
-
   {
     label: 'Staff',
-    icon: DoctorsIcon,
+    icon: StaffIcon,
+    submenu: [
+    ],
+  },
+  {
+    label: 'Registrar',
+    icon: RegistrarIcon,
     submenu: [
       { label: 'Add Staff', path: '/dashboard/admin/add-staff' },
       { label: 'Staff List', path: '/dashboard/admin/staff-list' },
     ],
   },
+
+
+
   {
     label: 'Finance',
     icon: FinanceIcon,
