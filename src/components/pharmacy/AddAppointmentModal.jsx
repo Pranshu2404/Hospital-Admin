@@ -113,8 +113,8 @@ const AddAppointmentModal = ({ isOpen, onClose, type }) => {
         size="sm"
         onClick={() => {
           const path = type.toLowerCase() === 'ipd'
-            ? '/dashboard/admin/patients/add-ipd'
-            : '/dashboard/admin/patients/add-opd';
+            ? '/dashboard/staff/patients/add-ipd'
+            : '/dashboard/staff/patients/add-opd';
           navigate(path);
         }}
       >

@@ -6,7 +6,7 @@ import { useModal } from '../common/Modals';
 import AddAppointmentModal from './AddAppointmentModal';
 import ChoosePatientTypeModal from '../patients/ChoosePatientTypeModal';
 import { useLocation, useNavigate } from 'react-router-dom';
-import ChoosePatientTypeModal2 from '../patients/ChoosePatientTypeModal2';
+import ChoosePatientTypeModal2 from './ChoosePatientTypeModal2';
 
 const AppointmentList = () => {
   const location = useLocation();

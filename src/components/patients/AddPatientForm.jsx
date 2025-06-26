@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { FormInput, FormSelect, FormTextarea, Button } from '../common/FormElements';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 
 const AddPatientForm = () => {
+  const navigate = useNavigate()
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -61,6 +63,7 @@ const handleSubmit = async (e) => {
 
     console.log('✅ Patient added:', response.data);
     alert('Patient added successfully!');
+    navigate('/dashboard/admin/appointments?type=ipd')
   } catch (err) {
     console.error('❌ Error adding patient:', err.response?.data || err.message);
     alert(err.response?.data?.error || 'Failed to add patient.');
@@ -86,8 +89,8 @@ const handleSubmit = async (e) => {
   ];
 
   const patientTypeOptions = [
-    { value: 'OPD', label: 'OPD (Outpatient)' },
-    { value: 'IPD', label: 'IPD (Inpatient)' }
+    { value: 'opd', label: 'OPD (Outpatient)' },
+    { value: 'ipd', label: 'IPD (Inpatient)' }
   ];
 
   return (

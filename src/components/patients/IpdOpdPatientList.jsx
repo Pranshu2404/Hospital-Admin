@@ -25,7 +25,7 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient }) => {
           gender: p.gender,
           phone: p.phone,
           email: p.email,
-          type: p.patient_type || 'OPD',
+          type: p.patient_type.toUpperCase() || 'OPD',
           bloodGroup: p.blood_group || 'N/A',
           lastVisit: new Date(p.registered_at).toISOString().split('T')[0],
           status: 'Active', // You can map a real status if available
@@ -51,7 +51,8 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient }) => {
     const matchesSearch =
       patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       patient.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      patient.phone.includes(searchTerm);
+      patient.phone.includes(searchTerm)||
+      patient.type.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesFilter = filterType === 'all' || patient.type === filterType;
     return matchesSearch && matchesFilter;
   });

@@ -17,19 +17,21 @@
 import React, { useState } from "react";
 import Layout from '../../../components/Layout';
 import { adminSidebar } from '../../../constants/sidebarItems/adminSidebar';
-import ChoosePatientTypeModal from '../../../components/patients/ChoosePatientTypeModal';
+// import ChoosePatientTypeModal from '../../../components/patients/ChoosePatientTypeModal';
 import { useNavigate } from 'react-router-dom';
 import AddPatientIPDForm from "./AddPatientIPDForm";
+import { staffSidebar } from "../../../constants/sidebarItems/staffSidebar";
+import ChoosePatientTypeModal from "../../../components/pharmacy/ChoosePatientTypeModal";
 
-const AddPatientPage = () => {
+const AddPatientPage1 = () => {
   const [open, setOpen] = useState(true); // ✅ This must be a boolean
   const navigate = useNavigate();
   return (
-    <Layout sidebarItems={adminSidebar}>
-      <ChoosePatientTypeModal isOpen={open} onClose={()=>navigate('/dashboard/admin')} />
+    <Layout sidebarItems={staffSidebar}>
+      <ChoosePatientTypeModal isOpen={open} onClose={()=>navigate('/dashboard/staff')} />
       {/* <AddPatientIPDForm/> */}
     </Layout>
   );
 };
 
-export default AddPatientPage;
+export default AddPatientPage1;

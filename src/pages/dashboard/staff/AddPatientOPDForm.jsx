@@ -42,7 +42,7 @@ const AddPatientOPDForm = () => {
 
       console.log('✅ OPD Patient added:', response.data);
       alert('OPD Patient added successfully!');
-      navigate('/dashboard/admin/appointments?type=opd')
+      navigate('/dashboard/staff/appointments?type=opd')
     } catch (err) {
       console.error('❌ Error adding OPD patient:', err.response?.data || err.message);
       alert(err.response?.data?.error || 'Failed to add patient.');

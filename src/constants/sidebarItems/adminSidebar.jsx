@@ -1,4 +1,5 @@
 
+import { FaClinicMedical } from 'react-icons/fa';
 import {
   HomeIcon,
   AppointmentIcon,
@@ -101,7 +102,14 @@ export const adminSidebar = [
       { label: 'Registrar List', path: '/dashboard/admin/registrar-list' },
     ],
   },
-
+  {
+    label: 'Pharmacy',
+    icon: FaClinicMedical,
+    submenu: [
+      { label: 'Add Pharmacy', path: '/dashboard/admin/pharmacies/add' },
+      { label: 'Pharmacy List', path: '/dashboard/admin/pharmacies' },
+    ],
+  },
 
 
   {

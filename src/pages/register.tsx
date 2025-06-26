@@ -10,6 +10,7 @@ export default function Register() {
     password: '',
     role: 'admin',
     hospitalID: '',
+    fireNOC: '',
     registryNo: '',
     address: '',
     contact: '',
@@ -65,7 +66,20 @@ export default function Register() {
           </select>
 
           {/* Hospital/Clinic Details */}
-          <input type="text" name="hospitalID" placeholder="Hospital/Clinic ID" value={form.hospitalID} onChange={handleChange} required className="p-2 border rounded" />
+          {/* <input type="text" name="hospitalID" placeholder="Hospital/Clinic ID" value={form.hospitalID} onChange={handleChange} required className="p-2 border rounded" /> */}
+          <input
+  type="text"
+  name="hospitalID"
+  placeholder="Hospital/Clinic ID (e.g. AB1234)"
+  value={form.hospitalID}
+  onChange={handleChange}
+  required
+  pattern="^[A-Za-z]{2}\d{4}$"
+  title="Hospital ID must be 2 letters followed by 4 numbers (e.g. AB1234)"
+  className="p-2 border rounded"
+/>
+
+          <input type="text" name="fireNOC" placeholder="Fire NOC" value={form.fireNOC} onChange={handleChange} required className="p-2 border rounded" />
           <input type="text" name="registryNo" placeholder="Registry Number" value={form.registryNo} onChange={handleChange} required className="p-2 border rounded" />
           <input type="text" name="address" placeholder="Address" value={form.address} onChange={handleChange} required className="p-2 border rounded" />
           <input type="tel" name="contact" placeholder="Contact Number" value={form.contact} onChange={handleChange} required className="p-2 border rounded" />

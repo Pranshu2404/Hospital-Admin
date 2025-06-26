@@ -191,7 +191,7 @@ const AddPatientIPDForm = () => {
 
       console.log('✅ IPD Patient added:', response.data);
       alert('IPD Patient added successfully!');
-      navigate('/dashboard/admin/appointments?type=ipd')
+      navigate('/dashboard/staff/appointments?type=ipd')
     } catch (err) {
       console.error('❌ Error adding IPD patient:', err.response?.data || err.message);
       alert(err.response?.data?.error || 'Failed to add patient.');

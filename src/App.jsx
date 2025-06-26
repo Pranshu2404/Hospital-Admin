@@ -74,6 +74,15 @@ import ProfilePage from './pages/dashboard/pharmacy/profile';
 import Settings from './pages/dashboard/pharmacy/settings';
 import AddRegistrarPage from './pages/dashboard/admin/add-registrar.jsx';
 import RegistrarListPage from './pages/dashboard/admin/registrar-list.jsx';
+import PharmacyList from './pages/dashboard/admin/PharmacyList.jsx';
+import AddPharmacy from './pages/dashboard/admin/AddPharmacy.jsx';
+import PharmacyProfile from './pages/dashboard/admin/PharmacyProfile.jsx';
+import AddPatientOPD1 from './pages/dashboard/staff/AddPatientOPD.jsx';
+import AddPatientIPD1 from './pages/dashboard/staff/AddPatientIPD.jsx';
+import AppointmentsPage1 from './pages/dashboard/staff/appointments.jsx';
+import AddPatientPage1 from './pages/dashboard/staff/add-patient.jsx';
+import PatientListPage1 from './pages/dashboard/staff/patient-list.jsx';
+import PatientProfilePage1 from './pages/dashboard/staff/patient-profile.jsx';
 
 export default function App() {
   return (
@@ -106,13 +115,11 @@ export default function App() {
           <Route path="/dashboard/admin/blood-bank" element={<BloodBankPage />} />
           <Route path="/dashboard/admin/profile" element={<UserProfilePage />} />
           <Route path="/dashboard/admin/settings" element={<SettingsPage />} />
-          
+          <Route path="dashboard/admin/pharmacies" element={<PharmacyList />} />
+<Route path="dashboard/admin/pharmacies/add" element={<AddPharmacy />} />
+<Route path="dashboard/admin/pharmacies/:id" element={<PharmacyProfile />} />
           <Route path="/dashboard/admin/patients/add-opd" element={<AddPatientOPD />} />
-          <Route path="/dashboard/admin/patients/add-ipd" element={<AddPatientIPD />} />
-          
-
-          
-          
+          <Route path="/dashboard/admin/patients/add-ipd" element={<AddPatientIPD />} />         
 
           {/* <Route path="/dashboard/admin/departments" element={<DepartmentList />} /> */}
           <Route path="/dashboard/admin/departments/:deptName" element={<DepartmentAdd />} />
@@ -120,9 +127,6 @@ export default function App() {
           <Route path="/dashboard/admin/add-department" element={<DepartmentAdd />} />  
           <Route path="/dashboard/admin/add-hod" element={<AddHodPage />} />
           <Route path="/dashboard/admin/DepartmentList" element={<DepartmentList />} />
-
- 
-
 
           {/* Doctor Routes */}
           <Route
@@ -242,9 +246,15 @@ export default function App() {
               </ProtectedRoute>
             }
           />
-
+          <Route path="/dashboard/staff/patients/add-opd" element={<AddPatientOPD1 />} />
+          <Route path="/dashboard/staff/patients/add-ipd" element={<AddPatientIPD1 />} />
+          <Route path="/dashboard/staff/appointments" element={<AppointmentsPage1 />} />
+          <Route path="/dashboard/staff/add-patient" element={<AddPatientPage1 />} />
+          <Route path="/dashboard/staff/patient-list" element={<PatientListPage1 />} />
+          <Route path="/dashboard/staff/patient-profile" element={<PatientProfilePage1 />} />
             {/* Pharmacy Routes */}
           <Route path="/dashboard/pharmacy" element={<PharmacyDashboard />} />
+          
           <Route path="/dashboard/pharmacy/add-medicine" element={<AddMedicinePage />} />
           <Route path="/dashboard/pharmacy/medicine-list" element={<MedicineListPage />} />
           <Route path="/dashboard/pharmacy/medicine-detail" element={<MedicineDetailPage />} />
