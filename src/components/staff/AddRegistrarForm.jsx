@@ -2,12 +2,12 @@ import { useState } from 'react';
 import { FormInput, FormSelect, Button } from '../common/FormElements';
 import axios from 'axios';
 
-const AddStaffForm = () => {
+const AddRegistrarForm = () => {
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
     phone: '',
-    role: 'staff',
+    role: 'registrar',
     department: '',
     specialization: '',
     joiningDate: '',
@@ -32,10 +32,10 @@ const AddStaffForm = () => {
       formData
     );
     console.log('✅ Staff added successfully:', response.data);
-    alert('Staff added successfully!');
+    alert('Registrar added successfully!');
   } catch (err) {
     console.error('❌ Error adding staff:', err.response?.data || err.message);
-    alert(err.response?.data?.error || 'Failed to add staff.');
+    alert(err.response?.data?.error || 'Failed to add Registrar.');
   }
 };
 
@@ -63,8 +63,8 @@ const AddStaffForm = () => {
     <div className="p-6">
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm">
         <div className="p-6 border-b border-gray-100">
-          <h2 className="text-2xl font-bold text-gray-900">Add New Staff</h2>
-          <p className="text-gray-600 mt-1">Fill the staff details to add them to the hospital system.</p>
+          <h2 className="text-2xl font-bold text-gray-900">Add New Registrar</h2>
+          <p className="text-gray-600 mt-1">Fill the Registrar details to add them to the hospital system.</p>
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -85,16 +85,14 @@ const AddStaffForm = () => {
             placeholder="Enter email"
           />
 
-          {/* <FormInput
+          <FormInput
   label="Password"
   type="password"
   value={formData.password || ''}
   onChange={(e) => handleInputChange('password', e.target.value)}
   required
   placeholder="Enter password"
-/> */}
-
-
+/>
           <FormInput
             label="Phone"
             type="tel"
@@ -145,4 +143,4 @@ const AddStaffForm = () => {
   );
 };
 
-export default AddStaffForm;
+export default AddRegistrarForm;

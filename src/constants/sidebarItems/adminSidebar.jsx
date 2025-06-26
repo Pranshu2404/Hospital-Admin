@@ -89,14 +89,16 @@ export const adminSidebar = [
     label: 'Staff',
     icon: StaffIcon,
     submenu: [
+      { label: 'Add Staff', path: '/dashboard/admin/add-staff' },
+      { label: 'Staff List', path: '/dashboard/admin/staff-list' },
     ],
   },
   {
     label: 'Registrar',
     icon: RegistrarIcon,
     submenu: [
-      { label: 'Add Staff', path: '/dashboard/admin/add-staff' },
-      { label: 'Staff List', path: '/dashboard/admin/staff-list' },
+      { label: 'Add Registrar', path: '/dashboard/admin/add-registrar' },
+      { label: 'Registrar List', path: '/dashboard/admin/registrar-list' },
     ],
   },
 

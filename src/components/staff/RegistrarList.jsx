@@ -3,7 +3,7 @@ import { Button, SearchInput } from '../common/FormElements';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
-const StaffList = ({ setCurrentPage, setSelectedStaff }) => {
+const RegistrarList = ({ setCurrentPage, setSelectedStaff }) => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [staffMembers, setStaffMembers] = useState([]);
@@ -26,7 +26,7 @@ const StaffList = ({ setCurrentPage, setSelectedStaff }) => {
   }, []);
 
   const filteredStaff = staffMembers
-  .filter((staff) => staff.role === 'staff')
+  .filter((staff) => staff.role === 'registrar')
   .filter((staff) =>
     staff.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     `${staff.first_name} ${staff.last_name}`.toLowerCase().includes(searchTerm.toLowerCase())
@@ -38,10 +38,10 @@ const StaffList = ({ setCurrentPage, setSelectedStaff }) => {
       <div className="bg-white rounded-xl shadow p-6">
         <div className="flex justify-between items-center mb-4">
           <div>
-            <h2 className="text-2xl font-bold text-gray-800">Staff Directory</h2>
-            <p className="text-gray-500">Manage all hospital Staff</p>
+            <h2 className="text-2xl font-bold text-gray-800">Registrar Directory</h2>
+            <p className="text-gray-500">Manage all hospital Registrars</p>
           </div>
-          <Button onClick={() => navigate('/dashboard/admin/add-staff')}>+ Add Staff</Button>
+          <Button onClick={() => navigate('/dashboard/admin/add-registrar')}>+ Add Registrar</Button>
         </div>
 
         <SearchInput
@@ -122,4 +122,4 @@ const StaffList = ({ setCurrentPage, setSelectedStaff }) => {
   );
 };
 
-export default StaffList;
+export default RegistrarList;
