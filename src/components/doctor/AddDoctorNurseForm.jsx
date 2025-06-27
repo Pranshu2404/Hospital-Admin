@@ -15,7 +15,7 @@ const AddDoctorNurseForm = () => {
     city: '',
     state: '',
     zipCode: '',
-    role: '',
+    role: 'Doctor', // Set default role to Doctor
     department: '',
     specialization: '',
     licenseNumber: '',
@@ -28,7 +28,18 @@ const AddDoctorNurseForm = () => {
     salary: '',
     isFullTime: true,
     hasInsurance: true,
-    notes: ''
+    notes: '',
+    paymentType: '',
+    contractualSalary: '',
+    feePerVisit: '',
+    ratePerHour: '',
+    contractStartDate: '',
+    contractEndDate: '',
+    visitsPerWeek: '',
+    workingDaysPerWeek: '',
+    timeSlots: [{ start: '', end: '' }],
+    aadharNumber: '',
+    panNumber: ''
   });
 
   const handleInputChange = (field, value) => {
@@ -38,21 +49,37 @@ const AddDoctorNurseForm = () => {
     }));
   };
 
-  const handleSubmit = async (e) => {
-  e.preventDefault();
+  const handleTimeSlotChange = (idx, field, value) => {
+    setFormData(prev => {
+      const updated = [...prev.timeSlots];
+      updated[idx][field] = value;
+      return { ...prev, timeSlots: updated };
+    });
+  };
 
-  try {
-    const response = await axios.post(
-      `${import.meta.env.VITE_BACKEND_URL}/api/doctors`,
-      formData
-    );
-    console.log('✅ Doctor added successfully:', response.data);
-    alert('Doctor added successfully!');
-  } catch (err) {
-    console.error('❌ Error adding doctor:', err.response?.data || err.message);
-    alert(err.response?.data?.error || 'Failed to add doctor.');
-  }
-};
+  const handleAddTimeSlot = () => {
+    setFormData(prev => ({ ...prev, timeSlots: [...prev.timeSlots, { start: '', end: '' }] }));
+  };
+
+  const handleRemoveTimeSlot = (idx) => {
+    setFormData(prev => ({ ...prev, timeSlots: prev.timeSlots.filter((_, i) => i !== idx) }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    try {
+      const response = await axios.post(
+        `${import.meta.env.VITE_BACKEND_URL}/api/doctors`,
+        formData
+      );
+      console.log('✅ Doctor added successfully:', response.data);
+      alert('Doctor added successfully!');
+    } catch (err) {
+      console.error('❌ Error adding doctor:', err.response?.data || err.message);
+      alert(err.response?.data?.error || 'Failed to add doctor.');
+    }
+  };
 
 
   const roleOptions = [
@@ -124,13 +151,13 @@ const AddDoctorNurseForm = () => {
                 required
               />
               <FormInput
-  label="Password"
-  type="password"
-  value={formData.password}
-  onChange={(e) => handleInputChange('password', e.target.value)}
-  placeholder="Create password"
-  required
-/>
+                label="Password"
+                type="password"
+                value={formData.password}
+                onChange={(e) => handleInputChange('password', e.target.value)}
+                placeholder="Create password"
+                required
+              />
 
               <FormInput
                 label="Phone Number"
@@ -154,6 +181,20 @@ const AddDoctorNurseForm = () => {
                 options={genderOptions}
                 placeholder="Select gender"
                 required
+              />
+              <FormInput
+                label="Aadhar Number"
+                value={formData.aadharNumber}
+                onChange={(e) => handleInputChange('aadharNumber', e.target.value)}
+                placeholder="Enter Aadhar number"
+                maxLength={12}
+              />
+              <FormInput
+                label="PAN Number"
+                value={formData.panNumber}
+                onChange={(e) => handleInputChange('panNumber', e.target.value)}
+                placeholder="Enter PAN number"
+                maxLength={10}
               />
             </div>
           </div>
@@ -195,14 +236,14 @@ const AddDoctorNurseForm = () => {
           <div className="mb-8">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Professional Information</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormSelect
+              {/* <FormSelect
                 label="Role"
                 value={formData.role}
                 onChange={(e) => handleInputChange('role', e.target.value)}
                 options={roleOptions}
                 placeholder="Select role"
                 required
-              />
+              /> */}
               <FormSelect
                 label="Department"
                 value={formData.department}
@@ -278,6 +319,120 @@ const AddDoctorNurseForm = () => {
                 checked={formData.hasInsurance}
                 onChange={(e) => handleInputChange('hasInsurance', e.target.checked)}
               />
+              {/* Show contractual fields if not full-time */}
+              {!formData.isFullTime && (
+                <>
+                  <FormSelect
+                    label="Payment Type"
+                    value={formData.paymentType}
+                    onChange={e => handleInputChange('paymentType', e.target.value)}
+                    options={[
+                      { value: 'Fee per Visit', label: 'Fee per Visit' },
+                      { value: 'Per Hour', label: 'Per Hour' },
+                      { value: 'Contractual Salary', label: 'Contractual Salary' }
+                    ]}
+                    placeholder="Select payment type"
+                    required
+                  />
+                  {formData.paymentType === 'Fee per Visit' && (
+                    <FormInput
+                      label="Fee per Visit"
+                      type="number"
+                      value={formData.feePerVisit}
+                      onChange={e => handleInputChange('feePerVisit', e.target.value)}
+                      placeholder="Enter fee per visit"
+                      required
+                    />
+                  )}
+                  {formData.paymentType === 'Per Hour' && (
+                    <FormInput
+                      label="Rate per Hour"
+                      type="number"
+                      value={formData.ratePerHour}
+                      onChange={e => handleInputChange('ratePerHour', e.target.value)}
+                      placeholder="Enter rate per hour"
+                      required
+                    />
+                  )}
+                  {formData.paymentType === 'Contractual Salary' && (
+                    <FormInput
+                      label="Contractual Salary"
+                      type="number"
+                      value={formData.contractualSalary}
+                      onChange={e => handleInputChange('contractualSalary', e.target.value)}
+                      placeholder="Enter contractual salary"
+                      required
+                    />
+                  )}
+                  <FormInput
+                    label="Contract Start Date"
+                    type="date"
+                    value={formData.contractStartDate}
+                    onChange={e => handleInputChange('contractStartDate', e.target.value)}
+                    required
+                  />
+                  <FormInput
+                    label="Contract End Date"
+                    type="date"
+                    value={formData.contractEndDate}
+                    onChange={e => handleInputChange('contractEndDate', e.target.value)}
+                    required
+                  />
+                  <FormInput
+                    label="Visits per Week"
+                    type="number"
+                    value={formData.visitsPerWeek}
+                    onChange={e => handleInputChange('visitsPerWeek', e.target.value)}
+                    placeholder="Enter number of visits per week"
+                  />
+                  <div className="flex flex-col md:flex-row md:col-span-2 gap-4">
+                    <div className="flex-1">
+                      <FormInput
+                        label="Working Days per Week"
+                        type="number"
+                        value={formData.workingDaysPerWeek}
+                        onChange={e => handleInputChange('workingDaysPerWeek', e.target.value)}
+                        placeholder="Enter working days per week"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Time Slots Available</label>
+                      <div className="space-y-2">
+                        {formData.timeSlots.map((slot, idx) => (
+                          <div key={idx} className="flex items-center gap-2">
+                            <input
+                              type="time"
+                              className="border rounded px-2 py-1"
+                              value={slot.start}
+                              onChange={e => handleTimeSlotChange(idx, 'start', e.target.value)}
+                              required
+                            />
+                            <span className="mx-1">to</span>
+                            <input
+                              type="time"
+                              className="border rounded px-2 py-1"
+                              value={slot.end}
+                              onChange={e => handleTimeSlotChange(idx, 'end', e.target.value)}
+                              required
+                            />
+                            <button
+                              type="button"
+                              className="ml-2 text-red-600 hover:text-red-800 text-xs px-2 py-1 border border-red-200 rounded"
+                              onClick={() => handleRemoveTimeSlot(idx)}
+                              disabled={formData.timeSlots.length === 1}
+                            >Remove</button>
+                          </div>
+                        ))}
+                        <button
+                          type="button"
+                          className="mt-2 text-teal-700 border border-teal-300 px-3 py-1 rounded hover:bg-teal-50 text-sm"
+                          onClick={handleAddTimeSlot}
+                        >+ Add Time Slot</button>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
 

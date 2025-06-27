@@ -22,7 +22,7 @@ const SelectDepartment = () => {
     fetchDepartments();
   }, []);
 
-  const handleAddDepartment = (e) => {
+  const handleAddDepartment = async (e) => {
     e.preventDefault();
     const trimmed = newDeptName.trim();
     if (!trimmed) return;
@@ -36,11 +36,20 @@ const SelectDepartment = () => {
       return;
     }
 
-    navigate(`/dashboard/admin/add-hod?name=${encodeURIComponent(trimmed)}`);
+    try {
+      const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/departments`, { name: trimmed });
+      const newDepartment = res.data; // Should contain _id and name
+      setDepartments((prev) => [...prev, newDepartment]);
+      setNewDeptName('');
+      // Navigate to a page that lists doctors of this department for HOD selection
+      navigate(`/dashboard/admin/add-hod/${newDepartment._id}?departmentName=${encodeURIComponent(newDepartment.name)}`);
+    } catch (err) {
+      alert('Failed to add department');
+    }
   };
 
-  const handleDepartmentClick = (deptId) => {
-    navigate(`/dashboard/admin/add-hod?id=${deptId}`);
+  const handleDepartmentClick = (deptId, deptName) => {
+    navigate(`/dashboard/admin/add-hod/${deptId}?departmentName=${encodeURIComponent(deptName)}`);
   };
 
   return (
@@ -75,7 +84,7 @@ const SelectDepartment = () => {
             {departments.map((dept) => (
               <button
                 key={dept._id}
-                onClick={() => handleDepartmentClick(dept._id)}
+                onClick={() => handleDepartmentClick(dept._id, dept.name)}
                 className="w-full bg-blue-50 border border-blue-200 rounded-xl p-4 text-left hover:bg-blue-100 transition"
               >
                 <h3 className="text-lg font-medium text-blue-900">{dept.name}</h3>

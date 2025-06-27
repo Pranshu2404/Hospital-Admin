@@ -1,5 +1,3 @@
-
-
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
@@ -36,7 +34,7 @@ import AddPatientIPD from "./pages/dashboard/admin/AddPatientIPD.jsx";
 
 import DepartmentList from "./pages/dashboard/admin/DepartmentList.jsx";
 import DepartmentAdd from "./pages/dashboard/admin/add-department.jsx";
-import AddHodPage from './pages/dashboard/admin/AddHod.jsx';
+import AddHodPage from './pages/dashboard/admin/AddHodPage.jsx';
 // import DepartmentList from './pages/admin/department/DepartmentList';
 
 
@@ -246,6 +244,7 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+          <Route path="/dashboard/admin/add-hod/:id" element={<AddHodPage />} />
           <Route path="/dashboard/staff/patients/add-opd" element={<AddPatientOPD1 />} />
           <Route path="/dashboard/staff/patients/add-ipd" element={<AddPatientIPD1 />} />
           <Route path="/dashboard/staff/appointments" element={<AppointmentsPage1 />} />

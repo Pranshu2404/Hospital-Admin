@@ -13,6 +13,8 @@ const AddRegistrarForm = () => {
     joiningDate: '',
     gender: 'male',
     status: 'Active',
+    aadharNumber: '',
+    panNumber: '',
   });
 
   const handleInputChange = (field, value) => {
@@ -131,6 +133,22 @@ const AddRegistrarForm = () => {
             onChange={(e) => handleInputChange('gender', e.target.value)}
             options={genderOptions}
             required
+          />
+
+          <FormInput
+            label="Aadhar Number"
+            value={formData.aadharNumber}
+            onChange={(e) => handleInputChange('aadharNumber', e.target.value)}
+            placeholder="Enter Aadhar number"
+            maxLength={12}
+          />
+
+          <FormInput
+            label="PAN Number"
+            value={formData.panNumber}
+            onChange={(e) => handleInputChange('panNumber', e.target.value)}
+            placeholder="Enter PAN number"
+            maxLength={10}
           />
 
           <div className="md:col-span-2 flex justify-end space-x-4">
