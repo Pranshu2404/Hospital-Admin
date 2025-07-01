@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import axios from 'axios';
 import { FormInput, FormSelect, FormTextarea, FormCheckbox, Button } from '../common/FormElements';
+import { Link } from 'react-router-dom';
+
 
 const AddDoctorNurseForm = () => {
   const [formData, setFormData] = useState({
@@ -48,6 +50,22 @@ const AddDoctorNurseForm = () => {
       [field]: value
     }));
   };
+
+const [showForgotModal, setShowForgotModal] = useState(false);
+const [forgotData, setForgotData] = useState({ username: '', phone: '' });
+
+  const handleForgotChange = (field, value) => {
+    setForgotData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleForgotSubmit = (e) => {
+    e.preventDefault();
+    alert(`Reset link sent for user: ${forgotData.username} and phone: ${forgotData.phone}`);
+    setShowForgotModal(false); // Close modal
+    setForgotData({ username: '', phone: '' }); // Clear fields
+  };
+
+
 
   const handleTimeSlotChange = (idx, field, value) => {
     setFormData(prev => {
@@ -475,9 +493,57 @@ const AddDoctorNurseForm = () => {
             <Button variant="primary" type="submit">
               Add Staff Member
             </Button>
+            <button
+              type="button"
+              onClick={() => setShowForgotModal(true)}
+              className="text-blue-600 hover:underline hover:text-blue-800 transition"
+            >Forgot Password?</button>
           </div>
         </form>
       </div>
+
+      {showForgotModal && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-30 z-50">
+          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
+            <h3 className="text-xl font-semibold text-gray-800 mb-4">Forgot Password</h3>
+            <form onSubmit={handleForgotSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                <input
+                  type="text"
+                  value={forgotData.username}
+                  onChange={(e) => handleForgotChange('username', e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                <input
+                  type="tel"
+                  value={forgotData.phone}
+                  onChange={(e) => handleForgotChange('phone', e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                  required
+                />
+              </div>
+              <div className="flex justify-end space-x-3 mt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowForgotModal(false)}
+                  className="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400"
+                >Cancel</button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                >Submit</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+
     </div>
   );
 };

@@ -98,7 +98,9 @@ const AddPatientOPDForm = () => {
                 onChange={(e) => handleInputChange('phone', e.target.value)}
                 required
               />
-              <FormInput label="Date of Birth" type="date" value={formData.dateOfBirth} onChange={(e) => handleInputChange('dateOfBirth', e.target.value)} required />
+              {/* <FormInput label="Date of Birth" type="date" value={formData.dateOfBirth} onChange={(e) => handleInputChange('dateOfBirth', e.target.value)} required /> */}
+              <FormInput label="Age" type="number" value={formData.age || ''} onChange={(e) => handleInputChange('age', e.target.value)} required />
+
               <FormSelect
                 label="Gender"
                 value={formData.gender}

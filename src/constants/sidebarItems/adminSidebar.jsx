@@ -27,6 +27,22 @@ export const adminSidebar = [
     path: '/dashboard/admin/appointments',
   },
   {
+    label: 'Department',
+    icon: DepartmentIcon,
+    submenu: [
+      { label: 'Add Department', path: '/dashboard/admin/add-department' },
+      { label: 'HOD List', path: '/dashboard/admin/DepartmentList' },
+    ],
+  },
+  {
+    label: 'Doctors',
+    icon: DoctorsIcon,
+    submenu: [
+      { label: 'Add Doctor', path: '/dashboard/admin/add-doctor' },
+      { label: 'Doctor List', path: '/dashboard/admin/doctor-list' },
+    ],
+  },
+  {
     label: 'Patients',
     icon: PatientIcon,
     submenu: [
@@ -70,22 +86,7 @@ export const adminSidebar = [
   // },
 
 
-  {
-    label: 'Department',
-    icon: DepartmentIcon,
-    submenu: [
-      { label: 'Add Department', path: '/dashboard/admin/add-department' },
-      { label: 'HOD List', path: '/dashboard/admin/DepartmentList' },
-    ],
-  },
-  {
-    label: 'Doctors',
-    icon: DoctorsIcon,
-    submenu: [
-      { label: 'Add Doctor', path: '/dashboard/admin/add-doctor' },
-      { label: 'Doctor List', path: '/dashboard/admin/doctor-list' },
-    ],
-  },
+  
   {
     label: 'Staff',
     icon: StaffIcon,
