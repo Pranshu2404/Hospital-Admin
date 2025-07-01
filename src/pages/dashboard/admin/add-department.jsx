@@ -42,7 +42,7 @@ const SelectDepartment = () => {
       setDepartments((prev) => [...prev, newDepartment]);
       setNewDeptName('');
       // Navigate to a page that lists doctors of this department for HOD selection
-      navigate(`/dashboard/admin/add-hod/${newDepartment._id}?departmentName=${encodeURIComponent(newDepartment.name)}`);
+      // navigate(`/dashboard/admin/add-hod/${newDepartment._id}?departmentName=${encodeURIComponent(newDepartment.name)}`);
     } catch (err) {
       alert('Failed to add department');
     }
