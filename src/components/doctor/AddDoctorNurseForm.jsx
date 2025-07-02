@@ -2,6 +2,7 @@ import { useState } from 'react';
 import axios from 'axios';
 import { FormInput, FormSelect, FormTextarea, FormCheckbox, Button } from '../common/FormElements';
 import { Link } from 'react-router-dom';
+import { useEffect } from 'react';
 
 
 const AddDoctorNurseForm = () => {
@@ -107,18 +108,39 @@ const [forgotData, setForgotData] = useState({ username: '', phone: '' });
     { value: 'Administrator', label: 'Administrator' }
   ];
 
-  const departmentOptions = [
-    { value: 'General Medicine', label: 'General Medicine' },
-    { value: 'Cardiology', label: 'Cardiology' },
-    { value: 'Orthopedics', label: 'Orthopedics' },
-    { value: 'Pediatrics', label: 'Pediatrics' },
-    { value: 'Emergency', label: 'Emergency' },
-    { value: 'ICU', label: 'ICU' },
-    { value: 'Surgery', label: 'Surgery' },
-    { value: 'Radiology', label: 'Radiology' },
-    { value: 'Laboratory', label: 'Laboratory' },
-    { value: 'Pharmacy', label: 'Pharmacy' }
-  ];
+  // const departmentOptions = [
+  //   { value: 'General Medicine', label: 'General Medicine' },
+  //   { value: 'Cardiology', label: 'Cardiology' },
+  //   { value: 'Orthopedics', label: 'Orthopedics' },
+  //   { value: 'Pediatrics', label: 'Pediatrics' },
+  //   { value: 'Emergency', label: 'Emergency' },
+  //   { value: 'ICU', label: 'ICU' },
+  //   { value: 'Surgery', label: 'Surgery' },
+  //   { value: 'Radiology', label: 'Radiology' },
+  //   { value: 'Laboratory', label: 'Laboratory' },
+  //   { value: 'Pharmacy', label: 'Pharmacy' }
+  // ];
+
+  const [departmentOptions, setDepartmentOptions] = useState([]);
+
+
+useEffect(() => {
+  const fetchDepartments = async () => {
+    try {
+      const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/departments`);
+      const departments = res.data?.map(dep => ({
+        value: dep._id,
+        label: dep.name
+      })) || [];
+
+      setDepartmentOptions(departments);
+    } catch (err) {
+      console.error('❌ Failed to fetch departments:', err);
+    }
+  };
+
+  fetchDepartments();
+}, []);
 
   const shiftOptions = [
     { value: 'Morning', label: 'Morning (7 AM - 3 PM)' },
@@ -265,7 +287,11 @@ const [forgotData, setForgotData] = useState({ username: '', phone: '' });
               <FormSelect
                 label="Department"
                 value={formData.department}
-                onChange={(e) => handleInputChange('department', e.target.value)}
+                onChange={(e) => {
+  console.log("Selected department:", e.target.value); // Add this
+  handleInputChange('department', e.target.value);
+}}
+
                 options={departmentOptions}
                 placeholder="Select department"
                 required
@@ -491,7 +517,7 @@ const [forgotData, setForgotData] = useState({ username: '', phone: '' });
               Cancel
             </Button>
             <Button variant="primary" type="submit">
-              Add Staff Member
+              Add Doctor
             </Button>
             <button
               type="button"

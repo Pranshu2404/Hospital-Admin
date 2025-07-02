@@ -5,14 +5,33 @@ import { adminSidebar } from '../../../constants/sidebarItems/adminSidebar';
 
 const DepartmentList = () => {
   const [hods, setHods] = useState([]);
+  const [departmentsMap, setDepartmentsMap] = useState({});
 
   useEffect(() => {
     const fetchHods = async () => {
       try {
         const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/departments/hods/all`);
-        setHods(res.data);
+        const hodList = res.data;
+
+        // Extract unique department IDs from HODs
+        const departmentIds = [...new Set(hodList.map(hod => hod.department))];
+
+        // Fetch each department's name using its ID
+        const deptPromises = departmentIds.map(id =>
+          axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/departments/${id}`)
+        );
+        const deptResponses = await Promise.all(deptPromises);
+
+        // Map department ID to name
+        const deptMap = {};
+        deptResponses.forEach(response => {
+          deptMap[response.data._id] = response.data.name;
+        });
+
+        setDepartmentsMap(deptMap);
+        setHods(hodList);
       } catch (err) {
-        console.error('Failed to fetch HODs:', err);
+        console.error('Failed to fetch HODs or departments:', err);
       }
     };
 
@@ -43,7 +62,9 @@ const DepartmentList = () => {
                 {hods.map((hod) => (
                   <tr key={hod._id}>
                     <td className="px-4 py-3">{hod.firstName} {hod.lastName}</td>
-                    <td className="px-4 py-3">{hod.department}</td>
+                    <td className="px-4 py-3">
+                      {departmentsMap[hod.department] || '—'}
+                    </td>
                     <td className="px-4 py-3">{hod.email}</td>
                     <td className="px-4 py-3">{hod.phone}</td>
                     <td className="px-4 py-3">{hod.experience} yrs</td>

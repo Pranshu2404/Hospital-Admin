@@ -46,30 +46,35 @@ const AddHodPage = () => {
   useEffect(() => {
     async function fetchData() {
       try {
+        // Fetch department details with populated HOD
         const deptRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/departments/${id}`);
         setDepartment(deptRes.data);
-        // Fetch all doctors, then filter by department name if present
-        const docRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/doctors`);
-        let filtered = docRes.data;
-        if (departmentName) {
-          filtered = filtered.filter(doc => doc.department && doc.department.trim().toLowerCase() === departmentName.trim().toLowerCase());
-        }
-        setDoctors(filtered);
+
+        // Fetch doctors directly by department ID
+        const docRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/doctors/department/${id}`);
+        setDoctors(docRes.data);
       } catch (err) {
+        console.error(err);
         setSuccess('Failed to load data');
       } finally {
         setLoading(false);
       }
     }
     fetchData();
-  }, [id, departmentName]);
+  }, [id]);
 
   const handleSetHod = async (doctorId) => {
     try {
-      await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/departments/${id}/set-hod`, { doctorId });
+      // Update department using PUT API
+      await axios.put(`${import.meta.env.VITE_BACKEND_URL}/api/departments/${id}`, {
+        head_doctor_id: doctorId
+      });
       setSuccess('HOD assigned successfully!');
-      setTimeout(() => navigate('/dashboard/admin'), 1200);
+      // Refetch department to update HOD info
+      const deptRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/departments/${id}`);
+      setDepartment(deptRes.data);
     } catch (err) {
+      console.error(err);
       setSuccess('Failed to assign HOD');
     }
   };
@@ -86,7 +91,19 @@ const AddHodPage = () => {
     <Layout sidebarItems={adminSidebar}>
       <div className="p-6 min-h-screen bg-gray-50 w-full">
         <div className="bg-white rounded-xl p-6 shadow w-full max-w-full overflow-x-auto">
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Assign HOD for {department?.name}</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            Assign HOD for {department?.name}
+          </h2>
+          
+          {department?.head_doctor_id && (
+            <div className="mb-4 p-4 bg-blue-50 rounded-lg">
+              <h3 className="font-semibold text-blue-800">Current HOD:</h3>
+              <p className="text-sm text-gray-800">
+                {department.head_doctor_id.firstName} {department.head_doctor_id.lastName} — {department.head_doctor_id.specialization}
+              </p>
+            </div>
+          )}
+
           {success && <div className="mb-4 text-green-600 font-medium">{success}</div>}
           <div className="overflow-x-auto">
             <table className="min-w-full w-full table-auto">
@@ -125,7 +142,7 @@ const AddHodPage = () => {
                     <td className="px-4 py-4 whitespace-nowrap">
                       <div className="flex flex-col space-y-1">
                         <span className={getRoleBadge(member.role)}>{member.role}</span>
-                        <div className="text-sm text-gray-900">{member.department || '—'}</div>
+                        <div className="text-sm text-gray-900">{member.department?.name || '—'}</div>
                         <div className="text-sm text-gray-500">{member.specialization || '—'}</div>
                       </div>
                     </td>
@@ -143,12 +160,16 @@ const AddHodPage = () => {
                       <span className={getStatusBadge(member.status || 'Active')}>{member.status || 'Active'}</span>
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap text-sm font-medium">
-                      <button
-                        className="bg-blue-600 text-white px-4 py-1 rounded hover:bg-blue-700"
-                        onClick={() => handleSetHod(member._id)}
-                      >
-                        Select as HOD
-                      </button>
+                      {department?.head_doctor_id?._id === member._id ? (
+  <span className="text-green-600 font-semibold">HOD</span>
+) : (
+  <button
+    className="bg-blue-600 text-white px-4 py-1 rounded hover:bg-blue-700"
+    onClick={() => handleSetHod(member._id)}
+  >
+    Select as HOD
+  </button>
+)}
                     </td>
                   </tr>
                 ))}

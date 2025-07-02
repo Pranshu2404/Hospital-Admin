@@ -299,6 +299,19 @@ const SelectDepartment = () => {
     fetchDepartments();
   }, []);
 
+  const departmentOptions = [
+    { value: 'General Medicine', label: 'General Medicine' },
+    { value: 'Cardiology', label: 'Cardiology' },
+    { value: 'Orthopedics', label: 'Orthopedics' },
+    { value: 'Pediatrics', label: 'Pediatrics' },
+    { value: 'Emergency', label: 'Emergency' },
+    { value: 'ICU', label: 'ICU' },
+    { value: 'Surgery', label: 'Surgery' },
+    { value: 'Radiology', label: 'Radiology' },
+    { value: 'Laboratory', label: 'Laboratory' },
+    { value: 'Pharmacy', label: 'Pharmacy' }
+  ];
+
   const handleAddDepartment = async (e) => {
     e.preventDefault();
     const trimmed = newDeptName.trim();
@@ -355,19 +368,19 @@ const SelectDepartment = () => {
               {/* Suggestions Dropdown */}
               {newDeptName.trim() !== '' && (
                 <ul className="absolute z-50 bg-white border border-gray-300 rounded-md shadow-md w-full max-h-48 overflow-y-auto mt-1">
-                  {departments
+                  {departmentOptions
                     .filter(
                       (dept) =>
-                        dept.name.toLowerCase().includes(newDeptName.toLowerCase()) &&
-                        dept.name.toLowerCase() !== newDeptName.toLowerCase()
+                        dept.label.toLowerCase().includes(newDeptName.toLowerCase()) &&
+                        dept.label.toLowerCase() !== newDeptName.toLowerCase()
                     )
                     .map((dept) => (
                       <li
-                        key={dept._id}
-                        onClick={() => handleSuggestionClick(dept.name)}
+                        // key={dept._id}
+                        onClick={() => handleSuggestionClick(dept.value)}
                         className="px-4 py-2 hover:bg-blue-100 cursor-pointer"
                       >
-                        {dept.name}
+                        {dept.label}
                       </li>
                     ))}
                 </ul>

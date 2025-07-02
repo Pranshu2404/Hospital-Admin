@@ -35,11 +35,11 @@ const [appointmentType, setAppointmentType] = useState(null);
       try {
         const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/appointments`);
         const data = response.data;
-
+        console.log(data)
         const enriched = data.map((appt) => ({
           ...appt,
           patientName: `${appt.patient_id.first_name} ${appt.patient_id.last_name}`,
-          doctorName: `${appt.doctor_id.firstName} ${appt.doctor_id.lastName}`,
+          doctorName: `${appt.doctor_id.firstName ||""} ${appt.doctor_id.lastName||""}`,
           date: appt.appointment_date.slice(0, 10),
           time: appt.time_slot?.split(' - ')[0],
           duration: appt.time_slot?.split(' - ')[1] || 'N/A',

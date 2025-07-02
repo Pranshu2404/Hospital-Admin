@@ -103,7 +103,7 @@ export default function App() {
           <Route path="/dashboard/admin/staff-list" element={<StaffListPage />} />
           <Route path="/dashboard/admin/registrar-list" element={<RegistrarListPage />} />
           <Route path="/dashboard/admin/staff-profile" element={<StaffProfilePage />} />
-          <Route path="/dashboard/admin/doctor-profile" element={<DoctorProfilePage />} />
+          <Route path="/dashboard/admin/doctor-profile/:id" element={<DoctorProfilePage />} />
           <Route path="/dashboard/admin/income" element={<IncomePage />} />
           <Route path="/dashboard/admin/expense" element={<ExpensePage />} />
           <Route path="/dashboard/admin/invoices" element={<InvoiceListPage />} />
