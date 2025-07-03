@@ -26,17 +26,22 @@ const AddPatientOPDForm = () => {
   });
 
   const [doctors, setDoctors] = useState([]);
+  const [departments, setDepartments] = useState([]);
 
   useEffect(() => {
-    const fetchDoctors = async () => {
+    const fetchDoctorsAndDepartments = async () => {
       try {
-        const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/doctors`);
-        setDoctors(res.data);
+        const [doctorRes, deptRes] = await Promise.all([
+          axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/doctors`),
+          axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/departments`)
+        ]);
+        setDoctors(doctorRes.data);
+        setDepartments(deptRes.data);
       } catch (error) {
-        console.error('Error fetching doctors:', error);
+        console.error('Error fetching doctors or departments:', error);
       }
     };
-    fetchDoctors();
+    fetchDoctorsAndDepartments();
   }, []);
 
   const handleInputChange = (field, value) => {
@@ -52,10 +57,10 @@ const AddPatientOPDForm = () => {
   };
 
   const calculateDOBFromAge = (age) => {
-  const today = new Date();
-  const dob = new Date(today.getFullYear() - age, today.getMonth(), today.getDate());
-  return dob.toISOString().split('T')[0]; // format as 'YYYY-MM-DD'
-};
+    const today = new Date();
+    const dob = new Date(today.getFullYear() - age, today.getMonth(), today.getDate());
+    return dob.toISOString().split('T')[0];
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -71,14 +76,12 @@ const AddPatientOPDForm = () => {
         patient_type: "opd"
       };
 
-      // 1. Create patient
       const patientRes = await axios.post(
         `${import.meta.env.VITE_BACKEND_URL}/api/patients`,
         patientPayload
       );
       const patientId = patientRes.data._id;
 
-      // 2. Add appointment
       const appointmentPayload = {
         patient_id: patientId,
         doctor_id: formData.doctorId,
@@ -90,7 +93,6 @@ const AddPatientOPDForm = () => {
         notes: formData.notes,
         status: 'Scheduled'
       };
-      console.log(appointmentPayload)
 
       await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/appointments`, appointmentPayload);
 
@@ -148,14 +150,7 @@ const AddPatientOPDForm = () => {
               <FormInput label="Last Name" value={formData.lastName} onChange={(e) => handleInputChange('lastName', e.target.value)} required />
               <FormInput label="Email" type="email" value={formData.email} onChange={(e) => handleInputChange('email', e.target.value)} required />
               <FormInput label="Phone Number" type="tel" value={formData.phone} onChange={(e) => handleInputChange('phone', e.target.value)} required />
-              <FormInput
-  label="Age"
-  type="number"
-  value={formData.age}
-  onChange={(e) => handleInputChange('age', e.target.value)}
-  required
-/>
-
+              <FormInput label="Age" type="number" value={formData.age} onChange={(e) => handleInputChange('age', e.target.value)} required />
               <FormSelect label="Gender" value={formData.gender} onChange={(e) => handleInputChange('gender', e.target.value)} options={genderOptions} required />
               <FormSelect label="Blood Group" value={formData.bloodGroup} onChange={(e) => handleInputChange('bloodGroup', e.target.value)} options={bloodGroupOptions} />
             </div>
@@ -168,19 +163,20 @@ const AddPatientOPDForm = () => {
                 label="Department"
                 value={formData.department}
                 onChange={(e) => handleInputChange('department', e.target.value)}
-                options={[
-                  { value: 'cardiology', label: 'Cardiology' },
-                  { value: 'orthopedics', label: 'Orthopedics' },
-                  { value: 'neurology', label: 'Neurology' },
-                  { value: 'general', label: 'General Medicine' }
-                ]}
+                options={departments.map(d => ({
+                  value: d._id,
+                  label: d.name
+                }))}
                 required
               />
               <FormSelect
                 label="Doctor"
                 value={formData.doctorId}
                 onChange={(e) => handleInputChange('doctorId', e.target.value)}
-                options={doctors.map(d => ({ value: d._id, label: `Dr. ${d.firstName} ${d.lastName}` }))}
+                options={doctors.map(d => ({
+                  value: d._id,
+                  label: `Dr. ${d.firstName} ${d.lastName}`
+                }))}
                 required
               />
               <FormInput label="Date" type="date" value={formData.date} onChange={(e) => handleInputChange('date', e.target.value)} required />

@@ -123,12 +123,14 @@
 
 
 
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { FormInput, FormSelect, FormTextarea, Button } from '../../../components/common/FormElements';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 
 const AddPatientIPDForm = () => {
+  const navigate = useNavigate();
+
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -149,7 +151,22 @@ const AddPatientIPDForm = () => {
     allergies: '',
     medications: '',
     bloodGroup: '',
+    department: '',
   });
+
+  const [departments, setDepartments] = useState([]);
+
+  useEffect(() => {
+    const fetchDepartments = async () => {
+      try {
+        const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/departments`);
+        setDepartments(res.data);
+      } catch (err) {
+        console.error('❌ Failed to load departments:', err.message);
+      }
+    };
+    fetchDepartments();
+  }, []);
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({
@@ -174,14 +191,15 @@ const AddPatientIPDForm = () => {
         zipCode: formData.zipCode,
         emergency_contact: formData.emergencyContact,
         emergency_phone: formData.emergencyPhone,
-        ward: formData.ward,
-        bed: formData.bed,
+        // ward: formData.ward,
+        // bed: formData.bed,
         admission_date: formData.admissionDate,
         medical_history: formData.medicalHistory,
         allergies: formData.allergies,
         medications: formData.medications,
         blood_group: formData.bloodGroup,
-        patient_type: "ipd"
+        department_id: formData.department,
+        patient_type: 'ipd'
       };
 
       const response = await axios.post(
@@ -191,7 +209,7 @@ const AddPatientIPDForm = () => {
 
       console.log('✅ IPD Patient added:', response.data);
       alert('IPD Patient added successfully!');
-      navigate('/dashboard/admin/appointments?type=ipd')
+      navigate('/dashboard/admin/appointments?type=ipd');
     } catch (err) {
       console.error('❌ Error adding IPD patient:', err.response?.data || err.message);
       alert(err.response?.data?.error || 'Failed to add patient.');
@@ -205,14 +223,10 @@ const AddPatientIPDForm = () => {
   ];
 
   const bloodGroupOptions = [
-    { value: 'A+', label: 'A+' },
-    { value: 'A-', label: 'A-' },
-    { value: 'B+', label: 'B+' },
-    { value: 'B-', label: 'B-' },
-    { value: 'AB+', label: 'AB+' },
-    { value: 'AB-', label: 'AB-' },
-    { value: 'O+', label: 'O+' },
-    { value: 'O-', label: 'O-' }
+    { value: 'A+', label: 'A+' }, { value: 'A-', label: 'A-' },
+    { value: 'B+', label: 'B+' }, { value: 'B-', label: 'B-' },
+    { value: 'AB+', label: 'AB+' }, { value: 'AB-', label: 'AB-' },
+    { value: 'O+', label: 'O+' }, { value: 'O-', label: 'O-' }
   ];
 
   return (
@@ -234,6 +248,7 @@ const AddPatientIPDForm = () => {
               <FormInput label="Phone Number" type="tel" value={formData.phone} onChange={(e) => handleInputChange('phone', e.target.value)} required />
               <FormInput label="Date of Birth" type="date" value={formData.dateOfBirth} onChange={(e) => handleInputChange('dateOfBirth', e.target.value)} required />
               <FormSelect label="Gender" value={formData.gender} onChange={(e) => handleInputChange('gender', e.target.value)} options={genderOptions} required />
+              <FormSelect label="Blood Group" value={formData.bloodGroup} onChange={(e) => handleInputChange('bloodGroup', e.target.value)} options={bloodGroupOptions} />
             </div>
           </div>
 
@@ -257,10 +272,17 @@ const AddPatientIPDForm = () => {
             </div>
           </div>
 
-          {/* Admission Details */}
+          {/* Department + Admission Details */}
           <div className="mb-8">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Admission Information</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormSelect
+                label="Department"
+                value={formData.department}
+                onChange={(e) => handleInputChange('department', e.target.value)}
+                options={departments.map(dep => ({ value: dep._id, label: dep.name }))}
+                required
+              />
               <FormInput label="Ward" value={formData.ward} onChange={(e) => handleInputChange('ward', e.target.value)} required />
               <FormInput label="Bed Number" value={formData.bed} onChange={(e) => handleInputChange('bed', e.target.value)} required />
               <FormInput label="Admission Date" type="date" value={formData.admissionDate} onChange={(e) => handleInputChange('admissionDate', e.target.value)} required />
@@ -274,11 +296,9 @@ const AddPatientIPDForm = () => {
               <FormInput label="Medical History" value={formData.medicalHistory} onChange={(e) => handleInputChange('medicalHistory', e.target.value)} />
               <FormInput label="Allergies" value={formData.allergies} onChange={(e) => handleInputChange('allergies', e.target.value)} />
               <FormInput label="Medications" value={formData.medications} onChange={(e) => handleInputChange('medications', e.target.value)} />
-              <FormSelect label="Blood Group" value={formData.bloodGroup} onChange={(e) => handleInputChange('bloodGroup', e.target.value)} options={bloodGroupOptions} />
             </div>
           </div>
 
-          {/* Submit Buttons */}
           <div className="flex justify-end space-x-4">
             <Button variant="secondary" type="button">Cancel</Button>
             <Button variant="primary" type="submit">Add IPD Patient</Button>
@@ -290,4 +310,3 @@ const AddPatientIPDForm = () => {
 };
 
 export default AddPatientIPDForm;
-
