@@ -81,6 +81,8 @@ import AppointmentsPage1 from './pages/dashboard/staff/appointments.jsx';
 import AddPatientPage1 from './pages/dashboard/staff/add-patient.jsx';
 import PatientListPage1 from './pages/dashboard/staff/patient-list.jsx';
 import PatientProfilePage1 from './pages/dashboard/staff/patient-profile.jsx';
+import ForgotPassword from './pages/ForgotPassword.jsx';
+import ResetPassword from './pages/ResetPassword.jsx';
 
 export default function App() {
   return (
