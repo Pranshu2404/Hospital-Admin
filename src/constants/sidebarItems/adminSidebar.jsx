@@ -14,6 +14,7 @@ import {
   StaffIcon,
   RegistrarIcon,
 } from '../../components/common/Icons';
+import {FaLock} from 'react-icons/fa';
 
 export const adminSidebar = [
   {
@@ -141,4 +142,5 @@ export const adminSidebar = [
     icon: SettingsIcon,
     path: '/dashboard/admin/settings',
   },
+  { label: 'Forgot Password', path: '/forgot-password', icon: FaLock }
 ];

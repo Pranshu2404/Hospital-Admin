@@ -118,6 +118,8 @@ export default function App() {
 <Route path="dashboard/admin/pharmacies/:id" element={<PharmacyProfile />} />
           <Route path="/dashboard/admin/patients/add-opd" element={<AddPatientOPD />} />
           <Route path="/dashboard/admin/patients/add-ipd" element={<AddPatientIPD />} />         
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password/:token" element={<ResetPassword />} />
 
           {/* <Route path="/dashboard/admin/departments" element={<DepartmentList />} /> */}
           <Route path="/dashboard/admin/departments/:deptName" element={<DepartmentAdd />} />
