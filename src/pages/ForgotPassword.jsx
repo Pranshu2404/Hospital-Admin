@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import axios from 'axios';
 import Layout from '../components/Layout';
+import { adminSidebar } from '../constants/sidebarItems/adminSidebar';
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState('');
@@ -21,7 +22,7 @@ const ForgotPassword = () => {
   };
 
   return (
-    <Layout>
+    <Layout sidebarItems={adminSidebar}>
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
       <div className="max-w-md w-full bg-white shadow-md rounded-lg p-6">
         <h2 className="text-2xl font-bold text-gray-800 mb-4">Forgot Password</h2>
