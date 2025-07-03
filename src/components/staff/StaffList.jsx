@@ -14,7 +14,8 @@ const StaffList = ({ setCurrentPage, setSelectedStaff }) => {
     const fetchStaff = async () => {
       try {
         const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/staff`);
-        setStaffMembers(response.data); // Ensure your API returns an array
+        setStaffMembers(response.data); 
+        console.log(response.data)
       } catch (err) {
         console.error('Failed to fetch staff:', err);
       } finally {
@@ -26,7 +27,6 @@ const StaffList = ({ setCurrentPage, setSelectedStaff }) => {
   }, []);
 
   const filteredStaff = staffMembers
-  .filter((staff) => staff.role === 'staff')
   .filter((staff) =>
     staff.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     `${staff.first_name} ${staff.last_name}`.toLowerCase().includes(searchTerm.toLowerCase())
