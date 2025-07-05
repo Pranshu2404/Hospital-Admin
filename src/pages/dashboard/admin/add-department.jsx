@@ -211,7 +211,7 @@
 //               />
 
 //               {/* ✅ Suggestions Dropdown */}
-//               {newDeptName.trim() !== '' && (
+//               {newDeptName.trim() !== '' &&
 //                 <ul className="absolute z-50 bg-white border border-gray-300 rounded-md shadow-md w-full max-h-48 overflow-y-auto mt-1">
 //                   {departments
 //                     .filter(
@@ -229,7 +229,7 @@
 //                       </li>
 //                     ))}
 //                 </ul>
-//               )}
+//               }
 //             </div>
 //             <button
 //               type="submit"
@@ -348,6 +348,16 @@ const SelectDepartment = () => {
     navigate(`/dashboard/admin/add-hod/${deptId}?departmentName=${encodeURIComponent(deptName)}`);
   };
 
+  const handleDeleteDepartment = async (deptId) => {
+    if (!window.confirm('Are you sure you want to delete this department?')) return;
+    try {
+      await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/api/departments/${deptId}`);
+      setDepartments((prev) => prev.filter((dept) => dept._id !== deptId));
+    } catch (err) {
+      alert('Failed to delete department');
+    }
+  };
+
   return (
     <Layout sidebarItems={adminSidebar}>
       <div className="p-6">
@@ -399,26 +409,37 @@ const SelectDepartment = () => {
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
           <div className="flex justify-between items-center mb-2">
             <h2 className="text-2xl font-bold text-gray-900">Select Department</h2>
-            <button
+            {/* <button
               onClick={() => navigate('/dashboard/admin/add-doctor')}
               className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition"
             >
               + Add Doctor
-            </button>
+            </button> */}
           </div>
 
           <p className="text-gray-600 mb-6">Click a department to Edit its Head Doctor</p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
             {departments.map((dept) => (
-              <button
-                key={dept._id}
-                onClick={() => handleDepartmentClick(dept._id, dept.name)}
-                className="w-full bg-blue-50 border border-blue-200 rounded-xl p-4 text-left hover:bg-blue-100 transition"
-              >
-                <h3 className="text-lg font-medium text-blue-900">{dept.name}</h3>
-                <p className="text-sm text-blue-600">Click to Edit Head of Department</p>
-              </button>
+              <div key={dept._id} className="relative">
+                <button
+                  onClick={() => handleDepartmentClick(dept._id, dept.name)}
+                  className="w-full bg-blue-50 border border-blue-200 rounded-xl p-4 text-left hover:bg-blue-100 transition"
+                >
+                  <h3 className="text-lg font-medium text-blue-900">{dept.name}</h3>
+                  <p className="text-sm text-blue-600">Click to Edit Head of Department</p>
+                </button>
+                <button
+                  onClick={() => handleDeleteDepartment(dept._id)}
+                  className="absolute top-2 right-2 text-red-500 hover:text-red-700 p-1 rounded-full bg-white shadow"
+                  title="Delete Department"
+                  type="button"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 7.5V19a2 2 0 002 2h8a2 2 0 002-2V7.5M4 7.5h16M9.75 11.25v4.5m4.5-4.5v4.5M10.5 7.5V5.25A1.5 1.5 0 0112 3.75a1.5 1.5 0 011.5 1.5V7.5" />
+                  </svg>
+                </button>
+              </div>
             ))}
           </div>
         </div>
