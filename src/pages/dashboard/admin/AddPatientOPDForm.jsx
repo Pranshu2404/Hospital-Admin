@@ -3,8 +3,20 @@ import { FormInput, FormSelect, FormTextarea, Button } from '../../../components
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
+const getISTDateTime = () => {
+  const now = new Date();
+  // Convert to IST (Asia/Kolkata)
+  const istOffset = 5.5 * 60; // IST is UTC+5:30 in minutes
+  const localOffset = now.getTimezoneOffset();
+  const istTime = new Date(now.getTime() + (istOffset + localOffset) * 60000);
+  const date = istTime.toISOString().slice(0, 10);
+  const time = istTime.toTimeString().slice(0, 5);
+  return { date, time };
+};
+
 const AddPatientOPDForm = () => {
   const navigate = useNavigate();
+  const istNow = getISTDateTime();
 
   const [formData, setFormData] = useState({
     firstName: '',
@@ -16,8 +28,8 @@ const AddPatientOPDForm = () => {
     age: '',
     doctorId: '',
     department: '',
-    date: '',
-    time: '',
+    date: istNow.date,
+    time: istNow.time,
     duration: '30',
     type: '',
     priority: 'Normal',

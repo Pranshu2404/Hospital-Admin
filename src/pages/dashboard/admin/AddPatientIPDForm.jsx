@@ -128,6 +128,15 @@ import { FormInput, FormSelect, FormTextarea, Button } from '../../../components
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
+// Helper to get current IST date in YYYY-MM-DD
+function getCurrentISTDate() {
+  const now = new Date();
+  // Convert to IST (UTC+5:30)
+  const istOffset = 5.5 * 60 * 60 * 1000;
+  const istTime = new Date(now.getTime() + istOffset - now.getTimezoneOffset() * 60000);
+  return istTime.toISOString().slice(0, 10);
+}
+
 const AddPatientIPDForm = () => {
   const navigate = useNavigate();
 
@@ -155,6 +164,13 @@ const AddPatientIPDForm = () => {
   });
 
   const [departments, setDepartments] = useState([]);
+
+  // Set default admissionDate to IST date on mount
+  useEffect(() => {
+    if (!formData.admissionDate) {
+      setFormData(prev => ({ ...prev, admissionDate: getCurrentISTDate() }));
+    }
+  }, []);
 
   useEffect(() => {
     const fetchDepartments = async () => {
