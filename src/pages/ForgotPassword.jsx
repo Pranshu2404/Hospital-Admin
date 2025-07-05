@@ -3,7 +3,7 @@ import axios from 'axios';
 import Layout from '../components/Layout';
 import { adminSidebar } from '../constants/sidebarItems/adminSidebar';
 
-const ForgotPassword = () => {
+export function ForgotPasswordForm({ onClose }) {
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -22,7 +22,6 @@ const ForgotPassword = () => {
   };
 
   return (
-    <Layout sidebarItems={adminSidebar}>
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
       <div className="max-w-md w-full bg-white shadow-md rounded-lg p-6">
         <h2 className="text-2xl font-bold text-gray-800 mb-4">Forgot Password</h2>
@@ -51,10 +50,24 @@ const ForgotPassword = () => {
             Send Reset Link
           </button>
         </form>
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="mt-6 flex items-center justify-center gap-2 text-teal-700 hover:text-teal-900 font-medium text-sm transition-colors"
+            type="button"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+            </svg>
+            Back to Login
+          </button>
+        )}
       </div>
     </div>
-    </Layout>
   );
-};
+}
 
-export default ForgotPassword;
+// Default export for route usage (no sidebar/layout)
+export default function ForgotPassword() {
+  return <ForgotPasswordForm />;
+}

@@ -1,10 +1,8 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import Layout from '../components/Layout';
-import { adminSidebar } from '../constants/sidebarItems/adminSidebar';
 
-const ResetPassword = () => {
+export default function ResetPassword() {
   const { token } = useParams();
   const navigate = useNavigate();
   const [password, setPassword] = useState('');
@@ -26,14 +24,13 @@ const ResetPassword = () => {
         password,
       });
       setMessage(res.data.message);
-      setTimeout(() => navigate('/dashboard/admin'), 2000);
+      setTimeout(() => navigate('/'), 2000);
     } catch (err) {
       setError(err.response?.data?.message || 'Invalid or expired token');
     }
   };
 
   return (
-    <Layout sidebarItems={adminSidebar}>
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
       <div className="max-w-md w-full bg-white shadow-md rounded-lg p-6">
         <h2 className="text-2xl font-bold text-gray-800 mb-4">Reset Password</h2>
@@ -71,8 +68,5 @@ const ResetPassword = () => {
         </form>
       </div>
     </div>
-    </Layout>
   );
-};
-
-export default ResetPassword;
+}
