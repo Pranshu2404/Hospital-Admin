@@ -85,14 +85,36 @@
 // export default Sidebar;
 
 // components/Sidebar.jsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { SidebarItem } from './common/SidebarItem';
+import axios from 'axios'; 
 
-const Sidebar = ({ sidebarItems, section = 'Hospital Management' }) => {
+const Sidebar = ({ sidebarItems }) => {
   const [openMenu, setOpenMenu] = useState(null);
+  const [hospitalName, setHospitalName] = useState('Hospital Management'); 
   const location = useLocation();
   const navigate = useNavigate();
+
+useEffect(() => {
+  const fetchHospitalData = async () => {
+    try {
+      const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/hospitals`);
+
+      if (res.data && res.data.length > 0) {
+        const hospital = res.data[0]; 
+        console.log('Hospital data fetched:', hospital);
+        setHospitalName(hospital.name); 
+      } else {
+        console.warn('No hospital data received from API.');
+      }
+    } catch (err) {
+      console.error('Failed to fetch hospital data:', err);
+    }
+  };
+
+  fetchHospitalData();
+}, []);
 
   const handleClick = (item) => {
     if (item.submenu) {
@@ -116,7 +138,8 @@ const Sidebar = ({ sidebarItems, section = 'Hospital Management' }) => {
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4" />
           </svg>
         </div>
-        <h1 className="text-xl font-bold ml-3 text-gray-800">{section}</h1>
+        {/* Display the hospital name */}
+        <h1 className="text-xl font-bold ml-3 text-gray-800">{hospitalName}</h1>
       </div>
 
       <nav className="flex-1 p-4 overflow-y-auto space-y-2">
