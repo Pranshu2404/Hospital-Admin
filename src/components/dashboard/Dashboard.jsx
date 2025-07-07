@@ -1,14 +1,25 @@
-import { useState, useEffect } from 'react';
+
+
+
+import { useState } from 'react';
 import { StatsGrid } from '../common/StatCards';
+import { useNavigate } from 'react-router-dom';
 import { PatientIcon, AppointmentIcon, DoctorsIcon, FinanceIcon, PlusIcon } from '../common/Icons';
 
 const Dashboard = () => {
+  const navigate = useNavigate();
+
+const handleStatClick = (title) => {
+  if (title === 'Active Staff') {
+    navigate('/dashboard/admin/staff-list');
+  }
+};
+
   const [stats] = useState([
     {
       title: "Total Patients",
       value: "2,847",
       change: "12% from last month",
-      changeType: "positive",
       icon: <PatientIcon />,
       bgColor: "bg-blue-50",
       iconColor: "text-blue-600"
@@ -17,25 +28,23 @@ const Dashboard = () => {
       title: "Today's Appointments", 
       value: "146",
       change: "32 completed",
-      changeType: "info",
       icon: <AppointmentIcon />,
       bgColor: "bg-teal-50",
       iconColor: "text-teal-600"
     },
     {
-      title: "Active Staff",
-      value: "87", 
-      change: "All present today",
-      changeType: "positive",
+      title: 'Active Staff',
+      value: '87',
+      change: 'All present today',
       icon: <DoctorsIcon />,
-      bgColor: "bg-green-50",
-      iconColor: "text-green-600"
+      bgColor: 'bg-green-50',
+      iconColor: 'text-green-600',
+      clickable: true,
     },
     {
       title: "Monthly Revenue",
       value: "$847K",
       change: "8.2% increase", 
-      changeType: "positive",
       icon: <FinanceIcon />,
       bgColor: "bg-amber-50",
       iconColor: "text-amber-600"
@@ -143,141 +152,147 @@ const Dashboard = () => {
     }
   };
 
-  return (
-    <div className="p-6">
-      {/* Stats Grid */}
-      <StatsGrid stats={stats} />
 
-      {/* Main Dashboard Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-        
-        {/* Recent Appointments */}
-        <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-100">
-          <div className="p-6 border-b border-gray-100">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-900">Recent Appointments</h3>
-              <button className="text-teal-600 text-sm font-medium hover:text-teal-700 transition-colors">
-                View All
-              </button>
-            </div>
-          </div>
-          <div className="p-6">
-            {recentAppointments.map((appointment) => (
-              <div key={appointment.id} className="flex items-center justify-between py-4 border-b border-gray-50 last:border-b-0">
-                <div className="flex items-center space-x-4">
-                  <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
-                    <span className="text-gray-600 font-medium text-sm">{appointment.initials}</span>
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-900">{appointment.patientName}</p>
-                    <p className="text-sm text-gray-500">{appointment.service}</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-medium text-gray-900">{appointment.time}</p>
-                  <p className="text-xs text-gray-500">{appointment.doctor}</p>
-                </div>
-                <span className={getStatusBadge(appointment.status)}>
-                  {appointment.status}
-                </span>
-              </div>
-            ))}
+
+
+
+return (
+  <div className="p-6">
+    {/* Stats Grid */}
+    {/* <StatsGrid stats={stats} onStatClick={handleStatClick} /> */}
+    <StatsGrid stats={stats} onStatClick={handleStatClick} />
+
+    {/* Main Dashboard Content */}
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+      
+      {/* Recent Appointments */}
+      <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-100">
+        <div className="p-6 border-b border-gray-100">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-gray-900">Recent Appointments</h3>
+            <button className="text-teal-600 text-sm font-medium hover:text-teal-700 transition-colors">
+              View All
+            </button>
           </div>
         </div>
-
-        {/* Quick Actions */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-          <div className="p-6 border-b border-gray-100">
-            <h3 className="text-lg font-semibold text-gray-900">Quick Actions</h3>
-          </div>
-          <div className="p-6 space-y-4">
-            <button className="w-full flex items-center p-4 bg-teal-50 border border-teal-200 rounded-lg hover:bg-teal-100 transition-colors group">
-              <div className="p-2 bg-teal-600 rounded-lg">
-                <PlusIcon />
+        <div className="p-6">
+          {recentAppointments.map((appointment) => (
+            <div key={appointment.id} className="flex items-center justify-between py-4 border-b border-gray-50 last:border-b-0">
+              <div className="flex items-center space-x-4">
+                <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
+                  <span className="text-gray-600 font-medium text-sm">{appointment.initials}</span>
+                </div>
+                <div>
+                  <p className="font-medium text-gray-900">{appointment.patientName}</p>
+                  <p className="text-sm text-gray-500">{appointment.service}</p>
+                </div>
               </div>
-              <div className="ml-4 text-left">
-                <p className="font-medium text-gray-900 group-hover:text-teal-700">Add New Patient</p>
-                <p className="text-sm text-gray-500">Register a new patient</p>
+              <div className="text-right">
+                <p className="text-sm font-medium text-gray-900">{appointment.time}</p>
+                <p className="text-xs text-gray-500">{appointment.doctor}</p>
               </div>
-            </button>
-
-            <button className="w-full flex items-center p-4 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors group">
-              <div className="p-2 bg-blue-600 rounded-lg">
-                <AppointmentIcon />
-              </div>
-              <div className="ml-4 text-left">
-                <p className="font-medium text-gray-900">Schedule Appointment</p>
-                <p className="text-sm text-gray-500">Book new appointment</p>
-              </div>
-            </button>
-
-            <button className="w-full flex items-center p-4 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors group">
-              <div className="p-2 bg-green-600 rounded-lg">
-                <DoctorsIcon />
-              </div>
-              <div className="ml-4 text-left">
-                <p className="font-medium text-gray-900">Add Staff Member</p>
-                <p className="text-sm text-gray-500">Register new staff</p>
-              </div>
-            </button>
-
-            <button className="w-full flex items-center p-4 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors group">
-              <div className="p-2 bg-purple-600 rounded-lg">
-                <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-              </div>
-              <div className="ml-4 text-left">
-                <p className="font-medium text-gray-900">Generate Report</p>
-                <p className="text-sm text-gray-500">Create system reports</p>
-              </div>
-            </button>
-          </div>
+              <span className={getStatusBadge(appointment.status)}>
+                {appointment.status}
+              </span>
+            </div>
+          ))}
         </div>
       </div>
 
-      {/* Recent Activity */}
+      {/* Quick Actions */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100">
         <div className="p-6 border-b border-gray-100">
-          <h3 className="text-lg font-semibold text-gray-900">Recent Activity</h3>
+          <h3 className="text-lg font-semibold text-gray-900">Quick Actions</h3>
         </div>
-        <div className="p-6">
-          <div className="flow-root">
-            <ul className="-mb-8">
-              {recentActivities.map((activity, index) => (
-                <li key={activity.id}>
-                  <div className="relative pb-8">
-                    {index < recentActivities.length - 1 && (
-                      <span className="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200"></span>
-                    )}
-                    <div className="relative flex space-x-3">
-                      <div>{getActivityIcon(activity.type)}</div>
-                      <div className="min-w-0 flex-1 pt-1.5 flex justify-between space-x-4">
-                        <div>
-                          <p className="text-sm text-gray-500">
-                            {activity.user && (
-                              <span className="font-medium text-gray-900">{activity.user} </span>
-                            )}
-                            {activity.action}
-                            {activity.target && (
-                              <span className="font-medium text-gray-900"> {activity.target}</span>
-                            )}
-                          </p>
-                        </div>
-                        <div className="text-right text-sm whitespace-nowrap text-gray-500">
-                          <time>{activity.time}</time>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
+        <div className="p-6 space-y-4">
+          <button className="w-full flex items-center p-4 bg-teal-50 border border-teal-200 rounded-lg hover:bg-teal-100 transition-colors group">
+            <div className="p-2 bg-teal-600 rounded-lg">
+              <PlusIcon />
+            </div>
+            <div className="ml-4 text-left">
+              <p className="font-medium text-gray-900 group-hover:text-teal-700">Add New Patient</p>
+              <p className="text-sm text-gray-500">Register a new patient</p>
+            </div>
+          </button>
+
+          <button className="w-full flex items-center p-4 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors group">
+            <div className="p-2 bg-blue-600 rounded-lg">
+              <AppointmentIcon />
+            </div>
+            <div className="ml-4 text-left">
+              <p className="font-medium text-gray-900">Schedule Appointment</p>
+              <p className="text-sm text-gray-500">Book new appointment</p>
+            </div>
+          </button>
+
+          <button className="w-full flex items-center p-4 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors group">
+            <div className="p-2 bg-green-600 rounded-lg">
+              <DoctorsIcon />
+            </div>
+            <div className="ml-4 text-left">
+              <p className="font-medium text-gray-900">Add Staff Member</p>
+              <p className="text-sm text-gray-500">Register new staff</p>
+            </div>
+          </button>
+
+          <button className="w-full flex items-center p-4 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors group">
+            <div className="p-2 bg-purple-600 rounded-lg">
+              <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </div>
+            <div className="ml-4 text-left">
+              <p className="font-medium text-gray-900">Generate Report</p>
+              <p className="text-sm text-gray-500">Create system reports</p>
+            </div>
+          </button>
         </div>
       </div>
     </div>
-  );
+
+    {/* Recent Activity */}
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+      <div className="p-6 border-b border-gray-100">
+        <h3 className="text-lg font-semibold text-gray-900">Recent Activity</h3>
+      </div>
+      <div className="p-6">
+        <div className="flow-root">
+          <ul className="-mb-8">
+            {recentActivities.map((activity, index) => (
+              <li key={activity.id}>
+                <div className="relative pb-8">
+                  {index < recentActivities.length - 1 && (
+                    <span className="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200"></span>
+                  )}
+                  <div className="relative flex space-x-3">
+                    <div>{getActivityIcon(activity.type)}</div>
+                    <div className="min-w-0 flex-1 pt-1.5 flex justify-between space-x-4">
+                      <div>
+                        <p className="text-sm text-gray-500">
+                          {activity.user && (
+                            <span className="font-medium text-gray-900">{activity.user} </span>
+                          )}
+                          {activity.action}
+                          {activity.target && (
+                            <span className="font-medium text-gray-900"> {activity.target}</span>
+                          )}
+                        </p>
+                      </div>
+                      <div className="text-right text-sm whitespace-nowrap text-gray-500">
+                        <time>{activity.time}</time>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+);
 };
 
 export default Dashboard;
+

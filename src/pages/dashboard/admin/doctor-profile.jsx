@@ -99,3 +99,144 @@ const DoctorProfilePage = () => {
 };
 
 export default DoctorProfilePage;
+
+
+// import React, { useEffect, useState } from 'react';
+// import { useParams, useNavigate } from 'react-router-dom';
+// import axios from 'axios';
+// import Layout from '../../../components/Layout';
+// import { adminSidebar } from '../../../constants/sidebarItems/adminSidebar';
+
+// const DoctorProfile = () => {
+//   const { id } = useParams();
+//   const navigate = useNavigate();
+//   const [doctor, setDoctor] = useState(null);
+
+//   useEffect(() => {
+//     const fetchDoctor = async () => {
+//       try {
+//         const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/doctors/${id}`);
+//         setDoctor(res.data);
+//       } catch (error) {
+//         console.error('Failed to fetch doctor data', error);
+//       }
+//     };
+
+//     fetchDoctor();
+//   }, [id]);
+
+//   if (!doctor) {
+//     return <div className="p-6 text-gray-600">Loading...</div>;
+//   }
+
+//   return (
+//     <Layout sidebarItems={adminSidebar}>
+//       <div className="p-6 max-w-4xl mx-auto">
+//         <div className="bg-white shadow rounded-xl p-6">
+//           <h2 className="text-2xl font-bold mb-2 text-gray-800">Doctor Profile</h2>
+//           <p className="text-sm text-gray-500 mb-6">Detailed information about this doctor</p>
+
+//           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+//             <div>
+//               <p className="text-sm text-gray-500">Full Name</p>
+//               <p className="text-base font-semibold text-gray-800">{doctor.firstName} {doctor.lastName}</p>
+//             </div>
+//             <div>
+//               <p className="text-sm text-gray-500">Email</p>
+//               <p className="text-base font-semibold text-gray-800">{doctor.email}</p>
+//             </div>
+//             <div>
+//               <p className="text-sm text-gray-500">Phone</p>
+//               <p className="text-base font-semibold text-gray-800">{doctor.phone}</p>
+//             </div>
+//             <div>
+//               <p className="text-sm text-gray-500">Department</p>
+//               <p className="text-base font-semibold text-gray-800">{doctor.department}</p>
+//             </div>
+//             <div>
+//               <p className="text-sm text-gray-500">Specialization</p>
+//               <p className="text-base font-semibold text-gray-800">{doctor.specialization || '—'}</p>
+//             </div>
+//             <div>
+//               <p className="text-sm text-gray-500">License Number</p>
+//               <p className="text-base font-semibold text-gray-800">{doctor.licenseNumber || '—'}</p>
+//             </div>
+//             <div>
+//               <p className="text-sm text-gray-500">Experience</p>
+//               <p className="text-base font-semibold text-gray-800">{doctor.experience ? `${doctor.experience} years` : '—'}</p>
+//             </div>
+//             <div>
+//               <p className="text-sm text-gray-500">Shift</p>
+//               <p className="text-base font-semibold text-gray-800">{doctor.shift}</p>
+//             </div>
+//             <div>
+//               <p className="text-sm text-gray-500">Status</p>
+//               <p className="text-base font-semibold text-gray-800">{doctor.status}</p>
+//             </div>
+//             <div>
+//               <p className="text-sm text-gray-500">Gender</p>
+//               <p className="text-base font-semibold text-gray-800">{doctor.gender || '—'}</p>
+//             </div>
+//             <div>
+//               <p className="text-sm text-gray-500">Date of Birth</p>
+//               <p className="text-base font-semibold text-gray-800">{doctor.dateOfBirth || '—'}</p>
+//             </div>
+//             <div>
+//               <p className="text-sm text-gray-500">Address</p>
+//               <p className="text-base font-semibold text-gray-800">{doctor.address || '—'}</p>
+//             </div>
+//             <div>
+//               <p className="text-sm text-gray-500">Qualification</p>
+//               <p className="text-base font-semibold text-gray-800">{doctor.qualification || '—'}</p>
+//             </div>
+//             <div>
+//               <p className="text-sm text-gray-500">Start Date</p>
+//               <p className="text-base font-semibold text-gray-800">{doctor.startDate || '—'}</p>
+//             </div>
+//             <div>
+//               <p className="text-sm text-gray-500">Full Time</p>
+//               <p className="text-base font-semibold text-gray-800">{doctor.isFullTime ? 'Yes' : 'No'}</p>
+//             </div>
+//             <div>
+//               <p className="text-sm text-gray-500">Consultation Fee</p>
+//               <p className="text-base font-semibold text-gray-800">₹{doctor.consultationFee || '—'}</p>
+//             </div>
+//             <div>
+//               <p className="text-sm text-gray-500">Emergency Contact</p>
+//               <p className="text-base font-semibold text-gray-800">{doctor.emergencyContact || '—'}</p>
+//             </div>
+//             <div>
+//               <p className="text-sm text-gray-500">Emergency Phone</p>
+//               <p className="text-base font-semibold text-gray-800">{doctor.emergencyPhone || '—'}</p>
+//             </div>
+//             <div>
+//               <p className="text-sm text-gray-500">Has Insurance</p>
+//               <p className="text-base font-semibold text-gray-800">{doctor.hasInsurance ? 'Yes' : 'No'}</p>
+//             </div>
+//             <div>
+//               <p className="text-sm text-gray-500">Languages</p>
+//               <p className="text-base font-semibold text-gray-800">
+//                 {doctor.languages?.length ? doctor.languages.join(', ') : '—'}
+//               </p>
+//             </div>
+//             <div className="sm:col-span-2">
+//               <p className="text-sm text-gray-500">Notes</p>
+//               <p className="text-base font-semibold text-gray-800 whitespace-pre-line">{doctor.notes || '—'}</p>
+//             </div>
+//           </div>
+
+//           <div className="mt-6 flex justify-end">
+//             <button
+//               onClick={() => navigate(-1)}
+//               className="px-4 py-2 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md"
+//             >
+//               ← Back to List
+//             </button>
+//           </div>
+//         </div>
+//       </div>
+//     </Layout>
+//   );
+// };
+
+// export default DoctorProfile;

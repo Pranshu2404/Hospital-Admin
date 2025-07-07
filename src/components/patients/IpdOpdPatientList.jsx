@@ -186,7 +186,13 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient }) => {
                       >
                         View
                       </button>
-                      <button className="text-gray-400 hover:text-gray-600 p-1 rounded">
+                      {/* <button className="text-gray-400 hover:text-gray-600 p-1 rounded">
+                        <EditIcon />
+                      </button> */}
+                      <button
+                        onClick={() => navigate(`/dashboard/admin/update-patient/${patient.id}`)}
+                        className="text-gray-400 hover:text-blue-600 p-1 rounded"
+                      >
                         <EditIcon />
                       </button>
                       <button className="text-red-400 hover:text-red-600 p-1 rounded">

@@ -28,14 +28,14 @@ import AddDoctorPage from './pages/dashboard/admin/add-doctor.jsx';
 import DoctorListPage from './pages/dashboard/admin/doctor-list.jsx';
 import StaffProfilePage from './pages/dashboard/admin/staff-profile.jsx';
 import DoctorProfilePage from './pages/dashboard/admin/doctor-profile.jsx';
-
 import AddPatientOPD from "./pages/dashboard/admin/AddPatientOPD.jsx";
 import AddPatientIPD from "./pages/dashboard/admin/AddPatientIPD.jsx";
-
 import DepartmentList from "./pages/dashboard/admin/DepartmentList.jsx";
 import DepartmentAdd from "./pages/dashboard/admin/add-department.jsx";
 import AddHodPage from './pages/dashboard/admin/AddHodPage.jsx';
-// import DepartmentList from './pages/admin/department/DepartmentList';
+
+import UpdatePatientProfile from './pages/dashboard/admin/UpdatePatientProfile';
+import EditDoctor from './pages/dashboard/admin/EditDoctor'; 
 
 
 // Doctor pages
@@ -129,6 +129,11 @@ export default function App() {
           <Route path="/dashboard/admin/add-department" element={<DepartmentAdd />} />  
           <Route path="/dashboard/admin/add-hod" element={<AddHodPage />} />
           <Route path="/dashboard/admin/DepartmentList" element={<DepartmentList />} />
+
+          <Route path="/dashboard/admin/update-patient/:id" element={<UpdatePatientProfile />} />
+          <Route path="/dashboard/admin/edit-doctor/:id" element={<EditDoctor />} />
+
+
 
           {/* Doctor Routes */}
           <Route

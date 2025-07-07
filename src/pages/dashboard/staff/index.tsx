@@ -1,5 +1,5 @@
 import React from 'react'
-import StaffDashboard from '../../../components/dashboard/StaffDashBoard'
+import StaffDashboard from '../../../components/dashboard/StaffDashboard'
 
 const StaffDashboardPage = () => {
   return <StaffDashboard />

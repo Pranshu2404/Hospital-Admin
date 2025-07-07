@@ -193,7 +193,20 @@ const DoctorNurseList = ({ setCurrentPage }) => {
   View
 </button>
 
-              <button className="text-gray-400 hover:text-gray-600 p-1 rounded"><EditIcon /></button>
+              {/* <button className="text-gray-400 hover:text-gray-600 p-1 rounded"><EditIcon /></button> */}
+              <button
+                className="text-gray-400 hover:text-gray-600 p-1 rounded"
+                onClick={() => navigate(`/dashboard/admin/edit-doctor/${member._id}`)}
+              >
+                <EditIcon />
+              </button>
+
+              {/* <button
+                className="text-teal-600 hover:text-teal-900 p-1 rounded"
+                onClick={() => navigate(`/dashboard/admin/doctor-profile/${member._id}`)}
+              >
+                View
+              </button> */}
               <button className="text-red-400 hover:text-red-600 p-1 rounded"><DeleteIcon /></button>
             </div>
           </td>
