@@ -174,6 +174,7 @@ const AddRegistrarForm = () => {
   const [department, setDepartment] = useState('');
   const [specialization, setSpecialization] = useState('');
   const [joiningDate, setJoiningDate] = useState('');
+  const [departmentOptions, setDepartmentOptions] = useState([]);
 
   useEffect(() => {
     const fetchStaff = async () => {
@@ -188,6 +189,24 @@ const AddRegistrarForm = () => {
 
     fetchStaff();
   }, []);
+
+  useEffect(() => {
+  const fetchDepartments = async () => {
+    try {
+      const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/departments`);
+      const departments = res.data?.map(dep => ({
+        value: dep.name,
+        label: dep.name
+      })) || [];
+
+      setDepartmentOptions(departments);
+    } catch (err) {
+      console.error('❌ Failed to fetch departments:', err);
+    }
+  };
+
+  fetchDepartments();
+}, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -218,13 +237,6 @@ const AddRegistrarForm = () => {
     }
   };
 
-  const departmentOptions = [
-    { value: 'Cardiology', label: 'Cardiology' },
-    { value: 'Pediatrics', label: 'Pediatrics' },
-    { value: 'Orthopedics', label: 'Orthopedics' },
-    { value: 'Emergency', label: 'Emergency' },
-    { value: 'General', label: 'General' },
-  ];
 
   return (
     <div className="p-6">

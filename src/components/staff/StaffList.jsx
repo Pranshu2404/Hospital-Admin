@@ -9,6 +9,8 @@ const StaffList = ({ setCurrentPage, setSelectedStaff }) => {
   const [staffMembers, setStaffMembers] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  
+
   // Fetch staff from API
   useEffect(() => {
     const fetchStaff = async () => {
@@ -29,6 +31,7 @@ const StaffList = ({ setCurrentPage, setSelectedStaff }) => {
   const filteredStaff = staffMembers
   .filter((staff) =>
     staff.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    staff.role?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     `${staff.first_name} ${staff.last_name}`.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -57,6 +60,7 @@ const StaffList = ({ setCurrentPage, setSelectedStaff }) => {
         <th className="px-6 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Name</th>
         <th className="px-6 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Phone</th>
         <th className="px-6 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Department</th>
+        <th className="px-6 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Role</th>
         <th className="px-6 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Status</th>
         <th className="px-6 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Action</th>
       </tr>
@@ -82,6 +86,9 @@ const StaffList = ({ setCurrentPage, setSelectedStaff }) => {
             </td> */}
             <td className="px-6 py-4 whitespace-nowrap">{staff.phone || '—'}</td>
             <td className="px-6 py-4 whitespace-nowrap">{staff.department || '—'}</td>
+            <td className="px-6 py-4 whitespace-nowrap">
+  {staff.role ? staff.role.charAt(0).toUpperCase() + staff.role.slice(1) : '—'}
+</td>
             <td className="px-6 py-4 whitespace-nowrap">
               <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                 staff.status === 'Active'
