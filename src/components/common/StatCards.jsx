@@ -1,5 +1,8 @@
-export const StatCard = ({ title, value, change, changeType, icon, bgColor = "bg-blue-50", iconColor = "text-blue-600" }) => (
-  <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
+export const StatCard = ({ title, value, change, changeType, icon, bgColor = "bg-blue-50", iconColor = "text-blue-600", onClick }) => (
+  <div
+    className={`bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow ${onClick ? 'cursor-pointer' : ''}`}
+    onClick={onClick}
+  >
     <div className="flex items-center justify-between">
       <div>
         <p className="text-sm font-medium text-gray-600">{title}</p>
@@ -32,10 +35,11 @@ export const StatCard = ({ title, value, change, changeType, icon, bgColor = "bg
   </div>
 );
 
-export const StatsGrid = ({ stats }) => (
+export const StatsGrid = ({ stats, onStatClick }) => (
   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
     {stats.map((stat, index) => (
-      <StatCard key={index} {...stat} />
+      <StatCard key={index} {...stat} onClick={() => onStatClick(stat)} />
     ))}
   </div>
 );
+

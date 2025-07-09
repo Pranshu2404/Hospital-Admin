@@ -1,121 +1,155 @@
-
-
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { StatsGrid } from '../common/StatCards';
 import { useNavigate } from 'react-router-dom';
-import { PatientIcon, AppointmentIcon, DoctorsIcon, FinanceIcon, PlusIcon } from '../common/Icons';
+import axios from 'axios';
+import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
+dayjs.extend(relativeTime);
+import { adminSidebar } from '../../constants/sidebarItems/adminSidebar'; 
+
+import {
+  PatientIcon,
+  AppointmentIcon,
+  DoctorsIcon,
+  FinanceIcon,
+  PlusIcon,
+} from '../common/Icons';
 
 const Dashboard = () => {
   const navigate = useNavigate();
 
-const handleStatClick = (title) => {
-  if (title === 'Active Staff') {
-    navigate('/dashboard/admin/staff-list');
+  const [stats, setStats] = useState([]);
+  const [recentAppointments, setRecentAppointments] = useState([]);
+  const [recentActivities, setRecentActivities] = useState([]);
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        const [patientsRes, staffRes, appointmentsRes, doctorRes] = await Promise.all([
+          axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/patients`),
+          axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/staff`),
+          axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/appointments`),
+          axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/doctors`),
+        ]);
+
+        const patients = patientsRes.data || [];
+        const staff = staffRes.data || [];
+        const appointments = appointmentsRes.data || [];
+        const doctors = doctorRes.data || [];
+
+        setStats([
+  {
+    title: 'Total Patients',
+    value: patients.length.toString(),
+    change: '',
+    icon: <PatientIcon />,
+    bgColor: 'bg-blue-50',
+    iconColor: 'text-blue-600',
+    clickable: true,
+    route: '/dashboard/admin/patient-list',
+  },
+  {
+    title: "Today's Appointments",
+    value: appointments.filter(a => dayjs(a.date).isSame(dayjs(), 'day')).length.toString(),
+    change: '',
+    icon: <AppointmentIcon />,
+    bgColor: 'bg-teal-50',
+    iconColor: 'text-teal-600',
+    clickable: true,
+    route: '/dashboard/admin/appointments',
+  },
+  {
+    title: 'Active Staff',
+    value: staff.length.toString(),
+    change: '',
+    icon: <DoctorsIcon />,
+    bgColor: 'bg-green-50',
+    iconColor: 'text-green-600',
+    clickable: true,
+    route: '/dashboard/admin/staff-list',
+  },
+  {
+    title: 'Doctors',
+    value: doctors.length.toString(),
+    change: '',
+    icon: <FinanceIcon />,
+    bgColor: 'bg-amber-50',
+    iconColor: 'text-amber-600',
+    clickable: true,
+    route: '/dashboard/admin/doctor-list',
+  },
+]);
+
+
+        console.log(appointments);
+
+        const sortedAppointments = [...appointments]
+          .sort((a, b) => new Date(b.appointment_date) - new Date(a.appointment_date))
+          .slice(0, 5)
+          .map((a) => ({
+            id: a._id,
+            patientName: a.patient_id?.first_name || 'Unknown',
+            service: a.type || 'Consultation',
+            time: dayjs(a.appointment_date).format('hh:mm A'),
+            doctor: a.doctor_id?.firstName || 'Dr. Unknown',
+            status: a.status || 'Scheduled',
+            initials: a.patient_id?.first_name?.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || 'NA',
+          }));
+
+        setRecentAppointments(sortedAppointments);
+      } catch (err) {
+        console.error('❌ Failed fetching dashboard stats:', err);
+      }
+    };
+
+    const fetchRecentActivities = async () => {
+      try {
+        const [patientsRes, appointmentsRes] = await Promise.all([
+          axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/patients?limit=1&sort=desc`),
+          axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/appointments?limit=1&sort=desc`),
+        ]);
+
+        const patient = patientsRes.data[0];
+        const appointment = appointmentsRes.data[0];
+        console.log('Recent Patient:', patient);
+        const activities = [];
+
+        if (patient) {
+          activities.push({
+            id: patient._id,
+            user: patient.created_by || 'Admin',
+            action: 'added a new patient',
+            target: patient.first_name,
+            time: dayjs(patient.createdAt).fromNow(),
+            type: 'create',
+          });
+        }
+
+        if (appointment) {
+          activities.push({
+            id: appointment._id,
+            action: 'Appointment completed for',
+            target: appointment.patient_id?.first_name || 'Unknown',
+            time: dayjs(appointment.updatedAt).fromNow(),
+            type: 'complete',
+          });
+        }
+
+        setRecentActivities(activities);
+      } catch (err) {
+        console.error('❌ Failed fetching recent activities:', err);
+      }
+    };
+
+    fetchDashboardData();
+    fetchRecentActivities();
+  }, []);
+
+  const handleStatClick = (stat) => {
+  if (stat.clickable && stat.route) {
+    navigate(stat.route);
   }
 };
-
-  const [stats] = useState([
-    {
-      title: "Total Patients",
-      value: "2,847",
-      change: "12% from last month",
-      icon: <PatientIcon />,
-      bgColor: "bg-blue-50",
-      iconColor: "text-blue-600"
-    },
-    {
-      title: "Today's Appointments", 
-      value: "146",
-      change: "32 completed",
-      icon: <AppointmentIcon />,
-      bgColor: "bg-teal-50",
-      iconColor: "text-teal-600"
-    },
-    {
-      title: 'Active Staff',
-      value: '87',
-      change: 'All present today',
-      icon: <DoctorsIcon />,
-      bgColor: 'bg-green-50',
-      iconColor: 'text-green-600',
-      clickable: true,
-    },
-    {
-      title: "Monthly Revenue",
-      value: "$847K",
-      change: "8.2% increase", 
-      icon: <FinanceIcon />,
-      bgColor: "bg-amber-50",
-      iconColor: "text-amber-600"
-    }
-  ]);
-
-  const [recentAppointments] = useState([
-    {
-      id: 1,
-      patientName: "John Doe",
-      service: "General Checkup", 
-      time: "10:30 AM",
-      doctor: "Dr. Sarah Wilson",
-      status: "Pending",
-      initials: "JD"
-    },
-    {
-      id: 2,
-      patientName: "Maria Santos",
-      service: "Cardiology",
-      time: "11:15 AM", 
-      doctor: "Dr. Michael Chen",
-      status: "Confirmed",
-      initials: "MS"
-    },
-    {
-      id: 3,
-      patientName: "Robert Taylor", 
-      service: "Orthopedic",
-      time: "2:00 PM",
-      doctor: "Dr. Lisa Anderson", 
-      status: "In Progress",
-      initials: "RT"
-    }
-  ]);
-
-  const [recentActivities] = useState([
-    {
-      id: 1,
-      user: "Dr. Sarah Wilson",
-      action: "added a new patient",
-      target: "Maria Santos",
-      time: "2h ago",
-      type: "create"
-    },
-    {
-      id: 2, 
-      action: "Appointment completed for",
-      target: "John Doe",
-      time: "4h ago",
-      type: "complete"
-    },
-    {
-      id: 3,
-      action: "Invoice #INV-2024-001 generated for",
-      target: "Robert Taylor", 
-      time: "6h ago",
-      type: "invoice"
-    }
-  ]);
-
-  const getStatusBadge = (status) => {
-    const statusClasses = {
-      "Pending": "bg-yellow-100 text-yellow-800",
-      "Confirmed": "bg-green-100 text-green-800", 
-      "In Progress": "bg-blue-100 text-blue-800",
-      "Completed": "bg-gray-100 text-gray-800"
-    };
-    
-    return `px-2 py-1 text-xs font-medium rounded-full ${statusClasses[status] || 'bg-gray-100 text-gray-800'}`;
-  };
 
   const getActivityIcon = (type) => {
     switch (type) {
@@ -152,16 +186,19 @@ const handleStatClick = (title) => {
     }
   };
 
+  const getStatusBadge = (status) => {
+    const statusClasses = {
+      Pending: 'bg-yellow-100 text-yellow-800',
+      Confirmed: 'bg-green-100 text-green-800',
+      'In Progress': 'bg-blue-100 text-blue-800',
+      Completed: 'bg-gray-100 text-gray-800',
+    };
+    return `px-2 py-1 text-xs font-medium rounded-full ${statusClasses[status] || 'bg-gray-100 text-gray-800'}`;
+  };
 
-
-
-
-return (
-  <div className="p-6">
-    {/* Stats Grid */}
-    {/* <StatsGrid stats={stats} onStatClick={handleStatClick} /> */}
-    <StatsGrid stats={stats} onStatClick={handleStatClick} />
-
+  return (
+    <div className="p-6">
+      <StatsGrid stats={stats} onStatClick={handleStatClick} />
     {/* Main Dashboard Content */}
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
       
@@ -200,54 +237,26 @@ return (
       </div>
 
       {/* Quick Actions */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-        <div className="p-6 border-b border-gray-100">
-          <h3 className="text-lg font-semibold text-gray-900">Quick Actions</h3>
+      {/* Quick Links Section */}
+<div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4">
+  {adminSidebar
+    .filter(link => !link.submenu) // only show non-submenu items as quick links
+    .map((item) => (
+      <div
+        key={item.label}
+        onClick={() => navigate(item.path)}
+        className="cursor-pointer bg-white hover:bg-gray-50 border border-gray-200 rounded-xl p-4 shadow-sm flex items-center transition"
+      >
+        <div className="p-1 bg-gray-100 rounded-lg text-teal-600">
+          {item.icon && <item.icon className="w-3 h-3" />}
         </div>
-        <div className="p-6 space-y-4">
-          <button className="w-full flex items-center p-4 bg-teal-50 border border-teal-200 rounded-lg hover:bg-teal-100 transition-colors group">
-            <div className="p-2 bg-teal-600 rounded-lg">
-              <PlusIcon />
-            </div>
-            <div className="ml-4 text-left">
-              <p className="font-medium text-gray-900 group-hover:text-teal-700">Add New Patient</p>
-              <p className="text-sm text-gray-500">Register a new patient</p>
-            </div>
-          </button>
-
-          <button className="w-full flex items-center p-4 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors group">
-            <div className="p-2 bg-blue-600 rounded-lg">
-              <AppointmentIcon />
-            </div>
-            <div className="ml-4 text-left">
-              <p className="font-medium text-gray-900">Schedule Appointment</p>
-              <p className="text-sm text-gray-500">Book new appointment</p>
-            </div>
-          </button>
-
-          <button className="w-full flex items-center p-4 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors group">
-            <div className="p-2 bg-green-600 rounded-lg">
-              <DoctorsIcon />
-            </div>
-            <div className="ml-4 text-left">
-              <p className="font-medium text-gray-900">Add Staff Member</p>
-              <p className="text-sm text-gray-500">Register new staff</p>
-            </div>
-          </button>
-
-          <button className="w-full flex items-center p-4 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors group">
-            <div className="p-2 bg-purple-600 rounded-lg">
-              <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-            </div>
-            <div className="ml-4 text-left">
-              <p className="font-medium text-gray-900">Generate Report</p>
-              <p className="text-sm text-gray-500">Create system reports</p>
-            </div>
-          </button>
+        <div className="ml-4">
+          <p className="font-semibold text-gray-900">{item.label}</p>
+          <p className="text-sm text-gray-500">Go to {item.label}</p>
         </div>
       </div>
+    ))}
+</div>
     </div>
 
     {/* Recent Activity */}
