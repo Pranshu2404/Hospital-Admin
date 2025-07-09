@@ -174,6 +174,7 @@ const AddRegistrarForm = () => {
   const [department, setDepartment] = useState('');
   const [specialization, setSpecialization] = useState('');
   const [joiningDate, setJoiningDate] = useState('');
+  const [password, setPassword] = useState('');
   const [departmentOptions, setDepartmentOptions] = useState([]);
 
   useEffect(() => {
@@ -191,22 +192,22 @@ const AddRegistrarForm = () => {
   }, []);
 
   useEffect(() => {
-  const fetchDepartments = async () => {
-    try {
-      const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/departments`);
-      const departments = res.data?.map(dep => ({
-        value: dep.name,
-        label: dep.name
-      })) || [];
+    const fetchDepartments = async () => {
+      try {
+        const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/departments`);
+        const departments = res.data?.map(dep => ({
+          value: dep.name,
+          label: dep.name
+        })) || [];
 
-      setDepartmentOptions(departments);
-    } catch (err) {
-      console.error('❌ Failed to fetch departments:', err);
-    }
-  };
+        setDepartmentOptions(departments);
+      } catch (err) {
+        console.error('❌ Failed to fetch departments:', err);
+      }
+    };
 
-  fetchDepartments();
-}, []);
+    fetchDepartments();
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -223,10 +224,11 @@ const AddRegistrarForm = () => {
       joiningDate,
       role: 'registrar',
       status: 'Active',
+      password: password.trim() || undefined  // only send password if provided
     };
 
     try {
-      const response = await axios.put(
+      await axios.put(
         `${import.meta.env.VITE_BACKEND_URL}/api/staff/${selectedStaffId}`,
         registrarData
       );
@@ -236,7 +238,6 @@ const AddRegistrarForm = () => {
       alert(err.response?.data?.error || 'Failed to assign registrar role.');
     }
   };
-
 
   return (
     <div className="p-6">
@@ -280,6 +281,14 @@ const AddRegistrarForm = () => {
             value={joiningDate}
             onChange={(e) => setJoiningDate(e.target.value)}
             required
+          />
+
+          <input
+            type="password"
+            className="form-input border rounded px-3 py-2 md:col-span-2"
+            placeholder="Enter password (optional)"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
           />
 
           <div className="md:col-span-2 flex justify-end space-x-4">
