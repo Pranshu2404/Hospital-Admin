@@ -118,7 +118,7 @@ const AddStaffForm = () => {
           <FormInput label="PAN Number" value={formData.panNumber} onChange={(e) => handleInputChange('panNumber', e.target.value)} placeholder="Enter PAN number" maxLength={10} />
 
           {/* ✅ Password Field */}
-          <FormInput label="Password" type="password" value={formData.password} onChange={(e) => handleInputChange('password', e.target.value)} required placeholder="Set a password" />
+          {/* <FormInput label="Password" type="password" value={formData.password} onChange={(e) => handleInputChange('password', e.target.value)} required placeholder="Set a password" /> */}
 
           <div className="md:col-span-2 flex justify-end space-x-4">
             <Button variant="secondary" type="button">Cancel</Button>

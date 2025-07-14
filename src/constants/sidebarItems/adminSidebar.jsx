@@ -16,6 +16,9 @@ import {
 } from '../../components/common/Icons';
 import {FaLock} from 'react-icons/fa';
 
+import { FaBook } from 'react-icons/fa';
+
+
 export const adminSidebar = [
   {
     label: 'Dashboard',
@@ -23,6 +26,12 @@ export const adminSidebar = [
     path: '/dashboard/admin',
   },
   
+ {
+    label: 'Guide',
+    icon: FaBook,
+    path: '/dashboard/admin/guide',
+  },
+
   {
     label: 'Department',
     icon: DepartmentIcon,

@@ -34,6 +34,8 @@ import DepartmentList from "./pages/dashboard/admin/DepartmentList.jsx";
 import DepartmentAdd from "./pages/dashboard/admin/add-department.jsx";
 import AddHodPage from './pages/dashboard/admin/AddHodPage.jsx';
 
+import AdminGuidePage from './pages/dashboard/admin/guidePage.jsx';
+
 import UpdatePatientProfile from './pages/dashboard/admin/UpdatePatientProfile';
 import EditDoctor from './pages/dashboard/admin/EditDoctor'; 
 
@@ -132,6 +134,8 @@ export default function App() {
 
           <Route path="/dashboard/admin/update-patient/:id" element={<UpdatePatientProfile />} />
           <Route path="/dashboard/admin/edit-doctor/:id" element={<EditDoctor />} />
+
+<Route path="/dashboard/admin/guide" element={<AdminGuidePage />} />
 
 
 
