@@ -191,46 +191,86 @@ const AddPatientIPDForm = () => {
     }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      const payload = {
-        first_name: formData.firstName,
-        last_name: formData.lastName,
-        email: formData.email,
-        phone: formData.phone,
-        gender: formData.gender,
-        dob: formData.dateOfBirth,
-        address: formData.address,
-        city: formData.city,
-        state: formData.state,
-        zipCode: formData.zipCode,
-        emergency_contact: formData.emergencyContact,
-        emergency_phone: formData.emergencyPhone,
-        // ward: formData.ward,
-        // bed: formData.bed,
-        admission_date: formData.admissionDate,
-        medical_history: formData.medicalHistory,
-        allergies: formData.allergies,
-        medications: formData.medications,
-        blood_group: formData.bloodGroup,
-        department_id: formData.department,
-        patient_type: 'ipd'
-      };
+  // const handleSubmit = async (e) => {
+  //   e.preventDefault();
+  //   try {
+  //     const payload = {
+  //       first_name: formData.firstName,
+  //       last_name: formData.lastName,
+  //       email: formData.email,
+  //       phone: formData.phone,
+  //       gender: formData.gender,
+  //       dob: formData.dateOfBirth,
+  //       address: formData.address,
+  //       city: formData.city,
+  //       state: formData.state,
+  //       zipCode: formData.zipCode,
+  //       emergency_contact: formData.emergencyContact,
+  //       emergency_phone: formData.emergencyPhone,
+  //       // ward: formData.ward,
+  //       // bed: formData.bed,
+  //       admission_date: formData.admissionDate,
+  //       medical_history: formData.medicalHistory,
+  //       allergies: formData.allergies,
+  //       medications: formData.medications,
+  //       blood_group: formData.bloodGroup,
+  //       department_id: formData.department,
+  //       patient_type: 'ipd'
+  //     };
 
-      const response = await axios.post(
-        `${import.meta.env.VITE_BACKEND_URL}/api/patients`,
-        payload
-      );
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  try {
+    const payload = {
+      first_name: formData.firstName,
+      last_name: formData.lastName,
+      email: formData.email,
+      phone: formData.phone,
+      gender: formData.gender,
+      dob: formData.dateOfBirth,
+      address: formData.address,
+      city: formData.city,
+      state: formData.state,
+      zipCode: formData.zipCode,
+      emergency_contact: formData.emergencyContact,
+      emergency_phone: formData.emergencyPhone,
+      admission_date: formData.admissionDate,
+      medical_history: formData.medicalHistory,
+      allergies: formData.allergies,
+      medications: formData.medications,
+      blood_group: formData.bloodGroup,
+      department_id: formData.department,
+      patient_type: 'ipd'
+    };
 
-      console.log('✅ IPD Patient added:', response.data);
-      alert('IPD Patient added successfully!');
-      navigate('/dashboard/admin/appointments?type=ipd');
-    } catch (err) {
-      console.error('❌ Error adding IPD patient:', err.response?.data || err.message);
-      alert(err.response?.data?.error || 'Failed to add patient.');
-    }
-  };
+    const response = await axios.post(
+      `${import.meta.env.VITE_BACKEND_URL}/api/patients`,
+      payload
+    );
+
+    console.log('✅ IPD Patient added:', response.data);
+    alert('IPD Patient added successfully!');
+    window.location.reload(); // Reload the current page after successful submission
+
+  } catch (err) {
+    console.error('❌ Error adding IPD patient:', err.response?.data || err.message);
+    alert(err.response?.data?.error || 'Failed to add patient.');
+  }
+};
+
+  //     const response = await axios.post(
+  //       `${import.meta.env.VITE_BACKEND_URL}/api/patients`,
+  //       payload
+  //     );
+
+  //     console.log('✅ IPD Patient added:', response.data);
+  //     alert('IPD Patient added successfully!');
+  //     navigate('/dashboard/admin/appointments?type=ipd');
+  //   } catch (err) {
+  //     console.error('❌ Error adding IPD patient:', err.response?.data || err.message);
+  //     alert(err.response?.data?.error || 'Failed to add patient.');
+  //   }
+  // };
 
   const genderOptions = [
     { value: 'male', label: 'Male' },

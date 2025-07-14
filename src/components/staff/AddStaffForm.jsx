@@ -1,8 +1,6 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { FormInput, FormSelect, Button } from '../common/FormElements';
 import axios from 'axios';
-import { useEffect } from 'react';
 
 const AddStaffForm = () => {
   const [formData, setFormData] = useState({
@@ -17,6 +15,7 @@ const AddStaffForm = () => {
     status: 'Active',
     aadharNumber: '',
     panNumber: '',
+    password: '', // ✅ Password field added here
   });
 
   const [customRole, setCustomRole] = useState('');
@@ -29,24 +28,23 @@ const AddStaffForm = () => {
     }));
   };
 
-useEffect(() => {
-  const fetchDepartments = async () => {
-    try {
-      const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/departments`);
-      const departments = res.data?.map(dep => ({
-        value: dep.name,
-        label: dep.name
-      })) || [];
+  useEffect(() => {
+    const fetchDepartments = async () => {
+      try {
+        const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/departments`);
+        const departments = res.data?.map(dep => ({
+          value: dep.name,
+          label: dep.name
+        })) || [];
 
-      setDepartmentOptions(departments);
-    } catch (err) {
-      console.error('❌ Failed to fetch departments:', err);
-    }
-  };
+        setDepartmentOptions(departments);
+      } catch (err) {
+        console.error('❌ Failed to fetch departments:', err);
+      }
+    };
 
-  fetchDepartments();
-}, []);
-
+    fetchDepartments();
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -63,6 +61,7 @@ useEffect(() => {
       );
       console.log('✅ Staff added successfully:', response.data);
       alert('Staff added successfully!');
+      window.location.reload(); // ✅ Reloads the page after adding staff
     } catch (err) {
       console.error('❌ Error adding staff:', err.response?.data || err.message);
       alert(err.response?.data?.error || 'Failed to add staff.');
@@ -70,31 +69,21 @@ useEffect(() => {
   };
 
   const roleOptions = [
-  // { value: 'Doctor', label: 'Doctor' },
-  { value: 'Nurse', label: 'Nurse' },
-  { value: 'Wardboy', label: 'Wardboy' },
-  { value: 'Receptionist', label: 'Receptionist' },
-  // { value: 'Pharmacist', label: 'Pharmacist' },
-  { value: 'Lab Technician', label: 'Lab Technician' },
-  { value: 'Radiologist', label: 'Radiologist' },
-  { value: 'Surgeon', label: 'Surgeon' },
-  { value: 'Anesthesiologist', label: 'Anesthesiologist' },
-  { value: 'Accountant', label: 'Accountant' },
-  { value: 'Cleaner', label: 'Cleaner' },
-  { value: 'Security', label: 'Security' },
-  { value: 'Ambulance Driver', label: 'Ambulance Driver' },
-  { value: 'HR', label: 'HR' },
-  { value: 'IT Support', label: 'IT Support' },
-  { value: 'Others', label: 'Others' }
-];
-
-  // const departmentOptions = [
-  //   { value: 'Cardiology', label: 'Cardiology' },
-  //   { value: 'Pediatrics', label: 'Pediatrics' },
-  //   { value: 'Orthopedics', label: 'Orthopedics' },
-  //   { value: 'Emergency', label: 'Emergency' },
-  //   { value: 'General', label: 'General' },
-  // ];
+    { value: 'Nurse', label: 'Nurse' },
+    { value: 'Wardboy', label: 'Wardboy' },
+    { value: 'Receptionist', label: 'Receptionist' },
+    { value: 'Lab Technician', label: 'Lab Technician' },
+    { value: 'Radiologist', label: 'Radiologist' },
+    { value: 'Surgeon', label: 'Surgeon' },
+    { value: 'Anesthesiologist', label: 'Anesthesiologist' },
+    { value: 'Accountant', label: 'Accountant' },
+    { value: 'Cleaner', label: 'Cleaner' },
+    { value: 'Security', label: 'Security' },
+    { value: 'Ambulance Driver', label: 'Ambulance Driver' },
+    { value: 'HR', label: 'HR' },
+    { value: 'IT Support', label: 'IT Support' },
+    { value: 'Others', label: 'Others' }
+  ];
 
   const genderOptions = [
     { value: 'male', label: 'Male' },
@@ -111,96 +100,25 @@ useEffect(() => {
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormInput
-            label="Full Name"
-            value={formData.fullName}
-            onChange={(e) => handleInputChange('fullName', e.target.value)}
-            required
-            placeholder="Enter full name"
-          />
+          <FormInput label="Full Name" value={formData.fullName} onChange={(e) => handleInputChange('fullName', e.target.value)} required placeholder="Enter full name" />
+          <FormInput label="Email" type="email" value={formData.email} onChange={(e) => handleInputChange('email', e.target.value)} required placeholder="Enter email" />
+          <FormInput label="Phone" type="tel" value={formData.phone} onChange={(e) => handleInputChange('phone', e.target.value)} required placeholder="Enter phone number" />
 
-          <FormInput
-            label="Email"
-            type="email"
-            value={formData.email}
-            onChange={(e) => handleInputChange('email', e.target.value)}
-            required
-            placeholder="Enter email"
-          />
-
-          <FormInput
-            label="Phone"
-            type="tel"
-            value={formData.phone}
-            onChange={(e) => handleInputChange('phone', e.target.value)}
-            required
-            placeholder="Enter phone number"
-          />
-
-          <FormSelect
-            label="Role"
-            value={formData.role}
-            onChange={(e) => handleInputChange('role', e.target.value)}
-            options={roleOptions}
-            required
-          />
+          <FormSelect label="Role" value={formData.role} onChange={(e) => handleInputChange('role', e.target.value)} options={roleOptions} required />
 
           {formData.role === 'Others' && (
-            <FormInput
-              label="Please specify role"
-              value={customRole}
-              onChange={(e) => setCustomRole(e.target.value)}
-              required
-              placeholder="Enter custom role"
-            />
+            <FormInput label="Please specify role" value={customRole} onChange={(e) => setCustomRole(e.target.value)} required placeholder="Enter custom role" />
           )}
 
-          <FormSelect
-            label="Department"
-            value={formData.department}
-            onChange={(e) => handleInputChange('department', e.target.value)}
-            options={departmentOptions}
-            required
-          />
+          <FormSelect label="Department" value={formData.department} onChange={(e) => handleInputChange('department', e.target.value)} options={departmentOptions} required />
+          <FormInput label="Specialization" value={formData.specialization} onChange={(e) => handleInputChange('specialization', e.target.value)} placeholder="e.g., ICU, Lab Tech" />
+          <FormInput label="Joining Date" type="date" value={formData.joiningDate} onChange={(e) => handleInputChange('joiningDate', e.target.value)} required />
+          <FormSelect label="Gender" value={formData.gender} onChange={(e) => handleInputChange('gender', e.target.value)} options={genderOptions} required />
+          <FormInput label="Aadhar Number" value={formData.aadharNumber} onChange={(e) => handleInputChange('aadharNumber', e.target.value)} placeholder="Enter Aadhar number" maxLength={12} />
+          <FormInput label="PAN Number" value={formData.panNumber} onChange={(e) => handleInputChange('panNumber', e.target.value)} placeholder="Enter PAN number" maxLength={10} />
 
-          <FormInput
-            label="Specialization"
-            value={formData.specialization}
-            onChange={(e) => handleInputChange('specialization', e.target.value)}
-            placeholder="e.g., ICU, Lab Tech"
-          />
-
-          <FormInput
-            label="Joining Date"
-            type="date"
-            value={formData.joiningDate}
-            onChange={(e) => handleInputChange('joiningDate', e.target.value)}
-            required
-          />
-
-          <FormSelect
-            label="Gender"
-            value={formData.gender}
-            onChange={(e) => handleInputChange('gender', e.target.value)}
-            options={genderOptions}
-            required
-          />
-
-          <FormInput
-            label="Aadhar Number"
-            value={formData.aadharNumber}
-            onChange={(e) => handleInputChange('aadharNumber', e.target.value)}
-            placeholder="Enter Aadhar number"
-            maxLength={12}
-          />
-
-          <FormInput
-            label="PAN Number"
-            value={formData.panNumber}
-            onChange={(e) => handleInputChange('panNumber', e.target.value)}
-            placeholder="Enter PAN number"
-            maxLength={10}
-          />
+          {/* ✅ Password Field */}
+          <FormInput label="Password" type="password" value={formData.password} onChange={(e) => handleInputChange('password', e.target.value)} required placeholder="Set a password" />
 
           <div className="md:col-span-2 flex justify-end space-x-4">
             <Button variant="secondary" type="button">Cancel</Button>
