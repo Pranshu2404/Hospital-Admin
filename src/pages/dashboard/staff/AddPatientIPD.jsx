@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import Layout from '../../../components/Layout';
 import { adminSidebar } from '../../../constants/sidebarItems/adminSidebar';
-import AddPatientIPDForm from './AddPatientIPDForm';
+import AddPatientIPDForm from '../admin/AddPatientIPDForm';
 import { staffSidebar } from "../../../constants/sidebarItems/staffSidebar";
 
 

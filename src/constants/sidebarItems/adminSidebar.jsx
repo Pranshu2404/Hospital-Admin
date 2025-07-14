@@ -22,11 +22,7 @@ export const adminSidebar = [
     icon: HomeIcon,
     path: '/dashboard/admin',
   },
-  {
-    label: 'Appointments',
-    icon: AppointmentIcon,
-    path: '/dashboard/admin/appointments',
-  },
+  
   {
     label: 'Department',
     icon: DepartmentIcon,
@@ -43,52 +39,8 @@ export const adminSidebar = [
       { label: 'Doctor List', path: '/dashboard/admin/doctor-list' },
     ],
   },
-  {
-    label: 'Patients',
-    icon: PatientIcon,
-    submenu: [
-      { label: 'Add Patient', path: '/dashboard/admin/add-patient' },
-      { label: 'Patient List', path: '/dashboard/admin/patient-list' },
-    ],
-  },
 
-  //  {
-  //   label: 'Department',
-  //   icon: DoctorsIcon,
-  //   submenu: [
-  //     { label: 'Add Department', path: '/dashboard/admin/add-department' },
-  //     // { label: 'HOD List', path: '/dashboard/admin/department-list' },
-  //     { label: 'HOD List', path: '/dashboard/admin/DepartmentList' },
-  //   ],
-  // },
-  // {
-  //   label: 'Doctors',
-  //   icon: DoctorsIcon,
-  //   submenu: [
-  //     { label: 'Add Doctor', path: '/dashboard/admin/add-doctor' },
-  //     { label: 'Doctor List', path: '/dashboard/admin/doctor-list' },
-  //   ],
-  // },
-  // {
-  //   label: 'staff',
-  //   icon: DoctorsIcon,
-  //   submenu: [
-  //     // { label: 'Add Registrar', path: '/dashboard/admin/add-staff' },
-  //     // { label: 'Staff List', path: '/dashboard/admin/staff-list' },
-  //   ],
-  // },
-  // {
-  //   label: 'Registrar',
-  //   icon: DoctorsIcon,
-  //   submenu: [
-  //     { label: 'Add Staff', path: '/dashboard/admin/add-staff' },
-  //     { label: 'Staff List', path: '/dashboard/admin/staff-list' },
-  //   ],
-  // },
-
-
-  
-  {
+   {
     label: 'Staff',
     icon: StaffIcon,
     submenu: [
@@ -104,6 +56,25 @@ export const adminSidebar = [
       { label: 'Registrar List', path: '/dashboard/admin/registrar-list' },
     ],
   },
+
+  {
+    label: 'Patients',
+    icon: PatientIcon,
+    submenu: [
+      { label: 'Add Patient', path: '/dashboard/admin/add-patient' },
+      { label: 'Patient List', path: '/dashboard/admin/patient-list' },
+    ],
+  },
+
+  {
+    label: 'Appointments',
+    icon: AppointmentIcon,
+    path: '/dashboard/admin/appointments',
+  },
+
+
+  
+ 
   {
     label: 'Pharmacy',
     icon: FaClinicMedical,
