@@ -330,6 +330,7 @@
 
 
 
+/// <reference types="vite/client" />
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
@@ -371,9 +372,9 @@ const AdditionalDetailsModal: React.FC<AdditionalDetailsModalProps> = ({ isOpen,
         <div className="space-y-4">
           {/* Added input for Fire NOC */}
           <input type="text" name="fireNOC" placeholder="Fire NOC" value={details.fireNOC} onChange={handleChange} required className="w-full p-2 border rounded" />
-          {/* <textarea name="policyDetails" placeholder="Policy Details" value={details.policyDetails} onChange={handleChange} rows={3} className="w-full p-2 border rounded" /> */}
-          <textarea name="healthBima" placeholder="Health Insurance (Bima) Details" value={details.healthBima} onChange={handleChange} rows={3} className="w-full p-2 border rounded" />
-          {/* <textarea name="additionalInfo" placeholder="Any other Additional Information" value={details.additionalInfo} onChange={handleChange} rows={3} className="w-full p-2 border rounded" /> */}
+          {/* <textarea name="policyDetails" placeholder="Policy Details" value={details.policyDetails} onChange={handleChange} rows={3} className="w-full p-2 border rounded" />
+          <textarea name="healthBima" placeholder="Health Insurance (Bima) Details" value={details.healthBima} onChange={handleChange} rows={3} className="w-full p-2 border rounded" /> */}
+          <textarea name="additionalInfo" placeholder="Any other Additional Information" value={details.additionalInfo} onChange={handleChange} rows={3} className="w-full p-2 border rounded" />
         </div>
         <div className="flex items-center justify-between mt-6">
           <button type="button" onClick={onSkip} className="px-6 py-2 rounded text-gray-700 bg-gray-200 hover:bg-gray-300 transition">Skip for Now</button>
@@ -397,8 +398,7 @@ export default function Register() {
     address: '',
     companyName: '',
     companyNumber: '',
-    // Fields for the authorised person
-    name: '', // This is now for the authorised person
+    name: '', 
     email: '',
     password: '',
     contact: '',
@@ -477,12 +477,12 @@ export default function Register() {
                 <input type="tel" name="contact" placeholder="Contact Number" value={form.contact} onChange={handleChange} required className="p-2 border rounded" />
                 <input type="email" name="email" placeholder="Email Address" value={form.email} onChange={handleChange} required className="p-2 border rounded" />
                 <input type="password" name="password" placeholder="Password" value={form.password} onChange={handleChange} required className="p-2 border rounded" />
-                 <select name="role" value={form.role} onChange={handleChange} className="p-2 border rounded">
+                 {/* <select name="role" value={form.role} onChange={handleChange} className="p-2 border rounded">
                   <option value="admin">Admin</option>
                   <option value="doctor">Doctor</option>
                   <option value="staff">Staff</option>
                   <option value="pharmacy">Pharmacy</option>
-                </select>
+                </select> */}
               </div>
             </div>
           </div>
