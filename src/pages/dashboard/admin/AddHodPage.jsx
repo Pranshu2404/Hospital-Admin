@@ -141,7 +141,7 @@ const AddHodPage = () => {
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap">
                       <div className="flex flex-col space-y-1">
-                        <span className={getRoleBadge(member.role)}>{member.role}</span>
+                        {/* <span className={getRoleBadge(member.role)}>{member.role}</span> */}
                         <div className="text-sm text-gray-900">{member.department?.name || '—'}</div>
                         <div className="text-sm text-gray-500">{member.specialization || '—'}</div>
                       </div>

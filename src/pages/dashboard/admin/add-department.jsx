@@ -314,7 +314,7 @@ const SelectDepartment = () => {
           </form>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        {/* <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
           <div className="flex justify-between items-center mb-2">
             <h2 className="text-2xl font-bold text-gray-900">Manage Departments</h2>
           </div>
@@ -322,7 +322,7 @@ const SelectDepartment = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
             {departments.map((dept) => (
               <div key={dept._id} className="relative">
-                {/* --- CHANGED: This is now a div instead of a button --- */}
+                
                 <div className="w-full bg-blue-50 border border-blue-200 rounded-xl p-4 text-left">
                   {editingDept === dept._id ? (
                     <input
@@ -337,7 +337,7 @@ const SelectDepartment = () => {
                   ) : (
                     <>
                       <h3 className="text-lg font-medium text-blue-900">{dept.name}</h3>
-                      {/* --- REMOVED: "Click to Edit Head of Department" text --- */}
+                      
                     </>
                   )}
                 </div>
@@ -366,7 +366,7 @@ const SelectDepartment = () => {
               </div>
             ))}
           </div>
-        </div>
+        </div> */}
       </div>
     </Layout>
   );
