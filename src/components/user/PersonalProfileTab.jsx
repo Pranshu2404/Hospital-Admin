@@ -1,163 +1,123 @@
 import { useState } from 'react';
+import axios from 'axios';
 import { Button } from '../common/FormElements';
 import { EditIcon } from '../common/Icons';
 import ProfileInfoRow from './ProfileInfoRow';
 
-const PersonalProfileTab = () => {
+const PersonalProfileTab = ({ hospitalData }) => {
   const [isEditing, setIsEditing] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [profileData, setProfileData] = useState({
-    firstName: 'Sarah',
-    lastName: 'Wilson',
-    email: 'sarah.wilson@hospital.com',
-    phone: '+1 234-567-8900',
-    department: 'Administration',
-    position: 'Chief Medical Officer',
-    employeeId: 'EMP-001',
-    dateJoined: '2020-06-15',
-    specialization: 'General Medicine',
-    licenseNumber: 'MD-12345',
-    address: '123 Medical Drive',
-    city: 'New York',
-    state: 'NY',
-    zipCode: '10001'
+    hospitalName: hospitalData?.hospitalName || '',
+    adminName: hospitalData?.name || '',
+    email: hospitalData?.email || '',
+    phone: hospitalData?.contact || '',
+    address: hospitalData?.address || '',
+    registryNo: hospitalData?.registryNo || '',
+    hospitalID: hospitalData?.hospitalID || '',
+    companyName: hospitalData?.companyName || '',
+    companyNumber: hospitalData?.companyNumber || '',
+    fireNOC: hospitalData?.fireNOC || '',
+    healthBima: hospitalData?.healthBima || '',
+    additionalInfo: hospitalData?.additionalInfo || ''
   });
 
-  const handleSave = () => {
-    console.log('Saving profile data:', profileData);
-    setIsEditing(false);
+  const handleSave = async () => {
+    try {
+      setLoading(true);
+      await axios.patch(
+        `${import.meta.env.VITE_BACKEND_URL}/api/hospitals/${hospitalData._id}/details`,
+        {
+          hospitalName: profileData.hospitalName,
+          name: profileData.adminName,
+          email: profileData.email,
+          contact: profileData.phone,
+          address: profileData.address,
+          registryNo: profileData.registryNo,
+          companyName: profileData.companyName,
+          companyNumber: profileData.companyNumber,
+          fireNOC: profileData.fireNOC,
+          healthBima: profileData.healthBima,
+          additionalInfo: profileData.additionalInfo
+        }
+      );
+      alert('Details updated successfully');
+      setIsEditing(false);
+    } catch (err) {
+      console.error('Error updating hospital details:', err);
+      alert('Failed to update details');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleCancel = () => {
     setIsEditing(false);
-    // Reset any changes
+    // Reset back to original hospitalData
+    setProfileData({
+      hospitalName: hospitalData?.hospitalName || '',
+      adminName: hospitalData?.name || '',
+      email: hospitalData?.email || '',
+      phone: hospitalData?.contact || '',
+      address: hospitalData?.address || '',
+      registryNo: hospitalData?.registryNo || '',
+      hospitalID: hospitalData?.hospitalID || '',
+      companyName: hospitalData?.companyName || '',
+      companyNumber: hospitalData?.companyNumber || '',
+      fireNOC: hospitalData?.fireNOC || '',
+      healthBima: hospitalData?.healthBima || '',
+      additionalInfo: hospitalData?.additionalInfo || ''
+    });
   };
 
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
-        <h3 className="text-lg font-semibold text-gray-900">Personal Information</h3>
+        <h3 className="text-lg font-semibold text-gray-900">Hospital & Admin Information</h3>
         {!isEditing ? (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setIsEditing(true)}
-          >
-            <EditIcon />
-            Edit Profile
+          <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
+            <EditIcon /> Edit Profile
           </Button>
         ) : (
           <div className="flex space-x-2">
-            <Button variant="secondary" size="sm" onClick={handleCancel}>
-              Cancel
-            </Button>
-            <Button variant="primary" size="sm" onClick={handleSave}>
-              Save Changes
+            <Button variant="secondary" size="sm" onClick={handleCancel}>Cancel</Button>
+            <Button variant="primary" size="sm" onClick={handleSave} disabled={loading}>
+              {loading ? 'Saving...' : 'Save Changes'}
             </Button>
           </div>
         )}
       </div>
 
-      {/* Basic Information */}
+      {/* Hospital Info */}
       <div className="mb-8">
-        <h4 className="text-md font-semibold text-gray-900 mb-4">Basic Information</h4>
+        <h4 className="text-md font-semibold text-gray-900 mb-4">Hospital Details</h4>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <ProfileInfoRow
-            label="First Name"
-            value={profileData.firstName}
-            isEditing={isEditing}
-            onChange={(value) => setProfileData(prev => ({ ...prev, firstName: value }))}
-          />
-          <ProfileInfoRow
-            label="Last Name"
-            value={profileData.lastName}
-            isEditing={isEditing}
-            onChange={(value) => setProfileData(prev => ({ ...prev, lastName: value }))}
-          />
-          <ProfileInfoRow
-            label="Email"
-            value={profileData.email}
-            isEditing={isEditing}
-            onChange={(value) => setProfileData(prev => ({ ...prev, email: value }))}
-          />
-          <ProfileInfoRow
-            label="Phone"
-            value={profileData.phone}
-            isEditing={isEditing}
-            onChange={(value) => setProfileData(prev => ({ ...prev, phone: value }))}
-          />
+          <ProfileInfoRow label="Hospital Name" value={profileData.hospitalName} isEditing={isEditing} onChange={(val) => setProfileData(prev => ({ ...prev, hospitalName: val }))} />
+          <ProfileInfoRow label="Registry No" value={profileData.registryNo} isEditing={isEditing} onChange={(val) => setProfileData(prev => ({ ...prev, registryNo: val }))} />
+          <ProfileInfoRow label="Hospital ID" value={profileData.hospitalID} isEditing={false} />
+          <ProfileInfoRow label="Address" value={profileData.address} isEditing={isEditing} onChange={(val) => setProfileData(prev => ({ ...prev, address: val }))} />
+          <ProfileInfoRow label="Company Name" value={profileData.companyName} isEditing={isEditing} onChange={(val) => setProfileData(prev => ({ ...prev, companyName: val }))} />
+          <ProfileInfoRow label="Company Number" value={profileData.companyNumber} isEditing={isEditing} onChange={(val) => setProfileData(prev => ({ ...prev, companyNumber: val }))} />
         </div>
       </div>
 
-      {/* Professional Information */}
+      {/* Admin Info */}
       <div className="mb-8">
-        <h4 className="text-md font-semibold text-gray-900 mb-4">Professional Information</h4>
+        <h4 className="text-md font-semibold text-gray-900 mb-4">Admin Details</h4>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <ProfileInfoRow
-            label="Employee ID"
-            value={profileData.employeeId}
-            isEditing={false}
-          />
-          <ProfileInfoRow
-            label="Department"
-            value={profileData.department}
-            isEditing={isEditing}
-            onChange={(value) => setProfileData(prev => ({ ...prev, department: value }))}
-          />
-          <ProfileInfoRow
-            label="Position"
-            value={profileData.position}
-            isEditing={isEditing}
-            onChange={(value) => setProfileData(prev => ({ ...prev, position: value }))}
-          />
-          <ProfileInfoRow
-            label="Date Joined"
-            value={profileData.dateJoined}
-            isEditing={false}
-          />
-          <ProfileInfoRow
-            label="Specialization"
-            value={profileData.specialization}
-            isEditing={isEditing}
-            onChange={(value) => setProfileData(prev => ({ ...prev, specialization: value }))}
-          />
-          <ProfileInfoRow
-            label="License Number"
-            value={profileData.licenseNumber}
-            isEditing={isEditing}
-            onChange={(value) => setProfileData(prev => ({ ...prev, licenseNumber: value }))}
-          />
+          <ProfileInfoRow label="Name" value={profileData.adminName} isEditing={isEditing} onChange={(val) => setProfileData(prev => ({ ...prev, adminName: val }))} />
+          <ProfileInfoRow label="Email" value={profileData.email} isEditing={isEditing} onChange={(val) => setProfileData(prev => ({ ...prev, email: val }))} />
+          <ProfileInfoRow label="Contact" value={profileData.phone} isEditing={isEditing} onChange={(val) => setProfileData(prev => ({ ...prev, phone: val }))} />
         </div>
       </div>
 
-      {/* Address Information */}
-      <div className="mb-8">
-        <h4 className="text-md font-semibold text-gray-900 mb-4">Address Information</h4>
+      {/* Additional Info */}
+      <div>
+        <h4 className="text-md font-semibold text-gray-900 mb-4">Additional Information</h4>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <ProfileInfoRow
-            label="Address"
-            value={profileData.address}
-            isEditing={isEditing}
-            onChange={(value) => setProfileData(prev => ({ ...prev, address: value }))}
-            className="md:col-span-2"
-          />
-          <ProfileInfoRow
-            label="City"
-            value={profileData.city}
-            isEditing={isEditing}
-            onChange={(value) => setProfileData(prev => ({ ...prev, city: value }))}
-          />
-          <ProfileInfoRow
-            label="State"
-            value={profileData.state}
-            isEditing={isEditing}
-            onChange={(value) => setProfileData(prev => ({ ...prev, state: value }))}
-          />
-          <ProfileInfoRow
-            label="ZIP Code"
-            value={profileData.zipCode}
-            isEditing={isEditing}
-            onChange={(value) => setProfileData(prev => ({ ...prev, zipCode: value }))}
-          />
+          <ProfileInfoRow label="Fire NOC" value={profileData.fireNOC} isEditing={isEditing} onChange={(val) => setProfileData(prev => ({ ...prev, fireNOC: val }))} />
+          <ProfileInfoRow label="Health Bima Details" value={profileData.healthBima} isEditing={isEditing} onChange={(val) => setProfileData(prev => ({ ...prev, healthBima: val }))} />
+          <ProfileInfoRow label="Additional Info" value={profileData.additionalInfo} isEditing={isEditing} onChange={(val) => setProfileData(prev => ({ ...prev, additionalInfo: val }))} className="md:col-span-2" />
         </div>
       </div>
     </div>

@@ -104,7 +104,7 @@ useEffect(() => {
       if (res.data && res.data.length > 0) {
         const hospital = res.data[0]; 
         console.log('Hospital data fetched:', hospital);
-        setHospitalName(hospital.name); 
+        setHospitalName(hospital.hospitalName); 
       } else {
         console.warn('No hospital data received from API.');
       }
