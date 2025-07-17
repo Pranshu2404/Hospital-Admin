@@ -39,6 +39,7 @@ import AdminGuidePage from './pages/dashboard/admin/guidePage.jsx';
 import UpdatePatientProfile from './pages/dashboard/admin/UpdatePatientProfile';
 import EditDoctor from './pages/dashboard/admin/EditDoctor'; 
 
+import AddHodMain from './pages/dashboard/admin/add-Hod-main';
 
 // Doctor pages
 import DoctorDashboard from './pages/dashboard/doctor/index';
@@ -138,6 +139,7 @@ export default function App() {
 <Route path="/dashboard/admin/guide" element={<AdminGuidePage />} />
 
 
+<Route path="/dashboard/admin/add-hod-main" element={<AddHodMain />} />
 
           {/* Doctor Routes */}
           <Route
