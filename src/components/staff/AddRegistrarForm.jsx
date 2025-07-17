@@ -222,7 +222,7 @@ const AddRegistrarForm = () => {
       department,
       specialization,
       joiningDate,
-      role: 'registrar',
+      // role,
       status: 'Active',
       password: password.trim() || undefined  // only send password if provided
     };

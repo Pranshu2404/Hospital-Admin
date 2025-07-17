@@ -51,10 +51,21 @@ const AddDoctorNurseForm = () => {
   const [forgotData, setForgotData] = useState({ username: '', phone: '' });
 
   const educationOptions = [
-    { value: 'Mbbs', label: 'Mbbs' },
-    { value: 'PG', label: 'PG' },
-    { value: 'post PG', label: 'post PG' },
-  ];
+  { value: 'MBBS', label: 'MBBS' }, // Bachelor of Medicine, Bachelor of Surgery
+  { value: 'BDS', label: 'BDS' }, // Bachelor of Dental Surgery
+  { value: 'MD', label: 'MD' }, // Doctor of Medicine
+  { value: 'MS', label: 'MS' }, // Master of Surgery
+  { value: 'DNB', label: 'DNB' }, // Diplomate of National Board
+  { value: 'DM', label: 'DM' }, // Doctorate of Medicine (super specialty)
+  { value: 'MCh', label: 'MCh' }, // Master of Chirurgiae (super specialty)
+  { value: 'PhD', label: 'PhD' }, // Doctor of Philosophy
+  { value: 'Fellowship', label: 'Fellowship' }, // Sub-specialty training
+  { value: 'Diploma', label: 'Diploma' }, // Short-term specialization
+  { value: 'Resident Doctor', label: 'Resident Doctor' },
+  { value: 'Intern', label: 'Intern' },
+  { value: 'Trainee', label: 'Trainee' }
+];
+
 
   useEffect(() => {
     const fetchDepartments = async () => {
@@ -191,10 +202,10 @@ const AddDoctorNurseForm = () => {
               <FormSelect
                 label="Education"
                 value={formData.education}
-                onChange={(e) => handleInputChange('education', e.targe.value)}
+                onChange={(e) => handleInputChange('education', e.target.value)}
                 options={educationOptions}
                 placeholder="Select highest qualification"
-                // The md:col-span-2 class was removed from here
+                required
               />
               {/* --- END OF CHANGED SECTION --- */}
             </div>

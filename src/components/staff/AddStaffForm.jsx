@@ -147,11 +147,11 @@ const AddStaffForm = () => {
     department: '',
     specialization: '',
     joiningDate: '',
-    gender: 'male',
+    gender: '',
     status: 'Active',
     aadharNumber: '',
     panNumber: '',
-    password: '',
+    // password: '',
     registrationNo: '',       // ✅ Added Registration No.
     qualificationDetails: '', // ✅ Added Qualification Details
   });
@@ -220,6 +220,78 @@ const AddStaffForm = () => {
     { value: 'Others', label: 'Others' }
   ];
 
+  const qualificationOptionsByRole = {
+  Nurse: [
+    { value: 'ANM', label: 'ANM (Auxiliary Nurse Midwife)' },
+    { value: 'GNM', label: 'GNM (General Nursing & Midwifery)' },
+    { value: 'B.Sc Nursing', label: 'B.Sc Nursing' },
+    { value: 'M.Sc Nursing', label: 'M.Sc Nursing' },
+    { value: 'PhD Nursing', label: 'Ph.D. in Nursing' }
+  ],
+  'Lab Technician': [
+    { value: 'DMLT', label: 'DMLT (Diploma in Medical Lab Technology)' },
+    { value: 'BMLT', label: 'BMLT (Bachelor of Medical Lab Technology)' },
+    { value: 'MMLT', label: 'MMLT (Master of Medical Lab Technology)' },
+    { value: 'Certificate in Lab Technology', label: 'Certificate in Lab Technology' }
+  ],
+  Radiologist: [
+    { value: 'MBBS', label: 'MBBS' },
+    { value: 'MD Radiology', label: 'MD Radiology' },
+    { value: 'DNB Radiology', label: 'DNB Radiology' },
+    { value: 'DM Neuro Radiology', label: 'DM in Neuro Radiology' }
+  ],
+  Surgeon: [
+    { value: 'MBBS', label: 'MBBS' },
+    { value: 'MS General Surgery', label: 'MS General Surgery' },
+    { value: 'MCh', label: 'MCh (Master of Chirurgiae)' },
+    { value: 'Fellowship Surgery', label: 'Fellowship in Surgery' }
+  ],
+  Anesthesiologist: [
+    { value: 'MBBS', label: 'MBBS' },
+    { value: 'MD Anesthesiology', label: 'MD Anesthesiology' },
+    { value: 'DA', label: 'DA (Diploma in Anesthesia)' }
+  ],
+  Wardboy: [
+    { value: 'Basic Training', label: 'Basic Training in Patient Care' },
+    { value: 'First Aid Certification', label: 'First Aid Certification' }
+  ],
+  Receptionist: [
+    { value: 'Diploma in Hospital Management', label: 'Diploma in Hospital Management' },
+    { value: 'Graduate', label: 'Graduate in Any Stream' },
+    { value: 'Computer Knowledge', label: 'Basic Computer Knowledge' }
+  ],
+  'Ambulance Driver': [
+    { value: 'Valid Driving License', label: 'Valid Driving License' },
+    { value: 'First Aid Certification', label: 'First Aid Certification' }
+  ],
+  Cleaner: [
+    { value: 'Basic Hygiene Training', label: 'Basic Hygiene Training' }
+  ],
+  Accountant: [
+    { value: 'B.Com', label: 'B.Com (Bachelor of Commerce)' },
+    { value: 'M.Com', label: 'M.Com (Master of Commerce)' },
+    { value: 'CA', label: 'CA (Chartered Accountant)' }
+  ],
+  'IT Support': [
+    { value: 'Diploma in IT', label: 'Diploma in IT' },
+    { value: 'BCA', label: 'BCA (Bachelor of Computer Applications)' },
+    { value: 'MCA', label: 'MCA (Master of Computer Applications)' }
+  ],
+  HR: [
+    { value: 'MBA HR', label: 'MBA in HR' },
+    { value: 'PGDM HR', label: 'PGDM in HR' },
+    { value: 'Graduate', label: 'Graduate in Any Stream' }
+  ],
+  Security: [
+    { value: 'Security Training Certification', label: 'Security Training Certification' },
+    { value: 'Ex-Army/Police', label: 'Ex-Army/Police Personnel' }
+  ],
+  Others: [
+    { value: 'Relevant Certificate', label: 'Relevant Certificate or Diploma' }
+  ]
+};
+
+
   const genderOptions = [
     { value: 'male', label: 'Male' },
     { value: 'female', label: 'Female' },
@@ -237,7 +309,7 @@ const AddStaffForm = () => {
         <form onSubmit={handleSubmit} className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormInput label="Full Name" value={formData.fullName} onChange={(e) => handleInputChange('fullName', e.target.value)} required placeholder="Enter full name" />
           <FormInput label="Email" type="email" value={formData.email} onChange={(e) => handleInputChange('email', e.target.value)} required placeholder="Enter email" />
-          <FormInput label="Password" type="password" value={formData.password} onChange={(e) => handleInputChange('password', e.target.value)} required placeholder="Set a password" />
+          {/* <FormInput label="Password" type="password" value={formData.password} onChange={(e) => handleInputChange('password', e.target.value)} required placeholder="Set a password" /> */}
           <FormInput label="Phone" type="tel" value={formData.phone} onChange={(e) => handleInputChange('phone', e.target.value)} required placeholder="Enter phone number" />
           <FormSelect label="Role" value={formData.role} onChange={(e) => handleInputChange('role', e.target.value)} options={roleOptions} required />
           {formData.role === 'Others' && (
@@ -256,13 +328,25 @@ const AddStaffForm = () => {
 
           {/* ✅ Added Qualification Details section */}
           <div className="md:col-span-2">
-            <FormTextarea
-              label="Qualification Details"
-              value={formData.qualificationDetails}
-              onChange={(e) => handleInputChange('qualificationDetails', e.target.value)}
-              placeholder="Enter qualifications, certifications, etc."
-              rows={3}
-            />
+            {qualificationOptionsByRole[formData.role] ? (
+  <FormSelect
+    label="Qualification"
+    value={formData.qualificationDetails}
+    onChange={(e) => handleInputChange('qualificationDetails', e.target.value)}
+    options={qualificationOptionsByRole[formData.role]}
+    placeholder="Select qualification"
+    required
+  />
+) : (
+  <FormTextarea
+    label="Qualification Details"
+    value={formData.qualificationDetails}
+    onChange={(e) => handleInputChange('qualificationDetails', e.target.value)}
+    placeholder="Enter qualifications, certifications, etc."
+    rows={3}
+  />
+)}
+
           </div>
 
           <div className="md:col-span-2 flex justify-end space-x-4">

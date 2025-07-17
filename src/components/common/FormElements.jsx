@@ -17,7 +17,7 @@ export const FormInput = ({ label, type = "text", value, onChange, placeholder, 
   </div>
 );
 
-export const FormSelect = ({ label, value, onChange, options, placeholder, required = false, className = "" }) => (
+export const OldFormSelect = ({ label, value, onChange, options, placeholder, required = false, className = "" }) => (
   <div className={`mb-4 ${className}`}>
     <label className="block text-sm font-medium text-gray-700 mb-2">
       {label}
@@ -27,7 +27,7 @@ export const FormSelect = ({ label, value, onChange, options, placeholder, requi
       value={value}
       onChange={onChange}
       required={required}
-      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
+      className="w-full h-[200px] px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
     >
       {placeholder && <option value="">{placeholder}</option>}
       {options.map((option, index) => (
@@ -38,6 +38,77 @@ export const FormSelect = ({ label, value, onChange, options, placeholder, requi
     </select>
   </div>
 );
+
+export const FormSelect = ({
+  label,
+  value,
+  onChange,
+  options,
+  placeholder = "Select an option",
+  required = false,
+  className = ""
+}) => {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isOpen, setIsOpen] = useState(false);
+
+  const filteredOptions = options.filter((option) =>
+    option.label.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  return (
+    <div className={`mb-4 relative ${className}`}>
+      <label className="block text-sm font-medium text-gray-700 mb-2">
+        {label}
+        {required && <span className="text-red-500 ml-1">*</span>}
+      </label>
+
+      {/* Selected Value (Clickable Input) */}
+      <div
+        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white cursor-pointer focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        {value ? options.find((opt) => opt.value === value)?.label : placeholder}
+      </div>
+
+      {/* Dropdown */}
+      {isOpen && (
+        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-auto">
+          {/* Search Input */}
+          <div className="p-2 border-b">
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search..."
+              className="w-full px-2 py-1 border border-gray-300 rounded-md focus:ring-1 focus:ring-teal-500"
+            />
+          </div>
+
+          {/* Options */}
+          {filteredOptions.length > 0 ? (
+            filteredOptions.map((option) => (
+              <div
+                key={option.value}
+                className={`px-3 py-2 cursor-pointer hover:bg-teal-100 ${
+                  option.value === value ? "bg-teal-50 font-semibold" : ""
+                }`}
+                onClick={() => {
+                  onChange({ target: { value: option.value } });
+                  setIsOpen(false);
+                  setSearchTerm("");
+                }}
+              >
+                {option.label}
+              </div>
+            ))
+          ) : (
+            <div className="p-3 text-gray-500 text-sm">No results found</div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
 
 export const FormTextarea = ({ label, value, onChange, placeholder, required = false, rows = 4, className = "" }) => (
   <div className={`mb-4 ${className}`}>
