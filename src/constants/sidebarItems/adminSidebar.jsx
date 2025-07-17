@@ -32,14 +32,30 @@ export const adminSidebar = [
     path: '/dashboard/admin/guide',
   },
 
-  {
+  // {
+  //   label: 'Department',
+  //   icon: DepartmentIcon,
+  //   submenu: [
+  //     { label: 'Add Department', path: '/dashboard/admin/add-department' },
+  //     { label: 'Add HOD', path: '/dashboard/admin/add-Hod-main' },
+  //     { label: 'HOD List', path: '/dashboard/admin/DepartmentList' },
+  //   ],
+  // },
+
+
+
+{
     label: 'Department',
     icon: DepartmentIcon,
     submenu: [
       { label: 'Add Department', path: '/dashboard/admin/add-department' },
+      // FIX: Changed to all lowercase for consistency
+      { label: 'Add HOD', path: '/dashboard/admin/add-hod-main' },
       { label: 'HOD List', path: '/dashboard/admin/DepartmentList' },
     ],
   },
+
+
   {
     label: 'Doctors',
     icon: DoctorsIcon,
