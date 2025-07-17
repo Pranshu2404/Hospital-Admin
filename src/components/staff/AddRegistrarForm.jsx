@@ -181,7 +181,7 @@ const AddRegistrarForm = () => {
     const fetchStaff = async () => {
       try {
         const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/staff`);
-        const filteredStaff = response.data.filter(staff => staff.role === 'staff');
+        const filteredStaff = response.data.filter(staff => staff.role === 'Receptionist' || staff.role === 'Other' || staff.role === 'Nurse');
         setStaffOptions(filteredStaff);
       } catch (err) {
         console.error('Failed to fetch staff:', err);
@@ -254,7 +254,7 @@ const AddRegistrarForm = () => {
             onChange={(e) => setSelectedStaffId(e.target.value)}
             options={staffOptions.map(staff => ({
               value: staff._id,
-              label: `${staff.full_name || staff.first_name + ' ' + staff.last_name}`
+              label: `${(staff.full_name || staff.first_name + ' ' + staff.last_name)+ ' - ' + (staff.phone || '')}`
             }))}
             required
           />
