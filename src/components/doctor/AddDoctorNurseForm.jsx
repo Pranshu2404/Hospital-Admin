@@ -8,43 +8,38 @@ import { Link } from 'react-router-dom';
 
 const AddDoctorNurseForm = () => {
   const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    password: '',
-    phone: '',
-    dateOfBirth: '',
-    gender: '',
-    address: '',
-    city: '',
-    state: '',
-    zipCode: '',
-    // role: 'Doctor',
-    department: '',
-    specialization: '',
-    licenseNumber: '',
-    experience: '',
-    education: '',
-    shift: '',
-    emergencyContact: '',
-    emergencyPhone: '',
-    startDate: '',
-    salary: '',
-    isFullTime: true,
-    hasInsurance: true,
-    notes: '',
-    paymentType: '',
-    contractualSalary: '',
-    feePerVisit: '',
-    ratePerHour: '',
-    contractStartDate: '',
-    contractEndDate: '',
-    visitsPerWeek: '',
-    workingDaysPerWeek: '',
-    timeSlots: [{ start: '', end: '' }],
-    aadharNumber: '',
-    panNumber: ''
-  });
+  firstName: '',
+  lastName: '',
+  email: '',
+  password: '',
+  phone: '',
+  dateOfBirth: '',
+  gender: '',
+  address: '',
+  city: '',
+  state: '',
+  zipCode: '',
+  department: '',
+  specialization: '',
+  licenseNumber: '',
+  experience: '',
+  education: '',
+  shift: '', // Only if Full-time
+  emergencyContact: '',
+  emergencyPhone: '',
+  startDate: '',
+  isFullTime: true, // Toggle
+  paymentType: 'Salary', // Default if full-time
+  amount: '', // Replaces salary, feePerVisit, ratePerHour
+  contractStartDate: '',
+  contractEndDate: '',
+  visitsPerWeek: '',
+  workingDaysPerWeek: '',
+  timeSlots: [{ start: '', end: '' }], // For part-time availability
+  aadharNumber: '',
+  panNumber: '',
+  notes: ''
+});
 
   const [departmentOptions, setDepartmentOptions] = useState([]);
   const [showForgotModal, setShowForgotModal] = useState(false);
@@ -191,14 +186,14 @@ const AddDoctorNurseForm = () => {
               <FormInput label="Years of Experience" type="number" value={formData.experience} onChange={(e) => handleInputChange('experience', e.target.value)} placeholder="Enter years of experience" />
               
               {/* --- THIS SECTION WAS CHANGED --- */}
-              <FormSelect
+              {/* <FormSelect
                 label="Shift"
                 value={formData.shift}
                 onChange={(e) => handleInputChange('shift', e.target.value)}
                 options={shiftOptions}
                 placeholder="Select shift"
                 required
-              />
+              /> */}
               <FormSelect
                 label="Education"
                 value={formData.education}
@@ -212,62 +207,85 @@ const AddDoctorNurseForm = () => {
           </div>
 
           {/* Employment Information */}
-          <div className="mb-8">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Employment Information</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormInput label="Start Date" type="date" value={formData.startDate} onChange={(e) => handleInputChange('startDate', e.target.value)} required />
-              <FormInput label="Salary" type="number" value={formData.salary} onChange={(e) => handleInputChange('salary', e.target.value)} placeholder="Enter annual salary" />
-              <FormCheckbox label="Full-time Employee" checked={formData.isFullTime} onChange={(e) => handleInputChange('isFullTime', e.target.checked)} />
-              <FormCheckbox label="Has Health Insurance" checked={formData.hasInsurance} onChange={(e) => handleInputChange('hasInsurance', e.target.checked)} />
-              {!formData.isFullTime && (
-                <>
-                  <FormSelect
-                    label="Payment Type"
-                    value={formData.paymentType}
-                    onChange={e => handleInputChange('paymentType', e.target.value)}
-                    options={[
-                      { value: 'Fee per Visit', label: 'Fee per Visit' },
-                      { value: 'Per Hour', label: 'Per Hour' },
-                      { value: 'Contractual Salary', label: 'Contractual Salary' }
-                    ]}
-                    placeholder="Select payment type"
-                    required
-                  />
-                  {formData.paymentType === 'Fee per Visit' && (
-                    <FormInput label="Fee per Visit" type="number" value={formData.feePerVisit} onChange={e => handleInputChange('feePerVisit', e.target.value)} placeholder="Enter fee per visit" required />
-                  )}
-                  {formData.paymentType === 'Per Hour' && (
-                    <FormInput label="Rate per Hour" type="number" value={formData.ratePerHour} onChange={e => handleInputChange('ratePerHour', e.target.value)} placeholder="Enter rate per hour" required />
-                  )}
-                  {formData.paymentType === 'Contractual Salary' && (
-                    <FormInput label="Contractual Salary" type="number" value={formData.contractualSalary} onChange={e => handleInputChange('contractualSalary', e.target.value)} placeholder="Enter contractual salary" required />
-                  )}
-                  <FormInput label="Contract Start Date" type="date" value={formData.contractStartDate} onChange={e => handleInputChange('contractStartDate', e.target.value)} required />
-                  <FormInput label="Contract End Date" type="date" value={formData.contractEndDate} onChange={e => handleInputChange('contractEndDate', e.target.value)} required />
-                  <FormInput label="Visits per Week" type="number" value={formData.visitsPerWeek} onChange={e => handleInputChange('visitsPerWeek', e.target.value)} placeholder="Enter number of visits per week" />
-                  <div className="flex flex-col md:flex-row md:col-span-2 gap-4">
-                    <div className="flex-1">
-                      <FormInput label="Working Days per Week" type="number" value={formData.workingDaysPerWeek} onChange={e => handleInputChange('workingDaysPerWeek', e.target.value)} placeholder="Enter working days per week" />
-                    </div>
-                    <div className="flex-1">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Time Slots Available</label>
-                      <div className="space-y-2">
-                        {formData.timeSlots.map((slot, idx) => (
-                          <div key={idx} className="flex items-center gap-2">
-                            <input type="time" className="border rounded px-2 py-1" value={slot.start} onChange={e => handleTimeSlotChange(idx, 'start', e.target.value)} required />
-                            <span className="mx-1">to</span>
-                            <input type="time" className="border rounded px-2 py-1" value={slot.end} onChange={e => handleTimeSlotChange(idx, 'end', e.target.value)} required />
-                            <button type="button" className="ml-2 text-red-600 hover:text-red-800 text-xs px-2 py-1 border border-red-200 rounded" onClick={() => handleRemoveTimeSlot(idx)} disabled={formData.timeSlots.length === 1}>Remove</button>
-                          </div>
-                        ))}
-                        <button type="button" className="mt-2 text-teal-700 border border-teal-300 px-3 py-1 rounded hover:bg-teal-50 text-sm" onClick={handleAddTimeSlot}>+ Add Time Slot</button>
-                      </div>
-                    </div>
-                  </div>
-                </>
-              )}
+<div className="mb-8">
+  <h3 className="text-lg font-semibold text-gray-900 mb-4">Employment Information</h3>
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <FormInput label="Start Date" type="date" value={formData.startDate} onChange={(e) => handleInputChange('startDate', e.target.value)} required />
+    
+    {/* Full-time / Part-time toggle */}
+    <FormSelect
+      label="Employment Type"
+      value={formData.isFullTime ? 'Full-time' : 'Part-time'}
+      onChange={(e) => handleInputChange('isFullTime', e.target.value === 'Full-time')}
+      options={[
+        { value: 'Full-time', label: 'Full-time' },
+        { value: 'Part-time', label: 'Part-time' }
+      ]}
+    />
+
+    {formData.isFullTime ? (
+      <>
+        <FormSelect
+          label="Shift"
+          value={formData.shift}
+          onChange={(e) => handleInputChange('shift', e.target.value)}
+          options={shiftOptions}
+          placeholder="Select shift"
+          required
+        />
+        <FormInput
+          label="Salary"
+          type="number"
+          value={formData.amount}
+          onChange={(e) => handleInputChange('amount', e.target.value)}
+          placeholder="Enter salary"
+          required
+        />
+      </>
+    ) : (
+      <>
+        <FormSelect
+          label="Payment Type"
+          value={formData.paymentType}
+          onChange={(e) => handleInputChange('paymentType', e.target.value)}
+          options={[
+            { value: 'Fee per Visit', label: 'Fee per Visit' },
+            { value: 'Per Hour', label: 'Per Hour' },
+            { value: 'Contractual Salary', label: 'Contractual Salary' }
+          ]}
+          required
+        />
+        <FormInput
+          label="Amount"
+          type="number"
+          value={formData.amount}
+          onChange={(e) => handleInputChange('amount', e.target.value)}
+          placeholder="Enter amount"
+          required
+        />
+        <FormInput label="Contract Start Date" type="date" value={formData.contractStartDate} onChange={(e) => handleInputChange('contractStartDate', e.target.value)} />
+        <FormInput label="Contract End Date" type="date" value={formData.contractEndDate} onChange={(e) => handleInputChange('contractEndDate', e.target.value)} />
+        <FormInput label="Visits per Week" type="number" value={formData.visitsPerWeek} onChange={(e) => handleInputChange('visitsPerWeek', e.target.value)} />
+        <FormInput label="Working Days per Week" type="number" value={formData.workingDaysPerWeek} onChange={(e) => handleInputChange('workingDaysPerWeek', e.target.value)} />
+        
+        {/* Time Slots */}
+        <div className="md:col-span-2">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Time Slots</label>
+          {formData.timeSlots.map((slot, idx) => (
+            <div key={idx} className="flex gap-2 mb-2">
+              <input type="time" value={slot.start} onChange={(e) => handleTimeSlotChange(idx, 'start', e.target.value)} className="border px-2 py-1 rounded" />
+              <span>to</span>
+              <input type="time" value={slot.end} onChange={(e) => handleTimeSlotChange(idx, 'end', e.target.value)} className="border px-2 py-1 rounded" />
+              <button type="button" className="text-red-500" onClick={() => handleRemoveTimeSlot(idx)}>Remove</button>
             </div>
-          </div>
+          ))}
+          <button type="button" onClick={handleAddTimeSlot} className="text-blue-500 mt-2">+ Add Time Slot</button>
+        </div>
+      </>
+    )}
+  </div>
+</div>
+
 
           {/* Emergency Contact */}
           <div className="mb-8">
