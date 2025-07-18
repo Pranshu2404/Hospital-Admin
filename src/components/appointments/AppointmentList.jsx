@@ -508,7 +508,7 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
         <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-lg printable-slip">
           <div className="text-center p-4 border-b">
             <h2 className="text-2xl font-bold text-gray-900">Appointment Slip</h2>
-            <p className="text-gray-600 mt-1">{hospitalInfo?.name || 'Hospital Name'}</p>
+            <p className="text-gray-600 mt-1">{hospitalInfo?.hospitalName || 'Hospital Name'}</p>
           </div>
           <div className="p-6 grid grid-cols-2 gap-x-8 gap-y-4">
             <div><label className="text-sm text-gray-500">Patient Name</label><p className="font-semibold">{appointmentData.patientName}</p></div>
