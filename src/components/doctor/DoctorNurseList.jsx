@@ -70,8 +70,9 @@ const DoctorNurseList = ({ setCurrentPage }) => {
   // Download demo CSV
   const downloadDemoCSV = () => {
   const csvContent =
-    'firstName,lastName,email,password,phone,role,department,specialization,licenseNumber,experience,paymentType,dateOfBirth,gender,address,city,state,zipCode\n' +
-    'Sanjay,Gupta,sanjay.gupta.newtest@hospital.com,newpass123,9123456780,Doctor,Cardiology,Orthopedics,NEWTESTLIC005,14,Fee per Visit,03-12-1984,male,22A Lajpat Nagar,Kanpur,Uttar Pradesh,208005';
+  'firstName,lastName,email,password,phone,role,department,specialization,licenseNumber,experience,paymentType,amount,isFullTime,dateOfBirth,gender,address,city,state,zipCode,contractStartDate,contractEndDate,visitsPerWeek,workingDaysPerWeek,aadharNumber,panNumber,notes\n' +
+  'Sanjay,Gupta,sanjay.gupta@hospital.com,newpass123,9123456780,Doctor,Cardiology,Orthopedics,NEWTESTLIC005,14,Fee per Visit,1500,false,03-12-1984,Male,22A Lajpat Nagar,Kanpur,Uttar Pradesh,208005,2025-02-01,2025-12-31,3,4,1234-5678-9012,ABCDE1234F,Experienced Cardiologist';
+
   
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
@@ -323,9 +324,11 @@ const DoctorNurseList = ({ setCurrentPage }) => {
     <thead className="bg-gray-100">
       <tr>
         {[
-          'firstName', 'lastName', 'email', 'password', 'phone', 'role', 'department', 'specialization',
-          'licenseNumber', 'experience', 'paymentType', 'dateOfBirth', 'gender', 'address', 'city', 'state', 'zipCode'
-        ].map((header, index) => (
+    'firstName', 'lastName', 'email', 'password', 'phone', 'role', 'department', 'specialization',
+    'licenseNumber', 'experience', 'paymentType', 'amount', 'isFullTime', 'dateOfBirth', 'gender',
+    'address', 'city', 'state', 'zipCode', 'contractStartDate', 'contractEndDate', 'visitsPerWeek',
+    'workingDaysPerWeek', 'aadharNumber', 'panNumber', 'notes'
+  ].map((header, index) => (
           <th key={index} className="border px-2 py-1 text-gray-700 font-medium text-left">
             {header}
           </th>
@@ -335,10 +338,11 @@ const DoctorNurseList = ({ setCurrentPage }) => {
     <tbody>
       <tr className="bg-white">
         {[
-          'Sanjay', 'Gupta', 'sanjay.gupta.newtest@hospital.com', 'newpass123', '9123456780',
-          'Doctor', 'Cardiology', 'Orthopedics', 'NEWTESTLIC005', '14', 'Fee per Visit',
-          '03-12-1984', 'male', '22A Lajpat Nagar', 'Kanpur', 'Uttar Pradesh', '208005'
-        ].map((value, index) => (
+  'Sanjay', 'Gupta', 'sanjay.gupta@hospital.com', 'newpass123', '9123456780', 'Doctor', 'Cardiology', 'Orthopedics',
+  'NEWTESTLIC005', '14', 'Fee per Visit', '1500', 'false', '03-12-1984', 'Male', '22A Lajpat Nagar',
+  'Kanpur', 'Uttar Pradesh', '208005', '2025-02-01', '2025-12-31', '3', '4', '1234-5678-9012', 'ABCDE1234F', 'Experienced Cardiologist'
+]
+.map((value, index) => (
           <td key={index} className="border px-2 py-1 text-gray-600 truncate max-w-[150px]">
             {value}
           </td>
