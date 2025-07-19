@@ -153,8 +153,8 @@ const AddPatientIPDForm = () => {
     zipCode: '',
     emergencyContact: '',
     emergencyPhone: '',
-    ward: '',
-    bed: '',
+    // ward: '',
+    // bed: '',
     admissionDate: '',
     medicalHistory: '',
     allergies: '',
@@ -339,8 +339,8 @@ const handleSubmit = async (e) => {
                 options={departments.map(dep => ({ value: dep._id, label: dep.name }))}
                 required
               />
-              <FormInput label="Ward" value={formData.ward} onChange={(e) => handleInputChange('ward', e.target.value)} required />
-              <FormInput label="Bed Number" value={formData.bed} onChange={(e) => handleInputChange('bed', e.target.value)} required />
+              {/* <FormInput label="Ward" value={formData.ward} onChange={(e) => handleInputChange('ward', e.target.value)} required />
+              <FormInput label="Bed Number" value={formData.bed} onChange={(e) => handleInputChange('bed', e.target.value)} required /> */}
               <FormInput label="Admission Date" type="date" value={formData.admissionDate} onChange={(e) => handleInputChange('admissionDate', e.target.value)} required />
             </div>
           </div>

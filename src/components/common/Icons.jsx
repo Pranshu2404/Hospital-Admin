@@ -258,3 +258,9 @@ export const ViewIcon = () => (
     />
   </svg>
 );
+
+export const DollarIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v18m0-18a9 9 0 100 18m0-18a9 9 0 010 18m-3-6h6m-6 0a3 3 0 006 0m-6-6h6m-6 0a3 3 0 006 0" />
+  </svg>
+);

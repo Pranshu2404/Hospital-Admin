@@ -3,17 +3,19 @@ import axios from 'axios';
 import PersonalProfileTab from './PersonalProfileTab';
 import SecurityTab from './SecurityTab';
 import NotificationTab from './NotificationTab';
-import { PersonIcon, SettingsIcon, BellIcon } from '../common/Icons';
+ import ChargesDiscountTab from './ChargesDiscountTab';
+import { PersonIcon, SettingsIcon, BellIcon, DollarIcon } from '../common/Icons';
 
 const UserProfilePage = () => {
   const [activeTab, setActiveTab] = useState('personal');
   const [hospitalData, setHospitalData] = useState(null);
 
-  const tabs = [
-    { id: 'personal', label: 'Personal Info', icon: <PersonIcon />, component: PersonalProfileTab },
-    { id: 'security', label: 'Security', icon: <SettingsIcon />, component: SecurityTab },
-    { id: 'notifications', label: 'Notifications', icon: <BellIcon />, component: NotificationTab }
-  ];
+const tabs = [
+  { id: 'personal', label: 'Personal Info', icon: <PersonIcon />, component: PersonalProfileTab },
+  { id: 'security', label: 'Security', icon: <SettingsIcon />, component: SecurityTab },
+  { id: 'notifications', label: 'Notifications', icon: <BellIcon />, component: NotificationTab },
+  { id: 'charges', label: 'Charges & Discounts', icon: <DollarIcon />, component: ChargesDiscountTab } // ✅ NEW
+];
 
   useEffect(() => {
     const fetchHospitalData = async () => {

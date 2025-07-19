@@ -1,14 +1,28 @@
-const ProfileInfoRow = ({ label, value, isEditing, onChange, className = "" }) => {
+const ProfileInfoRow = ({ label, value, isEditing, onChange, className = "", options = [] }) => {
   if (isEditing && onChange) {
     return (
       <div className={`${className}`}>
         <label className="block text-sm font-medium text-gray-500 mb-1">{label}</label>
-        <input
+        {options.length > 0 ? (
+          <select
+  value={value}
+  onChange={(e) => onChange(e.target.value)}
+  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
+>
+  {options.map((option) => (
+    <option key={option.value} value={option.value}>
+      {option.label}
+    </option>
+  ))}
+</select>
+        ) : (
+          <input
           type="text"
           value={value}
           onChange={(e) => onChange(e.target.value)}
           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
         />
+        )}
       </div>
     );
   }

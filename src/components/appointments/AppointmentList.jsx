@@ -548,6 +548,7 @@ const AppointmentList = () => {
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [hospitalInfo, setHospitalInfo] = useState(null);
+  const { isOpen, openModal, closeModal } = useModal();
 
   useEffect(() => {
     if (patientType) {
@@ -623,8 +624,12 @@ const AppointmentList = () => {
                 <h2 className="text-2xl font-bold text-gray-900">Appointments</h2>
                 <p className="text-gray-600 mt-1">Manage patient appointments and schedules</p>
               </div>
-              <Button variant="primary" onClick={() => setIsAddModalOpen(true)}>
+              {/* <Button variant="primary" onClick={() => setIsAddModalOpen(true)}>
                 <PlusIcon /> New Appointment
+              </Button> */}
+              <Button variant="primary" onClick={openModal}>
+                <PlusIcon />
+                New Appointment
               </Button>
             </div>
             <div className="flex flex-col sm:flex-row gap-4">
@@ -695,6 +700,7 @@ const AppointmentList = () => {
           appointmentData={selectedAppointment}
           hospitalInfo={hospitalInfo}
         />
+        <ChoosePatientTypeModal2 isOpen={isOpen} onClose={closeModal} />
       </div>
     // </Layout>
   );
