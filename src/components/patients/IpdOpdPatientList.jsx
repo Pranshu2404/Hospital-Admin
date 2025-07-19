@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
+import Papa from 'papaparse';
 import { SearchInput, Button } from '../common/FormElements';
-import { EditIcon, DeleteIcon, FilterIcon } from '../common/Icons';
+import { EditIcon, DeleteIcon, FilterIcon, UploadIcon, XIcon, PlusIcon } from '../common/Icons';
 import { useNavigate } from 'react-router-dom';
 
 const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient }) => {
@@ -10,35 +11,92 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient }) => {
   const [filterType, setFilterType] = useState('all');
   const [patients, setPatients] = useState([]);
 
+  // NEW: State for upload messages and a ref for the file input
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [uploadError, setUploadError] = useState('');
+  const [uploadSuccess, setUploadSuccess] = useState('');
+  const fileInputRef = useRef(null);
+
   // Fetch patient data from API
+  const fetchPatients = async () => {
+    try {
+      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/patients`);
+      const data = response.data;
+
+      // Optional: transform backend fields to frontend format
+      const formatted = data.map(p => ({
+        id: p._id,
+        name: `${p.first_name} ${p.last_name}`,
+        age: calculateAge(p.dob),
+        gender: p.gender,
+        phone: p.phone,
+        email: p.email,
+        type: p.patient_type.toUpperCase() || 'OPD',
+        bloodGroup: p.blood_group || 'N/A',
+        lastVisit: new Date(p.registered_at).toISOString().split('T')[0],
+        status: 'Active', // You can map a real status if available
+      }));
+
+      setPatients(formatted);
+    } catch (error) {
+      console.error('❌ Error fetching patients:', error);
+    }
+  };
+
   useEffect(() => {
-    const fetchPatients = async () => {
-      try {
-        const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/patients`);
-        const data = response.data;
-
-        // Optional: transform backend fields to frontend format
-        const formatted = data.map(p => ({
-          id: p._id,
-          name: `${p.first_name} ${p.last_name}`,
-          age: calculateAge(p.dob),
-          gender: p.gender,
-          phone: p.phone,
-          email: p.email,
-          type: p.patient_type.toUpperCase() || 'OPD',
-          bloodGroup: p.blood_group || 'N/A',
-          lastVisit: new Date(p.registered_at).toISOString().split('T')[0],
-          status: 'Active', // You can map a real status if available
-        }));
-
-        setPatients(formatted);
-      } catch (error) {
-        console.error('❌ Error fetching patients:', error);
-      }
-    };
-
     fetchPatients();
   }, []);
+
+  // --- NEW: LOGIC FOR FILE UPLOAD AND DEMO DOWNLOAD ---
+  const handleFileUpload = (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    setUploadError('');
+    setUploadSuccess('');
+
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: async (results) => {
+        try {
+          const response = await axios.post(
+            `${import.meta.env.VITE_BACKEND_URL}/api/patients/bulk-add`,
+            results.data
+          );
+          setUploadSuccess(response.data.message || 'Patients uploaded successfully!');
+          fetchPatients();
+          setTimeout(() => {
+            setIsModalOpen(false);
+            setUploadSuccess(''); // Clear success message on modal close
+          }, 2000); // Close modal after 2 seconds
+        } catch (apiError) {
+          setUploadError(apiError.response?.data?.message || 'An error occurred.');
+        } finally {
+          event.target.value = null;
+        }
+      },
+      error: (error) => {
+        setUploadError(`CSV Parsing Error: ${error.message}`);
+        event.target.value = null;
+      },
+    });
+  };
+
+  const downloadDemoCSV = () => {
+    // These headers must match your Patient model exactly
+    const csvContent = 'first_name,last_name,email,phone,gender,dob,patient_type,blood_group,address,city,state,zipCode\n' +
+      'Amit,Sharma,amit.sharma@example.com,9876543210,male,1990-05-15,opd,O+,"123 Shastri Nagar","Kanpur","Uttar Pradesh",208001';
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'demo_patients.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   const calculateAge = (dob) => {
     const birthDate = new Date(dob);
@@ -51,7 +109,7 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient }) => {
     const matchesSearch =
       patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       patient.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      patient.phone.includes(searchTerm)||
+      patient.phone.includes(searchTerm) ||
       patient.type.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesFilter = filterType === 'all' || patient.type === filterType;
     return matchesSearch && matchesFilter;
@@ -81,13 +139,41 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient }) => {
               <h2 className="text-2xl font-bold text-gray-900">Patient List</h2>
               <p className="text-gray-600 mt-1">Manage all patient records</p>
             </div>
-            <Button 
-              variant="primary"
-              onClick={() => navigate('/dashboard/admin/add-patient')}
-            >
-              Add New Patient
-            </Button>
+            {/* MODIFIED: Wrapped buttons in a div for layout */}
+            <div className="flex items-center gap-2">
+              {/* NEW: Bulk Upload Button */}
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setUploadError('');
+                  setUploadSuccess('');
+                  setIsModalOpen(true);
+                }}
+              >
+                <UploadIcon /> {/* It's good practice to have an icon */}
+                Bulk Upload
+              </Button>
+              
+              <Button
+                variant="primary"
+                onClick={() => navigate('/dashboard/admin/add-patient')}
+              >
+                <PlusIcon />
+                Add New Patient
+              </Button>
+            </div>
           </div>
+
+          {/* NEW: Hidden file input and message display area */}
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileUpload}
+            className="hidden"
+            accept=".csv"
+          />
+          {uploadSuccess && <div className="mt-2 p-3 text-sm text-green-800 bg-green-100 rounded-md">{uploadSuccess}</div>}
+          {uploadError && <div className="mt-2 p-3 text-sm text-red-800 bg-red-100 rounded-md">{uploadError}</div>}
 
           {/* Search and Filter */}
           <div className="flex flex-col sm:flex-row gap-4">
@@ -219,6 +305,64 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient }) => {
             </div>
           </div>
         )}
+{/* --- BULK UPLOAD MODAL --- */}
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-2xl">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-semibold">Bulk Upload Patients</h3>
+              <button onClick={() => setIsModalOpen(false)} className="text-gray-500 hover:text-gray-800">
+                <XIcon />
+              </button>
+            </div>
+
+            <p className="text-gray-600 mb-4">
+              Upload patients using a CSV file. The headers must match the format below.
+            </p>
+
+            <div className="bg-gray-50 p-3 rounded-md border overflow-x-auto mb-4">
+              <table className="text-xs">
+                <thead className="bg-gray-200">
+                  <tr>
+                    {/* MODIFIED: Added all header columns */}
+                    {['first_name', 'last_name', 'email', 'phone', 'gender', 'dob', 'patient_type', 'blood_group', 'address', 'city', 'state', 'zipCode'].map((header) => (
+                      <th key={header} className="px-3 py-2 text-left font-medium text-gray-600 whitespace-nowrap">
+                        {header}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="bg-white">
+                    {/* MODIFIED: Added all data columns */}
+                    {['Amit', 'Sharma', 'amit@example.com', '9876543210', 'male', '1990-05-15', 'opd', 'O+', '123 Shastri Nagar', 'Kanpur', 'Uttar Pradesh', '208001'].map((value, index) => (
+                      <td key={index} className="px-3 py-2 text-gray-700 border-t whitespace-nowrap">
+                        {value}
+                      </td>
+                    ))}
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            
+            <div className="flex gap-4 mb-4">
+              <Button variant="outline" onClick={downloadDemoCSV}>Download Demo CSV</Button>
+              <Button variant="primary" onClick={() => fileInputRef.current?.click()}>Choose & Upload CSV</Button>
+            </div>
+
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileUpload}
+              className="hidden"
+              accept=".csv"
+            />
+            {uploadSuccess && <div className="mt-4 p-3 text-sm text-green-800 bg-green-100 rounded-md">{uploadSuccess}</div>}
+            {uploadError && <div className="mt-4 p-3 text-sm text-red-800 bg-red-100 rounded-md">{uploadError}</div>}
+          </div>
+        </div>
+      )}
+      {/* --------------------------- */}
       </div>
     </div>
   );
