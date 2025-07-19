@@ -387,6 +387,178 @@
 
 
 
+// import { useState, useEffect } from 'react';
+// import { useNavigate } from 'react-router-dom';
+// import Layout from '../../../components/Layout';
+// import { adminSidebar } from '../../../constants/sidebarItems/adminSidebar';
+// import { Button } from '../../../components/common/FormElements';
+// import axios from 'axios';
+
+// // --- Modal to prompt for HOD assignment ---
+// const AssignHODPromptModal = ({ isOpen, onClose, onConfirm, departmentName }) => {
+//   if (!isOpen) return null;
+
+//   return (
+//     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+//       <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md text-center">
+//         <h3 className="text-xl font-bold text-gray-900">Department Added!</h3>
+//         <p className="text-gray-600 my-4">
+//           Would you like to assign a Head of Department (HOD) for "{departmentName}" now?
+//         </p>
+//         <div className="flex justify-center space-x-4">
+//           <Button variant="secondary" onClick={onClose}>No, Later</Button>
+//           <Button variant="primary" onClick={onConfirm}>Yes, Assign HOD</Button>
+//         </div>
+//       </div>
+//     </div>
+//   );
+// };
+
+// // --- Main Component ---
+// const SelectDepartment = () => {
+//   const [departments, setDepartments] = useState([]);
+//   const [newDeptName, setNewDeptName] = useState('');
+//   const [editingDept, setEditingDept] = useState(null);
+//   const [editedName, setEditedName] = useState('');
+//   const [showAssignPrompt, setShowAssignPrompt] = useState(false);
+//   const [newlyAddedDept, setNewlyAddedDept] = useState(null);
+//   const navigate = useNavigate();
+
+//   useEffect(() => {
+//     const fetchDepartments = async () => {
+//       try {
+//         const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/departments`);
+//         setDepartments(res.data);
+//       } catch (err) {
+//         console.error('❌ Failed to fetch departments:', err);
+//       }
+//     };
+//     fetchDepartments();
+//   }, []);
+
+//   const handleAddDepartment = async (e) => {
+//     e.preventDefault();
+//     const trimmed = newDeptName.trim();
+//     if (!trimmed) return;
+//     if (departments.some(d => d.name.toLowerCase() === trimmed.toLowerCase())) {
+//       alert('This department name already exists on the list.');
+//       return;
+//     }
+//     try {
+//       const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/departments`, { name: trimmed });
+//       const newDept = res.data;
+//       setDepartments((prev) => [...prev, newDept]);
+//       setNewDeptName('');
+//       setNewlyAddedDept(newDept);
+//       setShowAssignPrompt(true);
+//     } catch (err) {
+//       let errorMessage = 'An unexpected error occurred.';
+//       if (err.response?.data?.error) {
+//         errorMessage = err.response.data.error;
+//       } else if (err.request) {
+//         errorMessage = 'Could not connect to the server.';
+//       } else {
+//         errorMessage = err.message;
+//       }
+//       alert(`Error: ${errorMessage}`);
+//       console.error('❌ Failed to add department:', err);
+//     }
+//   };
+
+//   const handleDeleteDepartment = async (id) => {
+//     if (!window.confirm('Are you sure you want to delete this department?')) return;
+//     try {
+//       await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/api/departments/${id}`);
+//       setDepartments((prev) => prev.filter((dept) => dept._id !== id));
+//     } catch (err) {
+//       alert('Failed to delete department');
+//     }
+//   };
+
+//   const handleEditDepartment = (id, currentName) => {
+//     setEditingDept(id);
+//     setEditedName(currentName);
+//   };
+
+//   const handleUpdateDepartment = async (id) => {
+//     const trimmed = editedName.trim();
+//     if (!trimmed) return;
+//     try {
+//       const res = await axios.put(`${import.meta.env.VITE_BACKEND_URL}/api/departments/${id}`, { name: trimmed });
+//       setDepartments((prev) => prev.map((dept) => (dept._id === id ? { ...dept, name: res.data.name } : dept)));
+//       setEditingDept(null);
+//     } catch (err) {
+//       alert('Failed to update department');
+//     }
+//   };
+
+//   const handleNavigateToAssignHOD = () => {
+//     if (!newlyAddedDept) return;
+//     navigate(`/dashboard/admin/add-hod/${newlyAddedDept._id}?departmentName=${encodeURIComponent(newlyAddedDept.name)}`);
+//     setShowAssignPrompt(false);
+//   };
+
+//   return (
+//     <Layout sidebarItems={adminSidebar}>
+//       <div className="p-6">
+//         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
+//           <h2 className="text-2xl font-bold text-gray-900 mb-2">Add New Department</h2>
+//           <form onSubmit={handleAddDepartment} className="flex flex-col sm:flex-row gap-4">
+//             <input
+//               type="text"
+//               placeholder="Enter department name"
+//               value={newDeptName}
+//               onChange={(e) => setNewDeptName(e.target.value)}
+//               className="w-full border border-gray-300 rounded-lg px-4 py-2 flex-1"
+//             />
+//             <Button type="submit" variant="primary">Add Department</Button>
+//           </form>
+//         </div>
+
+//         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+//           <h2 className="text-2xl font-bold text-gray-900">Manage Departments</h2>
+//           <p className="text-gray-600 mb-6">Edit or delete departments from the list below.</p>
+//           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+//             {departments.map((dept) => (
+//               <div key={dept._id} className="relative group bg-blue-50 border border-blue-200 rounded-xl p-4">
+//                 {editingDept === dept._id ? (
+//                   <input
+//                     type="text"
+//                     value={editedName}
+//                     onChange={(e) => setEditedName(e.target.value)}
+//                     onBlur={() => handleUpdateDepartment(dept._id)}
+//                     onKeyDown={(e) => e.key === 'Enter' && handleUpdateDepartment(dept._id)}
+//                     autoFocus
+//                     className="text-lg font-medium text-blue-900 bg-white border border-blue-300 rounded px-2 py-1 w-full"
+//                   />
+//                 ) : (
+//                   <h3 className="text-lg font-medium text-blue-900">{dept.name}</h3>
+//                 )}
+//                 <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+//                   <button onClick={() => handleEditDepartment(dept._id, dept.name)} className="text-gray-500 hover:text-blue-600 p-2 rounded-full bg-white/80 shadow" title="Edit Department Name">
+//                     ✏️
+//                   </button>
+//                   <button onClick={() => handleDeleteDepartment(dept._id)} className="text-red-500 hover:text-red-700 p-2 rounded-full bg-white/80 shadow" title="Delete Department">
+//                     🗑️
+//                   </button>
+//                 </div>
+//               </div>
+//             ))}
+//           </div>
+//         </div>
+//       </div>
+
+//       <AssignHODPromptModal
+//         isOpen={showAssignPrompt}
+//         onClose={() => setShowAssignPrompt(false)}
+//         onConfirm={handleNavigateToAssignHOD}
+//         departmentName={newlyAddedDept?.name}
+//       />
+//     </Layout>
+//   );
+// };
+
+// export default SelectDepartment;
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../../../components/Layout';
@@ -394,10 +566,32 @@ import { adminSidebar } from '../../../constants/sidebarItems/adminSidebar';
 import { Button } from '../../../components/common/FormElements';
 import axios from 'axios';
 
-// --- Modal to prompt for HOD assignment ---
+// A comprehensive list of hospital departments for suggestions
+const hospitalDepartmentSuggestions = [
+  // Clinical & Medical
+  'General Medicine', 'Pediatrics', 'Geriatrics', 'Obstetrics and Gynecology (OB/GYN)', 'Cardiology',
+  'Neurology', 'Oncology (Cancer Center)', 'Dermatology', 'Endocrinology', 'Gastroenterology',
+  'Nephrology (Renal Unit)', 'Pulmonology (Respiratory Medicine)', 'Rheumatology', 'Infectious Diseases',
+  'Psychiatry and Behavioral Health', 'Palliative Care',
+  // Surgical
+  'General Surgery', 'Orthopedic Surgery', 'Cardiothoracic Surgery', 'Neurosurgery', 'Plastic and Reconstructive Surgery',
+  'Urology', 'Otolaryngology (ENT)', 'Ophthalmology (Eye Care)', 'Anesthesiology', 'Vascular Surgery',
+  // Diagnostic & Imaging
+  'Radiology (X-Ray, CT, MRI)', 'Pathology and Laboratory Medicine', 'Nuclear Medicine', 'Interventional Radiology', 'Ultrasound',
+  // Critical & Emergency Care
+  'Emergency Department (ED/ER)', 'Intensive Care Unit (ICU)', 'Pediatric Intensive Care Unit (PICU)',
+  'Neonatal Intensive Care Unit (NICU)', 'Coronary Care Unit (CCU)', 'Trauma Center',
+  // Therapeutic & Rehabilitation
+  'Physical Therapy', 'Occupational Therapy', 'Speech-Language Pathology', 'Nutrition and Dietetics', 'Pharmacy',
+  // Administrative & Support
+  'Patient Registration / Admissions', 'Medical Records', 'Billing and Insurance', 'Information Technology (IT)',
+  'Biomedical Engineering', 'Housekeeping / Environmental Services', 'Security', 'Human Resources', 'Administration'
+];
+
+
+// --- Modal to prompt for HOD assignment (No changes needed here) ---
 const AssignHODPromptModal = ({ isOpen, onClose, onConfirm, departmentName }) => {
   if (!isOpen) return null;
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
       <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md text-center">
@@ -414,6 +608,7 @@ const AssignHODPromptModal = ({ isOpen, onClose, onConfirm, departmentName }) =>
   );
 };
 
+
 // --- Main Component ---
 const SelectDepartment = () => {
   const [departments, setDepartments] = useState([]);
@@ -422,6 +617,7 @@ const SelectDepartment = () => {
   const [editedName, setEditedName] = useState('');
   const [showAssignPrompt, setShowAssignPrompt] = useState(false);
   const [newlyAddedDept, setNewlyAddedDept] = useState(null);
+  const [suggestions, setSuggestions] = useState([]);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -436,12 +632,35 @@ const SelectDepartment = () => {
     fetchDepartments();
   }, []);
 
+  // <<< MODIFIED: Handler now suggests from the predefined list and excludes existing departments
+  const handleInputChange = (e) => {
+    const value = e.target.value;
+    setNewDeptName(value);
+
+    if (value) {
+      const existingDeptNames = departments.map(d => d.name.toLowerCase());
+      const filteredSuggestions = hospitalDepartmentSuggestions.filter(suggestion =>
+        suggestion.toLowerCase().includes(value.toLowerCase()) &&
+        !existingDeptNames.includes(suggestion.toLowerCase())
+      );
+      setSuggestions(filteredSuggestions);
+    } else {
+      setSuggestions([]);
+    }
+  };
+
+  const handleSuggestionClick = (name) => {
+    setNewDeptName(name);
+    setSuggestions([]); // Hide suggestions after selection
+  };
+  
   const handleAddDepartment = async (e) => {
     e.preventDefault();
     const trimmed = newDeptName.trim();
     if (!trimmed) return;
     if (departments.some(d => d.name.toLowerCase() === trimmed.toLowerCase())) {
       alert('This department name already exists on the list.');
+      setSuggestions([]); // Hide suggestions if name already exists
       return;
     }
     try {
@@ -451,6 +670,7 @@ const SelectDepartment = () => {
       setNewDeptName('');
       setNewlyAddedDept(newDept);
       setShowAssignPrompt(true);
+      setSuggestions([]); // Clear suggestions on successful add
     } catch (err) {
       let errorMessage = 'An unexpected error occurred.';
       if (err.response?.data?.error) {
@@ -497,20 +717,37 @@ const SelectDepartment = () => {
     navigate(`/dashboard/admin/add-hod/${newlyAddedDept._id}?departmentName=${encodeURIComponent(newlyAddedDept.name)}`);
     setShowAssignPrompt(false);
   };
-
+  
   return (
     <Layout sidebarItems={adminSidebar}>
       <div className="p-6">
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Add New Department</h2>
           <form onSubmit={handleAddDepartment} className="flex flex-col sm:flex-row gap-4">
-            <input
-              type="text"
-              placeholder="Enter department name"
-              value={newDeptName}
-              onChange={(e) => setNewDeptName(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-4 py-2 flex-1"
-            />
+            <div className="relative w-full flex-1">
+              <input
+                type="text"
+                placeholder="Enter department name"
+                value={newDeptName}
+                onChange={handleInputChange}
+                className="w-full border border-gray-300 rounded-lg px-4 py-2"
+                autoComplete="off"
+              />
+              {/* <<< MODIFIED: Suggestions list now maps over an array of strings */}
+              {suggestions.length > 0 && (
+                <ul className="absolute z-10 w-full bg-white border border-gray-200 rounded-b-lg shadow-lg mt-1 max-h-60 overflow-y-auto">
+                  {suggestions.map((name, index) => (
+                    <li
+                      key={`${name}-${index}`}
+                      className="px-4 py-2 cursor-pointer hover:bg-gray-100"
+                      onClick={() => handleSuggestionClick(name)}
+                    >
+                      {name}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
             <Button type="submit" variant="primary">Add Department</Button>
           </form>
         </div>
@@ -547,7 +784,7 @@ const SelectDepartment = () => {
           </div>
         </div>
       </div>
-
+      
       <AssignHODPromptModal
         isOpen={showAssignPrompt}
         onClose={() => setShowAssignPrompt(false)}
