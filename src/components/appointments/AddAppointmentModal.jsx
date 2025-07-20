@@ -639,8 +639,8 @@ const AddAppointmentModal = ({ isOpen, onClose, type, hospitalId }) => {
     options={[
       { value: 'Pending', label: 'Pending' },
       { value: 'Paid', label: 'Paid' },
-      { value: 'Partially Paid', label: 'Partially Paid' },
-      { value: 'Cancelled', label: 'Cancelled' }
+      { value: 'Refunded', label: 'Refunded' }
+      // { value: 'Cancelled', label: 'Cancelled' }
     ]}
     required
   />
