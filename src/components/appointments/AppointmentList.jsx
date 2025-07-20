@@ -480,8 +480,28 @@ import { useLocation } from 'react-router-dom';
 // --- Slip Modal (Updated to display correct patientId) ---
 const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }) => {
   if (!isOpen || !appointmentData) return null;
-  console.log('Appointment Data:', appointmentData);
-  
+  console.log(appointmentData)
+  const [appointmentDetails, setAppointmentDetails] = useState(null);
+  const [billingDetails, setBillingDetails] = useState(null);
+
+  useEffect(() => {
+    const fetchDetails = async () => {
+      try {
+        const [appointmentRes, billRes] = await Promise.all([
+          axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/appointments/${appointmentData._id}`),
+          axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/billing/appointment/${appointmentData._id}`)
+        ]);
+
+        setAppointmentDetails(appointmentRes.data);
+        setBillingDetails(billRes.data);
+      } catch (error) {
+        console.error('Error fetching details:', error);
+      }
+    };
+
+    if (isOpen) fetchDetails();
+  }, [isOpen, appointmentData._id]);
+
   const handlePrint = () => {
     window.print();
   };
@@ -496,24 +516,45 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
           .no-print { display: none; }
         }
       `}</style>
+
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
         <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-lg printable-slip">
+          {/* Header */}
           <div className="text-center p-4 border-b">
             <h2 className="text-2xl font-bold text-gray-900">Appointment Slip</h2>
             <p className="text-gray-600 mt-1">{hospitalInfo?.hospitalName || 'Hospital Name'}</p>
           </div>
-          <div className="p-6 grid grid-cols-2 gap-x-8 gap-y-4">
-            <div><label className="text-sm text-gray-500">Patient Name</label><p className="font-semibold">{appointmentData.patientName}</p></div>
-            <div>
-              <label className="text-sm text-gray-500">Patient ID</label>
-              {/* FIX: Displays the human-readable patientId */}
-              <p className="font-semibold">{appointmentData.patientId || 'N/A'}</p>
-            </div>
-            <div><label className="text-sm text-gray-500">Appointment Type</label><p className="font-semibold capitalize">{appointmentData.type}</p></div>
-            <div><label className="text-sm text-gray-500">Department</label><p className="font-semibold">{appointmentData.departmentName}</p></div>
-            <div><label className="text-sm text-gray-500">Doctor</label><p className="font-semibold">{appointmentData.doctorName}</p></div>
-            <div><label className="text-sm text-gray-500">Date & Time</label><p className="font-semibold">{`${appointmentData.date}, ${appointmentData.time}`}</p></div>
+
+          {/* Appointment Details */}
+          <div className="p-6 grid grid-cols-2 gap-x-8 gap-y-4 text-sm">
+            <div><span className="text-gray-500">Patient Name:</span> <strong>{appointmentData.patientName}</strong></div>
+            <div><span className="text-gray-500">Patient ID:</span> <strong>{appointmentData.patientId || 'N/A'}</strong></div>
+            <div><span className="text-gray-500">Appointment Type:</span> <strong>{appointmentData.type}</strong></div>
+            <div><span className="text-gray-500">Department:</span> <strong>{appointmentData.departmentName}</strong></div>
+            <div><span className="text-gray-500">Doctor:</span> <strong>{appointmentData.doctorName}</strong></div>
+            <div><span className="text-gray-500">Date & Time:</span> <strong>{appointmentData.date}, {appointmentData.time}</strong></div>
           </div>
+
+          {/* Billing Details */}
+          {billingDetails && billingDetails.details && (
+            <div className="p-4 border-t">
+              <h3 className="text-lg font-semibold mb-2">Bill Details</h3>
+              <div className="space-y-1 text-sm">
+                {billingDetails.details.map((item, idx) => (
+                  <div key={idx} className="flex justify-between">
+                    <span>{item.description||''}</span>
+                    <span>₹{item.amount.toFixed(2)||''}</span>
+                  </div>
+                ))}
+                <div className="flex justify-between font-bold border-t mt-2 pt-2">
+                  <span>Total</span>
+                  <span>₹{(billingDetails||'').total_amount.toFixed(2)}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Footer */}
           <div className="p-4 border-t flex justify-end space-x-3 no-print">
             <Button variant="secondary" onClick={onClose}>Close</Button>
             <Button variant="primary" onClick={handlePrint}>Print Slip</Button>

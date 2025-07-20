@@ -484,6 +484,7 @@ const AddAppointmentModal = ({ isOpen, onClose, type, hospitalId }) => {
         // total_amount: totalAmount,
         payment_method: formData.paymentMethod,
         status: status,
+        details: chargesSummary,
         items: chargesSummary // ✅ Correct key
       });
 
