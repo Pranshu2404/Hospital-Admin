@@ -477,19 +477,11 @@ import AddAppointmentModal from './AddAppointmentModal';
 import ChoosePatientTypeModal2 from '../patients/ChoosePatientTypeModal2';
 import { useLocation } from 'react-router-dom';
 
-// import React, { useEffect, useState } from 'react';
-// import axios from 'axios';
-// // import Layout from '../../../components/Layout';
-// import { adminSidebar } from '../../../constants/sidebarItems/adminSidebar';
-// import { SearchInput, Button } from '../common/FormElements';
-// import { PlusIcon, EditIcon, DeleteIcon, ViewIcon } from '../common/Icons';
-// import AddAppointmentModal from './AddAppointmentModal';
-// import { useLocation } from 'react-router-dom';
-
 // --- Slip Modal (Updated to display correct patientId) ---
 const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }) => {
   if (!isOpen || !appointmentData) return null;
-
+  console.log('Appointment Data:', appointmentData);
+  
   const handlePrint = () => {
     window.print();
   };
@@ -578,7 +570,7 @@ const AppointmentList = () => {
         }));
         setAppointments(enriched);
         setHospitalInfo(hospitalRes.data[0]);
-
+        console.log('Hospital Info:', hospitalRes.data[0]);
       } catch (error) {
         console.error('Error fetching data:', error);
       } finally {
@@ -692,8 +684,8 @@ const AppointmentList = () => {
           )}
         </div>
 
-        <AddAppointmentModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} type={appointmentType} />
-        
+        <AddAppointmentModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} type={appointmentType} hospitalId={hospitalInfo?._id} />
+
         <AppointmentSlipModal
           isOpen={isViewModalOpen}
           onClose={handleCloseViewModal}

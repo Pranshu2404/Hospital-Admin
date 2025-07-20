@@ -7,15 +7,24 @@ import ProfileInfoRow from './ProfileInfoRow';
 const ChargesDiscountTab = ({ hospitalData }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
+
   const [chargesData, setChargesData] = useState({
-    registrationFee: 0,
-    discountType: 'fixed',
-    discountValue: 0,
+    opdCharges: {
+      registrationFee: 0,
+      consultationFee: 0,
+      discountType: 'Fixed',
+      discountValue: 0,
+    },
     ipdCharges: {
-      roomCharges: [],
+      admissionFee: 0,
+      registrationFee: 0,
+      consultationFee: 0,
       nursingCharges: 0,
       otCharges: 0,
-      miscellaneous: 0
+      miscellaneous: 0,
+      discountType: 'Fixed',
+      discountValue: 0,
+      roomCharges: [],
     }
   });
 
@@ -28,14 +37,22 @@ const ChargesDiscountTab = ({ hospitalData }) => {
         );
         if (res.data) {
           setChargesData({
-            registrationFee: res.data.opdCharges?.registrationFee || 0,
-            discountType: res.data.opdCharges?.discountType || 'fixed',
-            discountValue: res.data.opdCharges?.discountValue || 0,
-            ipdCharges: res.data.ipdCharges || {
-              roomCharges: [],
-              nursingCharges: 0,
-              otCharges: 0,
-              miscellaneous: 0
+            opdCharges: {
+              registrationFee: res.data.opdCharges?.registrationFee || 0,
+              consultationFee: res.data.opdCharges?.consultationFee || 0,
+              discountType: res.data.opdCharges?.discountType || 'Fixed',
+              discountValue: res.data.opdCharges?.discountValue || 0,
+            },
+            ipdCharges: {
+              admissionFee: res.data.ipdCharges?.admissionFee || 0,
+              registrationFee: res.data.ipdCharges?.registrationFee || 0,
+              consultationFee: res.data.ipdCharges?.consultationFee || 0,
+              nursingCharges: res.data.ipdCharges?.nursingCharges || 0,
+              otCharges: res.data.ipdCharges?.otCharges || 0,
+              miscellaneous: res.data.ipdCharges?.miscellaneous || 0,
+              discountType: res.data.ipdCharges?.discountType || 'Fixed',
+              discountValue: res.data.ipdCharges?.discountValue || 0,
+              roomCharges: res.data.ipdCharges?.roomCharges || [],
             }
           });
         }
@@ -52,11 +69,7 @@ const ChargesDiscountTab = ({ hospitalData }) => {
       setLoading(true);
       await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/hospital-charges`, {
         hospital: hospitalData._id,
-        opdCharges: {
-          registrationFee: chargesData.registrationFee,
-          discountType: chargesData.discountType,
-          discountValue: chargesData.discountValue
-        },
+        opdCharges: chargesData.opdCharges,
         ipdCharges: chargesData.ipdCharges
       });
       alert('Charges updated successfully');
@@ -75,10 +88,7 @@ const ChargesDiscountTab = ({ hospitalData }) => {
       ...prev,
       ipdCharges: {
         ...prev.ipdCharges,
-        roomCharges: [
-          ...prev.ipdCharges.roomCharges,
-          { type: 'General', chargePerDay: 0 }
-        ]
+        roomCharges: [...prev.ipdCharges.roomCharges, { type: 'General', chargePerDay: 0 }]
       }
     }));
   };
@@ -126,43 +136,83 @@ const ChargesDiscountTab = ({ hospitalData }) => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         <ProfileInfoRow
           label="Registration Fee"
-          value={chargesData.registrationFee}
+          value={chargesData.opdCharges.registrationFee}
           isEditing={isEditing}
           type="number"
-          onChange={(val) => setChargesData(prev => ({ ...prev, registrationFee: Number(val) }))}
+          onChange={(val) => setChargesData(prev => ({
+            ...prev, opdCharges: { ...prev.opdCharges, registrationFee: Number(val) }
+          }))}
+        />
+        <ProfileInfoRow
+          label="Consultation Fee"
+          value={chargesData.opdCharges.consultationFee}
+          isEditing={isEditing}
+          type="number"
+          onChange={(val) => setChargesData(prev => ({
+            ...prev, opdCharges: { ...prev.opdCharges, consultationFee: Number(val) }
+          }))}
         />
         <ProfileInfoRow
           label="Discount Type"
-          value={chargesData.discountType}
+          value={chargesData.opdCharges.discountType}
           isEditing={isEditing}
           type="select"
           options={[
-            { label: 'Fixed', value: 'fixed' },
-            { label: 'Percentage', value: 'percentage' }
+            { label: 'Fixed', value: 'Fixed' },
+            { label: 'Percentage', value: 'Percentage' }
           ]}
-          onChange={(val) => setChargesData(prev => ({ ...prev, discountType: val }))}
+          onChange={(val) => setChargesData(prev => ({
+            ...prev, opdCharges: { ...prev.opdCharges, discountType: val }
+          }))}
         />
         <ProfileInfoRow
           label="Discount Value"
-          value={chargesData.discountValue}
+          value={chargesData.opdCharges.discountValue}
           isEditing={isEditing}
           type="number"
-          onChange={(val) => setChargesData(prev => ({ ...prev, discountValue: Number(val) }))}
+          onChange={(val) => setChargesData(prev => ({
+            ...prev, opdCharges: { ...prev.opdCharges, discountValue: Number(val) }
+          }))}
         />
       </div>
 
       {/* ✅ IPD Charges */}
       <h4 className="text-md font-semibold text-gray-900 mb-4">IPD Charges</h4>
-      {/* Nursing, OT, Misc */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <ProfileInfoRow
+          label="Admission Fee"
+          value={chargesData.ipdCharges.admissionFee}
+          isEditing={isEditing}
+          type="number"
+          onChange={(val) => setChargesData(prev => ({
+            ...prev, ipdCharges: { ...prev.ipdCharges, admissionFee: Number(val) }
+          }))}
+        />
+        <ProfileInfoRow
+          label="Registration Fee"
+          value={chargesData.ipdCharges.registrationFee}
+          isEditing={isEditing}
+          type="number"
+          onChange={(val) => setChargesData(prev => ({
+            ...prev, ipdCharges: { ...prev.ipdCharges, registrationFee: Number(val) }
+          }))}
+        />
+        <ProfileInfoRow
+          label="Consultation Fee"
+          value={chargesData.ipdCharges.consultationFee}
+          isEditing={isEditing}
+          type="number"
+          onChange={(val) => setChargesData(prev => ({
+            ...prev, ipdCharges: { ...prev.ipdCharges, consultationFee: Number(val) }
+          }))}
+        />
         <ProfileInfoRow
           label="Nursing Charges"
           value={chargesData.ipdCharges.nursingCharges}
           isEditing={isEditing}
           type="number"
           onChange={(val) => setChargesData(prev => ({
-            ...prev,
-            ipdCharges: { ...prev.ipdCharges, nursingCharges: Number(val) }
+            ...prev, ipdCharges: { ...prev.ipdCharges, nursingCharges: Number(val) }
           }))}
         />
         <ProfileInfoRow
@@ -171,8 +221,7 @@ const ChargesDiscountTab = ({ hospitalData }) => {
           isEditing={isEditing}
           type="number"
           onChange={(val) => setChargesData(prev => ({
-            ...prev,
-            ipdCharges: { ...prev.ipdCharges, otCharges: Number(val) }
+            ...prev, ipdCharges: { ...prev.ipdCharges, otCharges: Number(val) }
           }))}
         />
         <ProfileInfoRow
@@ -181,8 +230,29 @@ const ChargesDiscountTab = ({ hospitalData }) => {
           isEditing={isEditing}
           type="number"
           onChange={(val) => setChargesData(prev => ({
-            ...prev,
-            ipdCharges: { ...prev.ipdCharges, miscellaneous: Number(val) }
+            ...prev, ipdCharges: { ...prev.ipdCharges, miscellaneous: Number(val) }
+          }))}
+        />
+        <ProfileInfoRow
+          label="Discount Type"
+          value={chargesData.ipdCharges.discountType}
+          isEditing={isEditing}
+          type="select"
+          options={[
+            { label: 'Fixed', value: 'Fixed' },
+            { label: 'Percentage', value: 'Percentage' }
+          ]}
+          onChange={(val) => setChargesData(prev => ({
+            ...prev, ipdCharges: { ...prev.ipdCharges, discountType: val }
+          }))}
+        />
+        <ProfileInfoRow
+          label="Discount Value"
+          value={chargesData.ipdCharges.discountValue}
+          isEditing={isEditing}
+          type="number"
+          onChange={(val) => setChargesData(prev => ({
+            ...prev, ipdCharges: { ...prev.ipdCharges, discountValue: Number(val) }
           }))}
         />
       </div>
