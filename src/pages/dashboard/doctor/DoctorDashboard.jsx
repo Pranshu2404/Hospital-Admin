@@ -1,26 +1,21 @@
 import React from 'react';
-// import StatCards from '../../../components/common/StatCard';
-// import AppointmentChart from '../../../components/common/AppointmentChart';
-// import TopTreatmentsChart from '../../../components/common/TopTreatmentsChart';
-// import ApprovalRequestList from '../../../components/common/ApprovalRequestList';
 import {
   FaUsers,
-  FaMoneyBillWave,
   FaUserMd,
   FaCalendarCheck,
   FaTooth,
   FaHeart,
 } from 'react-icons/fa';
+// REMOVED: FaMoneyBillWave as it's no longer used
 
 const DoctorDashboard = () => {
   return (
     <div>
-     <h1 className="text-2xl font-bold p-4  bg-white text-gray-800">Welcome Back, Dr. John!</h1> 
+     <h1 className="text-2xl font-bold p-4 bg-white text-gray-800">Welcome Back, Dr. John!</h1> 
 
     <div className="p-4 space-y-6 bg-gray-50 min-h-screen">
-      {/* <h1 className="text-2xl font-bold mb-4 p-2 bg-white text-gray-800">Welcome Back, Dr. John!</h1> */}
 
-      {/* ✅ Updated Stat Cards */}
+      {/* Stat Cards - Payment card is now Today's Appointments */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-white rounded-xl shadow p-4 flex items-center">
           <div className="w-12 h-12 bg-teal-100 text-teal-600 rounded-full flex items-center justify-center mr-4">
@@ -55,14 +50,15 @@ const DoctorDashboard = () => {
           </div>
         </div>
 
+        {/* UPDATED: This card now shows Today's Appointments */}
         <div className="bg-white rounded-xl shadow p-4 flex items-center">
-          <div className="w-12 h-12 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center mr-4">
-            <FaMoneyBillWave className="text-xl" />
+          <div className="w-12 h-12 bg-green-100 text-green-600 rounded-full flex items-center justify-center mr-4">
+            <FaCalendarCheck className="text-xl" />
           </div>
           <div>
-            <div className="text-sm text-gray-500">Payment</div>
-            <div className="text-xl font-bold text-gray-800">$1,500</div>
-            <div className="text-xs text-green-600">↑ 10%</div>
+            <div className="text-sm text-gray-500">Today's Appointments</div>
+            <div className="text-xl font-bold text-gray-800">12</div>
+            <div className="text-xs text-green-600">↑ 5% From yesterday</div>
           </div>
         </div>
       </div>
@@ -171,7 +167,7 @@ const DoctorDashboard = () => {
             <button className="mt-1 text-blue-600 text-sm">View More</button>
           </div>
           <div>
-            <div className="text-sm text-gray-500">Earnings</div>
+            <div className="text-sm text-gray-500">Earnings...</div>
             <div className="text-xl font-bold">$10,150</div>
             <div className="text-xs text-gray-500">Previous Month: $20,000</div>
             <button className="mt-1 text-blue-600 text-sm">View More</button>

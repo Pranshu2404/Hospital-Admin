@@ -164,6 +164,150 @@
 // export default AddRegistrarForm;
 
 
+// import { useState, useEffect } from 'react';
+// import { FormSelect, Button } from '../common/FormElements';
+// import axios from 'axios';
+
+// const AddRegistrarForm = () => {
+//   const [staffOptions, setStaffOptions] = useState([]);
+//   const [selectedStaffId, setSelectedStaffId] = useState('');
+//   const [department, setDepartment] = useState('');
+//   const [specialization, setSpecialization] = useState('');
+//   const [joiningDate, setJoiningDate] = useState('');
+//   const [password, setPassword] = useState('');
+//   const [departmentOptions, setDepartmentOptions] = useState([]);
+
+//   useEffect(() => {
+//     const fetchStaff = async () => {
+//       try {
+//         const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/staff`);
+//         const filteredStaff = response.data.filter(staff => staff.role === 'Receptionist' || staff.role === 'Other' || staff.role === 'Nurse');
+//         setStaffOptions(filteredStaff);
+//       } catch (err) {
+//         console.error('Failed to fetch staff:', err);
+//       }
+//     };
+
+//     fetchStaff();
+//   }, []);
+
+//   useEffect(() => {
+//     const fetchDepartments = async () => {
+//       try {
+//         const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/departments`);
+//         const departments = res.data?.map(dep => ({
+//           value: dep.name,
+//           label: dep.name
+//         })) || [];
+
+//         setDepartmentOptions(departments);
+//       } catch (err) {
+//         console.error('❌ Failed to fetch departments:', err);
+//       }
+//     };
+
+//     fetchDepartments();
+//   }, []);
+
+//   const handleSubmit = async (e) => {
+//     e.preventDefault();
+
+//     if (!selectedStaffId) return alert('Please select a staff member.');
+
+//     const selectedStaff = staffOptions.find(s => s._id === selectedStaffId);
+//     if (!selectedStaff) return alert('Selected staff not found.');
+
+//     const registrarData = {
+//       ...selectedStaff,
+//       department,
+//       specialization,
+//       joiningDate,
+//       // role,
+//       status: 'Active',
+//       password: password.trim() || undefined  // only send password if provided
+//     };
+
+//     try {
+//       await axios.put(
+//         `${import.meta.env.VITE_BACKEND_URL}/api/staff/${selectedStaffId}`,
+//         registrarData
+//       );
+//       alert('Registrar role assigned successfully!');
+//     } catch (err) {
+//       console.error('❌ Error updating registrar:', err.response?.data || err.message);
+//       alert(err.response?.data?.error || 'Failed to assign registrar role.');
+//     }
+//   };
+
+//   return (
+//     <div className="p-6">
+//       <div className="bg-white rounded-xl border border-gray-100 shadow-sm">
+//         <div className="p-6 border-b border-gray-100">
+//           <h2 className="text-2xl font-bold text-gray-900">Assign Registrar</h2>
+//           <p className="text-gray-600 mt-1">Select from existing staff to assign Registrar role.</p>
+//         </div>
+
+//         <form onSubmit={handleSubmit} className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+//           <FormSelect
+//             label="Select Staff"
+//             value={selectedStaffId}
+//             onChange={(e) => setSelectedStaffId(e.target.value)}
+//             options={staffOptions.map(staff => ({
+//               value: staff._id,
+//               label: `${(staff.full_name || staff.first_name + ' ' + staff.last_name)+ ' - ' + (staff.phone || '')}`
+//             }))}
+//             required
+//           />
+
+//           <FormSelect
+//             label="Department"
+//             value={department}
+//             onChange={(e) => setDepartment(e.target.value)}
+//             options={departmentOptions}
+//             required
+//           />
+
+//           <input
+//             type="text"
+//             className="form-input border rounded px-3 py-2"
+//             placeholder="Specialization"
+//             value={specialization}
+//             onChange={(e) => setSpecialization(e.target.value)}
+//           />
+
+//           <input
+//             type="date"
+//             className="form-input border rounded px-3 py-2"
+//             value={joiningDate}
+//             onChange={(e) => setJoiningDate(e.target.value)}
+//             required
+//           />
+
+//           <input
+//             type="password"
+//             className="form-input border rounded px-3 py-2 md:col-span-2"
+//             placeholder="Enter password (optional)"
+//             value={password}
+//             onChange={(e) => setPassword(e.target.value)}
+//           />
+
+//           <div className="md:col-span-2 flex justify-end space-x-4">
+//             <Button variant="secondary" type="button">Cancel</Button>
+//             <Button variant="primary" type="submit">Assign Registrar</Button>
+//           </div>
+//         </form>
+//       </div>
+//     </div>
+//   );
+// };
+
+// export default AddRegistrarForm;
+
+
+
+
+
+
 import { useState, useEffect } from 'react';
 import { FormSelect, Button } from '../common/FormElements';
 import axios from 'axios';
@@ -172,8 +316,9 @@ const AddRegistrarForm = () => {
   const [staffOptions, setStaffOptions] = useState([]);
   const [selectedStaffId, setSelectedStaffId] = useState('');
   const [department, setDepartment] = useState('');
-  const [specialization, setSpecialization] = useState('');
-  const [joiningDate, setJoiningDate] = useState('');
+  const [email, setEmail] = useState('');
+  // RE-ADDED: State for the date, defaulting to today
+  const [joiningDate, setJoiningDate] = useState(new Date().toISOString().split('T')[0]);
   const [password, setPassword] = useState('');
   const [departmentOptions, setDepartmentOptions] = useState([]);
 
@@ -187,7 +332,6 @@ const AddRegistrarForm = () => {
         console.error('Failed to fetch staff:', err);
       }
     };
-
     fetchStaff();
   }, []);
 
@@ -199,32 +343,39 @@ const AddRegistrarForm = () => {
           value: dep.name,
           label: dep.name
         })) || [];
-
         setDepartmentOptions(departments);
       } catch (err) {
         console.error('❌ Failed to fetch departments:', err);
       }
     };
-
     fetchDepartments();
   }, []);
+
+  useEffect(() => {
+    if (selectedStaffId) {
+      const selectedStaff = staffOptions.find(s => s._id === selectedStaffId);
+      if (selectedStaff) {
+        setEmail(selectedStaff.email || '');
+      }
+    } else {
+      setEmail('');
+    }
+  }, [selectedStaffId, staffOptions]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!selectedStaffId) return alert('Please select a staff member.');
-
     const selectedStaff = staffOptions.find(s => s._id === selectedStaffId);
     if (!selectedStaff) return alert('Selected staff not found.');
 
     const registrarData = {
       ...selectedStaff,
       department,
-      specialization,
-      joiningDate,
-      // role,
+      email,
+      joiningDate, // Use the date from the state
       status: 'Active',
-      password: password.trim() || undefined  // only send password if provided
+      password: password.trim() || undefined
     };
 
     try {
@@ -254,7 +405,7 @@ const AddRegistrarForm = () => {
             onChange={(e) => setSelectedStaffId(e.target.value)}
             options={staffOptions.map(staff => ({
               value: staff._id,
-              label: `${(staff.full_name || staff.first_name + ' ' + staff.last_name)+ ' - ' + (staff.phone || '')}`
+              label: `${(staff.full_name || staff.first_name + ' ' + staff.last_name) + ' - ' + (staff.phone || '')}`
             }))}
             required
           />
@@ -268,13 +419,15 @@ const AddRegistrarForm = () => {
           />
 
           <input
-            type="text"
+            type="email"
             className="form-input border rounded px-3 py-2"
-            placeholder="Specialization"
-            value={specialization}
-            onChange={(e) => setSpecialization(e.target.value)}
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
           />
 
+          {/* RE-ADDED: Date input, which defaults to today */}
           <input
             type="date"
             className="form-input border rounded px-3 py-2"
@@ -282,7 +435,7 @@ const AddRegistrarForm = () => {
             onChange={(e) => setJoiningDate(e.target.value)}
             required
           />
-
+          
           <input
             type="password"
             className="form-input border rounded px-3 py-2 md:col-span-2"
@@ -291,7 +444,7 @@ const AddRegistrarForm = () => {
             onChange={(e) => setPassword(e.target.value)}
           />
 
-          <div className="md:col-span-2 flex justify-end space-x-4">
+          <div className="md:col-span-2 flex justify-end space-x-4 mt-2">
             <Button variant="secondary" type="button">Cancel</Button>
             <Button variant="primary" type="submit">Assign Registrar</Button>
           </div>
