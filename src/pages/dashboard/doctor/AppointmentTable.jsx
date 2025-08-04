@@ -1,36 +1,75 @@
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import AddAppointmentModal from '@/components/appointments/AddAppointmentModal';
 
-import React, { useState } from 'react';
-import AddAppointmentForm from './AddAppointmentForm'; // Ensure this file exists
 
-const appointmentsInitial = [
-  { name: 'Akiko', gender: 'Female', age: 29, time: 'Today, 8:30 AM', diagnosis: 'Wisdom Tooth Removal', status: 'Confirmed' },
-  { name: 'Ashton Cox', gender: 'Male', age: 19, time: 'Yesterday, 10:45 PM', diagnosis: 'Consultation', status: 'Cancelled' },
-  { name: 'Brielle Williamson', gender: 'Male', age: 42, time: 'Nov 25, 10:45 AM', diagnosis: 'Consultation', status: 'Cancelled' },
-  { name: 'Cedric Kelly', gender: 'Male', age: 36, time: 'Yesterday, 9:10 PM', diagnosis: 'Root Canal', status: 'Confirmed' },
-  { name: 'Charde Marshall', gender: 'Female', age: 40, time: 'Nov 23, 9:45 AM', diagnosis: 'Consultation', status: 'Confirmed' },
-  { name: 'Colleen Hurst', gender: 'Female', age: 45, time: 'Nov 23, 10:45 AM', diagnosis: 'Scaling', status: 'Confirmed' },
-  { name: 'Garrett Winters', gender: 'Female', age: 38, time: 'Today, 11:00 AM', diagnosis: 'Scaling', status: 'Confirmed' },
-  { name: 'Haley Kennedy', gender: 'Female', age: 50, time: 'Nov 23, 10:20 AM', diagnosis: 'Wisdom Tooth Removal', status: 'Confirmed' },
-  { name: 'Herrod Chandler', gender: 'Male', age: 33, time: 'Nov 25, 2:45 PM', diagnosis: 'Bleaching', status: 'Confirmed' },
-  { name: 'Jena Gaines', gender: 'Male', age: 30, time: 'Nov 21, 10:05 PM', diagnosis: 'Bleaching', status: 'Confirmed' }
-];
-
-const AppointmentTable = () => {
-  const [appointments, setAppointments] = useState(appointmentsInitial);
+const AppointmentTable = ({ }) => {
+  const [appointments, setAppointments] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [searchTerm, setSearchTerm] = useState('');
+  const navigate = useNavigate();
+  const itemsPerPage = 10;
+  const doctorId = localStorage.getItem("doctorId");
 
-  const handleSave = (data) => {
-    setAppointments(prev => [...prev, { ...data, status: 'Confirmed' }]);
-    setShowForm(false);
+  useEffect(() => {
+    const fetchAppointments = async () => {
+      try {
+        const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/appointments/doctor/${doctorId}`);
+        setAppointments(response.data || []);
+        setLoading(false);
+        console.log(response.data)
+      } catch (err) {
+        console.error('Error fetching appointments:', err);
+        setLoading(false);
+      }
+    };
+
+    fetchAppointments();
+  }, [doctorId]);
+
+  const handleSave = async (data) => {
+    try {
+      const response = await axios.post('/api/appointments', data);
+      setAppointments(prev => [...prev, response.data]);
+      setShowForm(false);
+    } catch (err) {
+      console.error('Error creating appointment:', err);
+    }
   };
+
+  const handleViewDetails = (appointment) => {
+    navigate(`/doctor/appointments/${appointment._id}`, { 
+      state: { appointment } 
+    });
+  };
+
+  const filteredAppointments = Array.isArray(appointments) 
+  ? appointments.filter(appt => {
+      const patientName = `${appt.patient_id?.first_name || ''} ${appt.patient_id?.last_name || ''}`.toLowerCase();
+      return patientName.includes(searchTerm.toLowerCase()) || 
+             appt.diagnosis?.toLowerCase().includes(searchTerm.toLowerCase());
+    })
+  : [];
+
+  const paginatedAppointments = filteredAppointments.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  const totalPages = Math.ceil(filteredAppointments.length / itemsPerPage);
+
+  if (loading) return <div>Loading appointments...</div>;
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
       <div className="bg-white p-6 rounded-xl shadow-md">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-2xl font-semibold">Appointments</h2>
+          <h2 className="text-2xl text-teal-600 font-semibold">Appointments</h2>
           <button
-            className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg"
+            className="bg-teal-600 hover:bg-teal-700 text-white font-medium py-2 px-4 rounded-lg"
             onClick={() => setShowForm(true)}
           >
             + Add Appointment
@@ -40,14 +79,23 @@ const AppointmentTable = () => {
         <div className="flex items-center justify-between mb-4">
           <label>
             Show
-            <select className="ml-2 border rounded px-2 py-1">
-              <option>10</option>
-              <option>25</option>
-              <option>50</option>
+            <select 
+              className="ml-2 border rounded px-2 py-1"
+              onChange={(e) => setItemsPerPage(Number(e.target.value))}
+            >
+              <option value={10}>10</option>
+              <option value={25}>25</option>
+              <option value={50}>50</option>
             </select>
             entries
           </label>
-          <input type="text" placeholder="Search..." className="border rounded px-3 py-1" />
+          <input 
+            type="text" 
+            placeholder="Search..." 
+            className="border rounded px-3 py-1" 
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
         </div>
 
         <div className="overflow-x-auto">
@@ -57,45 +105,82 @@ const AppointmentTable = () => {
                 <th className="px-4 py-2">Patient Name</th>
                 <th className="px-4 py-2">Gender</th>
                 <th className="px-4 py-2">Age</th>
-                <th className="px-4 py-2">Time</th>
+                <th className="px-4 py-2">Date & Time</th>
                 <th className="px-4 py-2">Diagnosis</th>
                 <th className="px-4 py-2">Status</th>
+                <th className="px-4 py-2">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {appointments.map((a, idx) => (
-                <tr key={idx}>
-                  <td className="px-4 py-2">{a.name}</td>
-                  <td className="px-4 py-2">{a.gender}</td>
-                  <td className="px-4 py-2">{a.age}</td>
-                  <td className="px-4 py-2">{a.time}</td>
-                  <td className="px-4 py-2">{a.diagnosis}</td>
-                  <td className={`px-4 py-2 ${a.status === 'Confirmed' ? 'text-green-600' : 'text-red-500'}`}>
-                    {a.status}
-                  </td>
-                </tr>
-              ))}
+              {paginatedAppointments.map((appointment) => {
+                const dob = new Date(appointment.patient_id?.dob);
+                const age = new Date().getFullYear() - dob.getFullYear();
+                
+                return (
+                  <tr key={appointment._id}>
+                    <td className="px-4 py-2">
+                      {appointment.patient_id?.first_name} {appointment.patient_id?.last_name}
+                    </td>
+                    <td className="px-4 py-2 capitalize">{appointment.patient_id?.gender}</td>
+                    <td className="px-4 py-2">{age}</td>
+                    <td className="px-4 py-2">
+                      {new Date(appointment.appointment_date).toLocaleDateString()} {appointment.time_slot}
+                    </td>
+                    <td className="px-4 py-2">{appointment.diagnosis || 'N/A'}</td>
+                    <td className={`px-4 py-2 ${
+                      appointment.status === 'Completed' ? 'text-green-600' : 
+                      appointment.status === 'Cancelled' ? 'text-red-500' : 'text-teal-600'
+                    }`}>
+                      {appointment.status}
+                    </td>
+                    <td className="px-4 py-2">
+                      <button
+                        onClick={() => handleViewDetails(appointment)}
+                        className="bg-teal-500 hover:bg-teal-600 text-white px-3 py-1 rounded text-sm"
+                      >
+                        View Details
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
 
         <div className="flex justify-between items-center mt-4 text-sm">
-          <p>Showing 1 to 10 of {appointments.length} entries</p>
+          <p>Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, filteredAppointments.length)} of {filteredAppointments.length} entries</p>
           <div className="flex gap-2">
-            <button className="px-3 py-1 bg-gray-200 rounded disabled:opacity-50" disabled>Previous</button>
-            <button className="px-3 py-1 bg-blue-600 text-white rounded">1</button>
-            <button className="px-3 py-1 bg-white border rounded">2</button>
-            <button className="px-3 py-1 bg-gray-200 rounded">Next</button>
+            <button 
+              className="px-3 py-1 bg-gray-200 rounded disabled:opacity-50" 
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+            >
+              Previous
+            </button>
+            {Array.from({ length: totalPages }, (_, i) => (
+              <button
+                key={i}
+                className={`px-3 py-1 rounded ${currentPage === i + 1 ? 'bg-teal-600 text-white' : 'bg-white border'}`}
+                onClick={() => setCurrentPage(i + 1)}
+              >
+                {i + 1}
+              </button>
+            ))}
+            <button 
+              className="px-3 py-1 bg-gray-200 rounded disabled:opacity-50"
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+            >
+              Next
+            </button>
           </div>
         </div>
       </div>
 
-      {showForm && (
-        <AddAppointmentForm
-          onClose={() => setShowForm(false)}
-          onSave={handleSave}
-        />
-      )}
+      
+        <AddAppointmentModal onClose={() => setShowForm(false)} isOpen={showForm} fixedDoctorId={doctorId}/>
+      
     </div>
   );
 };

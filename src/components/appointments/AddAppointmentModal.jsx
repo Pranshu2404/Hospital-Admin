@@ -268,7 +268,7 @@ const priorityOptions = [
   { value: 'Urgent', label: 'Urgent' }
 ];
 
-const AddAppointmentModal = ({ isOpen, onClose, type, hospitalId }) => {
+const AddAppointmentModal = ({ isOpen, onClose, type, hospitalId, fixedDoctorId }) => {
   const navigate = useNavigate();
   // console.log(hospitalId)
   const [formData, setFormData] = useState({
@@ -464,7 +464,7 @@ const AddAppointmentModal = ({ isOpen, onClose, type, hospitalId }) => {
       console.log(formData)
       const appointmentRes = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/appointments`, {
         patient_id: formData.patientId,
-        doctor_id: formData.doctorId,
+        doctor_id: fixedDoctorId?fixedDoctorId:formData.doctorId,
         department_id: formData.department,
         appointment_date: formData.date,
         time_slot: `${formData.time} - ${calculateEndTime(formData.time, formData.duration)}`,
@@ -563,7 +563,8 @@ const AddAppointmentModal = ({ isOpen, onClose, type, hospitalId }) => {
             options={departments.map(dep => ({ value: dep._id, label: dep.name }))}
             required
           />
-          <FormSelect
+          {!fixedDoctorId?
+          (<FormSelect
             label="Select Doctor"
             value={formData.doctorId}
             onChange={(e) => handleInputChange('doctorId', e.target.value)}
@@ -572,7 +573,8 @@ const AddAppointmentModal = ({ isOpen, onClose, type, hospitalId }) => {
               label: (d.isFullTime) ? `Dr. ${d.firstName} ${d.lastName} (Full Time)` : `Dr. ${d.firstName} ${d.lastName} (Part Time)`
             }))}
             required
-          />
+          />)
+          :(<div></div>)}
         </div>
 
         {/* Date and Time */}

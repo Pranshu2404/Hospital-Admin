@@ -48,7 +48,7 @@ useEffect(() => {
   const isActive = (path) => location.pathname === path;
 
   return (
-    <aside className="w-72 bg-white border-r border-gray-200 flex flex-col shadow-sm">
+    <aside className="w-72 bg-white border-r border-gray-200 flex flex-col shadow-md shadow-black">
       <div className="flex items-center p-5 border-b border-gray-100">
         <div className="p-3 rounded-[300px] border-2 border-teal-600">
           <FontAwesomeIcon icon={faHospital} className="text-teal-600 w-9 h-8" />
@@ -74,7 +74,7 @@ useEffect(() => {
                   <button
                     key={subItem.label || subIdx}
                     onClick={() => handleSubItemClick(subItem)}
-                    className={`block w-full text-left text-sm py-1.5 transition-colors ${
+                    className={`block w-full text-left text-base py-1.5 transition-colors ${
                       isActive(subItem.path)
                         ? 'text-teal-600 font-medium'
                         : 'text-gray-600 hover:text-teal-600'

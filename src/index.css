@@ -189,3 +189,30 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Tailwind-compatible teal scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f0fdfa; /* Tailwind's teal-50 */
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: #0d9488; /* Tailwind's teal-600 */
+  border-radius: 4px;
+  border: 2px solid #f0fdfa; /* Matches track for spacing effect */
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: #0f766e; /* Tailwind's teal-700 */
+}
+
+/* Firefox */
+* {
+  scrollbar-color: #0d9488 #f0fdfa;
+  scrollbar-width: thin;
+}
+

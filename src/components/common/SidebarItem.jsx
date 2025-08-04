@@ -2,8 +2,8 @@ export const SidebarItem = ({ icon: Icon, text, onClick, hasSubmenu, isOpen, act
   return (
     <button
       onClick={onClick}
-      className={`w-full flex items-center px-4 py-2 rounded transition text-left ${
-        active ? 'bg-teal-100 text-teal-700 font-medium' : 'hover:bg-gray-100 text-gray-700'
+      className={`w-full flex items-center px-4 py-2 rounded transition text-left text-base ${
+        active ? 'bg-teal-100 text-teal-700 font-bold' : 'hover:bg-gray-100 text-gray-700 font-semibold'
       }`}
     >
       <span className="mr-3">{Icon && <Icon />}</span>

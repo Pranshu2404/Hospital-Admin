@@ -14,54 +14,55 @@ import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/
 import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
 import { staffSidebar } from '@/constants/sidebarItems/staffSidebar';
+import { Button } from '@/components/ui/button';
 
 const guideItems = [
   {
     icon: HomeIcon,
     title: 'Dashboard',
-    description: 'Overview of staff activities and quick stats.',
+    description: 'Get a quick snapshot of your daily tasks, notifications, and essential hospital updates in one place.',
     path: '/dashboard/staff'
   },
   {
     icon: AppointmentIcon,
     title: 'Appointments',
-    description: 'Manage and view patient appointments.',
+    description: 'View upcoming appointments, schedule new ones, and manage bookings efficiently.',
     path: '/dashboard/staff/appointments'
   },
   {
     icon: PatientIcon,
     title: 'Patients',
-    description: 'Add, view and manage patient records.',
+    description: 'Access patient profiles, add new entries, and monitor their ongoing treatment records.',
     path: '/dashboard/staff/patients'
   },
   {
     icon: DoctorsIcon,
     title: 'Staff',
-    description: 'Manage staff information and access.',
+    description: 'View and update staff information including roles, schedules, and departments.',
     path: '/dashboard/staff/staff'
   },
   {
     icon: FinanceIcon,
     title: 'Finance',
-    description: 'Track income, expenses, and invoices.',
+    description: 'Review financial transactions, monitor income and expenses, and manage patient billing.',
     path: '/dashboard/staff/finance'
   },
   {
     icon: MonitorIcon,
     title: 'Reports',
-    description: 'Generate and review medical and admin reports.',
+    description: 'Generate hospital reports such as inventory usage, blood bank status, and patient history logs.',
     path: '/dashboard/staff/reports'
   },
   {
     icon: UserProfileIcon,
     title: 'Profile',
-    description: 'Update your profile and preferences.',
+    description: 'Edit your personal details, update login credentials, and set availability preferences.',
     path: '/dashboard/staff/profile'
   },
   {
     icon: SettingsIcon,
     title: 'Settings',
-    description: 'Manage system and notification settings.',
+    description: 'Customize your notification preferences and configure dashboard display settings.',
     path: '/dashboard/staff/settings'
   },
 ];
@@ -71,36 +72,36 @@ export default function StaffGuidePage() {
 
   return (
     <Layout sidebarItems={staffSidebar}>
-    <div className="p-6">
-      <h1 className="text-3xl font-bold text-teal-600 mb-6">Staff Dashboard Guide</h1>
-
-      <Accordion type="single" collapsible className="w-full space-y-4">
-        {guideItems.map((item, index) => {
-          const Icon = item.icon;
-          return (
-            <AccordionItem key={index} value={`item-${index}`} className="rounded-xl border border-teal-200 shadow-sm">
-              <AccordionTrigger className="flex items-center justify-between px-4 py-3 text-left hover:bg-teal-50 rounded-xl">
-                <div className="flex items-center space-x-4">
-                  <div className="w-10 h-10 bg-teal-100 text-teal-600 flex items-center justify-center rounded-full">
-                    <Icon className="w-5 h-5" />
-                  </div>
-                  <span className="font-medium text-lg">{item.title}</span>
-                </div>
-              </AccordionTrigger>
-              <AccordionContent className="px-4 pb-4 text-gray-700 text-base">
-                <p className="mb-2">{item.description}</p>
-                <button
-                  onClick={() => navigate(item.path)}
-                  className="text-sm text-white bg-teal-600 hover:bg-teal-700 px-3 py-1.5 rounded-md transition"
+          <div className="max-w-4xl mx-auto p-6">
+            <h2 className="text-2xl font-bold text-teal-700 mb-6 text-center">Staff Guide</h2>
+            <Accordion type="multiple" className="space-y-4">
+              {guideItems.map((step, index) => (
+                <AccordionItem
+                  key={index}
+                  value={`item-${index}`}
+                  className="rounded-xl border border-teal-200 shadow-sm"
                 >
-                  Go to {item.title}
-                </button>
-              </AccordionContent>
-            </AccordionItem>
-          );
-        })}
-      </Accordion>
-    </div>
-    </Layout>
+                  <AccordionTrigger className="p-4 font-semibold text-lg text-teal-900 hover:text-teal-600">
+                    <div className="flex justify-between w-full items-center gap-3">
+                      <div className="flex items-center gap-5 w-full text-nowrap">
+                        <step.icon className="text-teal-600 w-8 h-8" />
+                        {step.title}
+                      </div>
+                      <Button
+                        className="bg-teal-600 hover:bg-teal-700 text-white mr-5"
+                        onClick={() => navigate(step.path)}
+                      >
+                        Go to {step.title}
+                      </Button>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="bg-white px-6 py-4 text-gray-700 space-y-2">
+                    {step.description}
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          </div>
+        </Layout>
   );
 }

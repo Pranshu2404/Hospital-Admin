@@ -18,9 +18,14 @@ export default function Login() {
       const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/auth/login`, { email, password });
 
       const { token, role } = res.data;
-
+      console.log(res.data)
+      localStorage.setItem("doctorId",res.data.doctorId || null);
+      localStorage.setItem("hospitalId",res.data.hospitalID || null);
+      localStorage.setItem("staffId",res.data.staffId || null);
+      localStorage.setItem("pharmacyId",res.data.pharmacyId || null);
       login({ token, role });
     } catch (err) {
+      console.log(err)
       setError(err.response?.data?.message || 'Login failed.');
     }
   };

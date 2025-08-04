@@ -89,6 +89,8 @@ import ResetPassword from './pages/ResetPassword.jsx';
 import DoctorGuide from './pages/dashboard/doctor/guidepage';
 import PharmacyGuidePage from './pages/dashboard/pharmacy/guidepage';
 import StaffGuidePage from './pages/dashboard/staff/guidepage';
+import AppointmentDetails from './pages/dashboard/doctor/AppointmentDetails';
+import MyDepartmentPage from './pages/dashboard/doctor/DepartmentPage';
 
 export default function App() {
   return (
@@ -162,6 +164,11 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+          <Route path="/doctor/appointments/:id" element={
+            <ProtectedRoute role="doctor">
+                  <AppointmentDetails/>
+            </ProtectedRoute>
+            } />
           <Route
             path="/dashboard/doctor/records"
             element={
@@ -189,8 +196,7 @@ export default function App() {
             }
           />
 
-
-
+<Route path="/dashboard/doctor/department" element={<MyDepartmentPage />} />
 
 
           <Route
