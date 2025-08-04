@@ -20,7 +20,7 @@ import { adminSidebar } from '../../../constants/sidebarItems/adminSidebar';
 // import ChoosePatientTypeModal from '../../../components/patients/ChoosePatientTypeModal';
 import { useNavigate } from 'react-router-dom';
 import AddPatientIPDForm from "./AddPatientIPDForm";
-import { staffSidebar } from "../../../constants/sidebarItems/staffSidebar";
+import { staffSidebar } from '@/constants/sidebarItems/staffSidebar'
 import ChoosePatientTypeModal from "../../../components/pharmacy/ChoosePatientTypeModal";
 
 const AddPatientPage1 = () => {

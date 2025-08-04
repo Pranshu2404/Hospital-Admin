@@ -4,7 +4,7 @@ import { adminSidebar } from '../../../constants/sidebarItems/adminSidebar';
 
 const AdminHome = () => {
   return (
-    <Layout sidebarItems={adminSidebar} section="admin">
+    <Layout sidebarItems={adminSidebar} section="Admin">
       <Dashboard />
     </Layout>
   );

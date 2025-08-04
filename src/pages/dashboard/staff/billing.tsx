@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import Layout from '../../../components/Layout';
-import { staffSidebar } from '../../../constants/sidebarItems/staffSidebar';
+import { staffSidebar } from '@/constants/sidebarItems/staffSidebar'
 
 // --- Reusable UI Components (can be moved to a separate components folder) ---
 

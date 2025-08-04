@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Bell, UserPlus, Users, UserCheck, Bed, AlertTriangle, Dot } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import Layout from '../Layout';
-import { staffSidebar } from '../../constants/sidebarItems/staffSidebar';
 import { subDays, subMonths, subYears, isAfter, parse } from 'date-fns';
+import { staffSidebar } from '@/constants/sidebarItems/staffSidebar';
 
 const statsCardsData = [
     {

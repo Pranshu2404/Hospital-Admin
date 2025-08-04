@@ -1,3 +1,4 @@
+import { FaFileAlt } from 'react-icons/fa';
 import {
   HomeIcon,
   FinanceIcon,
@@ -14,6 +15,7 @@ export const pharmacySidebar = [
     icon: HomeIcon,
     path: '/dashboard/pharmacy',
   },
+  { label: 'Pharmacy Guide', path: '/dashboard/pharmacy/guide', icon: FaFileAlt },
   {
     label: 'Medicines',
     icon: MedicineIcon,

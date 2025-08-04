@@ -86,6 +86,9 @@ import PatientListPage1 from './pages/dashboard/staff/patient-list.jsx';
 import PatientProfilePage1 from './pages/dashboard/staff/patient-profile.jsx';
 import ForgotPassword from './pages/ForgotPassword.jsx';
 import ResetPassword from './pages/ResetPassword.jsx';
+import DoctorGuide from './pages/dashboard/doctor/guidepage';
+import PharmacyGuidePage from './pages/dashboard/pharmacy/guidepage';
+import StaffGuidePage from './pages/dashboard/staff/guidepage';
 
 export default function App() {
   return (
@@ -137,8 +140,9 @@ export default function App() {
           <Route path="/dashboard/admin/edit-doctor/:id" element={<EditDoctor />} />
 
 <Route path="/dashboard/admin/guide" element={<AdminGuidePage />} />
-
-
+<Route path="/dashboard/doctor/guide" element={<DoctorGuide />} />
+<Route path="/dashboard/pharmacy/guide" element={<PharmacyGuidePage />} />
+<Route path="/dashboard/staff/guide" element={<StaffGuidePage />} />
 <Route path="/dashboard/admin/add-hod-main" element={<AddHodMain />} />
 
           {/* Doctor Routes */}

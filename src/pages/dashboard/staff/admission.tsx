@@ -1,6 +1,6 @@
 // import React from 'react'
+import { staffSidebar } from '@/constants/sidebarItems/staffSidebar'
 import Layout from '../../../components/Layout'
-import { staffSidebar } from '../../../constants/sidebarItems/staffSidebar'
 import AddPatientForm from '../../../components/patients/AddPatientForm'
 
 function Admission() {

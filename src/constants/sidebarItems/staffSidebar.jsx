@@ -1,51 +1,45 @@
+import { FaFileAlt } from 'react-icons/fa';
 import {
   HomeIcon,
-  AppointmentIcon,
-  PatientIcon,
-  DoctorsIcon,
   FinanceIcon,
-  MonitorIcon,
   UserProfileIcon,
-  SettingsIcon
+  AppointmentIcon,
+  PatientIcon
 } from '../../components/common/Icons';
 
-export const adminSidebar = [
-  { text: 'Dashboard', icon: HomeIcon, page: 'Dashboard' },
-  { text: 'Appointments', icon: AppointmentIcon, page: 'AppointmentList' },
+export const staffSidebar = [
   {
-    text: 'Patients',
-    icon: PatientIcon,
-    subItems: [
-      { label: 'Add Patient', page: 'AddPatient' },
-      { label: 'Patient List', page: 'IpdOpdPatientList' }
-    ]
+    label: 'Dashboard',
+    icon: HomeIcon,
+    path: '/dashboard/staff',
   },
+  { label: 'Staff Guide', path: '/dashboard/staff/guide', icon: FaFileAlt },
   {
-    text: 'Staff',
-    icon: DoctorsIcon,
-    subItems: [
-      { label: 'Add Staff', page: 'AddDoctorNurse' },
-      { label: 'Staff List', page: 'DoctorNurseList' }
-    ]
-  },
+      label: 'Appointments',
+      icon: AppointmentIcon,
+      path: '/dashboard/staff/appointments',
+    },
+    {
+      label: 'Patients',
+      icon: PatientIcon,
+      submenu: [
+        { label: 'Add Patient', path: '/dashboard/staff/add-patient' },
+        { label: 'Patient List', path: '/dashboard/staff/patient-list' },
+      ],
+    },
+  // {
+  //   label: 'Admission',
+  //   icon: HomeIcon,
+  //   path: '/dashboard/staff/admission',
+  // },
   {
-    text: 'Finance',
+    label: 'Billing',
     icon: FinanceIcon,
-    subItems: [
-      { label: 'Income', page: 'IncomePage' },
-      { label: 'Expense', page: 'ExpensePage' },
-      { label: 'Invoices', page: 'InvoiceListPage' }
-    ]
+    path: '/dashboard/staff/billing',
   },
   {
-    text: 'Reports',
-    icon: MonitorIcon,
-    subItems: [
-      { label: 'Inventory', page: 'InventoryItemsPage' },
-      { label: 'Birth Report', page: 'BirthReportPage' },
-      { label: 'Blood Bank', page: 'BloodBankPage' }
-    ]
+    label: 'Discharges',
+    icon: UserProfileIcon,
+    path: '/dashboard/staff/discharges',
   },
-  { text: 'Profile', icon: UserProfileIcon, page: 'UserProfilePage' },
-  { text: 'Settings', icon: SettingsIcon, page: 'SettingsPage' }
 ];
