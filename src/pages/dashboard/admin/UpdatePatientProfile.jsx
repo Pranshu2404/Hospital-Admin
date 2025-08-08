@@ -104,10 +104,14 @@ import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Layout from '../../../components/Layout';
 import { adminSidebar } from '../../../constants/sidebarItems/adminSidebar';
+import { staffSidebar } from '../../../constants/sidebarItems/staffSidebar';
+import { useLocation } from 'react-router-dom';
+
 
 const UpdatePatientProfile = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const [patient, setPatient] = useState(null);
   const [formData, setFormData] = useState({
     first_name: '',
@@ -121,6 +125,13 @@ const UpdatePatientProfile = () => {
     address: '',
     emergency_contact: ''
   });
+
+  // Determine role from path (admin, staff, etc.)
+  let role = 'admin';
+  if (location.pathname.includes('/dashboard/staff/')) {
+    role = 'staff';
+  }
+  // Add more roles as needed
 
   useEffect(() => {
     const fetchPatient = async () => {
@@ -169,7 +180,7 @@ const handleSubmit = async (e) => {
   if (!patient) return <p className="p-6">Loading...</p>;
 
   return (
-    <Layout sidebarItems={adminSidebar}>
+    <Layout sidebarItems={role === 'admin' ? adminSidebar : staffSidebar}>
       {/* <div className="p-6 max-w-2xl mx-auto bg-white rounded-lg shadow">
         <h2 className="text-2xl font-bold mb-6 text-gray-900">Update Patient Profile</h2>
         <form onSubmit={handleSubmit} className="space-y-4">

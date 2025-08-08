@@ -9,7 +9,7 @@ const PatientListPage1 = () => {
 
   return (
     <Layout sidebarItems={staffSidebar}>
-      <IpdOpdPatientList setSelectedPatient={setSelectedPatient} />
+        <IpdOpdPatientList setSelectedPatient={setSelectedPatient} updatePatientBasePath="/dashboard/staff/update-patient" />
     </Layout>
   );
 };

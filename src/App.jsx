@@ -139,6 +139,7 @@ export default function App() {
           <Route path="/dashboard/admin/DepartmentList" element={<DepartmentList />} />
 
           <Route path="/dashboard/admin/update-patient/:id" element={<UpdatePatientProfile />} />
+          <Route path="/dashboard/staff/update-patient/:id" element={<UpdatePatientProfile />} />
           <Route path="/dashboard/admin/edit-doctor/:id" element={<EditDoctor />} />
 
 <Route path="/dashboard/admin/guide" element={<AdminGuidePage />} />

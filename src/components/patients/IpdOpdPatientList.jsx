@@ -5,7 +5,7 @@ import { SearchInput, Button } from '../common/FormElements';
 import { EditIcon, DeleteIcon, FilterIcon, UploadIcon, XIcon, PlusIcon } from '../common/Icons';
 import { useNavigate } from 'react-router-dom';
 
-const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient }) => {
+const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient, updatePatientBasePath = '/dashboard/admin/update-patient' }) => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
@@ -276,7 +276,7 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient }) => {
                         <EditIcon />
                       </button> */}
                       <button
-                        onClick={() => navigate(`/dashboard/admin/update-patient/${patient.id}`)}
+                        onClick={() => navigate(`${updatePatientBasePath}/${patient.id}`)}
                         className="text-gray-400 hover:text-blue-600 p-1 rounded"
                       >
                         <EditIcon />
