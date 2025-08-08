@@ -246,17 +246,17 @@ const PatientDetailModal = ({ patient, onClose, onSave }) => {
     // A small component for rendering each piece of data, either as text or an input field.
     const DetailRow = ({ label, name, value, isEditing, type = 'text' }) => (
         <div className="grid grid-cols-3 gap-2 py-3 border-b border-gray-100">
-            <p className="text-sm font-semibold text-gray-600 col-span-1">{label}</p>
+            <p className="text-md font-semibold text-gray-600 col-span-1">{label}</p>
             {isEditing ? (
                 <input
                     type={type}
                     name={name}
                     value={formData[name] || ''}
                     onChange={handleInputChange}
-                    className="col-span-2 text-sm p-2 border bg-gray-50 rounded-md focus:ring-2 focus:ring-teal-500 outline-none"
+                    className="col-span-2 text-md p-2 border bg-gray-50 rounded-md focus:ring-2 focus:ring-teal-500 outline-none"
                 />
             ) : (
-                <p className="text-sm text-gray-800 col-span-2">{value}</p>
+                <p className="text-md text-gray-800 col-span-2">{value}</p>
             )}
         </div>
     );
@@ -288,13 +288,13 @@ const PatientDetailModal = ({ patient, onClose, onSave }) => {
                 <div className="p-6 max-h-[60vh] overflow-y-auto">
                     <div className="space-y-4">
                         <div>
-                            <h3 className="font-semibold text-gray-800 mb-2">Personal Details</h3>
+                            <h2 className="font-semibold text-lg text-gray-800 mb-2">Personal Details</h2>
                             <DetailRow label="Gender" name="gender" value={formData.gender} isEditing={isEditing} />
                             <DetailRow label="Date of Birth" name="dob" value={format(parseISO(patient.dob), 'dd MMM yyyy')} isEditing={isEditing} type="date" />
                             <DetailRow label="Blood Group" name="blood_group" value={formData.blood_group} isEditing={isEditing} />
                         </div>
                         <div>
-                            <h3 className="font-semibold text-gray-800 mb-2 mt-4">Contact Information</h3>
+                            <h2 className="font-semibold text-lg text-gray-800 mb-2 mt-4">Contact Information</h2>
                             <DetailRow label="Email" name="email" value={formData.email} isEditing={isEditing} />
                             <DetailRow label="Phone" name="phone" value={formData.phone} isEditing={isEditing} />
                             <DetailRow label="Address" name="address" value={`${formData.address}, ${formData.city}, ${formData.state} - ${formData.zipCode}`} isEditing={isEditing} />
@@ -407,7 +407,7 @@ const StaffDashboard = () => {
     return (
         <Layout sidebarItems={staffSidebar} section="Staff">
             <PatientDetailModal patient={selectedPatient} onClose={() => setSelectedPatient(null)} onSave={handleSavePatient} />
-            <div className="bg-gray-50 min-h-screen p-4 sm:p-6 lg:p-8">
+            <div className="bg-gray-50 min-h-screen p-4 sm:p-6 lg:p-4">
                 <div className="max-w-7xl mx-auto">
                     {/* <header className="mb-6">
                         <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Staff Dashboard</h1>

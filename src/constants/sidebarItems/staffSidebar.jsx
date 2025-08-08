@@ -1,45 +1,52 @@
-import { FaFileAlt } from 'react-icons/fa';
-import {
-  HomeIcon,
-  FinanceIcon,
-  UserProfileIcon,
-  AppointmentIcon,
-  PatientIcon
-} from '../../components/common/Icons';
+import { 
+ FaChartLine, // Dashboard
+  FaBook,          // Staff Guide
+  FaCalendarCheck, // Appointments
+  FaUserInjured,   // Patients
+  FaFileMedical,   // Add Patient
+  FaListAlt,       // Patient List
+  FaFileInvoiceDollar, // Billing
+  FaSignOutAlt,     // Discharges
+  FaUserCog,
+} from 'react-icons/fa';
 
 export const staffSidebar = [
   {
     label: 'Dashboard',
-    icon: HomeIcon,
+    icon: FaChartLine,
     path: '/dashboard/staff',
   },
-  { label: 'Staff Guide', path: '/dashboard/staff/guide', icon: FaFileAlt },
+  { 
+    label: 'Staff Guide', 
+    path: '/dashboard/staff/guide', 
+    icon: FaBook 
+  },
   {
-      label: 'Appointments',
-      icon: AppointmentIcon,
-      path: '/dashboard/staff/appointments',
-    },
-    {
-      label: 'Patients',
-      icon: PatientIcon,
-      submenu: [
-        { label: 'Add Patient', path: '/dashboard/staff/add-patient' },
-        { label: 'Patient List', path: '/dashboard/staff/patient-list' },
-      ],
-    },
-  // {
-  //   label: 'Admission',
-  //   icon: HomeIcon,
-  //   path: '/dashboard/staff/admission',
-  // },
+    label: 'Appointments',
+    icon: FaCalendarCheck,
+    path: '/dashboard/staff/appointments',
+  },
+  {
+    label: 'Patients',
+    icon: FaUserInjured,
+    submenu: [
+      { label: 'Add Patient', path: '/dashboard/staff/add-patient', icon: FaFileMedical },
+      { label: 'Patient List', path: '/dashboard/staff/patient-list', icon: FaListAlt },
+    ],
+  },
   {
     label: 'Billing',
-    icon: FinanceIcon,
+    icon: FaFileInvoiceDollar,
     path: '/dashboard/staff/billing',
   },
   {
     label: 'Discharges',
-    icon: UserProfileIcon,
+    icon: FaSignOutAlt,
     path: '/dashboard/staff/discharges',
+  },
+  {
+    label: 'Profile',
+    icon: FaUserCog,
+    path: '/dashboard/staff/profile',
   },
 ];
