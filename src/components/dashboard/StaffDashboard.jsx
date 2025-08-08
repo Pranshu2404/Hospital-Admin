@@ -1,412 +1,446 @@
 import React, { useState, useEffect } from 'react';
-import { Bell, UserPlus, Users, UserCheck, Bed, AlertTriangle, Dot } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+// Aliased BarChart icon to avoid naming conflict with recharts component
+import { Users, Bed, Dot, User as UserIcon, BarChart as BarChartIcon, LineChart as LineChartIcon, ArrowUp, ArrowDown, Clock, X, ChevronDown, Edit, Save, Mail, Phone, MapPin, Calendar, Droplet } from 'lucide-react';
+import { Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Line, LineChart, BarChart } from 'recharts';
 import Layout from '../Layout';
-import { subDays, subMonths, subYears, isAfter, parse } from 'date-fns';
 import { staffSidebar } from '@/constants/sidebarItems/staffSidebar';
+// MODIFIED: Added more date-fns functions for time range filtering and formatting
+import { format, subDays, parseISO, subMonths, subYears, formatDistanceToNow } from 'date-fns';
 
-const statsCardsData = [
-    {
-        title: 'Total Staff',
-        value: '5',
-        trend: '+2 from last week',
-        icon: <Users className="h-6 w-6 text-gray-500" />,
-        color: 'text-blue-500',
-    },
-    {
-        title: 'On Duty',
-        value: '3',
-        progress: 60,
-        description: '60% of total staff',
-        icon: <UserCheck className="h-6 w-6 text-gray-500" />,
-        color: 'text-green-500',
-    },
-    {
-        title: 'Active Patients',
-        value: '38',
-        trend: '+5 from yesterday',
-        icon: <Bed className="h-6 w-6 text-gray-500" />,
-        color: 'text-yellow-500',
-    },
-    {
-        title: 'Critical Alerts',
-        value: '2',
-        description: 'Requires immediate attention',
-        icon: <AlertTriangle className="h-6 w-6 text-red-500" />,
-        color: 'text-red-500',
-    },
-];
+// --- Reusable Components --- //
 
-// CORRECTED: More realistic data for all time ranges
-const patientFlowData = [
-    // Data for Yearly View
-    { name: '1/15/2025', admissions: 10, discharges: 8 },
-    { name: '3/10/2025', admissions: 14, discharges: 12 },
-    // Data for Monthly View
-    { name: '6/5/2025', admissions: 20, discharges: 18 },
-    { name: '6/15/2025', admissions: 18, discharges: 20 },
-    // Data for Weekly View (Last 7 Days from July 5, 2025)
-    { name: '6/29/2025', admissions: 15, discharges: 19 },
-    { name: '6/30/2025', admissions: 22, discharges: 17 },
-    { name: '7/1/2025', admissions: 19, discharges: 20 },
-    { name: '7/2/2025', admissions: 24, discharges: 21 },
-    { name: '7/3/2025', admissions: 21, discharges: 25 },
-    { name: '7/4/2025', admissions: 18, discharges: 22 },
-    { name: '7/5/2025', admissions: 23, discharges: 19 },
-];
-
-
-const departmentStatusData = [
-    { name: 'Emergency', staff: 9, capacity: 12 },
-    { name: 'ICU', staff: 5, capacity: 8 },
-    { name: 'Cardiology', staff: 6, capacity: 10 },
-    { name: 'Pediatrics', staff: 5, capacity: 5 },
-];
-
-const recentActivityData = [
-    { text: 'Dr. Sarah Johnson started shift', time: '2 min ago', color: 'text-blue-500' },
-    { text: 'Patient admitted to ICU', time: '5 min ago', color: 'text-yellow-500' },
-    { text: 'Nurse Mike Chen completed rounds', time: '10 min ago', color: 'text-green-500' },
-    { text: 'Emergency alert resolved', time: '15 min ago', color: 'text-green-500' },
-];
-
-// Dummy patients data for demonstration
-const dummyPatients = [
-  { id: 1, name: 'John Doe', department: 'Orthopedics', amount: 1200 },
-  { id: 2, name: 'Jane Smith', department: 'General Medicine', amount: 900 },
-  { id: 3, name: 'Amit Kumar', department: 'General Medicine', amount: 700 },
-  { id: 4, name: 'Sara Lee', department: 'General Medicine', amount: 1500 },
-  { id: 5, name: 'Ali Hassan', department: 'General Medicine', amount: 800 },
-  { id: 6, name: 'Priya Singh', department: 'General Medicine', amount: 1100 },
-  { id: 7, name: 'Ravi Patel', department: 'Orthopedics', amount: 600 },
-  { id: 8, name: 'Fatima Noor', department: 'Orthopedics', amount: 1300 },
-];
-
-// --- Components --- //
-
-const StatCard = ({ title, value, trend, progress, description, icon, color }) => (
-    <div className="bg-white p-4 rounded-lg shadow-sm flex flex-col justify-between">
-        <div className="flex justify-between items-start">
-            <span className="text-sm font-medium text-gray-600">{title}</span>
-            {icon}
+const StatCard = ({ title, value, icon, color }) => (
+    <div className="bg-white p-6 rounded-lg shadow-sm flex items-center">
+        <div className={`p-3 rounded-full mr-4 ${color.replace('text-', 'bg-').replace('500', '100')}`}>
+            {React.cloneElement(icon, { className: `h-6 w-6 ${color}` })}
         </div>
         <div>
+            <span className="text-sm font-medium text-gray-600">{title}</span>
             <p className={`text-3xl font-bold ${color}`}>{value}</p>
-            {trend && <p className="text-xs text-gray-500 mt-1">{trend}</p>}
-            {progress !== undefined && (
-                <div className="mt-2">
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div className="bg-green-500 h-2 rounded-full" style={{ width: `${progress}%` }}></div>
-                    </div>
-                    <p className="text-xs text-gray-500 mt-1">{description}</p>
-                </div>
-            )}
-            {description && progress === undefined && <p className="text-xs text-gray-500 mt-1">{description}</p>}
         </div>
     </div>
 );
 
-const PatientFlowChart = () => {
+// --- Chart & List Components --- //
+
+const StaffDistributionChart = ({ staff, departments }) => {
+    const chartData = departments.map(dept => ({
+        name: dept.name,
+        staffCount: staff.filter(s => s.department === dept.name).length,
+    }));
+
+    return (
+        <div className="bg-white p-6 rounded-lg shadow-sm h-full">
+            <h3 className="font-semibold text-lg flex items-center"><BarChartIcon className="mr-2" />Staff by Department</h3>
+            <p className="text-sm text-gray-500 mb-4">Distribution of staff across departments.</p>
+            <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={chartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="name" tick={{ fontSize: 12 }} angle={-25} textAnchor="end" height={60} />
+                    <YAxis allowDecimals={false} />
+                    <Tooltip />
+                    <Legend />
+                    <Bar dataKey="staffCount" fill="#14b8a6" name="Staff Members" />
+                </BarChart>
+            </ResponsiveContainer>
+        </div>
+    );
+};
+
+const PatientRegistrationChart = ({ patients }) => {
     const [timeRange, setTimeRange] = useState('weekly');
-    const [filteredData, setFilteredData] = useState([]);
+    const [chartData, setChartData] = useState([]);
+    const [stats, setStats] = useState({ total: 0, change: 0 });
 
     useEffect(() => {
-        const now = new Date();
-        let startDate;
+        const processData = () => {
+            const now = new Date();
+            let startDate, prevStartDate, periodLabelFormat;
 
-        if (timeRange === 'monthly') {
-            startDate = subMonths(now, 1);
-        } else if (timeRange === 'yearly') {
-            startDate = subYears(now, 1);
-        } else {
-            startDate = subDays(now, 7);
+            if (timeRange === 'weekly') {
+                startDate = subDays(now, 7);
+                prevStartDate = subDays(now, 14);
+                periodLabelFormat = 'MMM dd';
+            } else if (timeRange === 'monthly') {
+                startDate = subMonths(now, 1);
+                prevStartDate = subMonths(now, 2);
+                periodLabelFormat = 'MMM dd';
+            } else { // yearly
+                startDate = subYears(now, 1);
+                prevStartDate = subYears(now, 2);
+                periodLabelFormat = 'MMM yyyy';
+            }
+
+            const allPatients = patients.map(p => ({ ...p, registeredDate: p.registered_at ? parseISO(p.registered_at) : null }));
+            const currentPeriodPatients = allPatients.filter(p => p.registeredDate && p.registeredDate >= startDate);
+            const previousPeriodPatients = allPatients.filter(p => p.registeredDate && p.registeredDate >= prevStartDate && p.registeredDate < startDate);
+
+            const totalCurrent = currentPeriodPatients.length;
+            const totalPrevious = previousPeriodPatients.length;
+            const change = totalPrevious > 0 ? ((totalCurrent - totalPrevious) / totalPrevious) * 100 : totalCurrent > 0 ? 100 : 0;
+            setStats({ total: totalCurrent, change: change });
+            
+            const registrationsByDay = currentPeriodPatients.reduce((acc, p) => {
+                const day = format(p.registeredDate, periodLabelFormat);
+                acc[day] = (acc[day] || 0) + 1;
+                return acc;
+            }, {});
+
+            const formattedData = Object.keys(registrationsByDay).map(day => ({
+                date: day,
+                registrations: registrationsByDay[day],
+            })).sort((a,b) => new Date(a.date) - new Date(b.date));
+            
+            setChartData(formattedData);
+        };
+
+        if (patients.length > 0) {
+            processData();
         }
-
-        const data = patientFlowData.filter(d => isAfter(parse(d.name, 'M/d/yyyy', new Date()), startDate));
-        setFilteredData(data);
-
-    }, [timeRange]);
+    }, [patients, timeRange]);
 
     const getTitle = () => {
-        if (timeRange === 'monthly') return 'Patient Flow (Last Month)';
-        if (timeRange === 'yearly') return 'Patient Flow (Last Year)';
-        return 'Patient Flow (Last 7 Days)';
+        if (timeRange === 'monthly') return 'Last Month';
+        if (timeRange === 'yearly') return 'Last Year';
+        return 'Last 7 Days';
     };
 
     return (
-        <div className="bg-white p-6 rounded-lg shadow-sm">
-            <div className="flex justify-between items-center mb-4">
+        <div className="bg-white p-6 rounded-lg shadow-sm h-full">
+            <div className="flex flex-wrap justify-between items-start mb-4">
                 <div>
-                    <h3 className="font-semibold text-lg">{getTitle()}</h3>
-                    <p className="text-sm text-gray-500">Daily patient admissions and discharges</p>
+                    <h3 className="font-semibold text-lg flex items-center"><LineChartIcon className="mr-2" />New Patient Registrations</h3>
+                    <p className="text-sm text-gray-500">Registrations for the {getTitle()}</p>
                 </div>
-                <div className="flex space-x-2">
-                    <button onClick={() => setTimeRange('weekly')} className={`px-3 py-1 text-sm rounded-md ${timeRange === 'weekly' ? 'bg-teal-600 text-white' : 'bg-gray-200'}`}>Weekly</button>
-                    <button onClick={() => setTimeRange('monthly')} className={`px-3 py-1 text-sm rounded-md ${timeRange === 'monthly' ? 'bg-teal-600 text-white' : 'bg-gray-200'}`}>Monthly</button>
-                    <button onClick={() => setTimeRange('yearly')} className={`px-3 py-1 text-sm rounded-md ${timeRange === 'yearly' ? 'bg-teal-600 text-white' : 'bg-gray-200'}`}>Yearly</button>
+                <div className="flex space-x-1 border border-gray-200 rounded-md p-1">
+                    <button onClick={() => setTimeRange('weekly')} className={`px-3 py-1 text-sm rounded ${timeRange === 'weekly' ? 'bg-teal-600 text-white' : 'bg-white text-gray-600'}`}>Weekly</button>
+                    <button onClick={() => setTimeRange('monthly')} className={`px-3 py-1 text-sm rounded ${timeRange === 'monthly' ? 'bg-teal-600 text-white' : 'bg-white text-gray-600'}`}>Monthly</button>
+                    <button onClick={() => setTimeRange('yearly')} className={`px-3 py-1 text-sm rounded ${timeRange === 'yearly' ? 'bg-teal-600 text-white' : 'bg-white text-gray-600'}`}>Yearly</button>
                 </div>
             </div>
-            <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={filteredData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+            
+            <div className="flex items-center space-x-4 mb-6">
+                <p className="text-4xl font-bold text-gray-800">{stats.total}</p>
+                <div className={`flex items-center text-sm px-2 py-1 rounded-full ${stats.change >= 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                    {stats.change >= 0 ? <ArrowUp size={16} className="mr-1" /> : <ArrowDown size={16} className="mr-1" />}
+                    {stats.change.toFixed(1)}% vs previous period
+                </div>
+            </div>
+
+             <ResponsiveContainer width="100%" height={250}>
+                <LineChart data={chartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                    <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                    <YAxis tick={{ fontSize: 12 }} />
+                    <XAxis dataKey="date" tick={{ fontSize: 12 }} />
+                    <YAxis allowDecimals={false} />
                     <Tooltip />
-                    <Legend iconSize={10} wrapperStyle={{ fontSize: "14px" }} />
-                    <Line type="monotone" dataKey="admissions" stroke="#3b82f6" strokeWidth={2} name="Admissions" dot={{ r: 4 }} />
-                    <Line type="monotone" dataKey="discharges" stroke="#ef4444" strokeWidth={2} name="Discharges" dot={{ r: 4 }} />
+                    <Legend />
+                    <Line type="monotone" dataKey="registrations" stroke="#3b82f6" strokeWidth={2} name="New Patients" dot={{ r: 4 }} />
                 </LineChart>
             </ResponsiveContainer>
         </div>
     );
 };
 
-const DepartmentStatus = () => {
-    const [departments, setDepartments] = useState([]);
-    const [staffs, setStaffs] = useState([]);
-    useEffect(() => {
-        async function fetchDepartments() {
-            try {
-                const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/departments`);
-                const data = await res.json();
-                setDepartments(data);
-            } catch (err) {
-                setDepartments([]);
-            }
-        }
-        async function fetchStaffs() {
-            try {
-                const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/staff`);
-                const data = await res.json();
-                setStaffs(data);
-            } catch (err) {
-                setStaffs([]);
-            }
-        }
-        fetchDepartments();
-        fetchStaffs();
-    }, []);
-    // For demo, assign random capacity if not present
-    const getRandom = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+const RecentAppointments = ({ appointments }) => {
+    const getStatusBadge = (status) => {
+        const statusClasses = {
+          Pending: 'bg-yellow-100 text-yellow-800',
+          Confirmed: 'bg-green-100 text-green-800',
+          Cancelled: 'bg-red-100 text-red-800',
+        };
+        return `px-2 py-1 text-xs font-medium rounded-full ${statusClasses[status] || 'bg-gray-100 text-gray-800'}`;
+    };
+
     return (
-        <div className="bg-white p-6 rounded-lg shadow-sm">
-            <h3 className="font-semibold text-lg">Department Status</h3>
-            <p className="text-sm text-gray-500 mb-6">Current capacity and staff allocation</p>
-            <div className="space-y-4">
-                {departments.map((dept) => {
-                    const staffCount = staffs.filter((s) => s.department === dept.name).length;
-                    const capacity = dept.capacity || getRandom(5, 7);
-                    return (
-                        <div key={dept._id || dept.name}>
-                            <div className="flex justify-between items-center mb-1">
-                                <div className="flex items-center">
-                                    <Dot className="text-teal-500 -ml-3" size={32} />
-                                    <span className="text-sm font-medium">{dept.name}</span>
-                                </div>
-                                <span className="text-sm text-gray-600">{staffCount} staff</span>
+        <div className="bg-white p-6 rounded-lg shadow-sm lg:col-span-2">
+            <h3 className="font-semibold text-lg flex items-center"><Clock className="mr-2" />Recent Appointments</h3>
+            <p className="text-sm text-gray-500 mb-4">A list of the latest scheduled appointments.</p>
+            <div className="space-y-2">
+                {appointments.length > 0 ? appointments.map((appt) => (
+                    <div key={appt.id} className="p-3 rounded-lg border border-gray-100 flex flex-wrap justify-between items-center">
+                        <div className="flex items-center space-x-3">
+                            <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                                <span className="text-gray-600 font-medium text-sm">{appt.initials}</span>
                             </div>
-                            <div className="w-full bg-teal-100 rounded-full h-2.5">
-                                <div className="bg-teal-500 h-2.5 rounded-full" style={{ width: `${capacity ? (staffCount / capacity) * 100 : 0}%` }}></div>
+                            <div>
+                                <p className="font-medium text-gray-900">{appt.patientName}</p>
+                                <p className="text-sm text-gray-500">{appt.doctor}</p>
                             </div>
                         </div>
-                    );
-                })}
+                        <div className="text-right">
+                            <p className="text-sm font-medium text-gray-900">{appt.time}</p>
+                            <span className={getStatusBadge(appt.status)}>{appt.status}</span>
+                        </div>
+                    </div>
+                )) : <p className="text-gray-500 text-center py-4">No recent appointments found.</p>}
             </div>
         </div>
     );
 };
 
-const RecentActivity = () => (
-    <div className="bg-white p-6 rounded-lg shadow-sm mt-6">
-        <h3 className="font-semibold text-lg">Recent Activity</h3>
-        <p className="text-sm text-gray-500 mb-4">Latest updates and changes</p>
-        <ul className="space-y-4">
-            {recentActivityData.map((activity, index) => (
-                <li key={index} className="flex items-start">
-                    <Dot className={`${activity.color.replace('blue', 'teal').replace('yellow', 'teal').replace('green', 'teal')} -ml-3 mt-[-4px]`} size={32} />
-                    <div>
-                        <p className="text-sm">{activity.text}</p>
-                        <p className="text-xs text-gray-400">{activity.time}</p>
-                    </div>
-                </li>
-            ))}
-        </ul>
-    </div>
-);
-
-const RegistrarStats = () => {
-  const [departments, setDepartments] = useState([]);
-  const [showTable, setShowTable] = useState(false);
-  const [selectedDept, setSelectedDept] = useState(null);
-
-  useEffect(() => {
-    async function fetchDepartments() {
-      try {
-        const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/departments`);
-        const data = await res.json();
-        setDepartments(data);
-      } catch (err) {
-        setDepartments([]);
-      }
-    }
-    fetchDepartments();
-  }, []);
-
-  // Calculate stats
-  const totalPatients = dummyPatients.length;
-  const totalCollection = dummyPatients.reduce((sum, p) => sum + p.amount, 0);
-  const patientsByDept = departments.map((dept) => ({
-    name: dept.name,
-    count: dummyPatients.filter((p) => p.department === dept.name).length,
-    collection: dummyPatients.filter((p) => p.department === dept.name).reduce((sum, p) => sum + p.amount, 0),
-  }));
-
-  const selectedPatients = selectedDept
-    ? dummyPatients.filter((p) => p.department === selectedDept)
-    : [];
-
-  return (
-    <div className="bg-white p-6 rounded-lg shadow-sm mb-6 mt-8">
-      <h3 className="font-semibold text-lg mb-4 text-black flex items-center gap-2">
-        <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 11c0-1.657-1.343-3-3-3s-3 1.343-3 3 1.343 3 3 3 3-1.343 3-3zm0 0c0-1.657 1.343-3 3-3s3 1.343 3 3-1.343 3-3 3-3-1.343-3-3zm-6 8v-1a4 4 0 014-4h4a4 4 0 014 4v1" /></svg>
-        Registrar Overview
-      </h3>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-4">
-        <div className="bg-gradient-to-br from-teal-100 to-teal-50 p-4 rounded-lg shadow hover:shadow-md transition cursor-pointer flex flex-col items-center">
-          <div className="text-sm text-teal-800 font-medium mb-1">Total Registered Patients</div>
-          <div className="text-3xl font-bold text-teal-700">{totalPatients}</div>
-        </div>
-        <div className="bg-gradient-to-br from-teal-100 to-teal-50 p-4 rounded-lg shadow hover:shadow-md transition cursor-pointer flex flex-col items-center">
-          <div className="text-sm text-teal-800 font-medium mb-1">Total Collection</div>
-          <div className="text-3xl font-bold text-teal-700">₹{totalCollection.toLocaleString()}</div>
-        </div>
-        <div className="bg-gradient-to-br from-teal-100 to-teal-50 p-4 rounded-lg shadow hover:shadow-md transition cursor-pointer flex flex-col items-center">
-          <div className="text-sm text-teal-800 font-medium mb-1">Departments</div>
-          <div className="text-3xl font-bold text-teal-700">{departments.length}</div>
-        </div>
-      </div>
-      <div>
-        <button
-          className="mt-2 mb-2 px-4 py-2 bg-teal-600 text-white rounded hover:bg-teal-700 transition text-sm font-medium flex items-center gap-2"
-          onClick={() => setShowTable((v) => !v)}
-        >
-          {showTable ? (
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-          ) : (
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
-          )}
-          {showTable ? 'Hide Department Details' : 'Show Department Details'}
-        </button>
-        {showTable && (
-          <div className="overflow-x-auto animate-fade-in">
-            <table className="min-w-full text-sm border border-teal-100 rounded-lg overflow-hidden">
-              <thead className="bg-teal-50">
-                <tr>
-                  <th className="px-4 py-2 text-left text-teal-700">Department</th>
-                  <th className="px-4 py-2 text-left text-teal-700">Patients</th>
-                  <th className="px-4 py-2 text-left text-teal-700">Collection</th>
-                </tr>
-              </thead>
-              <tbody>
-                {patientsByDept.map((dept) => (
-                  <tr
-                    key={dept.name}
-                    className={`hover:bg-teal-50 cursor-pointer ${selectedDept === dept.name ? 'bg-teal-100' : ''}`}
-                    onClick={() => setSelectedDept(dept.name)}
-                  >
-                    <td className="px-4 py-2 font-medium text-gray-700">{dept.name}</td>
-                    <td className="px-4 py-2 text-gray-600">{dept.count}</td>
-                    <td className="px-4 py-2 text-gray-600">₹{dept.collection.toLocaleString()}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {selectedDept && selectedPatients.length > 0 && (
-              <div className="mt-6 bg-teal-50 border border-teal-200 rounded-lg p-4 shadow animate-fade-in">
-                <h5 className="font-semibold text-teal-700 mb-2 flex items-center gap-2">
-                  <svg className="w-4 h-4 text-teal-600" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5.121 17.804A13.937 13.937 0 0112 15c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                  Patients in {selectedDept}
-                </h5>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                  {selectedPatients.map((p) => (
-                    <div key={p.id} className="bg-white border border-teal-100 rounded-lg p-3 shadow-sm">
-                      <div className="font-semibold text-gray-800">{p.name}</div>
-                      <div className="text-sm text-gray-500">Patient ID: {p.id}</div>
-                      <div className="text-sm text-gray-500">Collection: ₹{p.amount.toLocaleString()}</div>
-                    </div>
-                  ))}
+const PatientList = ({ patients, onPatientClick }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    return (
+        <div className="bg-white p-6 rounded-lg shadow-sm lg:col-span-3">
+            <button onClick={() => setIsOpen(!isOpen)} className="w-full flex justify-between items-center">
+                <h3 className="font-semibold text-lg flex items-center"><UserIcon className="mr-2" />All Registered Patients ({patients.length})</h3>
+                <ChevronDown className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+            </button>
+            <div className={`transition-all duration-500 ease-in-out overflow-hidden ${isOpen ? 'max-h-screen mt-4' : 'max-h-0'}`}>
+                <div className="space-y-3 overflow-y-auto max-h-[400px] pr-2">
+                    {patients.map((p) => (
+                        <div key={p._id} className="bg-gray-50 p-3 rounded-lg border border-gray-200 flex justify-between items-center">
+                            <div>
+                                <p className="font-semibold text-gray-800">{p.first_name} {p.last_name}</p>
+                                <p className="text-sm text-gray-500">Patient ID: {p.patientId}</p>
+                                {/* <div className="flex space-x-4 mt-1">
+                                    <span className="text- text-gray-600">Gender: {p.gender}</span>
+                                    <span className="text-xs text-gray-600">Blood: {p.blood_group}</span>
+                                </div> */}
+                            </div>
+                            <button
+                                onClick={() => onPatientClick(p)}
+                                className="px-3 py-1 text-sm font-medium text-white bg-teal-600 rounded hover:bg-teal-700 transition"
+                            >
+                                View
+                            </button>
+                        </div>
+                    ))}
                 </div>
-              </div>
+            </div>
+        </div>
+    );
+};
+
+// MODIFIED: This component has an improved UI and handles editing state.
+const PatientDetailModal = ({ patient, onClose, onSave }) => {
+    const [isEditing, setIsEditing] = useState(false);
+    const [formData, setFormData] = useState(null);
+    const [isSaving, setIsSaving] = useState(false);
+
+    useEffect(() => {
+        if (patient) {
+            setFormData({
+                ...patient,
+                dob: format(parseISO(patient.dob), 'yyyy-MM-dd')
+            });
+            // Reset editing state when a new patient is selected
+            setIsEditing(false);
+        }
+    }, [patient]);
+
+    if (!patient || !formData) return null;
+
+    const handleInputChange = (e) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+    };
+    
+    const handleSave = async () => {
+        setIsSaving(true);
+        await onSave(formData);
+        setIsSaving(false);
+        setIsEditing(false);
+    };
+
+    // A small component for rendering each piece of data, either as text or an input field.
+    const DetailRow = ({ label, name, value, isEditing, type = 'text' }) => (
+        <div className="grid grid-cols-3 gap-2 py-3 border-b border-gray-100">
+            <p className="text-sm font-semibold text-gray-600 col-span-1">{label}</p>
+            {isEditing ? (
+                <input
+                    type={type}
+                    name={name}
+                    value={formData[name] || ''}
+                    onChange={handleInputChange}
+                    className="col-span-2 text-sm p-2 border bg-gray-50 rounded-md focus:ring-2 focus:ring-teal-500 outline-none"
+                />
+            ) : (
+                <p className="text-sm text-gray-800 col-span-2">{value}</p>
             )}
-          </div>
-        )}
-      </div>
-    </div>);
-}
+        </div>
+    );
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50 p-4 transition-opacity">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl transform transition-all">
+                {/* Modal Header */}
+                <div className="p-6 flex items-center border-b relative">
+                    <div className="w-16 h-16 bg-teal-100 rounded-full flex items-center justify-center">
+                        <span className="text-2xl font-bold text-teal-600">
+                            {(formData.first_name?.[0] || '') + (formData.last_name?.[0] || '')}
+                        </span>
+                    </div>
+                    <div className="ml-4">
+                        <h2 className="text-2xl font-bold text-gray-800">{formData.first_name} {formData.last_name}</h2>
+                        <p className="text-sm text-gray-500">{formData.patientId}</p>
+                    </div>
+                    <button
+                        onClick={onClose}
+                        className="absolute top-6 right-6 p-2 rounded-full hover:bg-gray-100"
+                        aria-label="Close"
+                    >
+                        <X size={22} />
+                    </button>
+                </div>
+
+                {/* Modal Body */}
+                <div className="p-6 max-h-[60vh] overflow-y-auto">
+                    <div className="space-y-4">
+                        <div>
+                            <h3 className="font-semibold text-gray-800 mb-2">Personal Details</h3>
+                            <DetailRow label="Gender" name="gender" value={formData.gender} isEditing={isEditing} />
+                            <DetailRow label="Date of Birth" name="dob" value={format(parseISO(patient.dob), 'dd MMM yyyy')} isEditing={isEditing} type="date" />
+                            <DetailRow label="Blood Group" name="blood_group" value={formData.blood_group} isEditing={isEditing} />
+                        </div>
+                        <div>
+                            <h3 className="font-semibold text-gray-800 mb-2 mt-4">Contact Information</h3>
+                            <DetailRow label="Email" name="email" value={formData.email} isEditing={isEditing} />
+                            <DetailRow label="Phone" name="phone" value={formData.phone} isEditing={isEditing} />
+                            <DetailRow label="Address" name="address" value={`${formData.address}, ${formData.city}, ${formData.state} - ${formData.zipCode}`} isEditing={isEditing} />
+                        </div>
+                    </div>
+                </div>
+
+                {/* Modal Footer */}
+                <div className="p-4 bg-gray-50 rounded-b-2xl flex justify-end space-x-3">
+                    {isEditing ? (
+                        <>
+                            <button onClick={() => setIsEditing(false)} className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300">Cancel</button>
+                            <button onClick={handleSave} disabled={isSaving} className="px-4 py-2 text-sm font-medium text-white bg-teal-600 rounded-lg hover:bg-teal-700 disabled:bg-teal-400 flex items-center">
+                                <Save size={16} className="mr-2" /> {isSaving ? 'Saving...' : 'Save Changes'}
+                            </button>
+                        </>
+                    ) : (
+                        <button onClick={() => setIsEditing(true)} className="px-4 py-2 text-sm font-medium text-white bg-teal-600 rounded-lg hover:bg-teal-700 flex items-center">
+                            <Edit size={16} className="mr-2" /> Edit Patient
+                        </button>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+
+// --- Main Dashboard Component --- //
 
 const StaffDashboard = () => {
-    const [currentTime, setCurrentTime] = useState(new Date());
-    useEffect(() => {
-        const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-        return () => clearInterval(timer);
-    }, []);
+    const [staff, setStaff] = useState([]);
+    const [patients, setPatients] = useState([]);
+    const [departments, setDepartments] = useState([]);
+    const [recentAppointments, setRecentAppointments] = useState([]);
+    const [selectedPatient, setSelectedPatient] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
-    const formattedDate = currentTime.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'numeric',
-        day: 'numeric',
-    });
-    const formattedTime = currentTime.toLocaleTimeString('en-US', {
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: true,
-    });
+    const handleSavePatient = async (updatedPatient) => {
+        try {
+            const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/patients/${updatedPatient._id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(updatedPatient),
+            });
+            if (!response.ok) {
+                throw new Error('Failed to save patient data.');
+            }
+            const savedPatient = await response.json();
+            setPatients(prev => prev.map(p => p._id === savedPatient._id ? savedPatient : p));
+            setSelectedPatient(null);
+        } catch (err) {
+            console.error("Save error:", err);
+        }
+    };
+
+    useEffect(() => {
+        async function fetchData() {
+            setLoading(true);
+            setError(null);
+            try {
+                const [staffRes, patientRes, departmentRes, appointmentRes] = await Promise.all([
+                    fetch(`${import.meta.env.VITE_BACKEND_URL}/api/staff`),
+                    fetch(`${import.meta.env.VITE_BACKEND_URL}/api/patients`),
+                    fetch(`${import.meta.env.VITE_BACKEND_URL}/api/departments`),
+                    fetch(`${import.meta.env.VITE_BACKEND_URL}/api/appointments`)
+                ]);
+
+                if (!staffRes.ok || !patientRes.ok || !departmentRes.ok || !appointmentRes.ok) {
+                    throw new Error('Failed to fetch data. Please check API endpoints and server status.');
+                }
+
+                const staffData = await staffRes.json();
+                const patientData = await patientRes.json();
+                const departmentData = await departmentRes.json();
+                const appointmentData = await appointmentRes.json();
+                
+                setStaff(staffData);
+                setPatients(patientData);
+                setDepartments(departmentData);
+
+                const sortedAppointments = [...appointmentData]
+                    .sort((a, b) => new Date(b.appointment_date) - new Date(a.appointment_date))
+                    .slice(0, 5)
+                    .map((a) => ({
+                        id: a._id,
+                        patientName: a.patient_id?.first_name ? `${a.patient_id.first_name} ${a.patient_id.last_name}` : 'Unknown Patient',
+                        time: a.appointment_date ? format(parseISO(a.appointment_date), 'hh:mm a') : 'N/A',
+                        doctor: a.doctor_id?.firstName ? `Dr. ${a.doctor_id.firstName}` : 'Dr. Unknown',
+                        status: a.status || 'Scheduled',
+                        initials: (a.patient_id?.first_name?.[0] || '') + (a.patient_id?.last_name?.[0] || ''),
+                    }));
+                setRecentAppointments(sortedAppointments);
+
+            } catch (err) {
+                console.error("Failed to fetch dashboard data:", err);
+                setError(err.message);
+                setStaff([]);
+                setPatients([]);
+                setDepartments([]);
+                setRecentAppointments([]);
+            } finally {
+                setLoading(false);
+            }
+        }
+        fetchData();
+    }, []);
 
     return (
         <Layout sidebarItems={staffSidebar} section="Staff">
+            <PatientDetailModal patient={selectedPatient} onClose={() => setSelectedPatient(null)} onSave={handleSavePatient} />
             <div className="bg-gray-50 min-h-screen p-4 sm:p-6 lg:p-8">
                 <div className="max-w-7xl mx-auto">
-                    {/* Header */}
-                    <header className="flex flex-wrap justify-between items-center mb-6 gap-4">
-                        <div>
-                            <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Staff Management Dashboard</h1>
-                            <p className="text-sm text-gray-500">{formattedDate} &middot; {formattedTime}</p>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                            <button className="flex items-center bg-white border border-gray-300 rounded-md px-3 py-2 text-sm font-medium hover:bg-gray-50">
-                                <Bell className="h-4 w-4 mr-2" />
-                                Alerts (2)
-                            </button>
-                            <button className="flex items-center bg-teal-600 text-white rounded-md px-3 py-2 text-sm font-medium hover:bg-teal-500">
-                                <UserPlus className="h-4 w-4 mr-2" />
-                                Add Staff
-                            </button>
-                        </div>
-                    </header>
+                    {/* <header className="mb-6">
+                        <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Staff Dashboard</h1>
+                        <p className="text-sm text-gray-500">Overview of hospital staff and patient data.</p>
+                    </header> */}
 
-                   
-                    {/* Stat Cards */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-                        {statsCardsData.map((card, index) => (
-                            <StatCard key={index} {...card} />
-                        ))}
-                    </div>
+                    {loading && <div className="text-center py-10 text-gray-500">Loading dashboard data...</div>}
+                    
+                    {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg text-center" role="alert">{error}</div>}
 
-                    {/* Main Content (Overview) */}
-                    <main>
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                            <div className="lg:col-span-2">
-                                <PatientFlowChart />
+                    {!loading && !error && (
+                        <main>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+                                <StatCard title="Total Staff" value={staff.length} icon={<Users />} color="text-blue-500" />
+                                <StatCard title="Total Patients" value={patients.length} icon={<Bed />} color="text-yellow-500" />
+                                <StatCard title="Total Departments" value={departments.length} icon={<Dot size={32} />} color="text-green-500" />
                             </div>
-                            <div>
-                                <DepartmentStatus />
+
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                               <div className="lg:col-span-3">
+                                  <PatientRegistrationChart patients={patients} />
+                               </div>
+                               <RecentAppointments appointments={recentAppointments} />
+                               <div>
+                                  <StaffDistributionChart staff={staff} departments={departments} />
+                               </div>
                             </div>
-                        </div>
-                         {/* Registrar Section */}
-                    <RegistrarStats />
-                        <RecentActivity />
-                    </main>
+
+                            <div className="grid grid-cols-1">
+                                <PatientList patients={patients} onPatientClick={setSelectedPatient} />
+                            </div>
+                        </main>
+                    )}
                 </div>
             </div>
         </Layout>
