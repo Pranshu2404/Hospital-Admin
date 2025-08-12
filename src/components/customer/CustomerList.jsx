@@ -1,8 +1,50 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Button, SearchInput } from '../common/FormElements';
+import { FaTimes } from 'react-icons/fa';
 
-const CustomerList = ({ setCurrentPage, setSelectedCustomer }) => {
+// --- Modal Component for Customer Profile ---
+const CustomerProfileModal = ({ customer, onClose }) => {
+  if (!customer) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
+        <div className="flex justify-between items-center p-5 border-b">
+          <h3 className="text-xl font-bold text-gray-800">{customer.name}</h3>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-800">
+            <FaTimes size={20} />
+          </button>
+        </div>
+        <div className="p-6 space-y-3 text-sm">
+          <p><strong>Customer ID:</strong> {customer.id}</p>
+          <p><strong>Email:</strong> {customer.email}</p>
+          <p><strong>Phone:</strong> {customer.phone}</p>
+          <p><strong>Address:</strong> {customer.address}</p>
+          <hr className="my-3"/>
+          <p><strong>Last Purchase:</strong> {customer.purchase}</p>
+          <p><strong>Amount:</strong> {customer.amount}</p>
+          <div>
+            <strong>Status:</strong>
+            <span className={`ml-2 px-2 py-1 rounded-full text-xs font-medium ${customer.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-800'}`}>
+              {customer.status}
+            </span>
+          </div>
+        </div>
+        <div className="flex justify-end p-4 border-t">
+          <Button onClick={onClose} variant="secondary">
+            Close
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
+// --- Main Customer List Component ---
+const CustomerList = ({ setCurrentPage }) => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCustomer, setSelectedCustomer] = useState(null);
 
   const customers = [
     { id: 'P6985', name: 'Abu Bin Ishtiyak', email: 'info@softnio.com', phone: '+811 847-4958', address: 'Large cottage', purchase: 'Omiodon10mg, 10pcs', amount: '78.55 USD', status: 'Inactive' },
@@ -16,73 +58,77 @@ const CustomerList = ({ setCurrentPage, setSelectedCustomer }) => {
   );
 
   return (
-    <div className="p-6">
-      <div className="bg-white shadow rounded-xl p-6">
-        <div className="flex justify-between items-center mb-4">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-800">Customer List</h2>
-            <p className="text-gray-500">You have total 17890 Customers in Pharmacy.</p>
+    <>
+      <div className="p-6">
+        <div className="bg-white shadow rounded-xl p-6">
+          <div className="flex justify-between items-center mb-4">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-800">Customer List</h2>
+              <p className="text-gray-500">You have total {customers.length} Customers.</p>
+            </div>
+            <Button onClick={() => setCurrentPage('AddCustomerForm')}>
+              + Add Customer
+            </Button>
           </div>
-          <Button onClick={() => setCurrentPage('AddCustomerForm')}>
-            + Add Customer
-          </Button>
 
+          <SearchInput
+            placeholder="Search by name..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+
+          <div className="overflow-x-auto mt-4">
+            <table className="w-full text-sm text-gray-700">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="p-3 text-left">Customer</th>
+                  <th className="p-3 text-left">ID</th>
+                  <th className="p-3 text-left">Phone</th>
+                  <th className="p-3 text-left">Purchase Details</th>
+                  <th className="p-3 text-left">Status</th>
+                  <th className="p-3 text-center">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map(c => (
+                  <tr key={c.id} className="border-b">
+                    <td className="p-3">
+                      {c.name}
+                      <br />
+                      <span className="text-xs text-gray-500">{c.email}</span>
+                    </td>
+                    <td className="p-3">{c.id}</td>
+                    <td className="p-3">{c.phone}</td>
+                    <td className="p-3">{c.purchase}</td>
+                    <td className="p-3">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${c.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-800'}`}>
+                        {c.status}
+                      </span>
+                    </td>
+                    <td className="p-3 text-center">
+                      <button
+                        onClick={() => setSelectedCustomer(c)}
+                        className="text-blue-600 hover:underline text-sm font-semibold"
+                      >
+                        View
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
-
-        <SearchInput
-          placeholder="Search by name..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
-
-        <table className="w-full mt-4 text-sm text-gray-700">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="p-3 text-left">Customer</th>
-              <th>ID</th>
-              <th>Phone</th>
-              <th>Address</th>
-              <th>Purchase Details</th>
-              <th>Amount</th>
-              <th>Status</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map(c => (
-              <tr key={c.id} className="border-b">
-                <td className="p-3">
-                  {c.name}
-                  <br />
-                  <span className="text-xs text-gray-500">{c.email}</span>
-                </td>
-                <td>{c.id}</td>
-                <td>{c.phone}</td>
-                <td>{c.address}</td>
-                <td>{c.purchase}</td>
-                <td>{c.amount}</td>
-                <td>
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${c.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-800'}`}>
-                    {c.status}
-                  </span>
-                </td>
-                <td>
-                  <button
-                    onClick={() => {
-                      setSelectedCustomer(c);
-                      setCurrentPage('CustomerProfile');
-                    }}
-                    className="text-blue-600 hover:underline text-sm"
-                  >
-                    View
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
       </div>
-    </div>
+
+      {/* Render the modal if a customer is selected */}
+      {selectedCustomer && (
+        <CustomerProfileModal 
+          customer={selectedCustomer} 
+          onClose={() => setSelectedCustomer(null)} 
+        />
+      )}
+    </>
   );
 };
 

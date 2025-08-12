@@ -10,6 +10,7 @@ const AddCustomerForm = () => {
     purchasedItem: '',
     purchasedQuantity: '',
     amount: '',
+    paymentMode: '',
     status: '',
     description: ''
   });
@@ -33,11 +34,17 @@ const AddCustomerForm = () => {
     { value: 'pending', label: 'Pending' }
   ];
 
+  const paymentOptions = [
+    { value: 'cash', label: 'Cash' },
+    { value: 'card', label: 'Card' },
+    { value: 'upi', label: 'UPI' }
+  ];
+
   return (
     <div className="p-6">
       <div className="bg-white rounded-xl shadow-sm border border-gray-100">
         <div className="p-6 border-b border-gray-100">
-          <h2 className="text-2xl font-bold text-gray-900">Add Customer</h2>
+          <h2 className="text-2xl font-bold text-gray-900">Add Patient</h2>
           <p className="text-gray-600 mt-1">You can add a customer by filling these fields.</p>
         </div>
 
@@ -91,6 +98,15 @@ const AddCustomerForm = () => {
               placeholder="Amount"
               type="number"
             />
+            {/* Payment Mode now comes before Status */}
+            <FormSelect
+              label="Payment Mode"
+              value={formData.paymentMode}
+              onChange={(e) => handleInputChange('paymentMode', e.target.value)}
+              options={paymentOptions}
+              placeholder="Select Payment Mode"
+              required
+            />
             <FormSelect
               label="Status"
               value={formData.status}
@@ -100,6 +116,18 @@ const AddCustomerForm = () => {
               required
             />
           </div>
+
+          {/* Conditionally render QR code when 'upi' is selected */}
+          {formData.paymentMode === 'upi' && (
+            <div className="flex flex-col items-center justify-center p-4 border-2 border-dashed rounded-lg mb-6">
+              <img
+                src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=upi://pay?pa=your-upi-id@okhdfcbank"
+                alt="Scan for UPI Payment"
+                className="w-40 h-40"
+              />
+              <p className="mt-2 text-gray-600 font-medium">Scan to complete payment</p>
+            </div>
+          )}
 
           <FormTextarea
             label="Description"

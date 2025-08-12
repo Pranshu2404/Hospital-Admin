@@ -91,6 +91,8 @@ import PharmacyGuidePage from './pages/dashboard/pharmacy/guidepage';
 import StaffGuidePage from './pages/dashboard/staff/guidepage';
 import AppointmentDetails from './pages/dashboard/doctor/AppointmentDetails';
 import MyDepartmentPage from './pages/dashboard/doctor/DepartmentPage';
+// import PharmacyDashboardPage from './pages/dashboard/pharmacy/';
+
 
 export default function App() {
   return (

@@ -22,16 +22,16 @@ export const pharmacySidebar = [
     submenu: [
       { label: 'Add Medicine', path: '/dashboard/pharmacy/add-medicine' },
       { label: 'Medicine List', path: '/dashboard/pharmacy/medicine-list' },
-      { label: 'Medicine Detail', path: '/dashboard/pharmacy/medicine-detail' },
+      // { label: 'Medicine Detail', path: '/dashboard/pharmacy/medicine-detail' },
     ],
   },
   {
-    label: 'Customers',
+    label: 'Patients',
     icon: CustomersIcon,
     submenu: [
-      { label: 'Add Customer', path: '/dashboard/pharmacy/add-customer' },
-      { label: 'Customer List', path: '/dashboard/pharmacy/customers' },
-      { label: 'Customer Profile', path: '/dashboard/pharmacy/customer-profile' },
+      { label: 'Add Patient', path: '/dashboard/pharmacy/add-customer' },
+      { label: 'Patients List', path: '/dashboard/pharmacy/customers' },
+      { label: 'Patients Profile', path: '/dashboard/pharmacy/customer-profile' },
     ],
   },
   {
