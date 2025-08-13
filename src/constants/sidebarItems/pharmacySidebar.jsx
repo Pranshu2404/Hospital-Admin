@@ -31,7 +31,7 @@ export const pharmacySidebar = [
     submenu: [
       { label: 'Add Patient', path: '/dashboard/pharmacy/add-customer' },
       { label: 'Patients List', path: '/dashboard/pharmacy/customers' },
-      { label: 'Patients Profile', path: '/dashboard/pharmacy/customer-profile' },
+      // { label: 'Patients Profile', path: '/dashboard/pharmacy/customer-profile' },
     ],
   },
   {
