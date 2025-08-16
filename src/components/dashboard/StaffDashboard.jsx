@@ -342,6 +342,7 @@ const StaffDashboard = () => {
     const [selectedPatient, setSelectedPatient] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [processingRequestId, setProcessingRequestId] = useState(null);
 
     const handleSavePatient = async (updatedPatient) => {
         try {
@@ -366,15 +367,15 @@ const StaffDashboard = () => {
             setLoading(true);
             setError(null);
             try {
-                const staffId = localStorage.getItem('staffId');
-                const calendarEndpoint = staffId ? `${import.meta.env.VITE_BACKEND_URL}/api/calendar/staff/${staffId}` : `${import.meta.env.VITE_BACKEND_URL}/api/calendar`;
+                // const staffId = localStorage.getItem('staffId');
+                // const calendarEndpoint = staffId ? `${import.meta.env.VITE_BACKEND_URL}/api/calendar/staff/${staffId}` : `${import.meta.env.VITE_BACKEND_URL}/api/calendar`;
 
-                const [staffRes, patientRes, departmentRes, appointmentRes, calendarRes] = await Promise.all([
+                const [staffRes, patientRes, departmentRes, appointmentRes] = await Promise.all([
                     fetch(`${import.meta.env.VITE_BACKEND_URL}/api/staff`),
                     fetch(`${import.meta.env.VITE_BACKEND_URL}/api/patients`),
                     fetch(`${import.meta.env.VITE_BACKEND_URL}/api/departments`),
                     fetch(`${import.meta.env.VITE_BACKEND_URL}/api/appointments`),
-                    fetch(calendarEndpoint)
+                    ///fetch(calendarEndpoint)
                 ]);
 
                 if (!staffRes.ok || !patientRes.ok || !departmentRes.ok || !appointmentRes.ok) {
@@ -385,12 +386,39 @@ const StaffDashboard = () => {
                 const patientData = await patientRes.json();
                 const departmentData = await departmentRes.json();
                 const appointmentData = await appointmentRes.json();
-                const calendarData = calendarRes.ok ? await calendarRes.json() : [];
+                //const calendarData = calendarRes.ok ? await calendarRes.json() : [];
                 
                 setStaff(staffData);
                 setPatients(patientData);
                 setDepartments(departmentData);
                 setAppointments(appointmentData);
+
+                 // Build calendar events from the appointmentData array
+
+            const events = appointmentData
+                .filter(appt => appt.appointment_date) // Ensure the appointment has a date
+                .map(appt => {
+                    const patientName = appt.patient_id?.first_name 
+                        ? `${appt.patient_id.first_name} ${appt.patient_id.last_name}` 
+                        : 'Booked Slot';
+
+                    // The start time of the event
+                    const startDate = parseISO(appt.appointment_date);
+                    
+                    // The end time. Assuming a 30-minute duration for each appointment.
+                    // You can adjust this value as needed.
+                    const endDate = new Date(startDate.getTime() + 30 * 60000); // 30 minutes * 60 seconds * 1000 milliseconds
+
+                    return {
+                        title: patientName,
+                        start: startDate,
+                        end: endDate,
+                        allDay: false,
+                        resource: appt, // Optionally store the original appointment object
+                    };
+                });
+            
+            setCalendarEvents(events);
 
                 const sortedAppointments = [...appointmentData]
                     .sort((a, b) => new Date(b.appointment_date) - new Date(a.appointment_date))
@@ -406,32 +434,32 @@ const StaffDashboard = () => {
                 setRecentAppointments(sortedAppointments);
 
                 // --- Build calendar events ---
-                const events = [];
-                // calendarData expected to be an array of hospital schedules with days -> doctor -> bookedSlots
-                if (Array.isArray(calendarData)) {
-                    calendarData.forEach(hospitalSchedule => {
-                        if (!hospitalSchedule.days) return;
-                        hospitalSchedule.days.forEach(day => {
-                            if (!day.doctor) return;
-                            const doctor = day.doctor;
-                            const dateStr = day.date;
-                            (doctor.bookedSlots || []).forEach(slot => {
-                                const [hour, minute] = slot.split(':');
-                                const startDate = new Date(dateStr);
-                                startDate.setHours(parseInt(hour || '0', 10), parseInt(minute || '0', 10), 0);
-                                const endDate = new Date(startDate);
-                                endDate.setMinutes(endDate.getMinutes() + 30);
-                                events.push({
-                                    title: `Dr. ${doctor.firstName || doctor.first_name || ''} - ${slot}`,
-                                    start: startDate,
-                                    end: endDate,
-                                    allDay: false
-                                });
-                            });
-                        });
-                    });
-                }
-                setCalendarEvents(events);
+                // const events = [];
+                // // calendarData expected to be an array of hospital schedules with days -> doctor -> bookedSlots
+                // if (Array.isArray(calendarData)) {
+                //     calendarData.forEach(hospitalSchedule => {
+                //         if (!hospitalSchedule.days) return;
+                //         hospitalSchedule.days.forEach(day => {
+                //             if (!day.doctor) return;
+                //             const doctor = day.doctor;
+                //             const dateStr = day.date;
+                //             (doctor.bookedSlots || []).forEach(slot => {
+                //                 const [hour, minute] = slot.split(':');
+                //                 const startDate = new Date(dateStr);
+                //                 startDate.setHours(parseInt(hour || '0', 10), parseInt(minute || '0', 10), 0);
+                //                 const endDate = new Date(startDate);
+                //                 endDate.setMinutes(endDate.getMinutes() + 30);
+                //                 events.push({
+                //                     title: `Dr. ${doctor.firstName || doctor.first_name || ''} - ${slot}`,
+                //                     start: startDate,
+                //                     end: endDate,
+                //                     allDay: false
+                //                 });
+                //             });
+                //         });
+                //     });
+                // }
+                // setCalendarEvents(events);
 
                 // --- Next patient & approval requests for staff ---
                 const isSameDay = (d1, d2) => new Date(d1).toDateString() === new Date(d2).toDateString();
