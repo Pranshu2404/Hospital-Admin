@@ -92,7 +92,10 @@ import StaffGuidePage from './pages/dashboard/staff/guidepage';
 import AppointmentDetails from './pages/dashboard/doctor/AppointmentDetails';
 import MyDepartmentPage from './pages/dashboard/doctor/DepartmentPage';
 // import PharmacyDashboardPage from './pages/dashboard/pharmacy/';
-
+import SuppliersListPage from './pages/dashboard/pharmacy/SuppliersListPage';
+import AddSupplierPage from './pages/dashboard/pharmacy/AddSupplierPage';
+import ExpiredMedicineAlready from './pages/dashboard/pharmacy/ExpiredMedicineAlready';
+import CreateInvoicePage from './components/finance/CreateInvoicePage';
 
 export default function App() {
   return (
@@ -126,8 +129,8 @@ export default function App() {
           <Route path="/dashboard/admin/profile" element={<UserProfilePage />} />
           <Route path="/dashboard/admin/settings" element={<SettingsPage />} />
           <Route path="dashboard/admin/pharmacies" element={<PharmacyList />} />
-<Route path="dashboard/admin/pharmacies/add" element={<AddPharmacy />} />
-<Route path="dashboard/admin/pharmacies/:id" element={<PharmacyProfile />} />
+          <Route path="dashboard/admin/pharmacies/add" element={<AddPharmacy />} />
+          <Route path="dashboard/admin/pharmacies/:id" element={<PharmacyProfile />} />
           <Route path="/dashboard/admin/patients/add-opd" element={<AddPatientOPD />} />
           <Route path="/dashboard/admin/patients/add-ipd" element={<AddPatientIPD />} />         
           <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -144,11 +147,11 @@ export default function App() {
           <Route path="/dashboard/staff/update-patient/:id" element={<UpdatePatientProfile />} />
           <Route path="/dashboard/admin/edit-doctor/:id" element={<EditDoctor />} />
 
-<Route path="/dashboard/admin/guide" element={<AdminGuidePage />} />
-<Route path="/dashboard/doctor/guide" element={<DoctorGuide />} />
-<Route path="/dashboard/pharmacy/guide" element={<PharmacyGuidePage />} />
-<Route path="/dashboard/staff/guide" element={<StaffGuidePage />} />
-<Route path="/dashboard/admin/add-hod-main" element={<AddHodMain />} />
+          <Route path="/dashboard/admin/guide" element={<AdminGuidePage />} />
+          <Route path="/dashboard/doctor/guide" element={<DoctorGuide />} />
+          <Route path="/dashboard/pharmacy/guide" element={<PharmacyGuidePage />} />
+          <Route path="/dashboard/staff/guide" element={<StaffGuidePage />} />
+          <Route path="/dashboard/admin/add-hod-main" element={<AddHodMain />} />
 
           {/* Doctor Routes */}
           <Route
@@ -171,7 +174,9 @@ export default function App() {
             <ProtectedRoute role="doctor">
                   <AppointmentDetails/>
             </ProtectedRoute>
-            } />
+            } 
+          />
+
           <Route
             path="/dashboard/doctor/records"
             element={
@@ -199,8 +204,7 @@ export default function App() {
             }
           />
 
-<Route path="/dashboard/doctor/department" element={<MyDepartmentPage />} />
-
+          <Route path="/dashboard/doctor/department" element={<MyDepartmentPage />} />
 
           <Route
             path="/dashboard/doctor/prescriptions"
@@ -228,7 +232,6 @@ export default function App() {
               </ProtectedRoute>
             }
           />
-
 
           <Route
             path="/dashboard/doctor/doctor-details/:id"
@@ -293,7 +296,20 @@ export default function App() {
           <Route path="/dashboard/pharmacy/inventory" element={<InventoryPage />} />
           <Route path="/dashboard/pharmacy/profile" element={<ProfilePage />} />
           <Route path="/dashboard/pharmacy/settings" element={<Settings />} />
+          <Route path="/dashboard/pharmacy/suppliers" element={<SuppliersListPage />} />
+          <Route path="/dashboard/pharmacy/add-supplier" element={<AddSupplierPage />} /> 
+          <Route 
+            path="/dashboard/pharmacy/expired-medicines" 
+            element={<ExpiredMedicineAlready />} 
+          />   
+          <Route 
+            path="/dashboard/finance/create-invoice" 
+            element={<CreateInvoicePage />} 
+          />      
         </Routes>
+        
+
+
       </AuthProvider>
     </Router>
       );

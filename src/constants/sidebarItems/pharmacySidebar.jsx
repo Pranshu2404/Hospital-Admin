@@ -17,11 +17,20 @@ export const pharmacySidebar = [
   },
   { label: 'Pharmacy Guide', path: '/dashboard/pharmacy/guide', icon: FaFileAlt },
   {
+    label: 'Suppliers',
+    icon: CustomersIcon,
+    submenu: [
+      { label: 'Add Suppliers', path: '/dashboard/pharmacy/add-supplier' },
+      { label: 'Suppliers List',path: '/dashboard/pharmacy/suppliers' },
+    ],
+  },
+  {
     label: 'Medicines',
     icon: MedicineIcon,
     submenu: [
       { label: 'Add Medicine', path: '/dashboard/pharmacy/add-medicine' },
       { label: 'Medicine List', path: '/dashboard/pharmacy/medicine-list' },
+      { label: 'Expired Medicine List', path: '/dashboard/pharmacy/expired-medicines' },
       // { label: 'Medicine Detail', path: '/dashboard/pharmacy/medicine-detail' },
     ],
   },
@@ -35,15 +44,15 @@ export const pharmacySidebar = [
     ],
   },
   {
-    label: 'Invoices',
+    label: 'Expense',
     icon: FinanceIcon,
     submenu: [
-      { label: 'Invoice List', path: '/dashboard/pharmacy/invoices' },
-      { label: 'Invoice Detail', path: '/dashboard/pharmacy/invoice-detail' },
+      { label: 'Expense Management', path: '/dashboard/pharmacy/invoices' },
+      { label: 'Expense Detail', path: '/dashboard/pharmacy/invoice-detail' },
     ],
   },
   {
-    label: 'Inventory',
+    label: 'Invoice',
     icon: InventoryIcon,
     path: '/dashboard/pharmacy/inventory',
   },
