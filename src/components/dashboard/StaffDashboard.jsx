@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 // Aliased BarChart icon to avoid naming conflict with recharts component
 import { Users, Bed, Dot, User as UserIcon, BarChart as BarChartIcon, LineChart as LineChartIcon, ArrowUp, ArrowDown, Clock, X, ChevronDown, Edit, Save, Mail, Phone, MapPin, Calendar, Droplet } from 'lucide-react';
 import { Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Line, LineChart, BarChart } from 'recharts';
+import { Calendar as BigCalendar, momentLocalizer } from 'react-big-calendar';
+import moment from 'moment';
+import 'react-big-calendar/lib/css/react-big-calendar.css';
 import Layout from '../Layout';
 import { staffSidebar } from '@/constants/sidebarItems/staffSidebar';
 // MODIFIED: Added more date-fns functions for time range filtering and formatting
@@ -330,9 +333,16 @@ const StaffDashboard = () => {
     const [patients, setPatients] = useState([]);
     const [departments, setDepartments] = useState([]);
     const [recentAppointments, setRecentAppointments] = useState([]);
+    const [appointments, setAppointments] = useState([]);
+    const [calendarEvents, setCalendarEvents] = useState([]);
+    const [nextPatient, setNextPatient] = useState(null);
+    const [approvalRequests, setApprovalRequests] = useState([]);
+    const [currentDate, setCurrentDate] = useState(new Date());
+    const [currentView, setCurrentView] = useState('week');
     const [selectedPatient, setSelectedPatient] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [processingRequestId, setProcessingRequestId] = useState(null);
 
     const handleSavePatient = async (updatedPatient) => {
         try {
@@ -357,11 +367,15 @@ const StaffDashboard = () => {
             setLoading(true);
             setError(null);
             try {
+                // const staffId = localStorage.getItem('staffId');
+                // const calendarEndpoint = staffId ? `${import.meta.env.VITE_BACKEND_URL}/api/calendar/staff/${staffId}` : `${import.meta.env.VITE_BACKEND_URL}/api/calendar`;
+
                 const [staffRes, patientRes, departmentRes, appointmentRes] = await Promise.all([
                     fetch(`${import.meta.env.VITE_BACKEND_URL}/api/staff`),
                     fetch(`${import.meta.env.VITE_BACKEND_URL}/api/patients`),
                     fetch(`${import.meta.env.VITE_BACKEND_URL}/api/departments`),
-                    fetch(`${import.meta.env.VITE_BACKEND_URL}/api/appointments`)
+                    fetch(`${import.meta.env.VITE_BACKEND_URL}/api/appointments`),
+                    ///fetch(calendarEndpoint)
                 ]);
 
                 if (!staffRes.ok || !patientRes.ok || !departmentRes.ok || !appointmentRes.ok) {
@@ -372,10 +386,39 @@ const StaffDashboard = () => {
                 const patientData = await patientRes.json();
                 const departmentData = await departmentRes.json();
                 const appointmentData = await appointmentRes.json();
+                //const calendarData = calendarRes.ok ? await calendarRes.json() : [];
                 
                 setStaff(staffData);
                 setPatients(patientData);
                 setDepartments(departmentData);
+                setAppointments(appointmentData);
+
+                 // Build calendar events from the appointmentData array
+
+            const events = appointmentData
+                .filter(appt => appt.appointment_date) // Ensure the appointment has a date
+                .map(appt => {
+                    const patientName = appt.patient_id?.first_name 
+                        ? `${appt.patient_id.first_name} ${appt.patient_id.last_name}` 
+                        : 'Booked Slot';
+
+                    // The start time of the event
+                    const startDate = parseISO(appt.appointment_date);
+                    
+                    // The end time. Assuming a 30-minute duration for each appointment.
+                    // You can adjust this value as needed.
+                    const endDate = new Date(startDate.getTime() + 30 * 60000); // 30 minutes * 60 seconds * 1000 milliseconds
+
+                    return {
+                        title: patientName,
+                        start: startDate,
+                        end: endDate,
+                        allDay: false,
+                        resource: appt, // Optionally store the original appointment object
+                    };
+                });
+            
+            setCalendarEvents(events);
 
                 const sortedAppointments = [...appointmentData]
                     .sort((a, b) => new Date(b.appointment_date) - new Date(a.appointment_date))
@@ -389,6 +432,52 @@ const StaffDashboard = () => {
                         initials: (a.patient_id?.first_name?.[0] || '') + (a.patient_id?.last_name?.[0] || ''),
                     }));
                 setRecentAppointments(sortedAppointments);
+
+                // --- Build calendar events ---
+                // const events = [];
+                // // calendarData expected to be an array of hospital schedules with days -> doctor -> bookedSlots
+                // if (Array.isArray(calendarData)) {
+                //     calendarData.forEach(hospitalSchedule => {
+                //         if (!hospitalSchedule.days) return;
+                //         hospitalSchedule.days.forEach(day => {
+                //             if (!day.doctor) return;
+                //             const doctor = day.doctor;
+                //             const dateStr = day.date;
+                //             (doctor.bookedSlots || []).forEach(slot => {
+                //                 const [hour, minute] = slot.split(':');
+                //                 const startDate = new Date(dateStr);
+                //                 startDate.setHours(parseInt(hour || '0', 10), parseInt(minute || '0', 10), 0);
+                //                 const endDate = new Date(startDate);
+                //                 endDate.setMinutes(endDate.getMinutes() + 30);
+                //                 events.push({
+                //                     title: `Dr. ${doctor.firstName || doctor.first_name || ''} - ${slot}`,
+                //                     start: startDate,
+                //                     end: endDate,
+                //                     allDay: false
+                //                 });
+                //             });
+                //         });
+                //     });
+                // }
+                // setCalendarEvents(events);
+
+                // --- Next patient & approval requests for staff ---
+                const isSameDay = (d1, d2) => new Date(d1).toDateString() === new Date(d2).toDateString();
+                const todayAppointments = appointmentData.filter(a => a.appointment_date && isSameDay(a.appointment_date, new Date()));
+                const next = todayAppointments.length > 0 ? todayAppointments.sort((a,b) => new Date(a.appointment_date) - new Date(b.appointment_date))[0] : null;
+                if (next) {
+                    setNextPatient({
+                        ...next.patient_id,
+                        treatment: next.type,
+                        date: next.appointment_date
+                    });
+                } else {
+                    setNextPatient(null);
+                }
+                setApprovalRequests(todayAppointments.slice(1,5).map(a => ({
+                    name: a.patient_id?.first_name || a.patient_id?.firstName || 'Unknown',
+                    treatment: a.type
+                })));
 
             } catch (err) {
                 console.error("Failed to fetch dashboard data:", err);
@@ -430,9 +519,88 @@ const StaffDashboard = () => {
                                <div className="lg:col-span-3">
                                   <PatientRegistrationChart patients={patients} />
                                </div>
-                               <RecentAppointments appointments={recentAppointments} />
-                               <div>
-                                  <StaffDistributionChart staff={staff} departments={departments} />
+                            </div>
+
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                               <div className="lg:col-span-2">
+                                   <div className="bg-white rounded-xl shadow p-4 h-full">
+                                       <h3 className="font-semibold mb-3 text-teal-700">Professional Calendar</h3>
+                                       <BigCalendar
+                                           localizer={momentLocalizer(moment)}
+                                           events={calendarEvents}
+                                           startAccessor="start"
+                                           endAccessor="end"
+                                           style={{ height: 360 }}
+                                           views={[ 'month', 'week', 'day' ]}
+                                           date={currentDate}
+                                           view={currentView}
+                                           onNavigate={(date) => setCurrentDate(date)}
+                                           onView={(view) => setCurrentView(view)}
+                                       />
+                                   </div>
+                               </div>
+
+                               <div className="lg:col-span-1">
+                                   <div className="bg-white p-4 rounded-xl shadow flex flex-col h-full">
+                                       <div className="flex items-start justify-between">
+                                           <h3 className="font-semibold mb-1">Next Patient</h3>
+                                           <span className="text-sm text-gray-500">Today</span>
+                                       </div>
+
+                                       {nextPatient ? (
+                                           <div className="mt-3 flex-1 flex flex-col">
+                                               <div className="flex items-center gap-4">
+                                                   <div className="w-16 h-16 rounded-full bg-teal-100 flex items-center justify-center text-teal-600">
+                                                       <UserIcon className="w-8 h-8" />
+                                                   </div>
+                                                   <div className="flex-1">
+                                                       <div className="text-lg font-bold text-gray-800">{(nextPatient.first_name || nextPatient.firstName) + ' ' + (nextPatient.last_name || nextPatient.lastName || '')}</div>
+                                                       <div className="text-sm text-gray-600">{nextPatient.treatment}</div>
+                                                       <div className="text-sm text-gray-500 mt-1">Appointment: <span className="font-medium text-gray-700">{nextPatient.date ? new Date(nextPatient.date).toLocaleString() : 'N/A'}</span></div>
+                                                   </div>
+                                               </div>
+
+                                               <div className="grid grid-cols-2 gap-3 text-sm text-gray-600 mt-4">
+                                                   <div className="bg-gray-50 p-2 rounded">Gender<div className="font-medium text-gray-800">{nextPatient.gender || 'N/A'}</div></div>
+                                                   <div className="bg-gray-50 p-2 rounded">Age<div className="font-medium text-gray-800">{nextPatient.age || 'N/A'}</div></div>
+                                                   <div className="bg-gray-50 p-2 rounded">Contact<div className="font-medium text-gray-800">{nextPatient.phone || nextPatient.mobile || 'N/A'}</div></div>
+                                                   <div className="bg-gray-50 p-2 rounded">Blood Group<div className="font-medium text-gray-800">{nextPatient.blood_group || nextPatient.bloodGroup || 'N/A'}</div></div>
+                                               </div>
+
+                                               <div className="mt-4 flex gap-2">
+                                                   <button onClick={() => setSelectedPatient(nextPatient)} className="flex-1 px-3 py-2 bg-teal-600 text-white rounded hover:bg-teal-700">View Profile</button>
+                                                   <button className="px-3 py-2 bg-white border border-gray-200 rounded hover:bg-gray-50">Check-in</button>
+                                                   <button className="px-3 py-2 bg-white border border-gray-200 rounded hover:bg-gray-50">Message</button>
+                                               </div>
+                                           </div>
+                                       ) : (
+                                           <div className="mt-4 text-sm text-gray-500">No upcoming patient today.</div>
+                                       )}
+                                   </div>
+                               </div>
+
+                               <div className="lg:col-span-3">
+                                   <div className="bg-white p-4 rounded-xl shadow">
+                                       <div className="flex items-center justify-between mb-3">
+                                           <h3 className="font-semibold">Approval Requests</h3>
+                                           <span className="text-sm text-gray-500">{approvalRequests.length} pending</span>
+                                       </div>
+
+                                       <div className="space-y-2 text-sm">
+                                           {approvalRequests.length > 0 ? approvalRequests.map((req, i) => (
+                                               <div key={i} className="flex justify-between items-center border p-3 rounded">
+                                                   <div>
+                                                       <div className="font-semibold">{req.name}</div>
+                                                       <div className="text-gray-500 text-xs">{req.treatment}</div>
+                                                   </div>
+                                                   <div className="flex gap-2">
+                                                       <button className="text-green-600">Approve</button>
+                                                       <button className="text-red-600">Decline</button>
+                                                   </div>
+                                               </div>
+                                           )) : <div className="text-gray-500">No approval requests.</div>}
+                                       </div>
+                                   </div>
                                </div>
                             </div>
 
