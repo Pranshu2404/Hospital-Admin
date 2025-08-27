@@ -91,6 +91,9 @@ import PharmacyGuidePage from './pages/dashboard/pharmacy/guidepage';
 import StaffGuidePage from './pages/dashboard/staff/guidepage';
 import AppointmentDetails from './pages/dashboard/doctor/AppointmentDetails';
 import MyDepartmentPage from './pages/dashboard/doctor/DepartmentPage';
+import IPDAppointmentsPage from './pages/dashboard/admin/ipdappointment';
+import RoomListPage from './pages/dashboard/admin/RoomList';
+import AddRoomPage from './pages/dashboard/admin/AddRoom';
 // import PharmacyDashboardPage from './pages/dashboard/pharmacy/';
 
 
@@ -105,6 +108,7 @@ export default function App() {
           {/* Admin Routes */}
           <Route path="/dashboard/admin" element={<AdminHome />} />
           <Route path="/dashboard/admin/appointments" element={<AppointmentsPage />} />
+          <Route path="/dashboard/admin/ipd-appointments" element={<IPDAppointmentsPage />} />
           <Route path="/dashboard/admin/add-patient" element={<AddPatientPage />} />
           <Route path="/dashboard/admin/patient-list" element={<PatientListPage />} />
           <Route path="/dashboard/admin/patient-profile" element={<PatientProfilePage />} />
@@ -112,6 +116,8 @@ export default function App() {
           <Route path="/dashboard/admin/add-registrar" element={<AddRegistrarPage />} />
           <Route path="/dashboard/admin/add-doctor" element={<AddDoctorPage />} />
           <Route path="/dashboard/admin/doctor-list" element={<DoctorListPage />} />
+          <Route path="/dashboard/admin/room-list" element={<RoomListPage />} />
+          <Route path="/dashboard/admin/add-room" element={<AddRoomPage />} />
           <Route path="/dashboard/admin/staff-list" element={<StaffListPage />} />
           <Route path="/dashboard/admin/registrar-list" element={<RegistrarListPage />} />
           <Route path="/dashboard/admin/staff-profile" element={<StaffProfilePage />} />

@@ -149,6 +149,7 @@ import {
   SettingsIcon,
   StaffIcon,
   UserProfileIcon,
+  RoomIcon,
 } from '../../components/common/Icons';
 
 export const adminSidebar = [
@@ -199,6 +200,15 @@ export const adminSidebar = [
     submenu: [
       { label: 'Add Registrar', path: '/dashboard/admin/add-registrar' },
       { label: 'Registrar List', path: '/dashboard/admin/registrar-list' },
+    ],
+  },
+  {
+    label: 'Rooms',
+    icon: RoomIcon,
+    path: '/dashboard/admin/room-list',
+    submenu: [
+      { label: 'Add Room', path: '/dashboard/admin/add-room' },
+      { label: 'Room List', path: '/dashboard/admin/room-list' },
     ],
   },
   {

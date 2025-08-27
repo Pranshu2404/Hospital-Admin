@@ -115,8 +115,8 @@ const ChoosePatientTypeModal2 = ({ isOpen, onClose }) => {
 
   const handleSelect = (type) => {
     onClose();
-    if (type === "opd") navigate("/dashboard/admin/appointments?type=opd");
-    else navigate("/dashboard/admin/appointments?type=ipd");
+    if (type === "opd") navigate("/dashboard/admin/patients/add-opd");
+    else navigate("/dashboard/admin/ipd-appointments");
   };
 
   return (
