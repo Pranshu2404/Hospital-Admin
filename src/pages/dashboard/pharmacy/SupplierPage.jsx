@@ -346,7 +346,7 @@ const SupplierEditModal = ({ supplier, onClose, onSubmit }) => {
           </div>
           <div className="flex justify-end p-5 border-t gap-3">
             <button type="button" onClick={onClose} className="bg-gray-200 text-gray-800 font-semibold px-4 py-2 rounded-lg hover:bg-gray-300">Cancel</button>
-            <button type="submit" className="bg-blue-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-blue-700">Save Changes</button>
+            <button type="submit" className="bg-teal-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-teal-700">Save Changes</button>
           </div>
         </form>
       </div>
@@ -445,7 +445,7 @@ const SuppliersListPage = () => {
                 <input type="text" placeholder="Search suppliers..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 p-2 border border-gray-300 rounded-lg" />
               </div>
               {/* THIS BUTTON IS NOW A LINK FOR NAVIGATION */}
-              <Link to="/dashboard/pharmacy/add-supplier" className="flex items-center gap-2 bg-blue-600 text-white font-semibold px-4 py-2 rounded-lg shadow hover:bg-blue-700 whitespace-nowrap">
+              <Link to="/dashboard/pharmacy/add-supplier" className="flex items-center gap-2 bg-teal-600 text-white font-semibold px-4 py-2 rounded-lg shadow hover:bg-teal-700 whitespace-nowrap">
                 <FaPlus /> Add Supplier
               </Link>
             </div>
@@ -470,7 +470,7 @@ const SuppliersListPage = () => {
                       <td className="px-6 py-4">{supplier.phone}</td>
                       <td className="px-6 py-4">{supplier.email}</td>
                       <td className="px-6 py-4 flex items-center gap-4">
-                        <button onClick={() => handleOpenEditModal(supplier)} className="text-blue-600 hover:text-blue-800"><FaEdit /></button>
+                        <button onClick={() => handleOpenEditModal(supplier)} className="text-teal-600 hover:text-teal-800"><FaEdit /></button>
                         <button onClick={() => handleDeactivate(supplier._id)} className="text-red-600 hover:text-red-800"><FaTrash /></button>
                       </td>
                     </tr>

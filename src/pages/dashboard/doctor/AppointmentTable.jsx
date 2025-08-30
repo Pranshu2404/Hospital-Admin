@@ -1,17 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import AddAppointmentModal from '@/components/appointments/AddAppointmentModal';
+import AddIPDAppointment from '@/components/appointments/AddIPDAppointment';
 
 
 const AppointmentTable = ({ }) => {
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [chooserOpen, setChooserOpen] = useState(false);
+  const [selectedType, setSelectedType] = useState(null); // 'ipd' or 'opd'
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
   const navigate = useNavigate();
-  const itemsPerPage = 10;
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   const doctorId = localStorage.getItem("doctorId");
 
   useEffect(() => {
@@ -70,7 +72,7 @@ const AppointmentTable = ({ }) => {
           <h2 className="text-2xl text-teal-600 font-semibold">Appointments</h2>
           <button
             className="bg-teal-600 hover:bg-teal-700 text-white font-medium py-2 px-4 rounded-lg"
-            onClick={() => setShowForm(true)}
+            onClick={() => { setChooserOpen(true); setSelectedType(null); }}
           >
             + Add Appointment
           </button>
@@ -178,9 +180,50 @@ const AppointmentTable = ({ }) => {
         </div>
       </div>
 
-      
-        <AddAppointmentModal onClose={() => setShowForm(false)} isOpen={showForm} fixedDoctorId={doctorId}/>
-      
+      {chooserOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-3xl p-6">
+            {!selectedType ? (
+              <div>
+                <h3 className="text-xl font-semibold mb-4">New Appointment</h3>
+                <p className="text-sm text-gray-600 mb-4">Choose appointment type to schedule</p>
+                <div className="flex gap-4">
+                  <button
+                    className="flex-1 bg-teal-600 hover:bg-teal-700 text-white py-3 rounded"
+                    onClick={() => setSelectedType('ipd')}
+                  >
+                    IPD
+                  </button>
+                  <button
+                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded"
+                    onClick={() => setSelectedType('opd')}
+                  >
+                    OPD
+                  </button>
+                  <button
+                    className="px-4 py-3 bg-gray-200 rounded text-sm"
+                    onClick={() => setChooserOpen(false)}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold">Schedule {selectedType?.toUpperCase()} Appointment</h3>
+                  <button className="text-sm text-gray-600" onClick={() => { setSelectedType(null); }}>
+                    Back
+                  </button>
+                </div>
+                <div className="max-h-[70vh] overflow-auto -mx-6 px-6">
+                  <AddIPDAppointment embedded={true} type={selectedType} fixedDoctorId={doctorId} onClose={() => setChooserOpen(false)} />
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

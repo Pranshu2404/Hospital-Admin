@@ -7,6 +7,7 @@ import moment from 'moment';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import Layout from '../Layout';
 import { staffSidebar } from '@/constants/sidebarItems/staffSidebar';
+import AppointmentSlipModal from '@/components/appointments/AppointmentSlipModal';
 // MODIFIED: Added more date-fns functions for time range filtering and formatting
 import { format, subDays, parseISO, subMonths, subYears, formatDistanceToNow } from 'date-fns';
 
@@ -335,6 +336,9 @@ const StaffDashboard = () => {
     const [recentAppointments, setRecentAppointments] = useState([]);
     const [appointments, setAppointments] = useState([]);
     const [calendarEvents, setCalendarEvents] = useState([]);
+    const [hospitalInfo, setHospitalInfo] = useState(null);
+    const [selectedCalendarAppt, setSelectedCalendarAppt] = useState(null);
+    const [isApptModalOpen, setIsApptModalOpen] = useState(false);
     const [nextPatient, setNextPatient] = useState(null);
     const [approvalRequests, setApprovalRequests] = useState([]);
     const [currentDate, setCurrentDate] = useState(new Date());
@@ -367,16 +371,17 @@ const StaffDashboard = () => {
             setLoading(true);
             setError(null);
             try {
-                // const staffId = localStorage.getItem('staffId');
-                // const calendarEndpoint = staffId ? `${import.meta.env.VITE_BACKEND_URL}/api/calendar/staff/${staffId}` : `${import.meta.env.VITE_BACKEND_URL}/api/calendar`;
+                    // const staffId = localStorage.getItem('staffId');
+                    // const calendarEndpoint = staffId ? `${import.meta.env.VITE_BACKEND_URL}/api/calendar/staff/${staffId}` : `${import.meta.env.VITE_BACKEND_URL}/api/calendar`;
 
-                const [staffRes, patientRes, departmentRes, appointmentRes] = await Promise.all([
-                    fetch(`${import.meta.env.VITE_BACKEND_URL}/api/staff`),
-                    fetch(`${import.meta.env.VITE_BACKEND_URL}/api/patients`),
-                    fetch(`${import.meta.env.VITE_BACKEND_URL}/api/departments`),
-                    fetch(`${import.meta.env.VITE_BACKEND_URL}/api/appointments`),
-                    ///fetch(calendarEndpoint)
-                ]);
+                    const [staffRes, patientRes, departmentRes, appointmentRes, hospitalRes] = await Promise.all([
+                        fetch(`${import.meta.env.VITE_BACKEND_URL}/api/staff`),
+                        fetch(`${import.meta.env.VITE_BACKEND_URL}/api/patients`),
+                        fetch(`${import.meta.env.VITE_BACKEND_URL}/api/departments`),
+                        fetch(`${import.meta.env.VITE_BACKEND_URL}/api/appointments`),
+                        fetch(`${import.meta.env.VITE_BACKEND_URL}/api/hospitals`),
+                        ///fetch(calendarEndpoint)
+                    ]);
 
                 if (!staffRes.ok || !patientRes.ok || !departmentRes.ok || !appointmentRes.ok) {
                     throw new Error('Failed to fetch data. Please check API endpoints and server status.');
@@ -386,39 +391,85 @@ const StaffDashboard = () => {
                 const patientData = await patientRes.json();
                 const departmentData = await departmentRes.json();
                 const appointmentData = await appointmentRes.json();
+                const hospitalData = hospitalRes.ok ? await hospitalRes.json() : [];
                 //const calendarData = calendarRes.ok ? await calendarRes.json() : [];
                 
                 setStaff(staffData);
                 setPatients(patientData);
                 setDepartments(departmentData);
                 setAppointments(appointmentData);
+                // Save hospital info for appointment slips
+                if (hospitalData && hospitalData.length > 0) {
+                    setHospitalInfo(hospitalData[0]);
+                }
 
-                 // Build calendar events from the appointmentData array
+                // Build calendar events from the appointmentData array using appointment start/end when available
+                const events = appointmentData
+                    .filter(appt => appt) // ensure appt exists
+                    .map(appt => {
+                        const patientName = appt.patient_id?.first_name
+                            ? `${appt.patient_id.first_name} ${appt.patient_id.last_name}`
+                            : 'Booked Slot';
 
-            const events = appointmentData
-                .filter(appt => appt.appointment_date) // Ensure the appointment has a date
-                .map(appt => {
-                    const patientName = appt.patient_id?.first_name 
-                        ? `${appt.patient_id.first_name} ${appt.patient_id.last_name}` 
-                        : 'Booked Slot';
+                        // Determine start datetime
+                        let startDate = null;
+                        if (appt.start_time) {
+                            startDate = new Date(appt.start_time);
+                        } else if (appt.startTime) {
+                            startDate = new Date(appt.startTime);
+                        } else if (appt.time_slot && appt.appointment_date) {
+                            const dateOnly = appt.appointment_date.split('T')[0];
+                            const timePart = appt.time_slot.split(' - ')[0].trim();
+                            // If timePart missing seconds, append :00
+                            const iso = `${dateOnly}T${timePart}${timePart.length === 5 ? ':00' : ''}`;
+                            startDate = new Date(iso);
+                        } else if (appt.appointment_date) {
+                            // fallback: parse appointment_date which may include time
+                            startDate = parseISO(appt.appointment_date);
+                        }
 
-                    // The start time of the event
-                    const startDate = parseISO(appt.appointment_date);
-                    
-                    // The end time. Assuming a 30-minute duration for each appointment.
-                    // You can adjust this value as needed.
-                    const endDate = new Date(startDate.getTime() + 30 * 60000); // 30 minutes * 60 seconds * 1000 milliseconds
+                        // Determine end datetime
+                        let endDate = null;
+                        if (appt.end_time) {
+                            endDate = new Date(appt.end_time);
+                        } else if (appt.endTime) {
+                            endDate = new Date(appt.endTime);
+                        } else if (appt.time_slot && appt.time_slot.includes(' - ') && appt.appointment_date) {
+                            const dateOnly = appt.appointment_date.split('T')[0];
+                            const timePart = appt.time_slot.split(' - ')[1].trim();
+                            const iso = `${dateOnly}T${timePart}${timePart.length === 5 ? ':00' : ''}`;
+                            endDate = new Date(iso);
+                        } else if (startDate && appt.duration) {
+                            endDate = new Date(startDate.getTime() + Number(appt.duration) * 60000);
+                        } else if (startDate) {
+                            endDate = new Date(startDate.getTime() + 30 * 60000);
+                        }
 
-                    return {
-                        title: patientName,
-                        start: startDate,
-                        end: endDate,
-                        allDay: false,
-                        resource: appt, // Optionally store the original appointment object
-                    };
-                });
-            
-            setCalendarEvents(events);
+                        // Ensure valid Date objects
+                        if (!(startDate instanceof Date) || isNaN(startDate)) startDate = null;
+                        if (!(endDate instanceof Date) || isNaN(endDate)) endDate = null;
+
+                        // If start or end are null, skip date-bound event
+                        if (!startDate || !endDate) {
+                            return {
+                                title: patientName,
+                                allDay: true,
+                                start: new Date(),
+                                end: new Date(),
+                                resource: appt
+                            };
+                        }
+
+                        return {
+                            title: patientName,
+                            start: startDate,
+                            end: endDate,
+                            allDay: false,
+                            resource: appt,
+                        };
+                    });
+
+                setCalendarEvents(events.filter(e => e.start && e.end));
 
                 const sortedAppointments = [...appointmentData]
                     .sort((a, b) => new Date(b.appointment_date) - new Date(a.appointment_date))
@@ -536,6 +587,10 @@ const StaffDashboard = () => {
                                            view={currentView}
                                            onNavigate={(date) => setCurrentDate(date)}
                                            onView={(view) => setCurrentView(view)}
+                                           onSelectEvent={(event) => {
+                                               setSelectedCalendarAppt(event.resource || event);
+                                               setIsApptModalOpen(true);
+                                           }}
                                        />
                                    </div>
                                </div>
@@ -607,6 +662,14 @@ const StaffDashboard = () => {
                             <div className="grid grid-cols-1">
                                 <PatientList patients={patients} onPatientClick={setSelectedPatient} />
                             </div>
+                            {isApptModalOpen && (
+                                <AppointmentSlipModal
+                                    isOpen={isApptModalOpen}
+                                    onClose={() => { setIsApptModalOpen(false); setSelectedCalendarAppt(null); }}
+                                    appointmentData={selectedCalendarAppt}
+                                    hospitalInfo={hospitalInfo}
+                                />
+                            )}
                         </main>
                     )}
                 </div>

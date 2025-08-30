@@ -146,7 +146,7 @@ const AddSupplierPage = () => {
                 <button
                 type="submit"
                 disabled={submitting}
-                className="bg-blue-600 text-white font-semibold px-6 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="bg-teal-600 text-white font-semibold px-6 py-2 rounded-lg hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                 {submitting ? 'Adding...' : 'Add Supplier'}
                 </button>

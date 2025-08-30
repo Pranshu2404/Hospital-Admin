@@ -27,7 +27,7 @@ const priorityOptions = [
   { value: 'Urgent', label: 'Urgent' }
 ];
 
-const AddIPDAppointment = ({ type = "ipd", fixedDoctorId }) => {
+const AddIPDAppointment = ({ type = "ipd", fixedDoctorId, embedded = false, onClose = () => {} }) => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     patientId: '',
@@ -308,7 +308,10 @@ const calculateCharges = () => {
         }
 
       } catch (err) {
-        console.error("Failed to fetch doctor data", err);
+        // Only log if the error is not a 404 for an empty ID
+        if (err.response && err.response.status !== 404) {
+          console.error("Failed to fetch doctor data", err);
+        }
         setDoctorDetails(null);
         setDoctorWorkingHours([]);
         setExistingAppointments([]);
@@ -519,11 +522,11 @@ const calculateCharges = () => {
     });
   };
 
-  return (
-    <Layout sidebarItems={adminSidebar}>
-      <div className='bg-white p-12'>
+  const innerContent = (
+    <>
+    <div className='bg-white p-62'>
         {type && (
-          <div className="mb-4">
+          <div className="mb-2">
             <h3 className="text-2xl font-semibold text-gray-800 capitalize">{type} Appointment</h3>
             <div className="flex items-center justify-between mt-4">
               <p className="text-base text-gray-600">If the patient is not registered, you can add them below.</p>
@@ -852,7 +855,7 @@ const calculateCharges = () => {
 
           {/* Form Actions */}
           <div className="flex justify-end space-x-3 pt-4">
-            <Button variant="secondary" type="button">
+            <Button variant="secondary" type="button" onClick={() => { if (embedded) onClose?.(); }}>
               Cancel
             </Button>
             <Button 
@@ -878,7 +881,15 @@ const calculateCharges = () => {
                     appointmentData={submitDetails}
                     hospitalInfo={hospitalInfo}
                   />
+    </>
 
+  );
+
+  if (embedded) return innerContent;
+
+  return (
+    <Layout sidebarItems={adminSidebar}>
+      {innerContent}
     </Layout>
   );
 };

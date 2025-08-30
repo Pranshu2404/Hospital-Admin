@@ -117,7 +117,7 @@
 
 import React, { useState, useEffect } from 'react';
 import apiClient from '../../api/apiClient'; // Adjust path as needed
-import { FaTimes, FaArrowLeft, FaPills, FaCheckCircle, FaExclamationCircle } from 'react-icons/fa';
+import { FaTimes, FaArrowLeft, FaPills, FaCheckCircle, FaExclamationCircle, } from 'react-icons/fa';
 
 const PrescriptionFlowModal = ({ prescriptions, onClose }) => {
   const [selectedPrescription, setSelectedPrescription] = useState(null);

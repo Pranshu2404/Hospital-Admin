@@ -216,3 +216,12 @@
   scrollbar-width: thin;
 }
 
+@layer utilities {
+  @keyframes blink-warning {
+    0%, 100% { background-color: theme('colors.red.100'); border-color: theme('colors.red.300'); }
+    50% { background-color: theme('colors.red.200'); border-color: theme('colors.red.500'); }
+  }
+  .animate-blink-warning {
+    animation: blink-warning 2s infinite;
+  }
+}

@@ -5,12 +5,116 @@ import { PlusIcon, FilterIcon, EditIcon, DeleteIcon, ViewIcon } from '../common/
 import ChoosePatientTypeModal2 from '../patients/ChoosePatientTypeModal2';
 import { useLocation } from 'react-router-dom';
 
+// cache whether backend supports the appointment-specific prescription endpoint
+// set to false to avoid calling an endpoint that many backends don't provide (prevents 404 noise)
+let appointmentEndpointAvailable = false; // null = unknown, false = not available, true = available
+
 const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }) => {
   const [billingDetails, setBillingDetails] = useState(null);
+  const [prescription, setPrescription] = useState(null);
+  const [candidatePrescriptions, setCandidatePrescriptions] = useState([]);
+  const [prescriptionForm, setPrescriptionForm] = useState({
+    diagnosis: '',
+    notes: '',
+    items: [{ medicine_name: '', dosage: '', duration: '', instructions: '' }],
+    prescriptionImage: null
+  });
+  const [showUploadForm, setShowUploadForm] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [submittingPrescription, setSubmittingPrescription] = useState(false);
+  
+  // helper to load prescription from server (cache-busted)
+  const loadPrescription = async () => {
+    if (!appointmentData || !appointmentData._id) return;
+    // Only attempt appointment-specific endpoint if it's known to exist or unknown yet
+    if (appointmentEndpointAvailable !== false) {
+      try {
+        const resp = await axios.get(
+          `${import.meta.env.VITE_BACKEND_URL}/api/prescriptions/appointment/${appointmentData._id}?_=${Date.now()}`
+        );
+        appointmentEndpointAvailable = true;
+        const pres = resp.data.prescription || resp.data || null;
+        if (pres) {
+          setPrescription(pres);
+          return;
+        }
+      } catch (err) {
+        // if server responds 404, mark endpoint as unavailable to avoid future calls
+        const status = err?.response?.status;
+        if (status === 404) {
+          appointmentEndpointAvailable = false;
+          console.debug('Appointment prescription endpoint returned 404, will use fallback lookup.');
+        } else {
+          console.debug('Error calling appointment prescription endpoint:', status || err.message);
+        }
+      }
+    }
+
+    // Fallback: fetch all prescriptions and try to find one matching appointment_id or patient_id
+    try {
+      const respAll = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/prescriptions?_=${Date.now()}`);
+      const list = Array.isArray(respAll.data) ? respAll.data : (respAll.data.prescriptions || []);
+      if (!list || !list.length) {
+        setPrescription(null);
+        return;
+      }
+
+      const appointmentId = appointmentData._id;
+      const patientId = appointmentData.patient_id && appointmentData.patient_id._id ? appointmentData.patient_id._id : appointmentData.patient_id;
+
+      // Prefer exact appointment match OR exact patient match
+      const normalizeId = (x) => (x && (x._id || x)) ? String(x._id || x) : null;
+      const appointmentIdStr = String(appointmentId);
+      const appointmentPatientId = appointmentData.patient_id && (appointmentData.patient_id._id || appointmentData.patient_id);
+      const patientIdStr = appointmentPatientId ? String(appointmentPatientId) : null;
+
+      // Find prescription linked to this appointment
+      let found = list.find(p => {
+        const pAppt = p.appointment_id && (p.appointment_id._id || p.appointment_id);
+        return pAppt && String(pAppt) === appointmentIdStr;
+      });
+
+      if (!found && patientIdStr) {
+        // find prescriptions whose patient_id exactly matches appointment patient
+        const byPatient = list.filter(p => {
+          const pid = p.patient_id && (p.patient_id._id || p.patient_id);
+          return pid && String(pid) === patientIdStr;
+        });
+        if (byPatient.length) {
+          // pick most recent by created_at
+          byPatient.sort((a,b) => {
+            const ta = a.created_at ? new Date(a.created_at).getTime() : 0;
+            const tb = b.created_at ? new Date(b.created_at).getTime() : 0;
+            return tb - ta;
+          });
+          found = byPatient[0];
+        }
+        // keep full patient-matching list for attach UI
+        setCandidatePrescriptions(byPatient);
+      } else {
+        setCandidatePrescriptions([]);
+      }
+
+      setPrescription(found || null);
+      return;
+    } catch (errAll) {
+      console.debug('Generic prescriptions list fetch failed:', errAll?.response?.status || errAll.message);
+      setPrescription(null);
+    }
+  };
   
   useEffect(() => {
     if (isOpen && appointmentData) {
-      const fetchBillingDetails = async () => {
+      // reset upload form visibility and form when modal opens
+      setShowUploadForm(false);
+      setPrescriptionForm({
+        diagnosis: '',
+        notes: '',
+        items: [{ medicine_name: '', dosage: '', duration: '', instructions: '' }],
+        prescriptionImage: null
+      });
+      loadPrescription();
+  const fetchBillingDetails = async () => {
         try {
           const response = await axios.get(
             `${import.meta.env.VITE_BACKEND_URL}/api/billing/appointment/${appointmentData._id}`
@@ -23,9 +127,115 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
         }
       };
       
-      fetchBillingDetails();
+  fetchBillingDetails();
     }
   }, [isOpen, appointmentData]);
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file');
+      return;
+    }
+
+    setUploadingImage(true);
+    const formData = new FormData();
+    formData.append('image', file);
+
+    try {
+      const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/prescriptions/upload`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      setPrescriptionForm(prev => ({ ...prev, prescriptionImage: response.data.imageUrl || response.data.url }));
+    } catch (err) {
+      console.error('Error uploading image:', err);
+      alert('Failed to upload image. Please try again.');
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const handlePrescriptionInputChange = (e) => {
+    const { name, value } = e.target;
+    setPrescriptionForm(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleMedicineChange = (index, e) => {
+    const { name, value } = e.target;
+    const newItems = [...prescriptionForm.items];
+    newItems[index][name] = value;
+    setPrescriptionForm(prev => ({ ...prev, items: newItems }));
+  };
+
+  const addMedicine = () => {
+    setPrescriptionForm(prev => ({ ...prev, items: [...prev.items, { medicine_name: '', dosage: '', duration: '', instructions: '' }] }));
+  };
+
+  const removeMedicine = (index) => {
+    const newItems = [...prescriptionForm.items];
+    newItems.splice(index, 1);
+    setPrescriptionForm(prev => ({ ...prev, items: newItems }));
+  };
+
+  const handleSubmitPrescription = async (e) => {
+    e.preventDefault();
+    setSubmittingPrescription(true);
+    try {
+      const patientId = appointmentData.patient_id && appointmentData.patient_id._id ? appointmentData.patient_id._id : appointmentData.patient_id;
+      const doctorId = appointmentData.doctor_id && appointmentData.doctor_id._id ? appointmentData.doctor_id._id : appointmentData.doctor_id;
+
+      const payload = {
+        patient_id: patientId,
+        doctor_id: doctorId,
+        appointment_id: appointmentData._id,
+        diagnosis: prescriptionForm.diagnosis,
+        notes: prescriptionForm.notes,
+        items: prescriptionForm.items,
+        prescription_image: prescriptionForm.prescriptionImage
+      };
+
+      const resp = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/prescriptions`, payload);
+      // set prescription immediately from response if present
+      const newPrescription = resp.data.prescription || resp.data || null;
+      if (newPrescription) {
+        setPrescription(newPrescription);
+      } else {
+        // fallback: reload from server (cache-busted)
+        await loadPrescription();
+      }
+      setShowUploadForm(false);
+      // reset form
+      setPrescriptionForm({
+        diagnosis: '',
+        notes: '',
+        items: [{ medicine_name: '', dosage: '', duration: '', instructions: '' }],
+        prescriptionImage: null
+      });
+      // Optionally you could update appointment status here if desired
+    } catch (err) {
+      console.error('Error submitting prescription:', err);
+      alert('Failed to save prescription. Please try again.');
+    } finally {
+      setSubmittingPrescription(false);
+    }
+  };
+
+  const attachPrescriptionToAppointment = async (prescriptionId) => {
+    if (!prescriptionId || !appointmentData || !appointmentData._id) return;
+    try {
+      // PATCH the prescription to include appointment_id
+      const resp = await axios.patch(`${import.meta.env.VITE_BACKEND_URL}/api/prescriptions/${prescriptionId}`, {
+        appointment_id: appointmentData._id
+      });
+      // reload prescription from server
+      await loadPrescription();
+      alert('Prescription attached to appointment');
+    } catch (err) {
+      console.error('Failed to attach prescription:', err);
+      alert('Failed to attach prescription.');
+    }
+  };
 
   if (!isOpen || !appointmentData) return null;
   
@@ -200,6 +410,110 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
               </div>
             </div>
           )}
+
+          {/* Prescription Section */}
+          <div className="slip-section mt-4">
+            <h4 className="text-lg font-semibold text-gray-800 mb-2 border-b pb-1">PRESCRIPTION</h4>
+
+            {prescription ? (
+              <div className="space-y-3 text-sm">
+                <div><span className="text-gray-600 font-medium">Diagnosis:</span> <strong>{prescription.diagnosis || 'N/A'}</strong></div>
+                <div><span className="text-gray-600 font-medium">Notes:</span> <span>{prescription.notes || 'N/A'}</span></div>
+                <div>
+                  <span className="text-gray-600 font-medium">Medications:</span>
+                  <div className="mt-2 space-y-2">
+                    {prescription.items && prescription.items.length > 0 ? prescription.items.map((it, i) => (
+                      <div key={i} className="p-2 bg-gray-50 rounded border">
+                        <div className="text-sm font-medium">{it.medicine_name || 'Medicine'}</div>
+                        <div className="text-xs text-gray-600">{it.dosage} • {it.duration} • {it.instructions}</div>
+                      </div>
+                    )) : <div className="text-sm text-gray-500">No medication items</div>}
+                  </div>
+                </div>
+                {prescription.prescription_image && (
+                  <div>
+                    <span className="text-gray-600 font-medium">Prescription Image:</span>
+                    <div className="mt-2">
+                      <img src={prescription.prescription_image} alt="Prescription" className="max-w-full rounded border" />
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="text-sm text-gray-600">
+                <p>No prescription uploaded for this appointment.</p>
+                {/* if we found prescriptions for the same patient, offer to attach one */}
+                {candidatePrescriptions && candidatePrescriptions.length > 0 && (
+                  <div className="mt-3">
+                    <p className="text-sm text-gray-700">Found {candidatePrescriptions.length} prescription(s) for this patient. Attach one to this appointment:</p>
+                    <div className="mt-2 space-y-2">
+                      {candidatePrescriptions.map(cp => (
+                        <div key={cp._id} className="flex items-center justify-between p-2 bg-gray-50 rounded border">
+                          <div className="text-sm">
+                            <div className="font-medium">{cp.diagnosis || 'Prescription'}</div>
+                            <div className="text-xs text-gray-600">{new Date(cp.created_at || cp.createdAt).toLocaleString()}</div>
+                          </div>
+                          <div>
+                            <button onClick={() => attachPrescriptionToAppointment(cp._id)} className="px-3 py-1 bg-indigo-600 text-white rounded">Attach</button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {!showUploadForm && (
+                  <div className="mt-3">
+                    <button onClick={() => setShowUploadForm(true)} className="px-3 py-1 bg-blue-600 text-white rounded">Add Prescription</button>
+                  </div>
+                )}
+
+                {showUploadForm && (
+                  <form onSubmit={handleSubmitPrescription} className="mt-4 space-y-3">
+                    <div>
+                      <label className="block text-sm font-medium">Diagnosis</label>
+                      <input name="diagnosis" value={prescriptionForm.diagnosis} onChange={handlePrescriptionInputChange} className="w-full border rounded px-2 py-1" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium">Notes</label>
+                      <textarea name="notes" value={prescriptionForm.notes} onChange={handlePrescriptionInputChange} className="w-full border rounded px-2 py-1" rows={2} />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium">Upload Image</label>
+                      <input type="file" accept="image/*" onChange={handleImageUpload} className="w-full" />
+                      {uploadingImage && <p className="text-xs text-blue-600">Uploading image...</p>}
+                      {prescriptionForm.prescriptionImage && (
+                        <img src={prescriptionForm.prescriptionImage} alt="Preview" className="mt-2 max-w-xs rounded border" />
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium">Medications</label>
+                      <div className="space-y-2 mt-2">
+                        {prescriptionForm.items.map((item, idx) => (
+                          <div key={idx} className="grid grid-cols-1 md:grid-cols-4 gap-2 p-2 bg-white rounded border">
+                            <input name="medicine_name" placeholder="Medicine" value={item.medicine_name} onChange={(e) => handleMedicineChange(idx, e)} className="border rounded px-2 py-1" />
+                            <input name="dosage" placeholder="Dosage" value={item.dosage} onChange={(e) => handleMedicineChange(idx, e)} className="border rounded px-2 py-1" />
+                            <input name="duration" placeholder="Duration" value={item.duration} onChange={(e) => handleMedicineChange(idx, e)} className="border rounded px-2 py-1" />
+                            <div className="flex items-center">
+                              <input name="instructions" placeholder="Instructions" value={item.instructions} onChange={(e) => handleMedicineChange(idx, e)} className="border rounded px-2 py-1 flex-1" />
+                              {idx > 0 && <button type="button" onClick={() => removeMedicine(idx)} className="ml-2 bg-red-500 text-white px-2 py-1 rounded">Remove</button>}
+                            </div>
+                          </div>
+                        ))}
+                        <button type="button" onClick={addMedicine} className="mt-2 px-3 py-1 bg-green-600 text-white rounded">+ Add Medicine</button>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end space-x-2">
+                      <button type="button" onClick={() => setShowUploadForm(false)} className="px-3 py-1 bg-gray-200 rounded">Cancel</button>
+                      <button type="submit" disabled={submittingPrescription} className="px-3 py-1 bg-blue-600 text-white rounded">{submittingPrescription ? 'Saving...' : 'Save Prescription'}</button>
+                    </div>
+                  </form>
+                )}
+              </div>
+            )}
+          </div>
 
           {/* Instructions */}
           <div className="slip-section mt-4">

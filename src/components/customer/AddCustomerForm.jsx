@@ -292,7 +292,7 @@ const AddCustomerForm = () => {
                     <input type="number" min="1" value={item.quantity} onChange={(e) => handleItemChange(index, 'quantity', e.target.value)} className="w-20 border rounded px-2 py-1 mt-1" />
                   </div>
                   <div className="text-sm font-medium p-1">
-                    ${(item.quantity * item.price).toFixed(2)}
+                    ₹{(item.quantity * item.price).toFixed(2)}
                   </div>
                   <Button type="button" onClick={() => removeItem(index)} variant="danger-outline" size="sm"><FaTrash /></Button>
                 </div>
@@ -304,7 +304,7 @@ const AddCustomerForm = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <div className="bg-gray-100 p-3 rounded-lg">
                 <label className="text-sm font-medium text-gray-600">Total Amount</label>
-                <div className="text-2xl font-bold text-gray-900">${totalAmount.toFixed(2)}</div>
+                <div className="text-2xl font-bold text-gray-900">₹{totalAmount.toFixed(2)}</div>
             </div>
             <FormSelect label="Payment Mode" value={formData.paymentMode} onChange={(e) => handleInputChange('paymentMode', e.target.value)} options={[{ value: 'cash', label: 'Cash' }, { value: 'card', label: 'Card' }, { value: 'upi', label: 'UPI' }]} required />
             <FormSelect label="Status" value={formData.status} onChange={(e) => handleInputChange('status', e.target.value)} options={[{ value: 'paid', label: 'Paid' }, { value: 'unpaid', label: 'Unpaid' }]} required />

@@ -212,6 +212,7 @@ const AddMedicine = () => {
     weight: '',
     category: '',
     manufacturer: '',
+    batchNumber: '',
     price: '',
     manufacturerPrice: '',
     stock: 0,
@@ -260,6 +261,7 @@ const AddMedicine = () => {
     const payload = {
       name: medicineData.name,
       category: medicineData.category,
+  batch_number: medicineData.batchNumber,
       stock_quantity: medicineData.stock,
       expiry_date: medicineData.expireDate,
       price_per_unit: medicineData.price,
@@ -313,6 +315,8 @@ const AddMedicine = () => {
             ))}
           </Select>
 
+          <Input label="Batch Number" value={medicineData.batchNumber} onChange={(e) => handleChange('batchNumber', e.target.value)} placeholder="Batch Number" />
+
           <Input label="Price per Unit" value={medicineData.price} onChange={(e) => handleChange('price', e.target.value)} placeholder="Price" type="number" required />
           <Input label="Manufacturer Price" value={medicineData.manufacturerPrice} onChange={(e) => handleChange('manufacturerPrice', e.target.value)} placeholder="Manufacturer Price" type="number" />
 
@@ -340,7 +344,7 @@ const AddMedicine = () => {
           </div>
 
           <div className="col-span-full">
-            <Button type="submit" disabled={submitting} className="bg-green-500 text-white hover:bg-green-600 disabled:opacity-50">
+            <Button type="submit" disabled={submitting} className="bg-teal-600 text-white hover:bg-teal-700 disabled:opacity-50">
               {submitting ? 'Adding...' : 'Add Medicine'}
             </Button>
           </div>

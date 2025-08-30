@@ -1,5 +1,5 @@
 import Layout from '../../../components/Layout';
-import AppointmentList from '../../../components/pharmacy/AppointmentList';
+import AppointmentList from '../../../components/appointments/AppointmentList';
 import { adminSidebar } from '../../../constants/sidebarItems/adminSidebar';
 import { staffSidebar } from '@/constants/sidebarItems/staffSidebar'
 
