@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import Layout from '../Layout';
 import { adminSidebar } from '@/constants/sidebarItems/adminSidebar';
 import AppointmentSlipModal from './AppointmentSlipModal';
+import QRCodeModal from './QRCodeModal';
 
 const appointmentTypeOptions = [
   { value: 'consultation', label: 'Consultation' },
@@ -64,6 +65,11 @@ const AddIPDAppointment = ({ type = "ipd", fixedDoctorId, embedded = false, onCl
   const [slipModal, setSlipModal] = useState(false);
   const [hospitalInfo, setHospitalInfo] = useState(null);
   const [submitDetails, setSubmitDetails] = useState(null);
+  const [isQrModalOpen, setIsQrModalOpen] = useState(false);
+  const [qrData, setQrData] = useState({ imageUrl: '', orderId: '' });
+  const [paymentStatus, setPaymentStatus] = useState('pending');
+  const [pollingIntervalId, setPollingIntervalId] = useState(null);
+
 
   // Calculate charges whenever relevant form data changes
   useEffect(() => {
@@ -408,9 +414,78 @@ const calculateCharges = () => {
     return true; // Slot is available
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+
+  // 2. Function to stop the polling
+  const stopPolling = () => {
+    if (pollingIntervalId) {
+      clearInterval(pollingIntervalId);
+      setPollingIntervalId(null);
+    }
+  };
+
+  // 3. Function to handle QR code generation
+  const handleGenerateQR = async () => {
+    if (!formData.patientId || totalAmount <= 0) {
+      alert("Please select a patient and ensure there is an amount to pay.");
+      return;
+    }
+
     setIsLoading(true);
+    setPaymentStatus('generating');
+    setIsQrModalOpen(true);
+
+    try {
+      const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/payments/create-qr-order`, {
+        amount: totalAmount,
+        patientId: formData.patientId,
+      });
+      
+      setQrData({ imageUrl: res.data.qrImageUrl, orderId: res.data.orderId });
+      setPaymentStatus('waiting');
+      
+      // Start polling for payment status
+      const intervalId = setInterval(async () => {
+        try {
+          const statusRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/payments/order-status/${res.data.orderId}`);
+          if (statusRes.data.status === 'paid') {
+            setPaymentStatus('paid');
+            stopPolling(); // Stop checking once paid
+            
+            // Payment successful, now schedule the appointment
+            alert('Payment successful! Scheduling appointment...');
+            setIsQrModalOpen(false);
+            
+            // Pass payment details to the submit handler
+            handleSubmit(null, { 
+                isPaid: true, 
+                method: 'QR Code', 
+                transactionId: res.data.orderId 
+            });
+          }
+        } catch (pollError) {
+          console.error("Polling error:", pollError);
+          stopPolling(); // Stop on error
+        }
+      }, 3000); // Check every 3 seconds
+
+      setPollingIntervalId(intervalId);
+
+    } catch (err) {
+      console.error('Error generating QR code:', err);
+      alert('Failed to generate QR code.');
+      setIsQrModalOpen(false);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e, paymentInfo = null) => {
+    if (e) e.preventDefault(); // Prevent default form submission if triggered by button
+    setIsLoading(true);
+
+    // If payment was made via QR, use the details passed from the polling logic
+    const finalPaymentMethod = paymentInfo ? paymentInfo.method : formData.paymentMethod;
+    const finalBillStatus = paymentInfo ? 'Paid' : status;
     
     try {
       // For time-based appointments, validate the selected time slot
@@ -467,7 +542,8 @@ const calculateCharges = () => {
         total_amount: totalAmount,
         payment_method: formData.paymentMethod,
         status: status,
-        items: chargesSummary
+        items: chargesSummary,
+        transaction_id: paymentInfo ? paymentInfo.transactionId : null, // Store transaction ID
       });
 
       alert('Appointment scheduled and bill generated!');
@@ -853,14 +929,20 @@ const calculateCharges = () => {
             </div>
           </div>
 
-          {/* Form Actions */}
-          <div className="flex justify-end space-x-3 pt-4">
-            <Button variant="secondary" type="button" onClick={() => { if (embedded) onClose?.(); }}>
-              Cancel
-            </Button>
+          {/* CORRECTED FORM ACTIONS PLACEMENT */}
+          <div className="flex justify-end space-x-3 pt-4 border-t mt-6">
             <Button 
-              variant="primary" 
-              type="submit" 
+                variant="secondary" 
+                type="button" 
+                onClick={handleGenerateQR}
+                disabled={isLoading || !formData.patientId || totalAmount <= 0}
+            >
+              {isLoading ? 'Processing...' : 'Pay with QR Code'}
+            </Button>
+            
+            <Button
+              variant="primary"
+              type="submit"
               disabled={isLoading || 
                 (formData.type === 'time-based' && 
                  formData.start_time && 
@@ -875,14 +957,25 @@ const calculateCharges = () => {
         </form>
       </div>
 
-                <AppointmentSlipModal
-                    isOpen={slipModal}
-                    onClose={() => setSlipModal(false)}
-                    appointmentData={submitDetails}
-                    hospitalInfo={hospitalInfo}
-                  />
+      {/* MODALS SHOULD BE HERE, OUTSIDE THE MAIN CONTENT DIV BUT INSIDE THE FRAGMENT */}
+      <QRCodeModal
+        isOpen={isQrModalOpen}
+        onClose={() => {
+          setIsQrModalOpen(false);
+          stopPolling(); // Stop polling if modal is closed manually
+        }}
+        qrImageUrl={qrData.imageUrl}
+        amount={totalAmount}
+        paymentStatus={paymentStatus}
+      />
+      
+      <AppointmentSlipModal
+        isOpen={slipModal}
+        onClose={() => setSlipModal(false)}
+        appointmentData={submitDetails}
+        hospitalInfo={hospitalInfo}
+      />
     </>
-
   );
 
   if (embedded) return innerContent;
