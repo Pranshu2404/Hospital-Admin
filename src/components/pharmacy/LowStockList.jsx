@@ -9,7 +9,7 @@ const LowStockList = () => {
     const fetchLowStock = async () => {
       try {
         // Call the new endpoint with a threshold of 5
-        const response = await apiClient.get('/api/pharmacy/medicines/low-stock?threshold=5');
+        const response = await apiClient.get('/api/medicines/low-stock?threshold=5');
         setMedicines(response.data);
       } catch (err) {
         console.error("Failed to fetch low stock medicines:", err);

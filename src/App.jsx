@@ -99,6 +99,26 @@ import SuppliersListPage from './pages/dashboard/pharmacy/SuppliersListPage';
 import AddSupplierPage from './pages/dashboard/pharmacy/AddSupplierPage';
 import ExpiredMedicineAlready from './pages/dashboard/pharmacy/ExpiredMedicineAlready';
 import CreateInvoicePage from './components/finance/CreateInvoicePage';
+import StockOverview from './pages/dashboard/pharmacy/StockOverview';
+import BatchPage from './pages/dashboard/pharmacy/BatchPage';
+import LowStock from './pages/dashboard/pharmacy/LowStock';
+import Expired from './pages/dashboard/pharmacy/Expired';
+import Adjustments from './pages/dashboard/pharmacy/Adjustments';
+import Orders from './pages/dashboard/pharmacy/Orders';
+import CreateOrder from './pages/dashboard/pharmacy/CreateOrder';
+import ReceiveStock from './components/pharmacy/ReceiveStock';
+import ReceiveStockPage from './pages/dashboard/pharmacy/ReceiveStock';
+import POSPage from './pages/dashboard/pharmacy/POSPage';
+import SalesHistoryPage from './pages/dashboard/pharmacy/SalesHistoryPage';
+import PrescriptionsList from './pages/dashboard/pharmacy/PrescriptionsList';
+import NewPrescriptionPage from './pages/dashboard/pharmacy/NewPrescriptionPage';
+import DispensePage from './pages/dashboard/pharmacy/DispensePage';
+import PrescriptionQueue from './pages/dashboard/pharmacy/PrescriptionsQueue';
+import PrescriptionsQueue from './pages/dashboard/pharmacy/PrescriptionsQueue';
+import PaymentCollection from './pages/dashboard/pharmacy/PaymentCollectionPage';
+import OutstandingPayments from './pages/dashboard/pharmacy/OutstandingPaymentsPage';
+import PaySalaryPage from './pages/dashboard/admin/PaySalaryPage';
+import DoctorSalaryPage from './pages/dashboard/doctor/DoctorSalaryPage';
 
 export default function App() {
   return (
@@ -293,12 +313,31 @@ export default function App() {
           
           <Route path="/dashboard/pharmacy/add-medicine" element={<AddMedicinePage />} />
           <Route path="/dashboard/pharmacy/medicine-list" element={<MedicineListPage />} />
-          <Route path="/dashboard/pharmacy/medicine-detail" element={<MedicineDetailPage />} />
+          <Route path="/dashboard/pharmacy/inventory/overview" element={<StockOverview/>} />
+          <Route path="/dashboard/pharmacy/low-stock" element={<LowStock/>} />
+          <Route path="/dashboard/pharmacy/expired" element={<Expired/>} />
+          <Route path="/dashboard/pharmacy/adjustments" element={<Adjustments/>} />
+          <Route path="/dashboard/pharmacy/medicine-detail/:id" element={<MedicineDetailPage />} />
+          <Route path="/dashboard/pharmacy/batches" element={<BatchPage/>}/>
+          <Route path="/dashboard/pharmacy/orders" element={<Orders/>}/>
+          <Route path="/dashboard/pharmacy/pos" element={<POSPage/>}/>
+          <Route path="/dashboard/pharmacy/history" element={<SalesHistoryPage/>}/>
+          <Route path="/dashboard/pharmacy/pos" element={<POSPage/>}/>
+          <Route path="/dashboard/pharmacy/create-order" element={<CreateOrder/>}/>
+          <Route path="/dashboard/pharmacy/receive-stock/:id" element={<ReceiveStockPage/>}/>
           <Route path="/dashboard/pharmacy/add-customer" element={<AddCustomerPage />} />
           <Route path="/dashboard/pharmacy/customers" element={<CustomersPage />} />
           <Route path="/dashboard/pharmacy/customer-profile" element={<CustomerProfilePage />} />
           <Route path="/dashboard/pharmacy/invoices" element={<InvoicesPage />} />
+          <Route path="/dashboard/pharmacy/prescriptions/list" element={<PrescriptionsList />} />
+          <Route path="/dashboard/pharmacy/prescriptions/new" element={<NewPrescriptionPage />} />
+          <Route path="/dashboard/pharmacy/prescriptions/dispense" element={<DispensePage />} />
+          <Route path="/dashboard/admin/finance/salary" element={<PaySalaryPage />} />
+          <Route path="/dashboard/doctor/salary" element={<DoctorSalaryPage />} />
+          <Route path="/dashboard/pharmacy/prescriptions/queue" element={<PrescriptionsQueue />} />
           <Route path="/dashboard/pharmacy/invoice-detail" element={<InvoiceDetailPage />} />
+          <Route path="/dashboard/pharmacy/billing/payments" element={<PaymentCollection />} />
+          <Route path="/dashboard/pharmacy/billing/outstanding" element={<OutstandingPayments />} />
           <Route path="/dashboard/pharmacy/inventory" element={<InventoryPage />} />
           <Route path="/dashboard/pharmacy/profile" element={<ProfilePage />} />
           <Route path="/dashboard/pharmacy/settings" element={<Settings />} />

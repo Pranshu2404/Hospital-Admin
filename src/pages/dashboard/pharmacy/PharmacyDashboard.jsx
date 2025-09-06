@@ -1,602 +1,3 @@
-// import React, { useState, useEffect } from 'react';
-// import { Link } from 'react-router-dom';
-// import {
-//   FaPills,
-//   FaTruck,
-//   FaExclamationTriangle,
-//   FaMoneyBillWave,
-//   FaPlus,
-// } from 'react-icons/fa';
-// import apiClient from '../../../api/apiClient'; // Adjust the import path as needed
-
-// import StatCardPharmacy from '../../../components/common/StatCardPharmacy';
-// import ExpiredStockModal from './ExpiredStockModal';
-// import { QuickActions, LowStockList, RecentSalesTable } from '../../../components/pharmacy/DashboardSections';
-
-// const PharmacyDashboard = () => {
-//     const [isModalOpen, setIsModalOpen] = useState(false);
-//     const [loading, setLoading] = useState(true);
-
-//     // State for all dashboard data
-//     const [dashboardData, setDashboardData] = useState({
-//       stats: {
-//         medicinesAvailable: '...',
-//         totalSuppliers: '...',
-//         expiredStockCount: '...',
-//         expiringThisMonthCount: '...',
-//         expiringNext7DaysCount: '...',
-//         todaysRevenue: '...',
-//         expiringThisMonthText: '...', // ADDED: For the card's sub-text
-//       },
-//       lowStockMedicines: [],
-//       recentSales: [],
-//       expiredMedicines: [],
-//       expiringThisMonth: [], 
-//     });
-
-//     // --- UPDATED: useEffect to fetch and process live data ---
-//     useEffect(() => {
-//       const fetchDashboardData = async () => {
-//         try {
-//           // Fetch all necessary data concurrently for efficiency
-//           const [suppliersResponse, medicinesResponse] = await Promise.all([
-//             apiClient.get('/api/suppliers'),
-//             apiClient.get('/api/pharmacy/medicines') // Assuming this is your medicines endpoint
-//           ]);
-          
-//           const suppliers = suppliersResponse.data;
-//           const medicines = medicinesResponse.data;
-
-//           // --- ADDED LOGIC: Calculate expiry dates ---
-//           const today = new Date();
-//           const currentMonth = today.getMonth();
-//           const currentYear = today.getFullYear();
-//           today.setHours(0, 0, 0, 0); // Normalize today's date to the start of the day
-
-// const expiredMedicines = medicines.filter(med => new Date(med.expiry_date) < today);
-//           const expiringThisMonth = medicines.filter(med => {
-//             const expiryDate = new Date(med.expiry_date);
-//             return expiryDate.getMonth() === currentMonth && expiryDate.getFullYear() === currentYear && expiryDate >= today;
-//           });
-
-//           // Create a display string for medicines expiring this month
-//           let expiringThisMonthText = "No medicines expiring this month.";
-//           if (expiringThisMonth.length > 0) {
-//             const names = expiringThisMonth.map(m => m.name).slice(0, 2).join(', ');
-//             expiringThisMonthText = `Expiring: ${names}${expiringThisMonth.length > 2 ? '...' : ''}`;
-//           }
-          
-//           setDashboardData({
-//             stats: {
-//               medicinesAvailable: medicines.length,
-//               totalSuppliers: suppliers.length,
-//               expiredStockCount: expiredMedicines.length,
-//               todaysRevenue: "$2,450", // Placeholder
-//               expiringThisMonthText: expiringThisMonthText, // Set dynamic text
-//             },
-//             expiredMedicines: expiredMedicines, 
-//             expiringThisMonth: expiringThisMonth,
-//             // Placeholders for other sections
-//             lowStockMedicines: [],
-//             recentSales: [],
-//           });
-
-//         } catch (error) {
-//           console.error("Failed to fetch dashboard data:", error);
-//         } finally {
-//           setLoading(false);
-//         }
-//       };
-
-//       fetchDashboardData();
-//     }, []);
-
-//     if (loading) {
-//       return (
-//         <div className="flex items-center justify-center min-h-screen bg-gray-50">
-//           <p className="text-xl font-semibold text-gray-600">Loading Dashboard...</p>
-//         </div>
-//       );
-//     }
-
-//   return (
-//     <>
-//       <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
-//         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
-//           <div>
-//             <h1 className="text-3xl font-bold text-gray-800">Pharmacy Dashboard</h1>
-//             <p className="text-gray-500 mt-1">Welcome back!</p>
-//           </div>
-//           <Link to="/dashboard/pharmacy/add-medicine" className="mt-4 sm:mt-0 flex items-center gap-2 bg-blue-600 text-white font-semibold px-4 py-2 rounded-lg shadow hover:bg-blue-700">
-//             <FaPlus />
-//             Add New Medicine
-//           </Link>
-//         </div>
-
-//         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-//             <StatCardPharmacy 
-//                 icon={<FaPills className="text-2xl text-blue-600" />}
-//                 title="Medicines Available"
-//                 value={dashboardData.stats.medicinesAvailable}
-//                 change="In Stock"
-//                 linkTo="/dashboard/pharmacy/medicine-list"
-//             />
-//             <StatCardPharmacy 
-//                 icon={<FaTruck className="text-2xl text-teal-600" />}
-//                 title="Total Suppliers"
-//                 value={dashboardData.stats.totalSuppliers}
-//                 change="Active Suppliers"
-//                 linkTo="/dashboard/pharmacy/suppliers" 
-//             />
-//             {/* THIS CARD IS NOW FULLY DYNAMIC */}
-//             <StatCardPharmacy 
-//                 icon={<FaExclamationTriangle className="text-2xl text-orange-600" />}
-//                 title="Expiring This Month"
-//                 value={dashboardData.stats.expiringThisMonthCount}
-//                 change={dashboardData.stats.expiringThisMonthText}
-//                 changeColor="text-gray-500"
-//                 onClick={() => setIsModalOpen(true)}
-//             />
-//             <StatCardPharmacy 
-//                 icon={<FaMoneyBillWave className="text-2xl text-green-600" />}
-//                 title="Today's Revenue"
-//                 value={dashboardData.stats.todaysRevenue}
-//                 change="↑ 12% from yesterday"
-//                 changeColor="text-green-600"
-//                 linkTo="/dashboard/pharmacy/invoices"
-//             />
-//         </div>
-
-//         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-//           <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-md">
-//             <h2 className="font-bold text-lg text-gray-700 mb-4">Sales Overview</h2>
-//             <div className="h-80 bg-gray-100 flex items-center justify-center rounded-lg">
-//               <p className="text-gray-500">[Sales Chart Placeholder]</p>
-//             </div>
-//           </div>
-//           <div className="space-y-6">
-//             <QuickActions />
-//             <LowStockList medicines={dashboardData.lowStockMedicines} />
-//           </div>
-//         </div>
-
-//         <RecentSalesTable sales={dashboardData.recentSales} />
-//       </div>
-      
-//       {isModalOpen && (
-//         <ExpiredStockModal 
-//           expiredMedicines={dashboardData.expiredMedicines}
-//           expiringThisMonth={dashboardData.expiringThisMonth} // Pass the new prop
-//           onClose={() => setIsModalOpen(false)} 
-//         />
-//       )}
-//     </>
-//   );
-// };
-
-// export default PharmacyDashboard;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// import React, { useState, useEffect } from 'react';
-// import { Link } from 'react-router-dom';
-// import {
-//   FaPills,
-//   FaTruck,
-//   FaExclamationTriangle,
-//   FaMoneyBillWave,
-//   FaPlus,
-// } from 'react-icons/fa';
-// import apiClient from '../../../api/apiClient';
-
-// import StatCardPharmacy from '../../../components/common/StatCardPharmacy';
-// import ExpiredStockModal from './ExpiredStockModal';
-// import { QuickActions, LowStockList, RecentSalesTable } from '../../../components/pharmacy/DashboardSections';
-
-// const PharmacyDashboard = () => {
-//     const [isModalOpen, setIsModalOpen] = useState(false);
-//     const [loading, setLoading] = useState(true);
-//     const [dashboardData, setDashboardData] = useState({
-//       stats: {
-//         medicinesAvailable: '...',
-//         totalSuppliers: '...',
-//         expiredStockCount: '...',
-//         expiringThisMonthCount: '...',
-//         expiringThisMonthText: '...',
-//         todaysRevenue: '...',
-//       },
-//       lowStockMedicines: [],
-//       recentSales: [],
-//       expiredMedicines: [],
-//       expiringThisMonth: [], 
-//     });
-
-//     useEffect(() => {
-//       const fetchDashboardData = async () => {
-//         try {
-//           const [suppliersResponse, medicinesResponse] = await Promise.all([
-//             apiClient.get('/api/suppliers'),
-//             apiClient.get('/api/pharmacy/medicines')
-//           ]);
-          
-//           const suppliers = suppliersResponse.data;
-//           const medicines = medicinesResponse.data;
-
-//           // Using the date logic that was working correctly for you
-//           const today = new Date();
-//           const currentMonth = today.getMonth();
-//           const currentYear = today.getFullYear();
-//           today.setHours(0, 0, 0, 0);
-
-//           const expiredMedicines = medicines.filter(med => med.expiry_date && new Date(med.expiry_date) < today);
-          
-//           const expiringThisMonth = medicines.filter(med => {
-//             if (!med.expiry_date) return false;
-//             const expiryDate = new Date(med.expiry_date);
-//             return expiryDate.getMonth() === currentMonth && expiryDate.getFullYear() === currentYear && expiryDate >= today;
-//           });
-
-//           // FIXED: Correctly calculate the count for the stat card
-//           const expiringThisMonthCount = expiringThisMonth.length;
-
-//           let expiringThisMonthText = "No medicines expiring this month.";
-//           if (expiringThisMonth.length > 0) {
-//             const names = expiringThisMonth.map(m => m.name).slice(0, 2).join(', ');
-//             expiringThisMonthText = `Expiring: ${names}${expiringThisMonth.length > 2 ? '...' : ''}`;
-//           }
-          
-//           setDashboardData({
-//             stats: {
-//               medicinesAvailable: medicines.length,
-//               totalSuppliers: suppliers.length,
-//               expiredStockCount: expiredMedicines.length,
-//               expiringThisMonthCount: expiringThisMonthCount, // FIXED: Set the count in state
-//               todaysRevenue: "$2,450", 
-//               expiringThisMonthText: expiringThisMonthText,
-//             },
-//             expiredMedicines: expiredMedicines, 
-//             expiringThisMonth: expiringThisMonth,
-//             lowStockMedicines: [
-//                 { id: 'med1', name: 'Paracetamol 500mg', stock: 15, supplier: 'Pharma Inc.' },
-//             ],
-//             recentSales: [
-//                 { id: 'S001', name: 'Atorvastatin', amount: '$25.50', status: 'Completed' },
-//             ],
-//           });
-
-//         } catch (error) {
-//           console.error("Failed to fetch dashboard data:", error);
-//         } finally {
-//           setLoading(false);
-//         }
-//       };
-
-//       fetchDashboardData();
-//     }, []);
-
-//     if (loading) {
-//       return (
-//         <div className="flex items-center justify-center min-h-screen bg-gray-50">
-//           <p className="text-xl font-semibold text-gray-600">Loading Dashboard...</p>
-//         </div>
-//       );
-//     }
-
-//   return (
-//     <>
-//       <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
-//         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
-//           <div>
-//             <h1 className="text-3xl font-bold text-gray-800">Pharmacy Dashboard</h1>
-//             <p className="text-gray-500 mt-1">Welcome back!</p>
-//           </div>
-//           <Link to="/dashboard/pharmacy/add-medicine" className="mt-4 sm:mt-0 flex items-center gap-2 bg-blue-600 text-white font-semibold px-4 py-2 rounded-lg shadow hover:bg-blue-700">
-//             <FaPlus /> Add New Medicine
-//           </Link>
-//         </div>
-
-//         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-//             <StatCardPharmacy 
-//                 icon={<FaExclamationTriangle className="text-2xl text-red-600" />}
-//                 title="Expired Medicines"
-//                 value={dashboardData.stats.expiredStockCount}
-//                 change="View expired stock"
-//                 changeColor="text-red-600"
-//                 linkTo="/dashboard/pharmacy/expired-medicines"
-//             />
-//             <StatCardPharmacy 
-//                 icon={<FaTruck className="text-2xl text-teal-600" />}
-//                 title="Total Suppliers"
-//                 value={dashboardData.stats.totalSuppliers}
-//                 change="Active Suppliers"
-//                 linkTo="/dashboard/pharmacy/suppliers" 
-//             />
-//             <StatCardPharmacy 
-//                 icon={<FaExclamationTriangle className="text-2xl text-orange-600" />}
-//                 title="Expiring This Month"
-//                 value={dashboardData.stats.expiringThisMonthCount}
-//                 change={dashboardData.stats.expiringThisMonthText}
-//                 changeColor="text-gray-500"
-//                 onClick={() => setIsModalOpen(true)}
-//             />
-//             <StatCardPharmacy 
-//                 icon={<FaMoneyBillWave className="text-2xl text-green-600" />}
-//                 title="Today's Revenue"
-//                 value={dashboardData.stats.todaysRevenue}
-//                 change="↑ 12% from yesterday"
-//                 changeColor="text-green-600"
-//                 linkTo="/dashboard/pharmacy/invoices"
-//             />
-//         </div>
-
-//         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-//           <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-md">
-//             <h2 className="font-bold text-lg text-gray-700 mb-4">Sales Overview</h2>
-//             <div className="h-80 bg-gray-100 flex items-center justify-center rounded-lg">
-//               <p className="text-gray-500">[Sales Chart Placeholder]</p>
-//             </div>
-//           </div>
-//           <div className="space-y-6">
-//             <QuickActions />
-//             <LowStockList medicines={dashboardData.lowStockMedicines} />
-//           </div>
-//         </div>
-
-//         <RecentSalesTable sales={dashboardData.recentSales} />
-//       </div>
-      
-//       {isModalOpen && 
-//         <ExpiredStockModal 
-//           expiringThisMonth={dashboardData.expiringThisMonth}
-//           onClose={() => setIsModalOpen(false)} 
-//         />
-//       }
-//     </>
-//   );
-// };
-
-// export default PharmacyDashboard;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// import React, { useState, useEffect } from 'react';
-// import { Link } from 'react-router-dom';
-// import {
-//   FaPills,
-//   FaTruck,
-//   FaExclamationTriangle,
-//   FaMoneyBillWave,
-//   FaPlus,
-// } from 'react-icons/fa';
-// import apiClient from '../../../api/apiClient';
-
-// import StatCardPharmacy from '../../../components/common/StatCardPharmacy';
-// import ExpiredStockModal from './ExpiredStockModal';
-// import { QuickActions } from '../../../components/pharmacy/DashboardSections'; // Or QuickActions.jsx if you renamed it
-// import LowStockList from '../../../components/pharmacy/LowStockList';
-// import RecentSalesTable from '../../../components/pharmacy/RecentSalesTable';const PharmacyDashboard = () => {
-//     const [isModalOpen, setIsModalOpen] = useState(false);
-//     const [loading, setLoading] = useState(true);
-//     const [dashboardData, setDashboardData] = useState({
-//       stats: {
-//         totalSuppliers: '...',
-//         expiredStockCount: '...',
-//         expiringThisMonthCount: '...',
-//         todaysRevenue: '...',
-//       },
-//       lowStockMedicines: [],
-//       recentSales: [],
-//       expiredMedicines: [],
-//       expiringThisMonth: [],
-//     });
-
-//     useEffect(() => {
-//       const fetchDashboardData = async () => {
-//         try {
-//           // --- UPDATED: Fetching expired medicines directly ---
-//           const [suppliersResponse, allMedicinesResponse, expiredMedicinesResponse] = await Promise.all([
-//             apiClient.get('/api/suppliers'),
-//             apiClient.get('/api/pharmacy/medicines'),
-//             apiClient.get('/api/pharmacy/medicines/expired') // Use the reliable endpoint
-//           ]);
-          
-//           const suppliers = suppliersResponse.data;
-//           const allMedicines = allMedicinesResponse.data;
-//           const expiredMedicines = expiredMedicinesResponse.data; // This list is now from the backend
-
-//           // Date logic for "Expiring This Month"
-//           const today = new Date();
-//           const currentMonth = today.getMonth();
-//           const currentYear = today.getFullYear();
-//           today.setHours(0, 0, 0, 0);
-          
-//           // We still filter the main list for items expiring this month
-//           const expiringThisMonth = allMedicines.filter(med => {
-//             if (!med.expiry_date) return false;
-//             const expiryDate = new Date(med.expiry_date);
-//             return expiryDate.getMonth() === currentMonth && expiryDate.getFullYear() === currentYear && expiryDate >= today;
-//           });
-          
-//           setDashboardData({
-//             stats: {
-//               totalSuppliers: suppliers.length,
-//               expiredStockCount: expiredMedicines.length, // This count is now from the backend
-//               expiringThisMonthCount: expiringThisMonth.length,
-//               todaysRevenue: "$2,450", 
-//             },
-//             expiredMedicines: expiredMedicines, // This list is also from the backend
-//             expiringThisMonth: expiringThisMonth,
-//             lowStockMedicines: [
-//                 { id: 'med1', name: 'Paracetamol 500mg', stock: 15, supplier: 'Pharma Inc.' },
-//             ],
-//             recentSales: [
-//                 { id: 'S001', name: 'Atorvastatin', amount: '$25.50', status: 'Completed' },
-//             ],
-//           });
-
-//         } catch (error) {
-//           console.error("Failed to fetch dashboard data:", error);
-//         } finally {
-//           setLoading(false);
-//         }
-//       };
-
-//       fetchDashboardData();
-//     }, []);
-
-//     if (loading) {
-//       return (
-//         <div className="flex items-center justify-center min-h-screen bg-gray-50">
-//           <p className="text-xl font-semibold text-gray-600">Loading Dashboard...</p>
-//         </div>
-//       );
-//     }
-
-//   return (
-//     <>
-//       <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
-//         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
-//           <div>
-//             <h1 className="text-3xl font-bold text-gray-800">Pharmacy Dashboard</h1>
-//             <p className="text-gray-500 mt-1">Welcome back!</p>
-//           </div>
-//           <Link to="/dashboard/pharmacy/add-medicine" className="mt-4 sm:mt-0 flex items-center gap-2 bg-blue-600 text-white font-semibold px-4 py-2 rounded-lg shadow hover:bg-blue-700">
-//             <FaPlus /> Add New Medicine
-//           </Link>
-//         </div>
-
-//         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-//             <StatCardPharmacy 
-//                 icon={<FaExclamationTriangle className="text-2xl text-red-600" />}
-//                 title="Expired Medicines"
-//                 value={dashboardData.stats.expiredStockCount}
-//                 change="View expired stock"
-//                 changeColor="text-red-600"
-//                 linkTo="/dashboard/pharmacy/expired-medicines"
-//             />
-//             <StatCardPharmacy 
-//                 icon={<FaTruck className="text-2xl text-teal-600" />}
-//                 title="Total Suppliers"
-//                 value={dashboardData.stats.totalSuppliers}
-//                 change="Active Suppliers"
-//                 linkTo="/dashboard/pharmacy/suppliers" 
-//             />
-//             <StatCardPharmacy 
-//                 icon={<FaExclamationTriangle className="text-2xl text-orange-600" />}
-//                 title="Expiring This Month"
-//                 value={dashboardData.stats.expiringThisMonthCount}
-//                 change="View expiring items"
-//                 changeColor="text-gray-500"
-//                 onClick={() => setIsModalOpen(true)}
-//             />
-//             <StatCardPharmacy 
-//                 icon={<FaMoneyBillWave className="text-2xl text-green-600" />}
-//                 title="Today's Revenue"
-//                 value={dashboardData.stats.todaysRevenue}
-//                 change="↑ 12% from yesterday"
-//                 changeColor="text-green-600"
-//                 linkTo="/dashboard/pharmacy/invoices"
-//             />
-//         </div>
-
-//         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-//           <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-md">
-//             <h2 className="font-bold text-lg text-gray-700 mb-4">Sales Overview</h2>
-//             <div className="h-80 bg-gray-100 flex items-center justify-center rounded-lg">
-//               <p className="text-gray-500">[Sales Chart Placeholder]</p>
-//             </div>
-//           </div>
-//           <div className="space-y-6">
-//             <QuickActions />
-//             <LowStockList medicines={dashboardData.lowStockMedicines} />
-//           </div>
-//         </div>
-
-//         <RecentSalesTable sales={dashboardData.recentSales} />
-//       </div>
-      
-//       {isModalOpen && (
-//         <ExpiredStockModal 
-//           expiringThisMonth={dashboardData.expiringThisMonth}
-//           onClose={() => setIsModalOpen(false)} 
-//         />
-//       )}
-//     </>
-//   );
-// };
-
-// export default PharmacyDashboard;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
@@ -604,18 +5,26 @@ import {
   FaExclamationTriangle,
   FaMoneyBillWave,
   FaPlus,
-  FaCalendarTimes, // Added for alert bar
+  FaCalendarTimes,
+  FaShoppingCart,
+  FaUsers,
+  FaFileInvoiceDollar,
+  FaPrescription,
+  FaChartLine,
+  FaBoxes
 } from 'react-icons/fa';
 import apiClient from '../../../api/apiClient';
 
-// --- Chart.js Imports ---
-import { Line } from 'react-chartjs-2';
+// Chart.js Imports
+import { Line, Bar, Doughnut } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
   CategoryScale,
   LinearScale,
   PointElement,
   LineElement,
+  BarElement,
+  ArcElement,
   Title,
   Tooltip,
   Legend,
@@ -624,26 +33,40 @@ import {
 import StatCardPharmacy from '../../../components/common/StatCardPharmacy';
 import ExpiredStockModal from './ExpiredStockModal';
 import { QuickActions } from '../../../components/pharmacy/DashboardSections';
-import LowStockList from '../../../components/pharmacy/LowStockList';
+// import LowStockList from '../../../components/pharmacy/LowStockList';
 import RecentSalesTable from '../../../components/pharmacy/RecentSalesTable';
+import RecentPrescriptions from '../../../components/pharmacy/RecentPrescriptions';
+import StockAlerts from '../../../components/pharmacy/StockAlerts';
 
-// --- Register Chart.js components ---
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
+// Register Chart.js components
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  ArcElement,
+  Title,
+  Tooltip,
+  Legend
+);
 
-// --- NEW: Blinking Top Bar Alert Component ---
 const ExpiryAlertBar = ({ medicines }) => {
   if (!medicines || medicines.length === 0) {
     return null;
   }
-  const medicineNames = medicines.map(med => med.name).join(', ');
+  const medicineNames = medicines.slice(0, 3).map(med => med.name).join(', ');
+  const remainingCount = medicines.length - 3;
+  
   return (
-    <div className="p-4 border-l-4 rounded-md shadow-md animate-blink-warning mb-6">
+    <div className="bg-red-50 p-4 border-l-4 border-red-400 rounded-md shadow-md mb-6">
       <div className="flex items-center gap-3">
         <FaCalendarTimes className="text-red-600 text-2xl" />
         <div>
           <h3 className="font-bold text-red-800">Expiry Alert!</h3>
           <p className="text-sm text-gray-700">
-            The following medicines are expiring in the next 2 days: <strong>{medicineNames}</strong>
+            {medicines.length} medicine(s) expiring soon: <strong>{medicineNames}</strong>
+            {remainingCount > 0 && ` and ${remainingCount} more...`}
           </p>
         </div>
       </div>
@@ -656,89 +79,136 @@ const PharmacyDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState({
     stats: {
-      totalSuppliers: '...',
-      expiredStockCount: '...',
-      expiringThisMonthCount: '...',
-      todaysRevenue: '...',
+      totalMedicines: 0,
+      totalSuppliers: 0,
+      expiredStockCount: 0,
+      expiringThisMonthCount: 0,
+      todaysRevenue: 0,
+      totalSales: 0,
+      totalPrescriptions: 0,
+      lowStockCount: 0
     },
     lowStockMedicines: [],
     expiredMedicines: [],
     expiringThisMonth: [],
-    // ADDED: State for medicines expiring very soon
     expiringSoon: [],
+    recentSales: [],
+    recentPrescriptions: [],
+    revenueData: [],
+    categoryDistribution: []
   });
 
-  // --- Chart Data & Options ---
+  // Chart Data & Options
   const salesChartData = {
     labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
     datasets: [{
-        label: 'Sales (₹)',
-        data: [12000, 19000, 15000, 21000, 18000, 25000, 23000],
-        borderColor: 'rgb(20, 184, 166)', // teal-500
-        backgroundColor: 'rgba(20, 184, 166, 0.1)',
-        fill: true,
-        tension: 0.4,
+      label: 'Sales (₹)',
+      data: [12000, 19000, 15000, 21000, 18000, 25000, 23000],
+      borderColor: 'rgb(20, 184, 166)',
+      backgroundColor: 'rgba(20, 184, 166, 0.1)',
+      fill: true,
+      tension: 0.4,
     }],
   };
+
   const salesChartOptions = {
     responsive: true,
     maintainAspectRatio: false,
-    plugins: { legend: { position: 'top' }, title: { display: false } },
+    plugins: {
+      legend: { position: 'top' },
+      title: { display: false }
+    },
+  };
+
+  const categoryChartData = {
+    labels: ['Tablets', 'Capsules', 'Syrups', 'Injections', 'Ointments'],
+    datasets: [{
+      data: [35, 25, 20, 12, 8],
+      backgroundColor: [
+        'rgba(255, 99, 132, 0.8)',
+        'rgba(54, 162, 235, 0.8)',
+        'rgba(255, 206, 86, 0.8)',
+        'rgba(75, 192, 192, 0.8)',
+        'rgba(153, 102, 255, 0.8)'
+      ],
+      borderWidth: 1,
+    }],
   };
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const [suppliersResponse, allMedicinesResponse, expiredMedicinesResponse] = await Promise.all([
+        const [
+          medicinesResponse,
+          suppliersResponse,
+          expiredResponse,
+          salesResponse,
+          prescriptionsResponse,
+          revenueResponse,
+          lowStockResponse
+        ] = await Promise.all([
+          apiClient.get('/api/medicines?limit=100'),
           apiClient.get('/api/suppliers'),
-          apiClient.get('/api/pharmacy/medicines'),
-          apiClient.get('/api/pharmacy/medicines/expired')
+          apiClient.get('/api/medicines/expired'),
+          apiClient.get('/api/orders/sale?limit=5&page=1'),
+          apiClient.get('/api/prescriptions?limit=5&page=1'),
+          apiClient.get('/api/revenue/daily'),
+          apiClient.get('/api/medicines/low-stock')
         ]);
-        
-        let allMedicines = allMedicinesResponse.data;
-        
-        // Dummy data injection to ensure the "expiring soon" alert is visible for demo
-        // allMedicines.push(
-        //   { _id: 'dummy1', name: 'Crocin Pain Relief', expiry_date: '2025-08-31T00:00:00.000Z' },
-        //   { _id: 'dummy2', name: 'Dolo 650', expiry_date: '2025-09-01T00:00:00.000Z' }
-        // );
 
+        const medicines = medicinesResponse.data.medicines || medicinesResponse.data;
         const suppliers = suppliersResponse.data;
-        const expiredMedicines = expiredMedicinesResponse.data;
+        const expiredMedicines = expiredResponse.data;
+        const recentSales = salesResponse.data.sales || salesResponse.data;
+        const recentPrescriptions = prescriptionsResponse.data.prescriptions || prescriptionsResponse.data;
+        const revenueData = revenueResponse.data;
+        const lowStockMedicines = lowStockResponse.data;
 
-        // --- Logic for Expiring This Month & Expiring Soon ---
         const today = new Date();
-        today.setHours(0, 0, 0, 0);
-
-        const currentMonth = today.getMonth();
-        const currentYear = today.getFullYear();
-
-        const expiringThisMonth = allMedicines.filter(med => {
+        const expiringThisMonth = medicines.filter(med => {
           if (!med.expiry_date) return false;
           const expiryDate = new Date(med.expiry_date);
-          return expiryDate.getMonth() === currentMonth && expiryDate.getFullYear() === currentYear && expiryDate >= today;
+          return expiryDate.getMonth() === today.getMonth() && 
+                 expiryDate.getFullYear() === today.getFullYear() &&
+                 expiryDate >= today;
         });
 
-        const limitDate = new Date(today);
-        limitDate.setDate(today.getDate() + 3); // Medicines expiring today, tomorrow, or the day after
-
-        const expiringSoon = allMedicines.filter(med => {
-            if (!med.expiry_date) return false;
-            const expiryDate = new Date(med.expiry_date);
-            return expiryDate >= today && expiryDate < limitDate;
+        const twoDaysFromNow = new Date();
+        twoDaysFromNow.setDate(today.getDate() + 2);
+        const expiringSoon = medicines.filter(med => {
+          if (!med.expiry_date) return false;
+          const expiryDate = new Date(med.expiry_date);
+          return expiryDate >= today && expiryDate <= twoDaysFromNow;
         });
-        
+
+        // Calculate category distribution
+        const categoryDistribution = medicines.reduce((acc, med) => {
+          const category = med.category || 'Other';
+          acc[category] = (acc[category] || 0) + 1;
+          return acc;
+        }, {});
+
         setDashboardData({
           stats: {
+            totalMedicines: medicines.length,
             totalSuppliers: suppliers.length,
             expiredStockCount: expiredMedicines.length,
             expiringThisMonthCount: expiringThisMonth.length,
-            todaysRevenue: "₹2,05,450", // MODIFIED: Replaced $ with ₹
+            todaysRevenue: revenueData.revenue?.total || 0,
+            totalSales: recentSales.length,
+            totalPrescriptions: recentPrescriptions.length,
+            lowStockCount: lowStockMedicines.length
           },
-          expiredMedicines: expiredMedicines,
-          expiringThisMonth: expiringThisMonth,
-          expiringSoon: expiringSoon,
-          lowStockMedicines: allMedicines.filter(med => med.stock_quantity < 20),
+          lowStockMedicines: lowStockMedicines.slice(0, 5),
+          expiredMedicines,
+          expiringThisMonth,
+          expiringSoon: expiringSoon.slice(0, 5),
+          recentSales: recentSales.slice(0, 5),
+          recentPrescriptions: recentPrescriptions.slice(0, 5),
+          categoryDistribution: Object.entries(categoryDistribution).map(([name, value]) => ({
+            name,
+            value
+          }))
         });
 
       } catch (error) {
@@ -754,79 +224,193 @@ const PharmacyDashboard = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <p className="text-xl font-semibold text-gray-600">Loading Dashboard...</p>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600"></div>
       </div>
     );
   }
 
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(amount);
+  };
+
   return (
     <>
       <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
+        {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
           <div>
             <h1 className="text-3xl font-bold text-gray-800">Pharmacy Dashboard</h1>
-            <p className="text-gray-500 mt-1">Welcome back!</p>
+            <p className="text-gray-500 mt-1">Comprehensive overview of your pharmacy operations</p>
           </div>
-          <Link to="/dashboard/pharmacy/add-medicine" className="mt-4 sm:mt-0 flex items-center gap-2 bg-teal-600 text-white font-semibold px-4 py-2 rounded-lg shadow hover:bg-blue-700">
-            <FaPlus /> Add New Medicine
-          </Link>
+          <div className="flex gap-3 mt-4 sm:mt-0">
+            <Link to="/dashboard/pharmacy/inventory/add-medicine" className="flex items-center gap-2 bg-teal-600 text-white font-semibold px-4 py-2 rounded-lg shadow hover:bg-teal-700">
+              <FaPlus /> Add Medicine
+            </Link>
+            <Link to="/dashboard/pharmacy/sales/pos" className="flex items-center gap-2 bg-blue-600 text-white font-semibold px-4 py-2 rounded-lg shadow hover:bg-blue-700">
+              <FaShoppingCart /> POS
+            </Link>
+          </div>
         </div>
 
-        {/* --- NEW: Blinking Top Bar Placed Here --- */}
+        {/* Expiry Alert Bar */}
         <ExpiryAlertBar medicines={dashboardData.expiringSoon} />
 
-        {/* --- RESTORED: Your Original Four Stat Cards --- */}
+        {/* Statistics Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <StatCardPharmacy 
-              icon={<FaExclamationTriangle className="text-2xl text-red-600" />}
-              title="Expired Medicines"
-              value={dashboardData.stats.expiredStockCount}
-              change="View expired stock"
-              changeColor="text-red-600"
-              linkTo="/dashboard/pharmacy/expired-medicines"
-            />
-            <StatCardPharmacy 
-              icon={<FaTruck className="text-2xl text-teal-600" />}
-              title="Total Suppliers"
-              value={dashboardData.stats.totalSuppliers}
-              change="Active Suppliers"
-              linkTo="/dashboard/pharmacy/suppliers" 
-            />
-            <StatCardPharmacy 
-              icon={<FaExclamationTriangle className="text-2xl text-orange-600" />}
-              title="Expiring This Month"
-              value={dashboardData.stats.expiringThisMonthCount}
-              change="View expiring items"
-              changeColor="text-gray-500"
-              onClick={() => setIsModalOpen(true)}
-            />
-            <StatCardPharmacy 
-              icon={<FaMoneyBillWave className="text-2xl text-teal-600" />}
-              title="Today's Revenue"
-              value={dashboardData.stats.todaysRevenue}
-              change="↑ 12% from yesterday"
-              changeColor="text-teal-600"
-              linkTo="/dashboard/pharmacy/invoices"
-            />
+          <StatCardPharmacy 
+            icon={<FaBoxes className="text-2xl text-blue-600" />}
+            title="Total Medicines"
+            value={dashboardData.stats.totalMedicines}
+            change="Inventory items"
+            linkTo="/dashboard/pharmacy/inventory/medicines"
+          />
+          <StatCardPharmacy 
+            icon={<FaTruck className="text-2xl text-green-600" />}
+            title="Total Suppliers"
+            value={dashboardData.stats.totalSuppliers}
+            change="Active Suppliers"
+            linkTo="/dashboard/pharmacy/purchasing/suppliers" 
+          />
+          <StatCardPharmacy 
+            icon={<FaExclamationTriangle className="text-2xl text-orange-600" />}
+            title="Expiring This Month"
+            value={dashboardData.stats.expiringThisMonthCount}
+            change="View expiring items"
+            changeColor="text-orange-600"
+            onClick={() => setIsModalOpen(true)}
+          />
+          <StatCardPharmacy 
+            icon={<FaMoneyBillWave className="text-2xl text-teal-600" />}
+            title="Today's Revenue"
+            value={formatCurrency(dashboardData.stats.todaysRevenue)}
+            change="Sales performance"
+            changeColor="text-teal-600"
+            linkTo="/dashboard/pharmacy/sales/history"
+          />
+          <StatCardPharmacy 
+            icon={<FaShoppingCart className="text-2xl text-purple-600" />}
+            title="Total Sales"
+            value={dashboardData.stats.totalSales}
+            change="Transactions today"
+            linkTo="/dashboard/pharmacy/sales/history"
+          />
+          <StatCardPharmacy 
+            icon={<FaPrescription className="text-2xl text-indigo-600" />}
+            title="Prescriptions"
+            value={dashboardData.stats.totalPrescriptions}
+            change="Active prescriptions"
+            linkTo="/dashboard/pharmacy/prescriptions/list"
+          />
+          <StatCardPharmacy 
+            icon={<FaExclamationTriangle className="text-2xl text-red-600" />}
+            title="Low Stock"
+            value={dashboardData.stats.lowStockCount}
+            change="Items need restocking"
+            changeColor="text-red-600"
+            linkTo="/dashboard/pharmacy/inventory/low-stock"
+          />
+          <StatCardPharmacy 
+            icon={<FaFileInvoiceDollar className="text-2xl text-gray-600" />}
+            title="Expired Stock"
+            value={dashboardData.stats.expiredStockCount}
+            change="Needs attention"
+            changeColor="text-gray-600"
+            linkTo="/dashboard/pharmacy/inventory/expired"
+          />
         </div>
 
+        {/* Charts and Data Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* --- IMPLEMENTED: Sales Chart --- */}
+          {/* Sales Chart */}
           <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-md">
-            <h2 className="font-bold text-lg text-gray-700 mb-4">Sales Overview</h2>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="font-bold text-lg text-gray-700">Sales Overview</h2>
+              <Link to="/dashboard/pharmacy/reports/sales" className="text-sm text-teal-600 hover:text-teal-700">
+                View Report →
+              </Link>
+            </div>
             <div className="h-80 relative">
               <Line data={salesChartData} options={salesChartOptions} />
             </div>
           </div>
+
+          {/* Quick Actions and Stock Alerts */}
           <div className="space-y-6">
             <QuickActions />
-            <LowStockList medicines={dashboardData.lowStockMedicines} />
+            <StockAlerts 
+              lowStockCount={dashboardData.stats.lowStockCount}
+              expiringCount={dashboardData.stats.expiringThisMonthCount}
+              expiredCount={dashboardData.stats.expiredStockCount}
+            />
           </div>
         </div>
 
-        <RecentSalesTable />
+        {/* Bottom Grid - Recent Activity */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Recent Sales */}
+          <div className="bg-white p-6 rounded-xl shadow-md">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="font-bold text-lg text-gray-700">Recent Sales</h2>
+              <Link to="/dashboard/pharmacy/sales/history" className="text-sm text-teal-600 hover:text-teal-700">
+                View All →
+              </Link>
+            </div>
+            <RecentSalesTable sales={dashboardData.recentSales} />
+          </div>
+
+          {/* Recent Prescriptions */}
+          <div className="bg-white p-6 rounded-xl shadow-md">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="font-bold text-lg text-gray-700">Recent Prescriptions</h2>
+              <Link to="/dashboard/pharmacy/prescriptions/list" className="text-sm text-teal-600 hover:text-teal-700">
+                View All →
+              </Link>
+            </div>
+            <RecentPrescriptions prescriptions={dashboardData.recentPrescriptions} />
+          </div>
+        </div>
+
+        {/* Category Distribution */}
+        <div className="bg-white p-6 rounded-xl shadow-md">
+          <h2 className="font-bold text-lg text-gray-700 mb-4">Medicine Category Distribution</h2>
+          <div className="h-64">
+            <Doughnut 
+              data={{
+                labels: dashboardData.categoryDistribution.map(item => item.name),
+                datasets: [{
+                  data: dashboardData.categoryDistribution.map(item => item.value),
+                  backgroundColor: [
+                    'rgba(255, 99, 132, 0.8)',
+                    'rgba(54, 162, 235, 0.8)',
+                    'rgba(255, 206, 86, 0.8)',
+                    'rgba(75, 192, 192, 0.8)',
+                    'rgba(153, 102, 255, 0.8)',
+                    'rgba(255, 159, 64, 0.8)',
+                    'rgba(199, 199, 199, 0.8)'
+                  ],
+                  borderWidth: 1,
+                }]
+              }}
+              options={{
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                  legend: {
+                    position: 'right',
+                  }
+                }
+              }}
+            />
+          </div>
+        </div>
       </div>
       
+      {/* Modals */}
       {isModalOpen && (
         <ExpiredStockModal 
           expiringThisMonth={dashboardData.expiringThisMonth}
