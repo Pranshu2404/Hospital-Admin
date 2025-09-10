@@ -389,13 +389,14 @@ const StaffDashboard = () => {
 
                 const staffData = await staffRes.json();
                 const patientData = await patientRes.json();
+                console.log("Patient API Data:", patientData); // Add this line for debugging
                 const departmentData = await departmentRes.json();
                 const appointmentData = await appointmentRes.json();
                 const hospitalData = hospitalRes.ok ? await hospitalRes.json() : [];
                 //const calendarData = calendarRes.ok ? await calendarRes.json() : [];
                 
                 setStaff(staffData);
-                setPatients(patientData);
+                setPatients(patientData.patients || []); // ✅ Access the nested 'patients' array
                 setDepartments(departmentData);
                 setAppointments(appointmentData);
                 // Save hospital info for appointment slips

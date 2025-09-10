@@ -52,6 +52,7 @@ const CreatePurchaseOrder = () => {
         medicine_id: '',
         quantity: 1,
         unit_cost: 0,
+        total_cost: 0,
         batch_number: '',
         expiry_date: ''
       }]
@@ -85,13 +86,14 @@ const CreatePurchaseOrder = () => {
     setLoading(true);
 
     try {
-      const response = await apiClient.post('/api/purchase-orders', {
+      const response = await apiClient.post('/api/orders/purchase-orders', {
         ...formData,
-        total_amount: calculateTotal()
+        total_amount: calculateTotal(),
+        user_id: 'currentUserId' // Replace with actual user ID from auth context or state
       });
-      
+      console.log('Purchase order created:', response.data);
       alert('Purchase order created successfully!');
-      navigate('/dashboard/pharmacy/purchasing/orders');
+      navigate('/dashboard/pharmacy/orders');
     } catch (err) {
       alert('Failed to create purchase order');
       console.error('Error:', err);
@@ -206,6 +208,19 @@ const CreatePurchaseOrder = () => {
               </div>
 
               <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Total Cost (₹)</label>
+                <input
+                  type="number"
+                  required
+                  min="0"
+                  step="0.01"
+                  value={item.unit_cost*item.quantity}
+                  onChange={(e) => updateItem(index, 'total_cost', parseFloat(e.target.value))}
+                  className="w-full p-2 border border-gray-300 rounded-lg"
+                />
+              </div>
+
+              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Batch Number</label>
                 <input
                   type="text"
@@ -283,7 +298,7 @@ const CreatePurchaseOrder = () => {
           </button>
           <button
             type="button"
-            onClick={() => navigate('/dashboard/pharmacy/purchasing/orders')}
+            onClick={() => navigate('/dashboard/pharmacy/orders')}
             className="flex items-center gap-2 border border-gray-300 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-50"
           >
             <FaTimes /> Cancel

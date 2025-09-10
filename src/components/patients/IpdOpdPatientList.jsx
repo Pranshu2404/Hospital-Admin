@@ -19,29 +19,32 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient, updatePatientBa
 
   // Fetch patient data from API
   const fetchPatients = async () => {
-    try {
-      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/patients`);
-      const data = response.data;
+  try {
+    const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/patients`);
+    const data = response.data;
+    const patientArray = data.patients || []; // You correctly get the array here
 
-      // Optional: transform backend fields to frontend format
-      const formatted = data.map(p => ({
-        id: p._id,
-        name: `${p.first_name} ${p.last_name}`,
-        age: calculateAge(p.dob),
-        gender: p.gender,
-        phone: p.phone,
-        email: p.email,
-        type: p.patient_type.toUpperCase() || 'OPD',
-        bloodGroup: p.blood_group || 'N/A',
-        lastVisit: new Date(p.registered_at).toISOString().split('T')[0],
-        status: 'Active', // You can map a real status if available
-      }));
+    // 💡 FIX: Use patientArray, which is the array, for mapping.
+    const formatted = patientArray.map(p => ({
+      id: p._id,
+      name: `${p.first_name} ${p.last_name}`,
+      age: calculateAge(p.dob),
+      gender: p.gender,
+      phone: p.phone,
+      email: p.email,
+      type: p.patient_type.toUpperCase() || 'OPD',
+      bloodGroup: p.blood_group || 'N/A',
+      lastVisit: new Date(p.registered_at).toISOString().split('T')[0],
+      status: 'Active', 
+    }));
 
-      setPatients(formatted);
-    } catch (error) {
-      console.error('❌ Error fetching patients:', error);
-    }
-  };
+    setPatients(formatted);
+  } catch (error) {
+    console.error('❌ Error fetching patients:', error);
+    // It's good practice to handle the error state for the UI
+    setPatients([]); 
+  }
+};
 
   useEffect(() => {
     fetchPatients();

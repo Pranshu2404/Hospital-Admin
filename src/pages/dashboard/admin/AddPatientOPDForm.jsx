@@ -94,17 +94,29 @@ const AddPatientOPDForm = () => {
       );
       const patientId = patientRes.data._id;
 
+      // 1. Create a full JavaScript Date object for the start time
+const startDateTime = new Date(`${formData.date}T${formData.time}`);
+
+// 2. Create the end time by adding the duration to the start time
+const endDateTime = new Date(startDateTime.getTime() + formData.duration * 60000); // duration is in minutes, so convert to milliseconds
+
       const appointmentPayload = {
         patient_id: patientId,
-        doctor_id: formData.doctorId,
-        department_id: formData.department,
-        appointment_date: formData.date,
-        time_slot: `${formData.time} - ${calculateEndTime(formData.time, formData.duration)}`,
-        type: formData.type,
-        priority: formData.priority,
-        notes: formData.notes,
-        status: 'Scheduled'
+    doctor_id: formData.doctorId, // ❗️ Ensure a doctor is selected in the form
+    department_id: formData.department,
+    hospital_id: localStorage.getItem('hospitalId'), // 💡 FIX: Add the hospital ID. Hardcode it for now or fetch it.
+    appointment_date: formData.date,
+    type: 'time-based', // 💡 FIX: Add this required field
+    appointment_type: formData.type, 
+    start_time: startDateTime, // 💡 FIX: Use start_time
+    end_time: endDateTime, 
+    priority: formData.priority,
+    notes: formData.notes,
+    status: 'Scheduled'
       };
+
+      // ✅ FIX: Use the correct variable name
+console.log('Sending this data to the backend:', appointmentPayload);
 
       await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/appointments`, appointmentPayload);
 

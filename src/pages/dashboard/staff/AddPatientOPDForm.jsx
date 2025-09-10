@@ -34,6 +34,8 @@ const AddPatientOPDForm = () => {
         blood_group: formData.bloodGroup,
         patient_type: "opd"
       };
+      // ✅ ADD THIS LINE FOR DEBUGGING
+  console.log("Submitting this data to backend:", appointmentData);
 
       const response = await axios.post(
         `${import.meta.env.VITE_BACKEND_URL}/api/patients`,

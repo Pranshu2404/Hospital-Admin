@@ -62,11 +62,13 @@ const DoctorDashboard = () => {
       try {
         console.log(doctorId)
         const [patientsRes, appointmentsRes, doctorsRes, calendarRes] = await Promise.all([
+          
           axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/patients`),
           axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/appointments`),
           axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/doctors`),
           axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/calendar/doctor/${doctorId}`)
         ]);
+        console.log("API response for patients:", patientsRes.data); // Add this line
         const currentDoctor = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/doctors/${doctorId}`);
 
         setName(currentDoctor.data.firstName)
@@ -74,7 +76,7 @@ const DoctorDashboard = () => {
         const patients = patientsRes.data || [];
         const appointments = appointmentsRes.data || [];
         setAppointments(appointmentsRes.data);
-        setPatients(patientsRes.data);
+        setPatients(patientsRes.data || []); // ✅ Always provide an array
         setDoctors(doctorsRes.data);
         const todayAppointments = appointments.filter(appt =>
           dayjs(appt.appointment_date).isSame(today, 'day')
@@ -184,10 +186,10 @@ const DoctorDashboard = () => {
     { name: 'Cancelled', value: appointments.filter(a => a.status === 'cancelled').length }
   ];
 
-  const patientByDepartment = patients.reduce((acc, p) => {
+  const patientByDepartment =  Array.isArray(patients) ? patients.reduce((acc, p) => {
     acc[p.department] = (acc[p.department] || 0) + 1;
     return acc;
-  }, {});
+  }, {}): {};
 
   const departmentData = Object.entries(patientByDepartment).map(([key, value]) => ({
     name: key,

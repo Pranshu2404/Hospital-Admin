@@ -351,6 +351,7 @@ export default function App() {
             path="/dashboard/finance/create-invoice" 
             element={<CreateInvoicePage />} 
           />      
+          <Route path="/dashboard/pharmacy/purchase/:id" element={<BatchPage />} />
         </Routes>
         
 

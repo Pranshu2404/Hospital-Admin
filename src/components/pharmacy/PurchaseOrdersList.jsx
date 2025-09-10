@@ -96,7 +96,7 @@ const PurchaseOrdersList = () => {
           <p className="text-gray-600">Manage your pharmacy purchase orders</p>
         </div>
         <Link
-          to="/dashboard/pharmacy/purchasing/create-order"
+          to="/dashboard/pharmacy/create-order"
           className="flex items-center gap-2 bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700"
         >
           <FaPlus /> Create Purchase Order
@@ -182,7 +182,7 @@ const PurchaseOrdersList = () => {
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
                       <Link
-                        to={`/dashboard/pharmacy/purchasing/orders/${order._id}`}
+                        to={`/dashboard/pharmacy/orders/${order._id}`}
                         className="text-blue-600 hover:text-blue-800 p-2 rounded hover:bg-blue-50"
                         title="View Order"
                       >
@@ -219,7 +219,7 @@ const PurchaseOrdersList = () => {
             <FaShoppingCart className="text-4xl text-gray-300 mx-auto mb-4" />
             <p className="text-gray-500">No purchase orders found</p>
             <Link
-              to="/dashboard/pharmacy/purchasing/create-order"
+              to="/dashboard/pharmacy/create-order"
               className="text-teal-600 hover:text-teal-700 text-sm"
             >
               Create your first purchase order

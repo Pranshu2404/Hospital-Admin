@@ -217,32 +217,43 @@ const calculateCharges = () => {
   };
 
   // Fetch initial lists
-  useEffect(() => {
-    const fetchOptions = async () => {
-      try {
-        const [patientRes, departmentRes, hospitalRes] = await Promise.all([
-          axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/patients`),
-          axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/departments`),
-          axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/hospitals`)
-        ]);
-        setPatients(patientRes.data);
-        setFilteredPatients(patientRes.data);
-        setDepartments(departmentRes.data);
-        setHospitalInfo(hospitalRes.data[0]);
+  // Inside the useEffect hook on line 281
+useEffect(() => {
+  const fetchOptions = async () => {
+    try {
+      const [patientRes, departmentRes, hospitalRes] = await Promise.all([
+        axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/patients`),
+        axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/departments`),
+        axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/hospitals`)
+      ]);
 
-        if (formData.department) {
+      // ✅ Add a check to ensure the response is an array
+     const patientsData = Array.isArray(patientRes.data) 
+  ? patientRes.data 
+  : Array.isArray(patientRes.data.patients) 
+    ? patientRes.data.patients 
+    : [];
+
+      
+      setPatients(patientsData);
+      setFilteredPatients(patientsData);
+      setDepartments(departmentRes.data);
+      setHospitalInfo(hospitalRes.data[0]);
+
+      // ... rest of the code
+      if (formData.department) {
           const doctorRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/doctors/department/${formData.department}`);
           setDoctors(doctorRes.data);
         } else {
           setDoctors([]);
         }
-      } catch (error) {
-        console.error('Error fetching data:', error);
-      }
-    };
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    }
+  };
 
-    fetchOptions();
-  }, [formData.department]);
+  fetchOptions();
+}, [formData.department]);
 
   // Fetch hospital charges
   useEffect(() => {
@@ -277,53 +288,55 @@ const calculateCharges = () => {
   // Fetch doctor data and appointments when doctor or date changes
   useEffect(() => {
   if (formData.doctorId && hospitalId && formData.date) {
-    const fetchDoctorData = async () => {
-      try {
-        // Fetch doctor details
-        const doctorRes = await axios.get(
-          `${import.meta.env.VITE_BACKEND_URL}/api/doctors/${formData.doctorId}`
-        );
-        const doctorData = doctorRes.data;
-        setDoctorDetails(doctorData);
+const fetchDoctorData = async () => {
+  try {
+    // Fetch doctor details
+    const doctorRes = await axios.get(
+      `${import.meta.env.VITE_BACKEND_URL}/api/doctors/${formData.doctorId}`
+    );
+    const doctorData = doctorRes.data;
+    setDoctorDetails(doctorData);
 
-        console.log("Doctor Data:", doctorData);
+    let workingHours = doctorData.timeSlots || [];
+    let appointments = [];
+    let patients = [];
 
-        // Fetch doctor's day schedule using the consolidated endpoint
-        const scheduleRes = await axios.get(
-          `${import.meta.env.VITE_BACKEND_URL}/api/calendar/${hospitalId}/doctor/${formData.doctorId}/${formData.date}`
-        );
-        
-        const scheduleData = scheduleRes.data;
+    try {
+      // Try fetching doctor's schedule for the day
+      const scheduleRes = await axios.get(
+  `${import.meta.env.VITE_BACKEND_URL}/api/calendar/${hospitalId}/doctor/${formData.doctorId}/${formData.date}`
+);
 
-        console.log("Schedule Data:", scheduleData);
-        
-        // Extract working hours from the schedule
-        let workingHours = [];
-        if (scheduleData.bookedAppointments && scheduleData.bookedAppointments.length > 0) {
-          // You might need to extract time slots from appointments or use doctor's default slots
-          // This depends on how your calendar structure works
-          workingHours = doctorData.timeSlots || [];
-        }
-        
-        setDoctorWorkingHours(doctorData.timeSlots);
-        setExistingAppointments(scheduleData.bookedAppointments || []);
-        
-        // For number-based system, use bookedPatients from the schedule
-        if (formData.type === 'number-based') {
-          setExistingPatients(scheduleData.bookedPatients || []);
-        }
 
-      } catch (err) {
-        // Only log if the error is not a 404 for an empty ID
-        if (err.response && err.response.status !== 404) {
-          console.error("Failed to fetch doctor data", err);
-        }
-        setDoctorDetails(null);
-        setDoctorWorkingHours([]);
-        setExistingAppointments([]);
-        setExistingPatients([]);
+      const scheduleData = scheduleRes.data;
+      console.log("Schedule Data:", scheduleData);
+
+      if (scheduleData?.workingHours?.length) {
+        workingHours = scheduleData.workingHours;
       }
-    };
+
+      appointments = scheduleData.bookedAppointments || [];
+      if (formData.type === "number-based") {
+        patients = scheduleData.bookedPatients || [];
+      }
+    } catch (err) {
+      // If calendar entry doesn’t exist, just use defaults
+      console.warn("No schedule found for this doctor/date, falling back to default slots.");
+    }
+
+    setDoctorWorkingHours(workingHours);
+    setExistingAppointments(appointments);
+    setExistingPatients(patients);
+
+  } catch (err) {
+    console.error("Failed to fetch doctor data", err);
+    setDoctorDetails(null);
+    setDoctorWorkingHours([]);
+    setExistingAppointments([]);
+    setExistingPatients([]);
+  }
+};
+
     fetchDoctorData();
   } else {
     setExistingAppointments([]);
@@ -424,24 +437,24 @@ const calculateCharges = () => {
   };
 
   // 3. Function to handle QR code generation
-  const handleGenerateQR = async () => {
-    if (!formData.patientId || totalAmount <= 0) {
-      alert("Please select a patient and ensure there is an amount to pay.");
-      return;
-    }
+const handleGenerateQR = async () => {
+  if (!formData.patientId || totalAmount <= 0) {
+    alert("Please select a patient and ensure there is an amount to pay.");
+    return;
+  }
 
-    setIsLoading(true);
-    setPaymentStatus('generating');
-    setIsQrModalOpen(true);
+  setIsLoading(true);
+  setPaymentStatus('generating');
 
-    try {
-      const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/payments/create-qr-order`, {
-        amount: totalAmount,
-        patientId: formData.patientId,
-      });
-      
-      setQrData({ imageUrl: res.data.qrImageUrl, orderId: res.data.orderId });
-      setPaymentStatus('waiting');
+  try {
+    const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/payments/create-qr-order`, {
+      amount: totalAmount,
+      patientId: formData.patientId,
+    });
+
+    setQrData({ imageUrl: res.data.qrImageUrl, orderId: res.data.orderId });
+    setPaymentStatus('waiting');
+    setIsQrModalOpen(true); // <-- open modal only AFTER we have data
       
       // Start polling for payment status
       const intervalId = setInterval(async () => {
@@ -471,13 +484,12 @@ const calculateCharges = () => {
       setPollingIntervalId(intervalId);
 
     } catch (err) {
-      console.error('Error generating QR code:', err);
-      alert('Failed to generate QR code.');
-      setIsQrModalOpen(false);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    console.error('Error generating QR code:', err);
+    alert('Failed to generate QR code.');
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const handleSubmit = async (e, paymentInfo = null) => {
     if (e) e.preventDefault(); // Prevent default form submission if triggered by button
@@ -627,15 +639,16 @@ const calculateCharges = () => {
             <div className="lg:col-span-2 space-y-4">
               {/* Patient Selection */}
               <FormSelect
-                label="Select Patient"
-                value={formData.patientId}
-                onChange={(e) => handleInputChange('patientId', e.target.value)}
-                options={filteredPatients.map(p => ({
-                  value: p._id,
-                  label: `${p.first_name} ${p.last_name} - ${p.phone || ''} (${p.patientId || ''})`
-                }))}
-                required
-              />
+  label="Select Patient"
+  value={formData.patientId}
+  onChange={(e) => handleInputChange('patientId', e.target.value)}
+  // ✅ CORRECTED LINE:
+  options={(filteredPatients || []).map(p => ({
+    value: p._id,
+    label: `${p.first_name} ${p.last_name} - ${p.phone || ''} (${p.patientId || ''})`
+  }))}
+  required
+/>
 
               {/* Department and Doctor Selection */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -930,44 +943,51 @@ const calculateCharges = () => {
           </div>
 
           {/* CORRECTED FORM ACTIONS PLACEMENT */}
-          <div className="flex justify-end space-x-3 pt-4 border-t mt-6">
-            <Button 
-                variant="secondary" 
-                type="button" 
-                onClick={handleGenerateQR}
-                disabled={isLoading || !formData.patientId || totalAmount <= 0}
-            >
-              {isLoading ? 'Processing...' : 'Pay with QR Code'}
-            </Button>
-            
-            <Button
-              variant="primary"
-              type="submit"
-              disabled={isLoading || 
-                (formData.type === 'time-based' && 
-                 formData.start_time && 
-                 !isWithinWorkingHours(formData.start_time)) ||
-                !formData.patientId ||
-                !formData.doctorId ||
-                !formData.department}
-            >
-              {isLoading ? 'Scheduling...' : 'Schedule Appointment'}
-            </Button>
-          </div>
+          {/* At the bottom of your form, around line 1030 */}
+        <div className="flex justify-end space-x-3 pt-4 border-t mt-6">
+          
+          {/* ✅ ADD THIS NEW BUTTON FOR QR PAYMENTS */}
+          <Button 
+            variant="secondary" 
+            type="button" 
+            onClick={handleGenerateQR}
+            disabled={isLoading || !formData.patientId || totalAmount <= 0}
+          >
+            {isLoading ? 'Processing...' : 'Pay with QR Code'}
+          </Button>
+          
+          {/* This is your existing submit button, now used for non-QR payments */}
+          <Button
+            variant="primary"
+            type="submit"
+            disabled={isLoading || 
+              (formData.type === 'time-based' && 
+               formData.start_time && 
+               !isWithinWorkingHours(formData.start_time)) ||
+              !formData.patientId ||
+              !formData.doctorId ||
+              !formData.department}
+          >
+            {isLoading ? 'Scheduling...' : 'Schedule Appointment'}
+          </Button>
+        </div>
         </form>
       </div>
 
       {/* MODALS SHOULD BE HERE, OUTSIDE THE MAIN CONTENT DIV BUT INSIDE THE FRAGMENT */}
-      <QRCodeModal
-        isOpen={isQrModalOpen}
-        onClose={() => {
-          setIsQrModalOpen(false);
-          stopPolling(); // Stop polling if modal is closed manually
-        }}
-        qrImageUrl={qrData.imageUrl}
-        amount={totalAmount}
-        paymentStatus={paymentStatus}
-      />
+      {isQrModalOpen && qrData.imageUrl && (
+  <QRCodeModal
+    isOpen={isQrModalOpen}
+    onClose={() => {
+      setIsQrModalOpen(false);
+      if (pollingIntervalId) clearInterval(pollingIntervalId);
+    }}
+    qrImageUrl={qrData.imageUrl}
+    amount={totalAmount}
+    paymentStatus={paymentStatus}
+  />
+)}
+
       
       <AppointmentSlipModal
         isOpen={slipModal}
