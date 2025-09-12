@@ -34,6 +34,7 @@ const PaymentCollection = () => {
     reference: '',
     collected_by: ''
   });
+  const [downloading, setDownloading] = useState({});
 
   useEffect(() => {
     fetchInvoices();
@@ -110,6 +111,32 @@ const PaymentCollection = () => {
       collected_by: ''
     });
     setShowPaymentModal(true);
+  };
+
+   const handleDownload = async (invoiceId) => {
+    setDownloading(prev => ({ ...prev, [invoiceId]: true }));
+    try {
+      const response = await apiClient.get(`/api/invoices/${invoiceId}/download`, {
+        responseType: 'blob'
+      });
+      
+      // Create blob and download
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `invoice-${invoiceId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      
+    } catch (err) {
+      console.error('Download failed:', err);
+      alert('Failed to download invoice. Please try again.');
+    } finally {
+      setDownloading(prev => ({ ...prev, [invoiceId]: false }));
+    }
   };
 
   if (loading) {
@@ -242,10 +269,9 @@ const PaymentCollection = () => {
                         </button>
                       )}
                       <Link
-                        to={`/api/invoices/${invoice._id}/download`}
+                        onClick={() => handleDownload(invoice._id)}
                         className="text-gray-600 hover:text-gray-800 p-2 rounded hover:bg-gray-50"
                         title="Download PDF"
-                        target="_blank"
                       >
                         <FaDownload />
                       </Link>

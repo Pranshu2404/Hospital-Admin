@@ -16,7 +16,7 @@ const RecentSalesTable = () => {
         const formattedSales = recentInvoices.map(invoice => ({
           id: `...${invoice._id.slice(-6)}`,
           patientName: `${invoice.patient_id?.first_name || ''} ${invoice.patient_id?.last_name || 'N/A'}`.trim(),
-          amount: `$${invoice.total_amount.toFixed(2)}`,
+          amount: `${invoice.total}`,
           status: invoice.status,
         }));
         

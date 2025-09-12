@@ -12,7 +12,9 @@ import {
   FaCheckCircle,
   FaTruck,
   FaExclamationTriangle,
-  FaBoxOpen
+  FaBoxOpen,
+  FaTimes,
+  FaCheck
 } from 'react-icons/fa';
 
 const PurchaseOrdersList = () => {
@@ -23,6 +25,10 @@ const PurchaseOrdersList = () => {
   const [statusFilter, setStatusFilter] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+  const [receivingItems, setReceivingItems] = useState({});
+  const [receivingLoading, setReceivingLoading] = useState(false);
 
   useEffect(() => {
     fetchPurchaseOrders();
@@ -35,6 +41,7 @@ const PurchaseOrdersList = () => {
       if (statusFilter) params.status = statusFilter;
       
       const response = await apiClient.get('/api/orders/purchase', { params });
+      console.log('Fetched Orders:', response.data);
       setOrders(response.data.orders);
       setTotalPages(response.data.totalPages);
     } catch (err) {
@@ -42,6 +49,71 @@ const PurchaseOrdersList = () => {
       console.error('Error:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchOrderDetails = async (orderId) => {
+    try {
+      const response = await apiClient.get(`/api/orders/purchase/${orderId}`);
+      setSelectedOrder(response.data);
+      setShowModal(true);
+      
+      // Initialize receiving items with 0 quantities
+      const initialReceiving = {};
+      response.data.items.forEach(item => {
+        initialReceiving[item._id] = {
+          received: item.received || 0,
+          toReceive: Math.max(0, (item.quantity - (item.received || 0)))
+        };
+      });
+      setReceivingItems(initialReceiving);
+    } catch (err) {
+      setError('Failed to fetch order details');
+      console.error('Error:', err);
+    }
+  };
+
+  const handleReceiveItem = (itemId, value) => {
+    const numericValue = parseInt(value) || 0;
+    const maxAllowed = selectedOrder.items.find(item => item._id === itemId).quantity - 
+                       (selectedOrder.items.find(item => item._id === itemId).received || 0);
+    
+    setReceivingItems(prev => ({
+      ...prev,
+      [itemId]: {
+        ...prev[itemId],
+        toReceive: Math.min(Math.max(0, numericValue), maxAllowed)
+      }
+    }));
+  };
+
+  const submitReceiving = async () => {
+    try {
+      setReceivingLoading(true);
+      
+      // Prepare the receive data
+      const receiveData = {
+        items: Object.entries(receivingItems).map(([itemId, values]) => ({
+          item_id: itemId,
+          quantity_received: values.toReceive
+        }))
+      };
+
+      console.log('Submitting Receive Data:', receiveData.items);
+      
+      await apiClient.post(`/api/orders/purchase/${selectedOrder._id}/receive`, { received_items: receiveData.items });
+      
+      // Refresh the orders list and close the modal
+      fetchPurchaseOrders();
+      setShowModal(false);
+      setSelectedOrder(null);
+      setReceivingItems({});
+      
+    } catch (err) {
+      setError('Failed to receive items');
+      console.error('Error:', err);
+    } finally {
+      setReceivingLoading(false);
     }
   };
 
@@ -181,13 +253,13 @@ const PurchaseOrdersList = () => {
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <Link
-                        to={`/dashboard/pharmacy/orders/${order._id}`}
+                      <button
+                        onClick={() => fetchOrderDetails(order._id)}
                         className="text-blue-600 hover:text-blue-800 p-2 rounded hover:bg-blue-50"
                         title="View Order"
                       >
                         <FaEye />
-                      </Link>
+                      </button>
                       {order.status === 'Draft' && (
                         <Link
                           to={`/dashboard/pharmacy/purchasing/edit-order/${order._id}`}
@@ -198,13 +270,13 @@ const PurchaseOrdersList = () => {
                         </Link>
                       )}
                       {canReceiveStock(order) && (
-                        <Link
-                          to={`/dashboard/pharmacy/purchasing/receive-stock/${order._id}`}
+                        <button
+                          onClick={() => fetchOrderDetails(order._id)}
                           className="text-green-600 hover:text-green-800 p-2 rounded hover:bg-green-50"
                           title="Receive Stock"
                         >
                           <FaBoxOpen />
-                        </Link>
+                        </button>
                       )}
                     </div>
                   </td>
@@ -248,6 +320,117 @@ const PurchaseOrdersList = () => {
           >
             Next
           </button>
+        </div>
+      )}
+
+      {/* Order Details Modal */}
+      {showModal && selectedOrder && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-screen overflow-y-auto">
+            <div className="flex justify-between items-center p-6 border-b">
+              <h2 className="text-xl font-bold text-gray-800">
+                Order #{selectedOrder.order_number}
+              </h2>
+              <button
+                onClick={() => {
+                  setShowModal(false);
+                  setSelectedOrder(null);
+                  setReceivingItems({});
+                }}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <FaTimes size={20} />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {/* Order Info */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <h3 className="font-semibold text-gray-700">Supplier Information</h3>
+                  <p className="text-gray-900">{selectedOrder.supplier_id?.name}</p>
+                  <p className="text-gray-600">{selectedOrder.supplier_id?.contactPerson}</p>
+                  <p className="text-gray-600">{selectedOrder.supplier_id?.email}</p>
+                  <p className="text-gray-600">{selectedOrder.supplier_id?.phone}</p>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-700">Order Details</h3>
+                  <p className="text-gray-600">Date: {new Date(selectedOrder.order_date).toLocaleDateString()}</p>
+                  <p className="text-gray-600">Expected Delivery: {new Date(selectedOrder.expected_delivery_date).toLocaleDateString()}</p>
+                  <p className="text-gray-600">Status: {getStatusBadge(selectedOrder.status)}</p>
+                  <p className="text-gray-600">Total: {formatCurrency(selectedOrder.total_amount)}</p>
+                </div>
+              </div>
+
+              {/* Items Table */}
+              <div>
+                <h3 className="font-semibold text-gray-700 mb-4">Order Items</h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Item</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Ordered Qty</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Received Qty</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Pending</th>
+                        {canReceiveStock(selectedOrder) && (
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Receive Now</th>
+                        )}
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Price</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {selectedOrder.items.map((item) => (
+                        <tr key={item._id}>
+                          <td className="px-4 py-2">
+                            <div className="font-medium">{item.medicine_id?.name}</div>
+                            <div className="text-sm text-gray-500">{item.medicine_id?._id}</div>
+                          </td>
+                          <td className="px-4 py-2">{item.quantity}</td>
+                          <td className="px-4 py-2">{item.received || 0}</td>
+                          <td className="px-4 py-2">{item.quantity - (item.received || 0)}</td>
+                          {canReceiveStock(selectedOrder) && (
+                            <td className="px-4 py-2">
+                              <input
+                                type="number"
+                                min="0"
+                                max={item.quantity - (item.received || 0)}
+                                value={receivingItems[item._id]?.toReceive || 0}
+                                onChange={(e) => handleReceiveItem(item._id, e.target.value)}
+                                className="w-20 p-1 border rounded"
+                                disabled={item.quantity - (item.received || 0) === 0}
+                              />
+                            </td>
+                          )}
+                          <td className="px-4 py-2">{formatCurrency(item.unit_cost)}</td>
+                          <td className="px-4 py-2">{formatCurrency(item.unit_cost * item.quantity)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Receive Action */}
+              {canReceiveStock(selectedOrder) && (
+                <div className="flex justify-end">
+                  <button
+                    onClick={submitReceiving}
+                    disabled={receivingLoading || Object.values(receivingItems).every(item => item.toReceive === 0)}
+                    className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 disabled:opacity-50"
+                  >
+                    {receivingLoading ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    ) : (
+                      <FaCheck />
+                    )}
+                    Receive Items
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -160,6 +160,7 @@ const PharmacyDashboard = () => {
         const suppliers = suppliersResponse.data;
         const expiredMedicines = expiredResponse.data;
         const recentSales = salesResponse.data.sales || salesResponse.data;
+        console.log(salesResponse.data);
         const recentPrescriptions = prescriptionsResponse.data.prescriptions || prescriptionsResponse.data;
         const revenueData = revenueResponse.data;
         const lowStockMedicines = lowStockResponse.data;

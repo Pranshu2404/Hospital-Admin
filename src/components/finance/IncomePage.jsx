@@ -1,128 +1,82 @@
 import React, { useState, useEffect } from 'react';
-import apiClient from '../../api/apiClient';
+import axios from 'axios';
 import { 
   FaMoneyBillWave, 
-  FaSearch, 
-  FaFilter,
-  FaDownload,
-  FaEye,
+  FaChartLine, 
   FaCalendarAlt,
-  FaUser,
+  FaDownload,
+  FaFilter,
+  FaHospital,
   FaUserMd,
   FaPills,
   FaStethoscope,
-  FaHospital,
   FaRupeeSign,
-  FaChartLine,
-  FaReceipt
+  FaReceipt,
+  FaUsers,
+  FaClock
 } from 'react-icons/fa';
 
-const IncomePage = () => {
-  const [incomeData, setIncomeData] = useState({
-    pharmacyInvoices: [],
-    appointmentInvoices: [],
-    combined: []
-  });
+const RevenueStats = () => {
+  const [revenueData, setRevenueData] = useState(null);
+  const [dailyRevenue, setDailyRevenue] = useState(null);
+  const [monthlyRevenue, setMonthlyRevenue] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [activeTab, setActiveTab] = useState('overview');
   const [filters, setFilters] = useState({
     period: 'monthly',
     startDate: new Date().toISOString().split('T')[0],
     endDate: new Date().toISOString().split('T')[0],
-    status: 'Paid',
-    type: 'all'
-  });
-  const [stats, setStats] = useState({
-    totalRevenue: 0,
-    pharmacyRevenue: 0,
-    appointmentRevenue: 0,
-    totalInvoices: 0
+    year: new Date().getFullYear(),
+    month: new Date().getMonth() + 1
   });
 
   useEffect(() => {
-    fetchIncomeData();
-    fetchRevenueStats();
-  }, [filters.period, filters.status]);
+    fetchRevenueData();
+  }, [filters.period]);
 
-  const fetchIncomeData = async () => {
+  const fetchRevenueData = async () => {
     setLoading(true);
     try {
-      const params = {
-        status: filters.status,
-        startDate: filters.startDate,
-        endDate: filters.endDate
-      };
-
-      // Fetch pharmacy invoices
-      const pharmacyResponse = await apiClient.get('/api/invoices/pharmacy', { 
-        params: { ...params, invoice_type: 'Pharmacy' } 
+      const baseUrl = import.meta.env.VITE_BACKEND_URL;
+      
+      // Fetch overview data
+      const overviewResponse = await axios.get(`${baseUrl}/api/revenue`, {
+        params: {
+          startDate: filters.startDate,
+          endDate: filters.endDate
+        }
       });
+      setRevenueData(overviewResponse.data);
 
-      // Fetch appointment invoices
-      const appointmentResponse = await apiClient.get('/api/invoices', { 
-        params: { ...params, invoice_type: 'Appointment' } 
+      // Fetch daily report
+      const dailyResponse = await axios.get(`${baseUrl}/api/revenue/daily`, {
+        params: { date: filters.startDate }
       });
+      setDailyRevenue(dailyResponse.data);
 
-      const pharmacyInvoices = pharmacyResponse.data.invoices || [];
-      const appointmentInvoices = appointmentResponse.data.invoices || [];
-
-      // Combine and sort by date
-      const combined = [...pharmacyInvoices, ...appointmentInvoices]
-        .sort((a, b) => new Date(b.issue_date) - new Date(a.issue_date));
-
-      setIncomeData({
-        pharmacyInvoices,
-        appointmentInvoices,
-        combined
+      // Fetch monthly report
+      const monthlyResponse = await axios.get(`${baseUrl}/api/revenue/monthly`, {
+        params: { 
+          year: filters.year,
+          month: filters.month
+        }
       });
+      setMonthlyRevenue(monthlyResponse.data);
 
-    } catch (err) {
-      console.error('Error fetching income data:', err);
-      alert('Failed to load income data');
+    } catch (error) {
+      console.error('Error fetching revenue data:', error);
+      alert('Failed to load revenue statistics');
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchRevenueStats = async () => {
-    try {
-      const response = await apiClient.get('/api/invoices/stats', {
-        params: {
-          startDate: filters.startDate,
-          endDate: filters.endDate,
-          type: filters.type !== 'all' ? filters.type : undefined
-        }
-      });
-
-      const statsData = response.data;
-      setStats({
-        totalRevenue: statsData.totalRevenue || 0,
-        pharmacyRevenue: statsData.revenueByType?.find(r => r._id === 'Pharmacy')?.total || 0,
-        appointmentRevenue: statsData.revenueByType?.find(r => r._id === 'Appointment')?.total || 0,
-        totalInvoices: statsData.totalInvoices || 0
-      });
-
-    } catch (err) {
-      console.error('Error fetching revenue stats:', err);
-    }
-  };
-
-  const filteredRecords = incomeData.combined.filter(record => {
-    const matchesSearch = record.invoice_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (record.patient_id?.first_name && 
-                          `${record.patient_id.first_name} ${record.patient_id.last_name || ''}`
-                            .toLowerCase().includes(searchTerm.toLowerCase())) ||
-                         (record.customer_name && record.customer_name.toLowerCase().includes(searchTerm.toLowerCase()));
-
-    const matchesType = filters.type === 'all' || record.invoice_type === filters.type;
-    
-    return matchesSearch && matchesType;
-  });
-
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
-      currency: 'INR'
+      currency: 'INR',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
     }).format(amount);
   };
 
@@ -134,49 +88,28 @@ const IncomePage = () => {
     });
   };
 
-  const getStatusBadge = (status) => {
-    const statusClasses = {
-      'Paid': 'bg-green-100 text-green-800',
-      'Pending': 'bg-yellow-100 text-yellow-800',
-      'Partial': 'bg-blue-100 text-blue-800',
-      'Cancelled': 'bg-red-100 text-red-800'
-    };
-    
-    return `px-2 py-1 text-xs font-medium rounded-full ${statusClasses[status] || 'bg-gray-100 text-gray-800'}`;
-  };
-
-  const getTypeIcon = (type) => {
-    if (type === 'Pharmacy') {
-      return <FaPills className="text-purple-600" />;
-    } else if (type === 'Appointment') {
-      return <FaStethoscope className="text-blue-600" />;
-    }
-    return <FaReceipt className="text-gray-600" />;
-  };
-
   const handleFilterChange = (key, value) => {
     setFilters(prev => ({ ...prev, [key]: value }));
   };
 
   const exportReport = () => {
-    const csvContent = [
-      ['Date', 'Invoice Number', 'Type', 'Patient', 'Amount', 'Status', 'Payment Method'],
-      ...filteredRecords.map(record => [
-        formatDate(record.issue_date),
-        record.invoice_number,
-        record.invoice_type,
-        record.patient_id ? `${record.patient_id.first_name} ${record.patient_id.last_name}` : record.customer_name,
-        record.total,
-        record.status,
-        record.payment_method || 'N/A'
-      ])
-    ].map(row => row.join(',')).join('\n');
+    // Simple CSV export implementation
+    let csvContent = 'Revenue Report\n\n';
+    
+    if (revenueData) {
+      csvContent += `Period: ${formatDate(revenueData.period.start)} - ${formatDate(revenueData.period.end)}\n`;
+      csvContent += `Gross Revenue: ${formatCurrency(revenueData.revenue.gross)}\n`;
+      csvContent += `Net Revenue: ${formatCurrency(revenueData.revenue.net)}\n`;
+      csvContent += `Appointment Revenue: ${formatCurrency(revenueData.revenue.appointment)}\n`;
+      csvContent += `Pharmacy Revenue: ${formatCurrency(revenueData.revenue.pharmacy)}\n`;
+      csvContent += `Salary Expenses: ${formatCurrency(revenueData.expenses.salaries)}\n`;
+    }
 
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `pharmacy_income_report_${new Date().getTime()}.csv`;
+    link.download = `revenue_report_${new Date().getTime()}.csv`;
     link.click();
     window.URL.revokeObjectURL(url);
   };
@@ -195,10 +128,10 @@ const IncomePage = () => {
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-            <FaMoneyBillWave className="text-teal-600" />
-            Pharmacy Income & Revenue
+            <FaChartLine className="text-teal-600" />
+            Revenue Statistics
           </h1>
-          <p className="text-gray-600">Track pharmacy sales and appointment revenue</p>
+          <p className="text-gray-600">Track hospital revenue and financial performance</p>
         </div>
         <div className="flex gap-2">
           <button
@@ -210,69 +143,20 @@ const IncomePage = () => {
         </div>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-white p-6 rounded-lg shadow border">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Total Revenue</p>
-              <p className="text-2xl font-bold text-gray-800">
-                {formatCurrency(stats.totalRevenue)}
-              </p>
-            </div>
-            <FaChartLine className="text-3xl text-blue-600" />
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-lg shadow border">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Pharmacy Sales</p>
-              <p className="text-2xl font-bold text-purple-600">
-                {formatCurrency(stats.pharmacyRevenue)}
-              </p>
-            </div>
-            <FaPills className="text-3xl text-purple-600" />
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-lg shadow border">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Appointments</p>
-              <p className="text-2xl font-bold text-blue-600">
-                {formatCurrency(stats.appointmentRevenue)}
-              </p>
-            </div>
-            <FaStethoscope className="text-3xl text-blue-600" />
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-lg shadow border">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Total Invoices</p>
-              <p className="text-2xl font-bold text-teal-600">
-                {stats.totalInvoices}
-              </p>
-            </div>
-            <FaReceipt className="text-3xl text-teal-600" />
-          </div>
-        </div>
-      </div>
-
       {/* Filters */}
       <div className="bg-white p-4 rounded-lg shadow border">
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-          <div className="relative">
-            <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search invoices, patients..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500"
-            />
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Report Type</label>
+            <select
+              value={filters.period}
+              onChange={(e) => handleFilterChange('period', e.target.value)}
+              className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500"
+            >
+              <option value="overview">Overview</option>
+              <option value="daily">Daily Report</option>
+              <option value="monthly">Monthly Report</option>
+            </select>
           </div>
 
           <div>
@@ -295,36 +179,9 @@ const IncomePage = () => {
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
-            <select
-              value={filters.status}
-              onChange={(e) => handleFilterChange('status', e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500"
-            >
-              <option value="Paid">Paid</option>
-              <option value="Pending">Pending</option>
-              <option value="Partial">Partial</option>
-              <option value="all">All Status</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
-            <select
-              value={filters.type}
-              onChange={(e) => handleFilterChange('type', e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500"
-            >
-              <option value="all">All Types</option>
-              <option value="Pharmacy">Pharmacy</option>
-              <option value="Appointment">Appointment</option>
-            </select>
-          </div>
-
           <div className="flex items-end">
             <button
-              onClick={() => { fetchIncomeData(); fetchRevenueStats(); }}
+              onClick={fetchRevenueData}
               className="w-full bg-teal-600 text-white py-2 rounded-lg hover:bg-teal-700"
             >
               Apply Filters
@@ -333,160 +190,369 @@ const IncomePage = () => {
         </div>
       </div>
 
-      {/* Income Table */}
-      <div className="bg-white rounded-lg shadow border overflow-hidden">
-        <div className="p-4 border-b">
-          <h3 className="text-lg font-semibold text-gray-800">Income Records</h3>
-          <p className="text-sm text-gray-600">
-            Showing {filteredRecords.length} records from {formatDate(filters.startDate)} to {formatDate(filters.endDate)}
-          </p>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Invoice #</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Patient/Customer</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Payment Method</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {filteredRecords.map((record) => (
-                <tr key={record._id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{formatDate(record.issue_date)}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-blue-600">{record.invoice_number}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center gap-2">
-                      {getTypeIcon(record.invoice_type)}
-                      <span className="text-sm text-gray-900">{record.invoice_type}</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {record.patient_id ? (
-                      <div className="text-sm font-medium text-gray-900">
-                        <FaUser className="inline mr-1 text-gray-400" />
-                        {record.patient_id.first_name} {record.patient_id.last_name}
-                      </div>
-                    ) : (
-                      <div className="text-sm font-medium text-gray-900">
-                        <FaUser className="inline mr-1 text-gray-400" />
-                        {record.customer_name}
-                      </div>
-                    )}
-                    {record.patient_id?.patientId && (
-                      <div className="text-xs text-gray-500">ID: {record.patient_id.patientId}</div>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-bold text-gray-900">
-                      {formatCurrency(record.total)}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{record.payment_method || 'N/A'}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={getStatusBadge(record.status)}>
-                      {record.status}
+      {/* Overview Tab */}
+      {activeTab === 'overview' && revenueData && (
+        <div className="space-y-6">
+          {/* Summary Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="bg-white p-6 rounded-lg shadow border">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600">Gross Revenue</p>
+                  <p className="text-2xl font-bold text-green-600">
+                    {formatCurrency(revenueData.revenue.gross)}
+                  </p>
+                </div>
+                <FaMoneyBillWave className="text-3xl text-green-600" />
+              </div>
+            </div>
+
+            <div className="bg-white p-6 rounded-lg shadow border">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600">Net Revenue</p>
+                  <p className="text-2xl font-bold text-blue-600">
+                    {formatCurrency(revenueData.revenue.net)}
+                  </p>
+                </div>
+                <FaChartLine className="text-3xl text-blue-600" />
+              </div>
+            </div>
+
+            <div className="bg-white p-6 rounded-lg shadow border">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600">Salary Expenses</p>
+                  <p className="text-2xl font-bold text-red-600">
+                    {formatCurrency(revenueData.expenses.salaries)}
+                  </p>
+                </div>
+                <FaUserMd className="text-3xl text-red-600" />
+              </div>
+            </div>
+
+            <div className="bg-white p-6 rounded-lg shadow border">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600">Profit Margin</p>
+                  <p className="text-2xl font-bold text-teal-600">
+                    {revenueData.profitability.netMargin.toFixed(1)}%
+                  </p>
+                </div>
+                <FaRupeeSign className="text-3xl text-teal-600" />
+              </div>
+            </div>
+          </div>
+
+          {/* Revenue Breakdown */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-white p-6 rounded-lg shadow border">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">Revenue Sources</h3>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-2">
+                    <FaStethoscope className="text-blue-600" />
+                    <span>Appointments</span>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-semibold">{formatCurrency(revenueData.revenue.appointment)}</p>
+                    <p className="text-sm text-gray-600">
+                      {revenueData.counts.appointments} appointments
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-2">
+                    <FaPills className="text-purple-600" />
+                    <span>Pharmacy Sales</span>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-semibold">{formatCurrency(revenueData.revenue.pharmacy)}</p>
+                    <p className="text-sm text-gray-600">
+                      {revenueData.counts.pharmacySales} sales
+                    </p>
+                  </div>
+                </div>
+
+                <div className="border-t pt-3">
+                  <div className="flex justify-between items-center font-semibold">
+                    <span>Total Revenue</span>
+                    <span className="text-green-600">
+                      {formatCurrency(revenueData.revenue.gross)}
                     </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center gap-2">
-                      <button 
-                        className="text-teal-600 hover:text-teal-800 p-1"
-                        title="View Details"
-                        onClick={() => window.open(`/api/invoices/${record._id}/download`, '_blank')}
-                      >
-                        <FaEye />
-                      </button>
-                      <button 
-                        className="text-blue-600 hover:text-blue-800 p-1"
-                        title="Download Invoice"
-                        onClick={() => window.open(`/api/invoices/${record._id}/download`, '_blank')}
-                      >
-                        <FaDownload />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white p-6 rounded-lg shadow border">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">Financial Metrics</h3>
+              <div className="space-y-3">
+                <div className="flex justify-between">
+                  <span>Gross Margin</span>
+                  <span className="font-semibold">
+                    {revenueData.profitability.grossMargin.toFixed(1)}%
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Net Margin</span>
+                  <span className="font-semibold text-green-600">
+                    {revenueData.profitability.netMargin.toFixed(1)}%
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Revenue per Appointment</span>
+                  <span className="font-semibold">
+                    {formatCurrency(
+                      revenueData.counts.appointments > 0 
+                        ? revenueData.revenue.appointment / revenueData.counts.appointments 
+                        : 0
+                    )}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Salary to Revenue Ratio</span>
+                  <span className="font-semibold">
+                    {revenueData.revenue.gross > 0 
+                      ? ((revenueData.expenses.salaries / revenueData.revenue.gross) * 100).toFixed(1) + '%'
+                      : '0%'
+                    }
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Period Information */}
+          <div className="bg-white p-6 rounded-lg shadow border">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">Period Summary</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div>
+                <p className="text-sm text-gray-600">Start Date</p>
+                <p className="font-semibold">{formatDate(revenueData.period.start)}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">End Date</p>
+                <p className="font-semibold">{formatDate(revenueData.period.end)}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Total Invoices</p>
+                <p className="font-semibold">
+                  {revenueData.counts.appointments + revenueData.counts.pharmacySales}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Salaries Paid</p>
+                <p className="font-semibold">{revenueData.counts.salariesPaid}</p>
+              </div>
+            </div>
+          </div>
         </div>
+      )}
 
-        {filteredRecords.length === 0 && (
-          <div className="text-center py-12">
-            <FaReceipt className="text-4xl text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-500">No income records found</p>
-            <p className="text-sm text-gray-400 mt-1">
-              {searchTerm ? 'Try adjusting your search criteria' : 'No records for selected date range'}
-            </p>
-          </div>
-        )}
-      </div>
+      {/* Daily Report Tab */}
+      {activeTab === 'daily' && dailyRevenue && (
+        <div className="bg-white p-6 rounded-lg shadow border">
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">
+            Daily Revenue Report - {formatDate(dailyRevenue.date)}
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h4 className="font-medium text-gray-700 mb-3">Revenue Breakdown</h4>
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span>Appointment Revenue:</span>
+                  <span className="font-semibold">{formatCurrency(dailyRevenue.revenue.appointment)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Pharmacy Revenue:</span>
+                  <span className="font-semibold">{formatCurrency(dailyRevenue.revenue.pharmacy)}</span>
+                </div>
+                <div className="flex justify-between border-t pt-2">
+                  <span className="font-medium">Total Revenue:</span>
+                  <span className="font-bold text-green-600">
+                    {formatCurrency(dailyRevenue.revenue.total)}
+                  </span>
+                </div>
+              </div>
+            </div>
 
-      {/* Revenue Breakdown */}
-      <div className="bg-white p-6 rounded-lg shadow border">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">Revenue Breakdown</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <h4 className="font-medium text-gray-700 mb-3">By Type</h4>
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                  <FaPills className="text-purple-600" />
-                  <span className="text-gray-600">Pharmacy Sales:</span>
+            <div>
+              <h4 className="font-medium text-gray-700 mb-3">Expenses & Net</h4>
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span>Salary Expenses:</span>
+                  <span className="font-semibold text-red-600">
+                    {formatCurrency(dailyRevenue.expenses.salaries)}
+                  </span>
                 </div>
-                <span className="font-medium">{formatCurrency(stats.pharmacyRevenue)}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                  <FaStethoscope className="text-blue-600" />
-                  <span className="text-gray-600">Appointments:</span>
+                <div className="flex justify-between border-t pt-2">
+                  <span className="font-medium">Net Income:</span>
+                  <span className="font-bold text-blue-600">
+                    {formatCurrency(dailyRevenue.net)}
+                  </span>
                 </div>
-                <span className="font-medium">{formatCurrency(stats.appointmentRevenue)}</span>
-              </div>
-              <div className="flex justify-between border-t pt-2">
-                <span className="font-medium">Total Revenue:</span>
-                <span className="font-bold text-green-600">
-                  {formatCurrency(stats.totalRevenue)}
-                </span>
               </div>
             </div>
           </div>
 
-          <div>
-            <h4 className="font-medium text-gray-700 mb-3">Performance Metrics</h4>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-gray-600">Total Invoices:</span>
-                <span className="font-medium">{stats.totalInvoices}</span>
+          <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <p className="text-sm text-gray-600">Appointments</p>
+              <p className="text-xl font-semibold">{dailyRevenue.counts.appointments}</p>
+            </div>
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <p className="text-sm text-gray-600">Pharmacy Sales</p>
+              <p className="text-xl font-semibold">{dailyRevenue.counts.pharmacySales}</p>
+            </div>
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <p className="text-sm text-gray-600">Salaries Paid</p>
+              <p className="text-xl font-semibold">{dailyRevenue.counts.salariesPaid}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Monthly Report Tab */}
+      {activeTab === 'monthly' && monthlyRevenue && (
+        <div className="bg-white p-6 rounded-lg shadow border">
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">
+            Monthly Revenue Report - {new Date(monthlyRevenue.year, monthlyRevenue.month - 1).toLocaleString('default', { month: 'long' })} {monthlyRevenue.year}
+          </h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <p className="text-sm text-blue-600">Total Revenue</p>
+              <p className="text-2xl font-bold text-blue-700">
+                {formatCurrency(monthlyRevenue.totalRevenue)}
+              </p>
+            </div>
+            <div className="bg-red-50 p-4 rounded-lg">
+              <p className="text-sm text-red-600">Salary Expenses</p>
+              <p className="text-2xl font-bold text-red-700">
+                {formatCurrency(monthlyRevenue.salaryExpenses)}
+              </p>
+            </div>
+            <div className="bg-green-50 p-4 rounded-lg">
+              <p className="text-sm text-green-600">Net Revenue</p>
+              <p className="text-2xl font-bold text-green-700">
+                                {formatCurrency(monthlyRevenue.netRevenue)}
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h4 className="font-medium text-gray-700 mb-3">Revenue Breakdown</h4>
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span>Appointment Revenue:</span>
+                  <span className="font-semibold">
+                    {formatCurrency(monthlyRevenue.appointmentRevenue)}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Pharmacy Revenue:</span>
+                  <span className="font-semibold">
+                    {formatCurrency(monthlyRevenue.pharmacyRevenue)}
+                  </span>
+                </div>
+                <div className="flex justify-between border-t pt-2">
+                  <span className="font-medium">Total Revenue:</span>
+                  <span className="font-bold text-green-600">
+                    {formatCurrency(monthlyRevenue.totalRevenue)}
+                  </span>
+                </div>
               </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Average Invoice Value:</span>
-                <span className="font-medium">
-                  {formatCurrency(stats.totalInvoices > 0 ? stats.totalRevenue / stats.totalInvoices : 0)}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Collection Rate:</span>
-                <span className="font-medium text-green-600">98.5%</span>
+            </div>
+
+            <div>
+              <h4 className="font-medium text-gray-700 mb-3">Financial Metrics</h4>
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span>Average Daily Revenue:</span>
+                  <span className="font-semibold">
+                    {formatCurrency(monthlyRevenue.averageDailyRevenue)}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Highest Revenue Day:</span>
+                  <span className="font-semibold">
+                    {formatCurrency(monthlyRevenue.highestRevenueDay.amount)} on {formatDate(monthlyRevenue.highestRevenueDay.date)}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Profit Margin:</span>
+                  <span className="font-semibold text-green-600">
+                    {monthlyRevenue.profitMargin.toFixed(1)}%
+                  </span>
+                </div>
               </div>
             </div>
           </div>
+
+          <div className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <p className="text-sm text-gray-600">Total Appointments</p>
+              <p className="text-xl font-semibold">{monthlyRevenue.totalAppointments}</p>
+            </div>
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <p className="text-sm text-gray-600">Pharmacy Sales</p>
+              <p className="text-xl font-semibold">{monthlyRevenue.totalPharmacySales}</p>
+            </div>
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <p className="text-sm text-gray-600">Business Days</p>
+              <p className="text-xl font-semibold">{monthlyRevenue.businessDays}</p>
+            </div>
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <p className="text-sm text-gray-600">Salaries Paid</p>
+              <p className="text-xl font-semibold">{monthlyRevenue.totalSalariesPaid}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tabs Navigation */}
+      <div className="bg-white p-4 rounded-lg shadow border">
+        <div className="flex space-x-4">
+          <button
+            onClick={() => setActiveTab('overview')}
+            className={`px-4 py-2 rounded-lg font-medium ${
+              activeTab === 'overview'
+                ? 'bg-teal-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            <FaChartLine className="inline mr-2" />
+            Overview
+          </button>
+          <button
+            onClick={() => setActiveTab('daily')}
+            className={`px-4 py-2 rounded-lg font-medium ${
+              activeTab === 'daily'
+                ? 'bg-teal-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            <FaCalendarAlt className="inline mr-2" />
+            Daily Report
+          </button>
+          <button
+            onClick={() => setActiveTab('monthly')}
+            className={`px-4 py-2 rounded-lg font-medium ${
+              activeTab === 'monthly'
+                ? 'bg-teal-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            <FaCalendarAlt className="inline mr-2" />
+            Monthly Report
+          </button>
         </div>
       </div>
     </div>
   );
 };
 
-export default IncomePage;
+export default RevenueStats;

@@ -255,6 +255,91 @@ useEffect(() => {
   fetchOptions();
 }, [formData.department]);
 
+// Add a new useEffect hook after the existing one that fetches doctor data
+// This hook will automatically set the start_time
+useEffect(() => {
+  if (formData.doctorId && formData.date && formData.type === 'time-based') {
+    // Sort existing appointments by start time
+    const sortedAppointments = [...existingAppointments].sort(
+      (a, b) => new Date(a.startTime) - new Date(b.startTime)
+    );
+
+    let proposedTime = null;
+    const now = new Date();
+    const today = new Date(formData.date);
+    const isToday = today.toDateString() === now.toDateString();
+
+    // Loop through the doctor's working hours
+    for (const range of doctorWorkingHours) {
+      const [startH, startM] = range.start.split(':').map(Number);
+      const [endH, endM] = range.end.split(':').map(Number);
+      let currentTime = new Date();
+      currentTime.setHours(startH, startM, 0, 0);
+
+      // If it's today, start searching from the current time
+      if (isToday && currentTime < now) {
+        // Round up to the nearest appointment duration increment
+        const minutesToAdd = Math.ceil(now.getMinutes() / formData.duration) * formData.duration;
+        currentTime.setMinutes(minutesToAdd, 0, 0);
+        // Ensure we don't start before the doctor's actual start time
+        if (currentTime.getHours() * 60 + currentTime.getMinutes() < startH * 60 + startM) {
+            currentTime.setHours(startH, startM, 0, 0);
+        }
+      }
+
+      // Check for available slots
+      while (currentTime.getHours() * 60 + currentTime.getMinutes() < endH * 60 + endM) {
+        const proposedStart = currentTime.toTimeString().slice(0, 5);
+        const proposedEnd = calculateEndTime(proposedStart, formData.duration);
+
+        const [proposedEndH, proposedEndM] = proposedEnd.split(':').map(Number);
+        const proposedEndInMinutes = proposedEndH * 60 + proposedEndM;
+
+        // Check if the proposed end time is within the working hours range
+        if (proposedEndInMinutes > endH * 60 + endM) {
+            break; // Stop if the slot would end after the working hours
+        }
+
+        // Check for conflicts with existing appointments
+        const hasConflict = sortedAppointments.some(appt => {
+          const apptStart = new Date(appt.startTime);
+          const apptEnd = new Date(appt.endTime);
+          const newStart = new Date(today);
+          newStart.setHours(currentTime.getHours(), currentTime.getMinutes());
+          const newEnd = new Date(today);
+          newEnd.setHours(proposedEndH, proposedEndM);
+
+          // Check for overlap
+          return (
+            (newStart >= apptStart && newStart < apptEnd) ||
+            (newEnd > apptStart && newEnd <= apptEnd) ||
+            (newStart <= apptStart && newEnd >= apptEnd)
+          );
+        });
+
+        // If no conflict, this is our next available slot
+        if (!hasConflict) {
+          proposedTime = proposedStart;
+          break; // Exit the while loop
+        }
+
+        // Move to the next potential slot
+        currentTime.setMinutes(currentTime.getMinutes() + parseInt(formData.duration));
+      }
+
+      if (proposedTime) {
+        break; // Exit the for loop once a slot is found
+      }
+    }
+
+    // Update the form state with the newly found time
+    setFormData(prev => ({ ...prev, start_time: proposedTime || '' }));
+
+  } else if (formData.type !== 'time-based') {
+    setFormData(prev => ({ ...prev, start_time: '' }));
+  }
+}, [formData.doctorId, formData.date, formData.duration, formData.type, existingAppointments, doctorWorkingHours]);
+
   // Fetch hospital charges
   useEffect(() => {
     if (hospitalId) {
@@ -555,22 +640,23 @@ const handleGenerateQR = async () => {
         payment_method: formData.paymentMethod,
         status: status,
         items: chargesSummary,
-        transaction_id: paymentInfo ? paymentInfo.transactionId : null, // Store transaction ID
+        // transaction_id: paymentInfo ? paymentInfo.transactionId : null, // Store transaction ID
       });
 
       alert('Appointment scheduled and bill generated!');
 
       const appointmentDetails = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/appointments/${appointmentId}`);
       console.log("Appointment Details for Slip:", appointmentDetails.data);
-      const enriched = appointmentDetails.data.map((appt) => ({
-          ...appt,
-          patientName: `${appt.patient_id?.first_name || ''} ${appt.patient_id?.last_name || ''}`.trim(),
-          doctorName: `Dr. ${appt.doctor_id?.firstName || ''} ${appt.doctor_id?.lastName || ''}`.trim(),
-          departmentName: appt.department_id?.name || 'N/A',
-          date: new Date(appt.appointment_date).toLocaleDateString(),
-          time: appt.time_slot?.split(' - ')[0] || 'N/A',
-          patientId: appt.patient_id?.patientId
-        }));
+      const appt = appointmentDetails.data;
+      const enriched = { // Wrap the single object in an array for consistent state handling
+          ...appt,
+          patientName: `${appt.patient_id?.first_name || ''} ${appt.patient_id?.last_name || ''}`.trim(),
+          doctorName: `Dr. ${appt.doctor_id?.firstName || ''} ${appt.doctor_id?.lastName || ''}`.trim(),
+          departmentName: appt.department_id?.name || 'N/A',
+          date: new Date(appt.appointment_date).toLocaleDateString(),
+          time: appt.time_slot?.split(' - ')[0] || 'N/A',
+          patientId: appt.patient_id?.patientId
+      };
       setSubmitDetails(enriched);
 
       setSlipModal(true);

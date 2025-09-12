@@ -456,6 +456,7 @@ const CustomerList = () => {
       try {
         const base = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
         const response = await axios.get(`${base}/api/customers`);
+        console.log(response.data);
         
         // Transform API response to match expected format
         const customerData = response.data.customers || response.data || [];

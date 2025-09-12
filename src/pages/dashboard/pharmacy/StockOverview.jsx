@@ -118,7 +118,7 @@ const StockOverview = () => {
             </div>
             <FaBox className="text-3xl text-blue-600" />
           </div>
-          <Link to="/dashboard/pharmacy/inventory/medicines" className="text-sm text-blue-600 hover:text-blue-700 mt-2 block">
+          <Link to="/dashboard/pharmacy/medicines" className="text-sm text-blue-600 hover:text-blue-700 mt-2 block">
             View all →
           </Link>
         </div>
@@ -131,7 +131,7 @@ const StockOverview = () => {
             </div>
             <FaExclamationTriangle className="text-3xl text-orange-600" />
           </div>
-          <Link to="/dashboard/pharmacy/inventory/low-stock" className="text-sm text-orange-600 hover:text-orange-700 mt-2 block">
+          <Link to="/dashboard/pharmacy/low-stock" className="text-sm text-orange-600 hover:text-orange-700 mt-2 block">
             View details →
           </Link>
         </div>
@@ -144,7 +144,7 @@ const StockOverview = () => {
             </div>
             <FaCalendarTimes className="text-3xl text-red-600" />
           </div>
-          <Link to="/dashboard/pharmacy/inventory/expiring" className="text-sm text-red-600 hover:text-red-700 mt-2 block">
+          <Link to="/dashboard/pharmacy/expiring" className="text-sm text-red-600 hover:text-red-700 mt-2 block">
             Check items →
           </Link>
         </div>
@@ -157,7 +157,7 @@ const StockOverview = () => {
             </div>
             <FaCalendarTimes className="text-3xl text-gray-600" />
           </div>
-          <Link to="/dashboard/pharmacy/inventory/expired" className="text-sm text-gray-600 hover:text-gray-700 mt-2 block">
+          <Link to="/dashboard/pharmacy/expired" className="text-sm text-gray-600 hover:text-gray-700 mt-2 block">
             Manage →
           </Link>
         </div>

@@ -34,6 +34,7 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
         );
         appointmentEndpointAvailable = true;
         const pres = resp.data.prescription || resp.data || null;
+        console.log('Loaded prescription from appointment-specific endpoint:', pres);
         if (pres) {
           setPrescription(pres);
           return;
@@ -52,50 +53,50 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
 
     // Fallback: fetch all prescriptions and try to find one matching appointment_id or patient_id
     try {
-      const respAll = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/prescriptions?_=${Date.now()}`);
-      const list = Array.isArray(respAll.data) ? respAll.data : (respAll.data.prescriptions || []);
-      if (!list || !list.length) {
-        setPrescription(null);
-        return;
-      }
+      // const respAll = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/prescriptions?_=${Date.now()}`);
+      // const list = Array.isArray(respAll.data) ? respAll.data : (respAll.data.prescriptions || []);
+      // if (!list || !list.length) {
+      //   setPrescription(null);
+      //   return;
+      // }
 
-      const appointmentId = appointmentData._id;
-      const patientId = appointmentData.patient_id && appointmentData.patient_id._id ? appointmentData.patient_id._id : appointmentData.patient_id;
+      // const appointmentId = appointmentData._id;
+      // const patientId = appointmentData.patient_id && appointmentData.patient_id._id ? appointmentData.patient_id._id : appointmentData.patient_id;
 
-      // Prefer exact appointment match OR exact patient match
-      const normalizeId = (x) => (x && (x._id || x)) ? String(x._id || x) : null;
-      const appointmentIdStr = String(appointmentId);
-      const appointmentPatientId = appointmentData.patient_id && (appointmentData.patient_id._id || appointmentData.patient_id);
-      const patientIdStr = appointmentPatientId ? String(appointmentPatientId) : null;
+      // // Prefer exact appointment match OR exact patient match
+      // const normalizeId = (x) => (x && (x._id || x)) ? String(x._id || x) : null;
+      // const appointmentIdStr = String(appointmentId);
+      // const appointmentPatientId = appointmentData.patient_id && (appointmentData.patient_id._id || appointmentData.patient_id);
+      // const patientIdStr = appointmentPatientId ? String(appointmentPatientId) : null;
 
-      // Find prescription linked to this appointment
-      let found = list.find(p => {
-        const pAppt = p.appointment_id && (p.appointment_id._id || p.appointment_id);
-        return pAppt && String(pAppt) === appointmentIdStr;
-      });
+      // // Find prescription linked to this appointment
+      // let found = list.find(p => {
+      //   const pAppt = p.appointment_id && (p.appointment_id._id || p.appointment_id);
+      //   return pAppt && String(pAppt) === appointmentIdStr;
+      // });
 
-      if (!found && patientIdStr) {
-        // find prescriptions whose patient_id exactly matches appointment patient
-        const byPatient = list.filter(p => {
-          const pid = p.patient_id && (p.patient_id._id || p.patient_id);
-          return pid && String(pid) === patientIdStr;
-        });
-        if (byPatient.length) {
-          // pick most recent by created_at
-          byPatient.sort((a,b) => {
-            const ta = a.created_at ? new Date(a.created_at).getTime() : 0;
-            const tb = b.created_at ? new Date(b.created_at).getTime() : 0;
-            return tb - ta;
-          });
-          found = byPatient[0];
-        }
-        // keep full patient-matching list for attach UI
-        setCandidatePrescriptions(byPatient);
-      } else {
-        setCandidatePrescriptions([]);
-      }
+      // if (!found && patientIdStr) {
+      //   // find prescriptions whose patient_id exactly matches appointment patient
+      //   const byPatient = list.filter(p => {
+      //     const pid = p.patient_id && (p.patient_id._id || p.patient_id);
+      //     return pid && String(pid) === patientIdStr;
+      //   });
+      //   if (byPatient.length) {
+      //     // pick most recent by created_at
+      //     byPatient.sort((a,b) => {
+      //       const ta = a.created_at ? new Date(a.created_at).getTime() : 0;
+      //       const tb = b.created_at ? new Date(b.created_at).getTime() : 0;
+      //       return tb - ta;
+      //     });
+      //     found = byPatient[0];
+      //   }
+      //   // keep full patient-matching list for attach UI
+      //   setCandidatePrescriptions(byPatient);
+      // } else {
+      //   setCandidatePrescriptions([]);
+      // }
 
-      setPrescription(found || null);
+      // setPrescription(found || null);
       return;
     } catch (errAll) {
       console.debug('Generic prescriptions list fetch failed:', errAll?.response?.status || errAll.message);

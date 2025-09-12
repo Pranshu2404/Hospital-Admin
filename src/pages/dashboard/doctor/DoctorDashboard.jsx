@@ -64,7 +64,7 @@ const DoctorDashboard = () => {
         const [patientsRes, appointmentsRes, doctorsRes, calendarRes] = await Promise.all([
           
           axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/patients`),
-          axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/appointments`),
+          axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/appointments/doctor/${doctorId}`),
           axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/doctors`),
           axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/calendar/doctor/${doctorId}`)
         ]);
@@ -73,10 +73,10 @@ const DoctorDashboard = () => {
 
         setName(currentDoctor.data.firstName)
         const today = dayjs();
-        const patients = patientsRes.data || [];
+        const patients = patientsRes.data.patients || [];
         const appointments = appointmentsRes.data || [];
-        setAppointments(appointmentsRes.data);
-        setPatients(patientsRes.data || []); // ✅ Always provide an array
+        setAppointments(appointments);
+        setPatients(patients);
         setDoctors(doctorsRes.data);
         const todayAppointments = appointments.filter(appt =>
           dayjs(appt.appointment_date).isSame(today, 'day')
