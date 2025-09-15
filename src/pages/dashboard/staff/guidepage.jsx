@@ -100,7 +100,7 @@ export default function StaffGuidePage() {
   const navigate = useNavigate();
 
   return (
-    <Layout sidebarItems={staffSidebar}>
+    <Layout sidebarItems={staffSidebar} section={'Staff'}>
       <div className="max-w-4xl mx-auto p-6">
         <h2 className="text-2xl font-bold text-teal-700 mb-6 text-center">Staff Guide</h2>
         <Accordion type="multiple" className="space-y-4">

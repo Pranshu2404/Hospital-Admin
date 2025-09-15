@@ -152,7 +152,7 @@ const PharmacyDashboard = () => {
           apiClient.get('/api/medicines/expired'),
           apiClient.get('/api/orders/sale?limit=5&page=1'),
           apiClient.get('/api/prescriptions?limit=5&page=1'),
-          apiClient.get('/api/revenue/daily'),
+          apiClient.get('/api/invoices/stats/pharmacy-monthly'),
           apiClient.get('/api/medicines/low-stock')
         ]);
 
@@ -163,6 +163,7 @@ const PharmacyDashboard = () => {
         console.log(salesResponse.data);
         const recentPrescriptions = prescriptionsResponse.data.prescriptions || prescriptionsResponse.data;
         const revenueData = revenueResponse.data;
+        console.log(revenueData);
         const lowStockMedicines = lowStockResponse.data;
 
         const today = new Date();
@@ -195,7 +196,7 @@ const PharmacyDashboard = () => {
             totalSuppliers: suppliers.length,
             expiredStockCount: expiredMedicines.length,
             expiringThisMonthCount: expiringThisMonth.length,
-            todaysRevenue: revenueData.revenue?.total || 0,
+            todaysRevenue: revenueData.totalRevenue || 0,
             totalSales: recentSales.length,
             totalPrescriptions: recentPrescriptions.length,
             lowStockCount: lowStockMedicines.length
@@ -249,10 +250,10 @@ const PharmacyDashboard = () => {
             <p className="text-gray-500 mt-1">Comprehensive overview of your pharmacy operations</p>
           </div>
           <div className="flex gap-3 mt-4 sm:mt-0">
-            <Link to="/dashboard/pharmacy/inventory/add-medicine" className="flex items-center gap-2 bg-teal-600 text-white font-semibold px-4 py-2 rounded-lg shadow hover:bg-teal-700">
+            <Link to="/dashboard/pharmacy/add-medicine" className="flex items-center gap-2 bg-teal-600 text-white font-semibold px-4 py-2 rounded-lg shadow hover:bg-teal-700">
               <FaPlus /> Add Medicine
             </Link>
-            <Link to="/dashboard/pharmacy/sales/pos" className="flex items-center gap-2 bg-blue-600 text-white font-semibold px-4 py-2 rounded-lg shadow hover:bg-blue-700">
+            <Link to="/dashboard/pharmacy/pos" className="flex items-center gap-2 bg-blue-600 text-white font-semibold px-4 py-2 rounded-lg shadow hover:bg-blue-700">
               <FaShoppingCart /> POS
             </Link>
           </div>

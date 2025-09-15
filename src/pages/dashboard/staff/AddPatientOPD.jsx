@@ -7,7 +7,7 @@ import { staffSidebar } from '@/constants/sidebarItems/staffSidebar'
 
 const AddPatientOPD1 = () => {
   return (
-    <Layout sidebarItems={staffSidebar}>
+    <Layout sidebarItems={staffSidebar} section={'Staff'}>
       <AddPatientOPDForm />
     </Layout>
   );

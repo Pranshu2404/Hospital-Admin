@@ -150,7 +150,7 @@ const PharmacyGuidePage = () => {
   const navigate = useNavigate();
 
   return (
-    <Layout sidebarItems={pharmacySidebar}>
+    <Layout sidebarItems={pharmacySidebar} section={'Pharmacy'}>
       <div className="max-w-6xl mx-auto p-6">
         {/* Header Section */}
         <div className="text-center mb-8">

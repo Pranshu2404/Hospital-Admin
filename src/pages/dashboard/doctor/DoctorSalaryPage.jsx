@@ -132,7 +132,7 @@ const DoctorSalaryPage = () => {
   }
 
   return (
-    <Layout sidebarItems={doctorSidebar}>
+    <Layout sidebarItems={doctorSidebar} section = "Doctor">
     <div className="p-6 space-y-6 bg-gray-100 min-h-screen">
       <div className="flex items-center gap-4 border-b pb-4">
         <FaUserMd className="text-4xl text-teal-600" />

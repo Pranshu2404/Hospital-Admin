@@ -5,7 +5,7 @@ import { staffSidebar } from '@/constants/sidebarItems/staffSidebar'
 
 const AppointmentsPage1 = () => {
   return (
-    <Layout sidebarItems={staffSidebar}>
+    <Layout sidebarItems={staffSidebar} section={'Staff'}>
       <AppointmentList />
     </Layout>
   );

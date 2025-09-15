@@ -218,7 +218,7 @@ const AppointmentDetails = () => {
   const appointmentDate = new Date(appointment.appointment_date);
 
   return (
-    <Layout sidebarItems={doctorSidebar}>
+    <Layout sidebarItems={doctorSidebar} section={'Doctor'}>
       <div className="p-6 bg-gray-50 min-h-screen">
         <div className="bg-white p-6 rounded-xl shadow-md">
           {/* Header */}

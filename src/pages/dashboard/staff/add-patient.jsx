@@ -27,7 +27,7 @@ const AddPatientPage1 = () => {
   const [open, setOpen] = useState(true); // ✅ This must be a boolean
   const navigate = useNavigate();
   return (
-    <Layout sidebarItems={staffSidebar}>
+    <Layout sidebarItems={staffSidebar} section={'Staff'}>
       <ChoosePatientTypeModal isOpen={open} onClose={()=>navigate('/dashboard/staff')} />
       {/* <AddPatientIPDForm/> */}
     </Layout>

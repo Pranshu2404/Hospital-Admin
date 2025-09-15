@@ -8,7 +8,7 @@ const PatientProfilePage1 = () => {
   const patient = location.state?.patient || null;
 
   return (
-    <Layout sidebarItems={staffSidebar}>
+    <Layout sidebarItems={staffSidebar} section={'Staff'}>
       <PatientProfile selectedPatient={patient} />
     </Layout>
   );

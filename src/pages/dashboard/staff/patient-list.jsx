@@ -8,7 +8,7 @@ const PatientListPage1 = () => {
   const [selectedPatient, setSelectedPatient] = useState(null);
 
   return (
-    <Layout sidebarItems={staffSidebar}>
+    <Layout sidebarItems={staffSidebar} section={'Staff'}>
         <IpdOpdPatientList setSelectedPatient={setSelectedPatient} updatePatientBasePath="/dashboard/staff/update-patient" />
     </Layout>
   );

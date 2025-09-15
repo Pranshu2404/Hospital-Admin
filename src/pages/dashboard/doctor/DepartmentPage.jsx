@@ -46,7 +46,7 @@ const MyDepartmentPage = () => {
   if (loading) return <p className="p-6">Loading...</p>;
 
   return (
-    <Layout sidebarItems={doctorSidebar}>
+    <Layout sidebarItems={doctorSidebar} section = "Doctor">
     <div className="p-6 bg-gray-50 min-h-screen">
       {department && (
         <>

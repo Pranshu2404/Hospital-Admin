@@ -1,6 +1,6 @@
 import { SearchIcon, BellIcon, ChevronDownIcon } from './common/Icons';
 
-const Header = ({ currentPage, section = 'Hospital Management', sidebarItems = [] }) => {
+const Header = ({ currentPage, section = 'Hospital', sidebarItems = [] }) => {
   const getPageTitle = () => {
     // Try to find the current page in sidebarItems
     let found = null;
@@ -36,12 +36,13 @@ const Header = ({ currentPage, section = 'Hospital Management', sidebarItems = [
   const getBreadcrumb = () => {
     const title = getPageTitle();
     return (
-      <nav className="flex space-x-1">
-        <span className="text-sm text-gray-500">{section}</span>
-        <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <nav className="flex space-x-1 font-bold">
+        {/* <span className="text-lg text-teal-600">({section}</span> */}
+        <span className="text-lg text-teal-600">({section} Admin)</span>
+        {/* <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-        </svg>
-        <span className="text-sm text-teal-600 font-medium">{title}</span>
+        </svg> */}
+        {/* <span className="text-lg text-teal-600 font-medium">{title})</span> */}
       </nav>
     );
   };
