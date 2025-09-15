@@ -137,7 +137,7 @@ export const pharmacySidebar = [
     icon: FaPrescription,
     submenu: [
       { label: 'All Prescriptions', path: '/dashboard/pharmacy/prescriptions/list' },
-      { label: 'New Prescription', path: '/dashboard/pharmacy/prescriptions/new' },
+      // { label: 'New Prescription', path: '/dashboard/pharmacy/prescriptions/new' },
       { label: 'Dispense Medication', path: '/dashboard/pharmacy/prescriptions/dispense' },
       { label: 'Prescription Queue', path: '/dashboard/pharmacy/prescriptions/queue' },
     ],
