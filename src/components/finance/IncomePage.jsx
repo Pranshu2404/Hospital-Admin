@@ -53,6 +53,7 @@ const RevenueStats = () => {
         params: { date: filters.startDate }
       });
       setDailyRevenue(dailyResponse.data);
+      console.log(dailyResponse.data)
 
       // Fetch monthly report
       const monthlyResponse = await axios.get(`${baseUrl}/api/revenue/monthly`, {
@@ -61,6 +62,7 @@ const RevenueStats = () => {
           month: filters.month
         }
       });
+      console.log(monthlyResponse.data)
       setMonthlyRevenue(monthlyResponse.data);
 
     } catch (error) {
