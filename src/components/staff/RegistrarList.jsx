@@ -26,7 +26,7 @@ const RegistrarList = ({ setCurrentPage, setSelectedStaff }) => {
   }, []);
 
   const filteredStaff = staffMembers
-  .filter((staff) => staff.role === 'registrar')
+  .filter((staff) => staff.role === 'receptionist')
   .filter((staff) =>
     staff.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     `${staff.first_name} ${staff.last_name}`.toLowerCase().includes(searchTerm.toLowerCase())
@@ -58,7 +58,7 @@ const RegistrarList = ({ setCurrentPage, setSelectedStaff }) => {
         <th className="px-6 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Phone</th>
         <th className="px-6 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Department</th>
         <th className="px-6 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Status</th>
-        <th className="px-6 py-3 text-left font-medium text-gray-500 uppercase tracking-wider">Action</th>
+        <th className="px-6 py-3 text-left font-medium text-gray-500 uppercase tracking-wider"></th>
       </tr>
     </thead>
     <tbody>
@@ -94,7 +94,7 @@ const RegistrarList = ({ setCurrentPage, setSelectedStaff }) => {
               </span>
             </td>
             <td className="px-6 py-4 whitespace-nowrap">
-              <Button
+              {/* <Button
                 variant="outline"
                 size="sm"
                 onClick={() => {
@@ -103,7 +103,7 @@ const RegistrarList = ({ setCurrentPage, setSelectedStaff }) => {
                 }}
               >
                 View
-              </Button>
+              </Button> */}
             </td>
           </tr>
         ))

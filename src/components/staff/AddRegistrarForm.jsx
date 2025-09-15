@@ -371,6 +371,7 @@ const AddRegistrarForm = () => {
 
     const registrarData = {
       ...selectedStaff,
+      role: 'receptionist', // Ensure role is set to receptionist
       department,
       email,
       joiningDate, // Use the date from the state
