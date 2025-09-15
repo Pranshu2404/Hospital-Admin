@@ -17,7 +17,6 @@ import {
 
 const Dashboard = () => {
   const navigate = useNavigate();
-
   const [stats, setStats] = useState([]);
   const [recentAppointments, setRecentAppointments] = useState([]);
   const [recentActivities, setRecentActivities] = useState([]);
@@ -36,11 +35,11 @@ const Dashboard = () => {
         const staff = staffRes.data || [];
         const appointments = appointmentsRes.data || [];
         const doctors = doctorRes.data || [];
-
+        console.log(patients, staff, appointments, doctors)
         setStats([
   {
     title: 'Total Patients',
-    value: patients.length.toString(),
+    value: patients?.length?.toString(),
     change: '',
     icon: <PatientIcon />,
     bgColor: 'bg-blue-50',
@@ -50,7 +49,7 @@ const Dashboard = () => {
   },
   {
     title: "Today's Appointments",
-    value: appointments.filter(a => dayjs(a.date).isSame(dayjs(), 'day')).length.toString(),
+   value: (appointments ?? []).filter(a => dayjs(a.appointment_date).isSame(dayjs(), 'day')).length?.toString(),
     change: '',
     icon: <AppointmentIcon />,
     bgColor: 'bg-teal-50',
@@ -60,7 +59,7 @@ const Dashboard = () => {
   },
   {
     title: 'Active Staff',
-    value: staff.length.toString(),
+    value: staff?.length?.toString(),
     change: '',
     icon: <DoctorsIcon />,
     bgColor: 'bg-green-50',
@@ -70,7 +69,7 @@ const Dashboard = () => {
   },
   {
     title: 'Doctors',
-    value: doctors.length.toString(),
+    value: doctors?.length?.toString(),
     change: '',
     icon: <FinanceIcon />,
     bgColor: 'bg-amber-50',
