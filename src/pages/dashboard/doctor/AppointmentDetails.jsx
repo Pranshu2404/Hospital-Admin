@@ -4,6 +4,7 @@ import axios from 'axios';
 import { FaUser, FaClock, FaStethoscope, FaNotesMedical, FaCheckCircle, FaPlus, FaTimes, FaMoneyBillWave } from 'react-icons/fa';
 import Layout from '@/components/Layout';
 import { doctorSidebar } from '@/constants/sidebarItems/doctorSidebar';
+import { POPULAR_MEDICINES } from '@/constants/medicines';
 
 const AppointmentDetails = () => {
   const { id } = useParams();
@@ -11,7 +12,7 @@ const AppointmentDetails = () => {
   const navigate = useNavigate();
   const [appointment, setAppointment] = useState(state?.appointment || null);
   const [loading, setLoading] = useState(!state?.appointment);
-  
+  const [suggestions, setSuggestions] = useState([])
   const [showPrescriptionForm, setShowPrescriptionForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -26,12 +27,26 @@ const AppointmentDetails = () => {
     prescriptionImage: null
   });
 
+  console.log(POPULAR_MEDICINES)
+
   useEffect(() => {
     // If appointment wasn't passed via state, fetch it from the API
     if (!state?.appointment && id) {
       fetchAppointment();
     }
   }, [id, state]);
+
+  const searchMedicines = (query) => {
+  if (query.length < 2) {
+    setSuggestions([]);
+    return;
+  }
+  
+  const filteredMedicines = POPULAR_MEDICINES.filter(med => 
+    med.toLowerCase().includes(query.toLowerCase())
+  );
+  setSuggestions(filteredMedicines);
+};
 
   const fetchAppointment = async () => {
     try {
@@ -87,13 +102,6 @@ const AppointmentDetails = () => {
     setPrescription(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleMedicineChange = (index, e) => {
-    const { name, value } = e.target;
-    const newItems = [...prescription.items];
-    newItems[index][name] = value;
-    setPrescription(prev => ({ ...prev, items: newItems }));
-  };
-
   const addMedicine = () => {
     setPrescription(prev => ({
       ...prev,
@@ -134,6 +142,24 @@ const AppointmentDetails = () => {
       setUploadingImage(false);
     }
   };
+
+  const handleMedicineChange = (index, e) => {
+  const { name, value } = e.target;
+  const newItems = [...prescription.items];
+  newItems[index][name] = value;
+  setPrescription(prev => ({ ...prev, items: newItems }));
+
+  if (name === 'medicine_name') {
+    searchMedicines(value); // Call local search function
+  }
+};
+
+const handleSuggestionClick = (index, medicineName) => {
+  const newItems = [...prescription.items];
+  newItems[index].medicine_name = medicineName;
+  setPrescription(prev => ({ ...prev, items: newItems }));
+  setSuggestions([]); // Clear suggestions after selection
+};
 
   const handleSubmitPrescription = async (e) => {
     e.preventDefault();
@@ -393,17 +419,30 @@ const AppointmentDetails = () => {
 
                     {prescription.items.map((item, index) => (
                       <div key={index} className="grid grid-cols-1 md:grid-cols-12 gap-4 mb-4 p-4 bg-white rounded border">
-                        <div className="md:col-span-3">
-                          <label className="block text-sm font-medium mb-1">Medicine Name *</label>
-                          <input
-                            type="text"
-                            name="medicine_name"
-                            value={item.medicine_name}
-                            onChange={(e) => handleMedicineChange(index, e)}
-                            className="w-full border rounded px-2 py-1 text-sm"
-                            required
-                          />
-                        </div>
+                        <div className="md:col-span-3 relative">
+                          <label className="block text-sm font-medium mb-1">Medicine Name *</label>
+                          <input
+                            type="text"
+                            name="medicine_name"
+                            value={item.medicine_name}
+                            onChange={(e) => handleMedicineChange(index, e)}
+                            className="w-full border rounded px-2 py-1 text-sm"
+                            required
+                          />
+                          {item.medicine_name.length > 1 && suggestions.length > 0 && (
+                            <ul className="absolute z-10 w-full bg-white border border-gray-300 rounded mt-1 max-h-48 overflow-y-auto shadow-lg">
+                              {suggestions.map((med, suggestionIndex) => (
+                                  <li
+                                  key={suggestionIndex} // Use index as key since names are strings
+                                  onClick={() => handleSuggestionClick(index, med)}
+                                  className="p-2 hover:bg-gray-100 cursor-pointer text-sm"
+                                  >
+                                   {med}
+                                  </li>
+                                ))}
+                            </ul>
+                          )}
+                        </div>
                         <div className="md:col-span-2">
                           <label className="block text-sm font-medium mb-1">Dosage *</label>
                           <input

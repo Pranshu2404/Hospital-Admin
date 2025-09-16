@@ -139,6 +139,14 @@ import { FormInput, FormSelect, Button, FormTextarea } from '../common/FormEleme
 import axios from 'axios';
 
 const AddStaffForm = () => {
+    const getTodayDate = () => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = (today.getMonth() + 1).toString().padStart(2, '0');
+    const day = today.getDate().toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -146,7 +154,7 @@ const AddStaffForm = () => {
     role: '',
     department: '',
     specialization: '',
-    joiningDate: '',
+    joiningDate: getTodayDate(),
     gender: '',
     status: 'Active',
     aadharNumber: '',

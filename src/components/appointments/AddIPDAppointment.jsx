@@ -45,6 +45,16 @@ const AddIPDAppointment = ({ type = "ipd", fixedDoctorId, embedded = false, onCl
     roomId: ''
   });
 
+  const [formData2, setFormData2] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    gender: '',
+    bloodGroup: '',
+    age: ''
+  })
+
   const hospitalId = localStorage.getItem('hospitalId');
 
   const [patients, setPatients] = useState([]);
@@ -69,7 +79,7 @@ const AddIPDAppointment = ({ type = "ipd", fixedDoctorId, embedded = false, onCl
   const [qrData, setQrData] = useState({ imageUrl: '', orderId: '' });
   const [paymentStatus, setPaymentStatus] = useState('pending');
   const [pollingIntervalId, setPollingIntervalId] = useState(null);
-
+  const [showFields, setShowFields] = useState(false)
 
   // Calculate charges whenever relevant form data changes
   useEffect(() => {
@@ -204,7 +214,7 @@ const calculateCharges = () => {
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-
+    setFormData2(prev => ({ ...prev, [field]: value }));
     if (field === 'patientIdSearch') {
       const keyword = value.toLowerCase();
       const filtered = patients.filter(p =>
@@ -512,6 +522,19 @@ const fetchDoctorData = async () => {
     return true; // Slot is available
   };
 
+    const genderOptions = [
+    { value: 'male', label: 'Male' },
+    { value: 'female', label: 'Female' },
+    { value: 'other', label: 'Other' }
+  ];
+
+  const bloodGroupOptions = [
+    { value: 'A+', label: 'A+' }, { value: 'A-', label: 'A-' },
+    { value: 'B+', label: 'B+' }, { value: 'B-', label: 'B-' },
+    { value: 'AB+', label: 'AB+' }, { value: 'AB-', label: 'AB-' },
+    { value: 'O+', label: 'O+' }, { value: 'O-', label: 'O-' }
+  ];
+
 
   // 2. Function to stop the polling
   const stopPolling = () => {
@@ -576,16 +599,44 @@ const handleGenerateQR = async () => {
   }
 };
 
+const calculateDOBFromAge = (age) => {
+    const today = new Date();
+    const dob = new Date(today.getFullYear() - age, today.getMonth(), today.getDate());
+    return dob.toISOString().split('T')[0];
+  };
+
   const handleSubmit = async (e, paymentInfo = null) => {
     if (e) e.preventDefault(); // Prevent default form submission if triggered by button
     setIsLoading(true);
-
+    let patientId;
     // If payment was made via QR, use the details passed from the polling logic
     const finalPaymentMethod = paymentInfo ? paymentInfo.method : formData.paymentMethod;
     const finalBillStatus = paymentInfo ? 'Paid' : status;
     
     try {
-      // For time-based appointments, validate the selected time slot
+      
+      if(showFields){
+        const patientPayload = {
+        first_name: formData2.firstName,
+        last_name: formData2.lastName,
+        email: formData2.email,
+        phone: formData2.phone,
+        gender: formData2.gender,
+        dob: calculateDOBFromAge(formData2.age),
+        blood_group: formData2.bloodGroup,
+        patient_type: "opd"
+      };
+
+      const patientRes = await axios.post(
+        `${import.meta.env.VITE_BACKEND_URL}/api/patients`,
+        patientPayload
+
+      );
+      console.log(patientRes)
+      patientId = patientRes.data._id;
+      }
+
+
       if (formData.type === 'time-based') {
         const proposedEnd = calculateEndTime(formData.start_time, formData.duration);
         const isAvailable = checkTimeSlotAvailability(formData.start_time, proposedEnd);
@@ -598,7 +649,7 @@ const handleGenerateQR = async () => {
 
       // Prepare appointment data
       const appointmentData = {
-        patient_id: formData.patientId,
+        patient_id: showFields?patientId:formData.patientId,
         doctor_id: fixedDoctorId || formData.doctorId,
         hospital_id: hospitalId,
         department_id: formData.department,
@@ -634,7 +685,7 @@ const handleGenerateQR = async () => {
 
       // ✅ Create billing with charges summary
       await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/billing`, {
-        patient_id: formData.patientId,
+        patient_id: showFields?patientId:formData.patientId,
         appointment_id: appointmentId,
         total_amount: totalAmount,
         payment_method: formData.paymentMethod,
@@ -708,10 +759,9 @@ const handleGenerateQR = async () => {
                 variant="outline"
                 size="sm"
                 onClick={() => {
-                  const path = type.toLowerCase() === 'ipd'
-                    ? '/dashboard/admin/patients/add-ipd'
-                    : '/dashboard/admin/patients/add-opd';
-                  navigate(path);
+                  type.toLowerCase() === 'ipd'
+                    ? navigate('/dashboard/admin/patients/add-ipd')
+                    : setShowFields(true);
                 }}
               >
                 + Add Patient
@@ -724,6 +774,7 @@ const handleGenerateQR = async () => {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-4">
               {/* Patient Selection */}
+              {!showFields&&(
               <FormSelect
   label="Select Patient"
   value={formData.patientId}
@@ -734,7 +785,21 @@ const handleGenerateQR = async () => {
     label: `${p.first_name} ${p.last_name} - ${p.phone || ''} (${p.patientId || ''})`
   }))}
   required
-/>
+/>)}
+
+{showFields&&(
+<div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Patient Information</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <FormInput label="First Name" value={formData2.firstName} onChange={(e) => handleInputChange('firstName', e.target.value)} required />
+              <FormInput label="Last Name" value={formData2.lastName} onChange={(e) => handleInputChange('lastName', e.target.value)} required />
+              <FormInput label="Email" type="email" value={formData2.email} onChange={(e) => handleInputChange('email', e.target.value)} required />
+              <FormInput label="Phone Number" type="tel" value={formData2.phone} onChange={(e) => handleInputChange('phone', e.target.value)} required />
+              <FormInput label="Age" type="number" value={formData2.age} onChange={(e) => handleInputChange('age', e.target.value)} required />
+              <FormSelect label="Gender" value={formData2.gender} onChange={(e) => handleInputChange('gender', e.target.value)} options={genderOptions} required />
+              <FormSelect label="Blood Group" value={formData2.bloodGroup} onChange={(e) => handleInputChange('bloodGroup', e.target.value)} options={bloodGroupOptions} />
+            </div>
+          </div>)}
 
               {/* Department and Doctor Selection */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1050,7 +1115,6 @@ const handleGenerateQR = async () => {
               (formData.type === 'time-based' && 
                formData.start_time && 
                !isWithinWorkingHours(formData.start_time)) ||
-              !formData.patientId ||
               !formData.doctorId ||
               !formData.department}
           >
