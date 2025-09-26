@@ -4,6 +4,15 @@ import { FormInput, FormSelect, FormTextarea, FormCheckbox, Button } from '../co
 import { Link } from 'react-router-dom';
 
 const AddDoctorNurseForm = () => {
+  // Function to get today's date in YYYY-MM-DD format
+  const getTodayDate = () => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = (today.getMonth() + 1).toString().padStart(2, '0');
+    const day = today.getDate().toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -24,7 +33,7 @@ const AddDoctorNurseForm = () => {
     shift: '', // Only if Full-time
     emergencyContact: '',
     emergencyPhone: '',
-    startDate: '',
+    startDate: getTodayDate(),
     isFullTime: true, // Toggle
     paymentType: 'Salary', // Default if full-time
     amount: '', // Replaces salary, feePerVisit, ratePerHour
