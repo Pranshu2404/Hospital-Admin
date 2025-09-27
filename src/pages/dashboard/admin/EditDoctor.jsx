@@ -12,7 +12,7 @@
 //   useEffect(() => {
 //     const fetchDoctor = async () => {
 //       try {
-//         const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/doctors/${id}`);
+//         const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/doctors/${id}`);
 //         setFormData(res.data);
 //       } catch (err) {
 //         console.error('Failed to load doctor', err);
@@ -31,7 +31,7 @@
 //   const handleSubmit = async (e) => {
 //     e.preventDefault();
 //     try {
-//       await axios.put(`${import.meta.env.VITE_BACKEND_URL}/api/doctors/${id}`, formData);
+//       await axios.put(`${import.meta.env.VITE_BACKEND_URL}/doctors/${id}`, formData);
 //       navigate(`/dashboard/admin/doctor-profile/${id}`);
 //     } catch (err) {
 //       console.error('Failed to update doctor:', err);
@@ -86,7 +86,7 @@ const EditDoctor = () => {
   useEffect(() => {
     const fetchDoctor = async () => {
       try {
-        const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/doctors/${id}`);
+        const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/doctors/${id}`);
         setFormData(res.data);
       } catch (err) {
         console.error('Failed to load doctor', err);
@@ -96,7 +96,7 @@ const EditDoctor = () => {
 
     const fetchDepartments = async () => {
       try {
-        const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/departments`);
+        const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/departments`);
         const departments = res.data.map(dep => ({
           value: dep._id,
           label: dep.name
@@ -120,7 +120,7 @@ const EditDoctor = () => {
 const handleSubmit = async (e) => {
   e.preventDefault();
   try {
-    await axios.put(`${import.meta.env.VITE_BACKEND_URL}/api/doctors/${id}`, formData);
+    await axios.put(`${import.meta.env.VITE_BACKEND_URL}/doctors/${id}`, formData);
     navigate('/dashboard/admin/doctor-list'); // 👈 Navigate to the list page after update
   } catch (err) {
     console.error('Failed to update doctor:', err);

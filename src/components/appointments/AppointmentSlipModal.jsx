@@ -30,7 +30,7 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
     if (appointmentEndpointAvailable !== false) {
       try {
         const resp = await axios.get(
-          `${import.meta.env.VITE_BACKEND_URL}/api/prescriptions/appointment/${appointmentData._id}?_=${Date.now()}`
+          `${import.meta.env.VITE_BACKEND_URL}/prescriptions/appointment/${appointmentData._id}?_=${Date.now()}`
         );
         appointmentEndpointAvailable = true;
         const pres = resp.data.prescription || resp.data || null;
@@ -53,7 +53,7 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
 
     // Fallback: fetch all prescriptions and try to find one matching appointment_id or patient_id
     try {
-      // const respAll = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/prescriptions?_=${Date.now()}`);
+      // const respAll = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/prescriptions?_=${Date.now()}`);
       // const list = Array.isArray(respAll.data) ? respAll.data : (respAll.data.prescriptions || []);
       // if (!list || !list.length) {
       //   setPrescription(null);
@@ -118,7 +118,7 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
   const fetchBillingDetails = async () => {
         try {
           const response = await axios.get(
-            `${import.meta.env.VITE_BACKEND_URL}/api/billing/appointment/${appointmentData._id}`
+            `${import.meta.env.VITE_BACKEND_URL}/billing/appointment/${appointmentData._id}`
           );
           console.log(response.data);
           setBillingDetails(response.data.bill);
@@ -145,7 +145,7 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
     formData.append('image', file);
 
     try {
-      const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/prescriptions/upload`, formData, {
+      const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/prescriptions/upload`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       setPrescriptionForm(prev => ({ ...prev, prescriptionImage: response.data.imageUrl || response.data.url }));
@@ -196,7 +196,7 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
         prescription_image: prescriptionForm.prescriptionImage
       };
 
-      const resp = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/prescriptions`, payload);
+      const resp = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/prescriptions`, payload);
       // set prescription immediately from response if present
       const newPrescription = resp.data.prescription || resp.data || null;
       if (newPrescription) {
@@ -226,7 +226,7 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
     if (!prescriptionId || !appointmentData || !appointmentData._id) return;
     try {
       // PATCH the prescription to include appointment_id
-      const resp = await axios.patch(`${import.meta.env.VITE_BACKEND_URL}/api/prescriptions/${prescriptionId}`, {
+      const resp = await axios.patch(`${import.meta.env.VITE_BACKEND_URL}/prescriptions/${prescriptionId}`, {
         appointment_id: appointmentData._id
       });
       // reload prescription from server

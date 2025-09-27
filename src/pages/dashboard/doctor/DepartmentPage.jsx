@@ -15,7 +15,7 @@ const MyDepartmentPage = () => {
       try {
         // 1️⃣ Get logged-in doctor's details
         const doctorRes = await axios.get(
-          `${import.meta.env.VITE_BACKEND_URL}/api/doctors/${doctorId}`
+          `${import.meta.env.VITE_BACKEND_URL}/doctors/${doctorId}`
         );
         const deptId = doctorRes.data?.department?._id;
         if (!deptId) {
@@ -24,13 +24,13 @@ const MyDepartmentPage = () => {
 
         // 2️⃣ Get department details (name + HOD)
         const deptRes = await axios.get(
-          `${import.meta.env.VITE_BACKEND_URL}/api/departments/${deptId}`
+          `${import.meta.env.VITE_BACKEND_URL}/departments/${deptId}`
         );
         setDepartment(deptRes.data);
 
         // 3️⃣ Get all doctors in this department
         const doctorsRes = await axios.get(
-          `${import.meta.env.VITE_BACKEND_URL}/api/doctors/department/${deptId}`
+          `${import.meta.env.VITE_BACKEND_URL}/doctors/department/${deptId}`
         );
         setDoctors(doctorsRes.data);
       } catch (err) {

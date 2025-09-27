@@ -22,7 +22,7 @@ const DoctorNurseList = ({ setCurrentPage }) => {
   const fetchDoctors = async () => {
     try {
       const cacheBust = `?_cacheBust=${new Date().getTime()}`;
-      const url = `${import.meta.env.VITE_BACKEND_URL}/api/doctors${cacheBust}`;
+      const url = `${import.meta.env.VITE_BACKEND_URL}/doctors${cacheBust}`;
       const res = await axios.get(url);
       setStaff(res.data);
     } catch (err) {
@@ -48,7 +48,7 @@ const DoctorNurseList = ({ setCurrentPage }) => {
       complete: async (results) => {
         try {
           const response = await axios.post(
-            `${import.meta.env.VITE_BACKEND_URL}/api/doctors/bulk-add`,
+            `${import.meta.env.VITE_BACKEND_URL}/doctors/bulk-add`,
             results.data
           );
           setUploadSuccess(response.data.message || 'Doctors uploaded successfully!');

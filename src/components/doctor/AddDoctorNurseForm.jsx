@@ -82,7 +82,7 @@ const AddDoctorNurseForm = () => {
   useEffect(() => {
     const fetchDepartments = async () => {
       try {
-        const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/departments`);
+        const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/departments`);
         const departments = res.data?.map(dep => ({
           value: dep._id,
           label: dep.name
@@ -221,7 +221,7 @@ const AddDoctorNurseForm = () => {
       };
       
       const response = await axios.post(
-        `${import.meta.env.VITE_BACKEND_URL}/api/doctors`,
+        `${import.meta.env.VITE_BACKEND_URL}/doctors`,
         submissionData
       );
       console.log('✅ Doctor added successfully:', response.data);

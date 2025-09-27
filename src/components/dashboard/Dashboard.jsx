@@ -25,10 +25,10 @@ const Dashboard = () => {
     const fetchDashboardData = async () => {
       try {
         const [patientsRes, staffRes, appointmentsRes, doctorRes] = await Promise.all([
-          axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/patients`),
-          axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/staff`),
-          axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/appointments`),
-          axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/doctors`),
+          axios.get(`${import.meta.env.VITE_BACKEND_URL}/patients`),
+          axios.get(`${import.meta.env.VITE_BACKEND_URL}/staff`),
+          axios.get(`${import.meta.env.VITE_BACKEND_URL}/appointments`),
+          axios.get(`${import.meta.env.VITE_BACKEND_URL}/doctors`),
         ]);
 
         const patients = patientsRes.data || [];
@@ -104,8 +104,8 @@ const Dashboard = () => {
     const fetchRecentActivities = async () => {
       try {
         const [patientsRes, appointmentsRes] = await Promise.all([
-          axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/patients?limit=1&sort=desc`),
-          axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/appointments?limit=1&sort=desc`),
+          axios.get(`${import.meta.env.VITE_BACKEND_URL}/patients?limit=1&sort=desc`),
+          axios.get(`${import.meta.env.VITE_BACKEND_URL}/appointments?limit=1&sort=desc`),
         ]);
 
         const patient = patientsRes.data[0];

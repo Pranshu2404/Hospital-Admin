@@ -51,7 +51,7 @@ const AppointmentDetails = () => {
   const fetchAppointment = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/appointments/${id}`);
+      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/appointments/${id}`);
       setAppointment(response.data);
     } catch (err) {
       console.error('Error fetching appointment:', err);
@@ -130,7 +130,7 @@ const AppointmentDetails = () => {
     formData.append('image', file);
 
     try {
-      const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/prescriptions/upload`, formData, {
+      const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/prescriptions/upload`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       setPrescription(prev => ({ ...prev, prescriptionImage: response.data.imageUrl }));
@@ -196,16 +196,16 @@ const handleSuggestionClick = (index, medicineName) => {
         prescription_image: prescription.prescriptionImage
       };
 
-      await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/prescriptions`, prescriptionData);
+      await axios.post(`${import.meta.env.VITE_BACKEND_URL}/prescriptions`, prescriptionData);
 
       // Update appointment status to completed
-      await axios.put(`${import.meta.env.VITE_BACKEND_URL}/api/appointments/${appointment._id}/complete`);
+      await axios.put(`${import.meta.env.VITE_BACKEND_URL}/appointments/${appointment._id}/complete`);
 
       // Calculate salary for part-time doctors
       setCalculatingSalary(true);
       try {
         const salaryResponse = await axios.post(
-          `${import.meta.env.VITE_BACKEND_URL}/api/salaries/calculate-appointment/${appointment._id}`
+          `${import.meta.env.VITE_BACKEND_URL}/salaries/calculate-appointment/${appointment._id}`
         );
         console.log('Salary calculation response:', salaryResponse.data);
         if (salaryResponse.data) {

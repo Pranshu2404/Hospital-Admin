@@ -10,7 +10,7 @@ const DepartmentList = () => {
   useEffect(() => {
     const fetchHods = async () => {
       try {
-        const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/departments/hods/all`);
+        const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/departments/hods/all`);
         const hodList = res.data;
 
         // Extract unique department IDs from HODs
@@ -18,7 +18,7 @@ const DepartmentList = () => {
 
         // Fetch each department's name using its ID
         const deptPromises = departmentIds.map(id =>
-          axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/departments/${id}`)
+          axios.get(`${import.meta.env.VITE_BACKEND_URL}/departments/${id}`)
         );
         const deptResponses = await Promise.all(deptPromises);
 

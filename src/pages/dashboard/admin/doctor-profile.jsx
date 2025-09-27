@@ -13,7 +13,7 @@ const DoctorProfilePage = () => {
   useEffect(() => {
     const fetchDoctor = async () => {
       try {
-        const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/doctors/${id}`);
+        const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/doctors/${id}`);
         setDoctor(res.data);
       } catch (err) {
         console.error('Error fetching doctor:', err);
@@ -115,7 +115,7 @@ export default DoctorProfilePage;
 //   useEffect(() => {
 //     const fetchDoctor = async () => {
 //       try {
-//         const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/doctors/${id}`);
+//         const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/doctors/${id}`);
 //         setDoctor(res.data);
 //       } catch (error) {
 //         console.error('Failed to fetch doctor data', error);

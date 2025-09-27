@@ -38,7 +38,7 @@ const AddPatientOPDForm = () => {
   console.log("Submitting this data to backend:", appointmentData);
 
       const response = await axios.post(
-        `${import.meta.env.VITE_BACKEND_URL}/api/patients`,
+        `${import.meta.env.VITE_BACKEND_URL}/patients`,
         payload
       );
 

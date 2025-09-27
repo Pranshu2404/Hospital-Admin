@@ -35,7 +35,7 @@
 //     setSuccess('');
 
 //     try {
-//       const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/auth/register`, form);
+//       const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/auth/register`, form);
 //       console.log('✅ Registration success:', response.data);
 //       setSuccess('Registration successful! Redirecting...');
 //       setTimeout(() => navigate('/'), 1500);
@@ -217,7 +217,7 @@
 //     setIsSubmitting(true);
 
 //     try {
-//       const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/auth/register`, form);
+//       const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/auth/register`, form);
 //       const { hospitalId } = response.data; // Get the ID from the backend
 
 //       setNewHospitalId(hospitalId); // Save the ID
@@ -234,7 +234,7 @@
 //   // Function called when saving details from the modal
 //   const handleSaveDetails = async (detailsData, hospitalId) => {
 //     try {
-//       await axios.patch(`${import.meta.env.VITE_BACKEND_URL}/api/hospitals/${hospitalId}/details`, detailsData);
+//       await axios.patch(`${import.meta.env.VITE_BACKEND_URL}/hospitals/${hospitalId}/details`, detailsData);
 //     } catch (err) {
 //       console.error("Could not save additional details:", err);
 //     } finally {
@@ -422,7 +422,7 @@ export default function Register() {
     setSuccess('');
     setIsSubmitting(true);
     try {
-      const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/auth/register`, form);
+      const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/auth/register`, form);
       const { hospitalId } = response.data;
       setNewHospitalId(hospitalId);
       setIsModalOpen(true);
@@ -435,7 +435,7 @@ export default function Register() {
 
   const handleSaveDetails = async (detailsData, hospitalId) => {
     try {
-      await axios.patch(`${import.meta.env.VITE_BACKEND_URL}/api/hospitals/${hospitalId}/details`, detailsData);
+      await axios.patch(`${import.meta.env.VITE_BACKEND_URL}/hospitals/${hospitalId}/details`, detailsData);
     } catch (err) {
       console.error("Could not save additional details:", err);
     } finally {

@@ -15,7 +15,7 @@ const PatientListPage = () => {
     const fetchPatients = async () => {
       try {
         const res = await axios.get(
-          `${import.meta.env.VITE_BACKEND_URL}/api/appointments/doctor/${doctorId}`
+          `${import.meta.env.VITE_BACKEND_URL}/appointments/doctor/${doctorId}`
         );
 
         if (Array.isArray(res.data)) {

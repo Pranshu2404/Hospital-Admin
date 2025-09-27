@@ -77,15 +77,15 @@ const AddAppointmentModal = ({ isOpen, onClose, type = "ipd", hospitalId, fixedD
     const fetchOptions = async () => {
       try {
         const [patientRes, departmentRes] = await Promise.all([
-          axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/patients`),
-          axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/departments`)
+          axios.get(`${import.meta.env.VITE_BACKEND_URL}/patients`),
+          axios.get(`${import.meta.env.VITE_BACKEND_URL}/departments`)
         ]);
         setPatients(patientRes.data);
         setFilteredPatients(patientRes.data);
         setDepartments(departmentRes.data);
 
         if (formData.department) {
-          const doctorRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/doctors/department/${formData.department}`);
+          const doctorRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/doctors/department/${formData.department}`);
           setDoctors(doctorRes.data);
         } else {
           setDoctors([]);
@@ -103,7 +103,7 @@ const AddAppointmentModal = ({ isOpen, onClose, type = "ipd", hospitalId, fixedD
     if (isOpen && hospitalId) {
       const fetchCharges = async () => {
         try {
-          const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/hospital-charges/${hospitalId}`);
+          const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/hospital-charges/${hospitalId}`);
           setHospitalCharges(res.data);
         } catch (err) {
           console.error("Failed to fetch hospital charges", err);
@@ -118,7 +118,7 @@ const AddAppointmentModal = ({ isOpen, onClose, type = "ipd", hospitalId, fixedD
     if (isOpen && type === 'ipd') {
       const fetchRooms = async () => {
         try {
-          const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/rooms?status=Available`);
+          const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/rooms?status=Available`);
           setRooms(res.data);
         } catch (err) {
           console.error("Failed to fetch rooms", err);
@@ -135,12 +135,12 @@ const AddAppointmentModal = ({ isOpen, onClose, type = "ipd", hospitalId, fixedD
       const fetchDoctorData = async () => {
         try {
           // Fetch doctor details
-          const doctorRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/doctors/${formData.doctorId}`);
+          const doctorRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/doctors/${formData.doctorId}`);
           setDoctorDetails(doctorRes.data);
 
           // Fetch today's schedule from calendar
           const calendarRes = await axios.get(
-            `${import.meta.env.VITE_BACKEND_URL}/api/calender/${hospitalId}/doctor/${formData.doctorId}/today`
+            `${import.meta.env.VITE_BACKEND_URL}/calender/${hospitalId}/doctor/${formData.doctorId}/today`
           );
           const doctorData = calendarRes.data;
           let workingHours = [];
@@ -316,7 +316,7 @@ const AddAppointmentModal = ({ isOpen, onClose, type = "ipd", hospitalId, fixedD
 
       // Create Appointment
       const appointmentRes = await axios.post(
-        `${import.meta.env.VITE_BACKEND_URL}/api/appointments`,
+        `${import.meta.env.VITE_BACKEND_URL}/appointments`,
         appointmentData
       );
 
@@ -324,7 +324,7 @@ const AddAppointmentModal = ({ isOpen, onClose, type = "ipd", hospitalId, fixedD
 
       // Create billing if needed
       if (chargesSummary.length > 0) {
-        await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/billing`, {
+        await axios.post(`${import.meta.env.VITE_BACKEND_URL}/billing`, {
           patient_id: formData.patientId,
           appointment_id: appointmentId,
           payment_method: formData.paymentMethod,

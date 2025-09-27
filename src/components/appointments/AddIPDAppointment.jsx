@@ -232,9 +232,9 @@ useEffect(() => {
   const fetchOptions = async () => {
     try {
       const [patientRes, departmentRes, hospitalRes] = await Promise.all([
-        axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/patients`),
-        axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/departments`),
-        axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/hospitals`)
+        axios.get(`${import.meta.env.VITE_BACKEND_URL}/patients`),
+        axios.get(`${import.meta.env.VITE_BACKEND_URL}/departments`),
+        axios.get(`${import.meta.env.VITE_BACKEND_URL}/hospitals`)
       ]);
 
       // ✅ Add a check to ensure the response is an array
@@ -252,7 +252,7 @@ useEffect(() => {
 
       // ... rest of the code
       if (formData.department) {
-          const doctorRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/doctors/department/${formData.department}`);
+          const doctorRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/doctors/department/${formData.department}`);
           setDoctors(doctorRes.data);
         } else {
           setDoctors([]);
@@ -355,7 +355,7 @@ useEffect(() => {
     if (hospitalId) {
       const fetchCharges = async () => {
         try {
-          const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/hospital-charges/${hospitalId}`);
+          const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/hospital-charges/${hospitalId}`);
           setHospitalCharges(res.data);
         } catch (err) {
           console.error("Failed to fetch hospital charges", err);
@@ -370,7 +370,7 @@ useEffect(() => {
     if (type === 'ipd') {
       const fetchRooms = async () => {
         try {
-          const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/rooms?status=Available`);
+          const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/rooms?status=Available`);
           setRooms(res.data);
         } catch (err) {
           console.error("Failed to fetch rooms", err);
@@ -387,7 +387,7 @@ const fetchDoctorData = async () => {
   try {
     // Fetch doctor details
     const doctorRes = await axios.get(
-      `${import.meta.env.VITE_BACKEND_URL}/api/doctors/${formData.doctorId}`
+      `${import.meta.env.VITE_BACKEND_URL}/doctors/${formData.doctorId}`
     );
     const doctorData = doctorRes.data;
     setDoctorDetails(doctorData);
@@ -399,7 +399,7 @@ const fetchDoctorData = async () => {
     try {
       // Try fetching doctor's schedule for the day
       const scheduleRes = await axios.get(
-  `${import.meta.env.VITE_BACKEND_URL}/api/calendar/${hospitalId}/doctor/${formData.doctorId}/${formData.date}`
+  `${import.meta.env.VITE_BACKEND_URL}/calendar/${hospitalId}/doctor/${formData.doctorId}/${formData.date}`
 );
 
 
@@ -555,7 +555,7 @@ const handleGenerateQR = async () => {
   setPaymentStatus('generating');
 
   try {
-    const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/payments/create-qr-order`, {
+    const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/payments/create-qr-order`, {
       amount: totalAmount,
       patientId: formData.patientId,
     });
@@ -567,7 +567,7 @@ const handleGenerateQR = async () => {
       // Start polling for payment status
       const intervalId = setInterval(async () => {
         try {
-          const statusRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/payments/order-status/${res.data.orderId}`);
+          const statusRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/payments/order-status/${res.data.orderId}`);
           if (statusRes.data.status === 'paid') {
             setPaymentStatus('paid');
             stopPolling(); // Stop checking once paid
@@ -628,7 +628,7 @@ const calculateDOBFromAge = (age) => {
       };
 
       const patientRes = await axios.post(
-        `${import.meta.env.VITE_BACKEND_URL}/api/patients`,
+        `${import.meta.env.VITE_BACKEND_URL}/patients`,
         patientPayload
 
       );
@@ -677,14 +677,14 @@ const calculateDOBFromAge = (age) => {
 
       // Create Appointment
       const appointmentRes = await axios.post(
-        `${import.meta.env.VITE_BACKEND_URL}/api/appointments`,
+        `${import.meta.env.VITE_BACKEND_URL}/appointments`,
         appointmentData
       );
 
       const appointmentId = appointmentRes.data._id;
 
       // ✅ Create billing with charges summary
-      await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/billing`, {
+      await axios.post(`${import.meta.env.VITE_BACKEND_URL}/billing`, {
         patient_id: showFields?patientId:formData.patientId,
         appointment_id: appointmentId,
         total_amount: totalAmount,
@@ -696,7 +696,7 @@ const calculateDOBFromAge = (age) => {
 
       alert('Appointment scheduled and bill generated!');
 
-      const appointmentDetails = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/appointments/${appointmentId}`);
+      const appointmentDetails = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/appointments/${appointmentId}`);
       console.log("Appointment Details for Slip:", appointmentDetails.data);
       const appt = appointmentDetails.data;
       const enriched = { // Wrap the single object in an array for consistent state handling

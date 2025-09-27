@@ -47,11 +47,11 @@ const AddHodPage = () => {
     async function fetchData() {
       try {
         // Fetch department details with populated HOD
-        const deptRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/departments/${id}`);
+        const deptRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/departments/${id}`);
         setDepartment(deptRes.data);
 
         // Fetch doctors directly by department ID
-        const docRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/doctors/department/${id}`);
+        const docRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/doctors/department/${id}`);
         setDoctors(docRes.data);
       } catch (err) {
         console.error(err);
@@ -66,12 +66,12 @@ const AddHodPage = () => {
   const handleSetHod = async (doctorId) => {
     try {
       // Update department using PUT API
-      await axios.put(`${import.meta.env.VITE_BACKEND_URL}/api/departments/${id}`, {
+      await axios.put(`${import.meta.env.VITE_BACKEND_URL}/departments/${id}`, {
         head_doctor_id: doctorId
       });
       setSuccess('HOD assigned successfully!');
       // Refetch department to update HOD info
-      const deptRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/departments/${id}`);
+      const deptRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/departments/${id}`);
       setDepartment(deptRes.data);
     } catch (err) {
       console.error(err);

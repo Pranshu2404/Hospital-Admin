@@ -44,8 +44,8 @@ const AddPatientOPDForm = () => {
     const fetchDoctorsAndDepartments = async () => {
       try {
         const [doctorRes, deptRes] = await Promise.all([
-          axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/doctors`),
-          axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/departments`)
+          axios.get(`${import.meta.env.VITE_BACKEND_URL}/doctors`),
+          axios.get(`${import.meta.env.VITE_BACKEND_URL}/departments`)
         ]);
         setDoctors(doctorRes.data);
         setDepartments(deptRes.data);
@@ -89,7 +89,7 @@ const AddPatientOPDForm = () => {
       };
 
       const patientRes = await axios.post(
-        `${import.meta.env.VITE_BACKEND_URL}/api/patients`,
+        `${import.meta.env.VITE_BACKEND_URL}/patients`,
         patientPayload
       );
       const patientId = patientRes.data._id;
@@ -118,7 +118,7 @@ const endDateTime = new Date(startDateTime.getTime() + formData.duration * 60000
       // ✅ FIX: Use the correct variable name
 console.log('Sending this data to the backend:', appointmentPayload);
 
-      await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/appointments`, appointmentPayload);
+      await axios.post(`${import.meta.env.VITE_BACKEND_URL}/appointments`, appointmentPayload);
 
       alert('Patient and appointment added successfully!');
       navigate('/dashboard/admin/appointments?type=opd');
@@ -326,8 +326,8 @@ export default AddPatientOPDForm;
 //     const fetchData = async () => {
 //       try {
 //         const [doctorRes, deptRes] = await Promise.all([
-//           axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/doctors`),
-//           axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/departments`)
+//           axios.get(`${import.meta.env.VITE_BACKEND_URL}/doctors`),
+//           axios.get(`${import.meta.env.VITE_BACKEND_URL}/departments`)
 //         ]);
 //         setDoctors(doctorRes.data);
 //         setDepartments(deptRes.data);
@@ -355,7 +355,7 @@ export default AddPatientOPDForm;
 //         blood_group: formData.bloodGroup,
 //         patient_type: "opd"
 //       };
-//       const patientRes = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/patients`, patientPayload);
+//       const patientRes = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/patients`, patientPayload);
 //       const newPatient = patientRes.data.patient;
 
 //       // Step 2: Create Appointment
@@ -371,7 +371,7 @@ export default AddPatientOPDForm;
 //         notes: formData.notes,
 //         status: 'Scheduled'
 //       };
-//       const appointmentRes = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/appointments`, appointmentPayload);
+//       const appointmentRes = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/appointments`, appointmentPayload);
 //       const newAppointment = appointmentRes.data;
       
 //       // Step 3: Construct Slip Data
@@ -433,7 +433,7 @@ export default AddPatientOPDForm;
 //   //       blood_group: formData.bloodGroup,
 //   //       patient_type: "opd"
 //   //     };
-//   //     const patientRes = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/patients`, patientPayload);
+//   //     const patientRes = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/patients`, patientPayload);
 //   //     const newPatient = patientRes.data.patient;
 
 //   //     const timeSlot = `${formData.time} - ${new Date(new Date(`1970-01-01T${formData.time}:00`).getTime() + formData.duration * 60000).toTimeString().slice(0, 5)}`;
@@ -448,7 +448,7 @@ export default AddPatientOPDForm;
 //   //       notes: formData.notes,
 //   //       status: 'Scheduled'
 //   //     };
-//   //     const appointmentRes = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/appointments`, appointmentPayload);
+//   //     const appointmentRes = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/appointments`, appointmentPayload);
 //   //     const newAppointment = appointmentRes.data;
 
 //   //     const selectedDoctor = doctors.find(d => d._id === formData.doctorId);

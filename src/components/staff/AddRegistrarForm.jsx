@@ -30,7 +30,7 @@
 //   try {
 //     console.log('Submitting form data:', formData);
 //     const response = await axios.post(
-//       `${import.meta.env.VITE_BACKEND_URL}/api/staff`,
+//       `${import.meta.env.VITE_BACKEND_URL}/staff`,
 //       formData
 //     );
 //     console.log('✅ Staff added successfully:', response.data);
@@ -180,7 +180,7 @@
 //   useEffect(() => {
 //     const fetchStaff = async () => {
 //       try {
-//         const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/staff`);
+//         const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/staff`);
 //         const filteredStaff = response.data.filter(staff => staff.role === 'Receptionist' || staff.role === 'Other' || staff.role === 'Nurse');
 //         setStaffOptions(filteredStaff);
 //       } catch (err) {
@@ -194,7 +194,7 @@
 //   useEffect(() => {
 //     const fetchDepartments = async () => {
 //       try {
-//         const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/departments`);
+//         const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/departments`);
 //         const departments = res.data?.map(dep => ({
 //           value: dep.name,
 //           label: dep.name
@@ -229,7 +229,7 @@
 
 //     try {
 //       await axios.put(
-//         `${import.meta.env.VITE_BACKEND_URL}/api/staff/${selectedStaffId}`,
+//         `${import.meta.env.VITE_BACKEND_URL}/staff/${selectedStaffId}`,
 //         registrarData
 //       );
 //       alert('Registrar role assigned successfully!');
@@ -325,7 +325,7 @@ const AddRegistrarForm = () => {
   useEffect(() => {
     const fetchStaff = async () => {
       try {
-        const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/staff`);
+        const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/staff`);
         const filteredStaff = response.data.filter(staff => staff.role === 'Receptionist' || staff.role === 'Other' || staff.role === 'Nurse');
         setStaffOptions(filteredStaff);
       } catch (err) {
@@ -338,7 +338,7 @@ const AddRegistrarForm = () => {
   useEffect(() => {
     const fetchDepartments = async () => {
       try {
-        const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/departments`);
+        const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/departments`);
         const departments = res.data?.map(dep => ({
           value: dep.name,
           label: dep.name
@@ -381,7 +381,7 @@ const AddRegistrarForm = () => {
 
     try {
       await axios.put(
-        `${import.meta.env.VITE_BACKEND_URL}/api/staff/${selectedStaffId}`,
+        `${import.meta.env.VITE_BACKEND_URL}/staff/${selectedStaffId}`,
         registrarData
       );
       alert('Registrar role assigned successfully!');

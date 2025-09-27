@@ -16,7 +16,7 @@ const Sidebar = ({ sidebarItems }) => {
 useEffect(() => {
   const fetchHospitalData = async () => {
     try {
-      const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/hospitals`);
+      const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/hospitals`);
 
       if (res.data && res.data.length > 0) {
         const hospital = res.data[0]; 

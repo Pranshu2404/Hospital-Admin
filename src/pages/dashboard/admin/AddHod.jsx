@@ -31,7 +31,7 @@ const AddHodPage = () => {
 
   useEffect(() => {
   if (deptIdFromQuery) {
-    axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/departments/${deptIdFromQuery}`)
+    axios.get(`${import.meta.env.VITE_BACKEND_URL}/departments/${deptIdFromQuery}`)
       .then(res => {
         const dept = res.data;
         setDeptName(dept.name);
@@ -86,11 +86,11 @@ const AddHodPage = () => {
     e.preventDefault();
     try {
       console.log('Submitting form data:', formData);
-      const doctorRes = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/doctors`, formData);
+      const doctorRes = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/doctors`, formData);
       const doctorId = doctorRes.data.doctor._id;
       console.log('Doctor created:', doctorRes);
       if (deptNameFromQuery) {
-        await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/departments`, {
+        await axios.post(`${import.meta.env.VITE_BACKEND_URL}/departments`, {
           name: deptNameFromQuery,
           head_doctor_id: doctorId
         });
@@ -105,10 +105,10 @@ const AddHodPage = () => {
 
   const handleUpdate = async () => {
     try {
-      const doctorRes = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/doctors`, formData);
+      const doctorRes = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/doctors`, formData);
       const doctorId = doctorRes.data._id;
 
-      await axios.put(`${import.meta.env.VITE_BACKEND_URL}/api/departments/${deptIdFromQuery}`, {
+      await axios.put(`${import.meta.env.VITE_BACKEND_URL}/departments/${deptIdFromQuery}`, {
         head_doctor_id: doctorId
       });
       alert('Department HOD updated successfully');
@@ -122,7 +122,7 @@ const AddHodPage = () => {
   const handleDelete = async () => {
     if (!window.confirm('Are you sure you want to delete this department?')) return;
     try {
-      await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/api/departments/${deptIdFromQuery}`);
+      await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/departments/${deptIdFromQuery}`);
       alert('Department deleted successfully');
       navigate(-1);
     } catch (err) {

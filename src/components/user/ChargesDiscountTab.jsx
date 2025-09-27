@@ -33,7 +33,7 @@ const ChargesDiscountTab = ({ hospitalData }) => {
     const fetchCharges = async () => {
       try {
         const res = await axios.get(
-          `${import.meta.env.VITE_BACKEND_URL}/api/hospital-charges/${hospitalData._id}`
+          `${import.meta.env.VITE_BACKEND_URL}/hospital-charges/${hospitalData._id}`
         );
         if (res.data) {
           setChargesData({
@@ -67,7 +67,7 @@ const ChargesDiscountTab = ({ hospitalData }) => {
   const handleSave = async () => {
     try {
       setLoading(true);
-      await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/hospital-charges`, {
+      await axios.post(`${import.meta.env.VITE_BACKEND_URL}/hospital-charges`, {
         hospital: hospitalData._id,
         opdCharges: chargesData.opdCharges,
         ipdCharges: chargesData.ipdCharges

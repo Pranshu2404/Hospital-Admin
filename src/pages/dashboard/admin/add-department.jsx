@@ -15,7 +15,7 @@
 // //   useEffect(() => {
 // //     const fetchDepartments = async () => {
 // //       try {
-// //         const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/departments`);
+// //         const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/departments`);
 // //         setDepartments(res.data);
 // //       } catch (err) {
 // //         console.error('❌ Failed to fetch departments:', err);
@@ -45,7 +45,7 @@
 // //     }
 
 // //     try {
-// //       const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/departments`, {
+// //       const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/departments`, {
 // //         name: trimmed,
 // //       });
 // //       setDepartments((prev) => [...prev, res.data]);
@@ -64,7 +64,7 @@
 // //   const handleDeleteDepartment = async (id) => {
 // //     if (!window.confirm('Are you sure you want to delete this department?')) return;
 // //     try {
-// //       await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/api/departments/${id}`);
+// //       await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/departments/${id}`);
 // //       setDepartments((prev) => prev.filter((dept) => dept._id !== id));
 // //     } catch (err) {
 // //       alert('Failed to delete department');
@@ -80,7 +80,7 @@
 // //     const trimmed = editedName.trim();
 // //     if (!trimmed) return;
 // //     try {
-// //       const res = await axios.put(`${import.meta.env.VITE_BACKEND_URL}/api/departments/${id}`, {
+// //       const res = await axios.put(`${import.meta.env.VITE_BACKEND_URL}/departments/${id}`, {
 // //         name: trimmed
 // //       });
 // //       setDepartments((prev) =>
@@ -218,7 +218,7 @@
 //   useEffect(() => {
 //     const fetchDepartments = async () => {
 //       try {
-//         const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/departments`);
+//         const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/departments`);
 //         setDepartments(res.data);
 //       } catch (err) {
 //         console.error('❌ Failed to fetch departments:', err);
@@ -242,7 +242,7 @@
 //       return;
 //     }
 //     try {
-//       const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/departments`, { name: trimmed });
+//       const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/departments`, { name: trimmed });
 //       setDepartments((prev) => [...prev, res.data]);
 //       setNewDeptName('');
 //     } catch (err) {
@@ -260,7 +260,7 @@
 //   const handleDeleteDepartment = async (id) => {
 //     if (!window.confirm('Are you sure you want to delete this department?')) return;
 //     try {
-//       await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/api/departments/${id}`);
+//       await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/departments/${id}`);
 //       setDepartments((prev) => prev.filter((dept) => dept._id !== id));
 //     } catch (err) {
 //       alert('Failed to delete department');
@@ -276,7 +276,7 @@
 //     const trimmed = editedName.trim();
 //     if (!trimmed) return;
 //     try {
-//       const res = await axios.put(`${import.meta.env.VITE_BACKEND_URL}/api/departments/${id}`, { name: trimmed });
+//       const res = await axios.put(`${import.meta.env.VITE_BACKEND_URL}/departments/${id}`, { name: trimmed });
 //       setDepartments((prev) =>
 //         prev.map((dept) => (dept._id === id ? { ...dept, name: res.data.name } : dept))
 //       );
@@ -427,7 +427,7 @@
 //   useEffect(() => {
 //     const fetchDepartments = async () => {
 //       try {
-//         const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/departments`);
+//         const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/departments`);
 //         setDepartments(res.data);
 //       } catch (err) {
 //         console.error('❌ Failed to fetch departments:', err);
@@ -445,7 +445,7 @@
 //       return;
 //     }
 //     try {
-//       const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/departments`, { name: trimmed });
+//       const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/departments`, { name: trimmed });
 //       const newDept = res.data;
 //       setDepartments((prev) => [...prev, newDept]);
 //       setNewDeptName('');
@@ -468,7 +468,7 @@
 //   const handleDeleteDepartment = async (id) => {
 //     if (!window.confirm('Are you sure you want to delete this department?')) return;
 //     try {
-//       await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/api/departments/${id}`);
+//       await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/departments/${id}`);
 //       setDepartments((prev) => prev.filter((dept) => dept._id !== id));
 //     } catch (err) {
 //       alert('Failed to delete department');
@@ -484,7 +484,7 @@
 //     const trimmed = editedName.trim();
 //     if (!trimmed) return;
 //     try {
-//       const res = await axios.put(`${import.meta.env.VITE_BACKEND_URL}/api/departments/${id}`, { name: trimmed });
+//       const res = await axios.put(`${import.meta.env.VITE_BACKEND_URL}/departments/${id}`, { name: trimmed });
 //       setDepartments((prev) => prev.map((dept) => (dept._id === id ? { ...dept, name: res.data.name } : dept)));
 //       setEditingDept(null);
 //     } catch (err) {
@@ -623,7 +623,7 @@ const SelectDepartment = () => {
   useEffect(() => {
     const fetchDepartments = async () => {
       try {
-        const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/departments`);
+        const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/departments`);
         setDepartments(res.data);
       } catch (err) {
         console.error('❌ Failed to fetch departments:', err);
@@ -664,7 +664,7 @@ const SelectDepartment = () => {
       return;
     }
     try {
-      const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/departments`, { name: trimmed });
+      const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/departments`, { name: trimmed });
       const newDept = res.data;
       setDepartments((prev) => [...prev, newDept]);
       setNewDeptName('');
@@ -688,7 +688,7 @@ const SelectDepartment = () => {
   const handleDeleteDepartment = async (id) => {
     if (!window.confirm('Are you sure you want to delete this department?')) return;
     try {
-      await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/api/departments/${id}`);
+      await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/departments/${id}`);
       setDepartments((prev) => prev.filter((dept) => dept._id !== id));
     } catch (err) {
       alert('Failed to delete department');
@@ -704,7 +704,7 @@ const SelectDepartment = () => {
     const trimmed = editedName.trim();
     if (!trimmed) return;
     try {
-      const res = await axios.put(`${import.meta.env.VITE_BACKEND_URL}/api/departments/${id}`, { name: trimmed });
+      const res = await axios.put(`${import.meta.env.VITE_BACKEND_URL}/departments/${id}`, { name: trimmed });
       setDepartments((prev) => prev.map((dept) => (dept._id === id ? { ...dept, name: res.data.name } : dept)));
       setEditingDept(null);
     } catch (err) {

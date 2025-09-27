@@ -23,7 +23,7 @@ const SchedulePage = () => {
       try {
         // 1️⃣ Get Doctor Calendar
         const calendarRes = await axios.get(
-          `${import.meta.env.VITE_BACKEND_URL}/api/calendar/doctor/${doctorId}`
+          `${import.meta.env.VITE_BACKEND_URL}/calendar/doctor/${doctorId}`
         );
 
         if (Array.isArray(calendarRes.data)) {
@@ -82,7 +82,7 @@ const SchedulePage = () => {
 
         // 2️⃣ Get Upcoming Appointments
         const appointmentsRes = await axios.get(
-          `${import.meta.env.VITE_BACKEND_URL}/api/appointments/doctor/${doctorId}`
+          `${import.meta.env.VITE_BACKEND_URL}/appointments/doctor/${doctorId}`
         );
 
         if (Array.isArray(appointmentsRes.data)) {

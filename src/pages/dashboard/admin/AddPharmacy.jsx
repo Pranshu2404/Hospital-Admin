@@ -23,7 +23,7 @@ const AddPharmacy = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/pharmacy`, form);
+      await axios.post(`${import.meta.env.VITE_BACKEND_URL}/pharmacy`, form);
       navigate('/dashboard/admin/pharmacies');
     } catch (err) {
       console.error('Failed to add pharmacy:', err);

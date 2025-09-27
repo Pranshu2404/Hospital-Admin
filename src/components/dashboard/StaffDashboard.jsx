@@ -350,7 +350,7 @@ const StaffDashboard = () => {
 
     const handleSavePatient = async (updatedPatient) => {
         try {
-            const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/patients/${updatedPatient._id}`, {
+            const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/patients/${updatedPatient._id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(updatedPatient),
@@ -372,14 +372,14 @@ const StaffDashboard = () => {
             setError(null);
             try {
                     // const staffId = localStorage.getItem('staffId');
-                    // const calendarEndpoint = staffId ? `${import.meta.env.VITE_BACKEND_URL}/api/calendar/staff/${staffId}` : `${import.meta.env.VITE_BACKEND_URL}/api/calendar`;
+                    // const calendarEndpoint = staffId ? `${import.meta.env.VITE_BACKEND_URL}/calendar/staff/${staffId}` : `${import.meta.env.VITE_BACKEND_URL}/calendar`;
 
                     const [staffRes, patientRes, departmentRes, appointmentRes, hospitalRes] = await Promise.all([
-                        fetch(`${import.meta.env.VITE_BACKEND_URL}/api/staff`),
-                        fetch(`${import.meta.env.VITE_BACKEND_URL}/api/patients`),
-                        fetch(`${import.meta.env.VITE_BACKEND_URL}/api/departments`),
-                        fetch(`${import.meta.env.VITE_BACKEND_URL}/api/appointments`),
-                        fetch(`${import.meta.env.VITE_BACKEND_URL}/api/hospitals`),
+                        fetch(`${import.meta.env.VITE_BACKEND_URL}/staff`),
+                        fetch(`${import.meta.env.VITE_BACKEND_URL}/patients`),
+                        fetch(`${import.meta.env.VITE_BACKEND_URL}/departments`),
+                        fetch(`${import.meta.env.VITE_BACKEND_URL}/appointments`),
+                        fetch(`${import.meta.env.VITE_BACKEND_URL}/hospitals`),
                         ///fetch(calendarEndpoint)
                     ]);
 

@@ -57,7 +57,7 @@ const handleSubmit = async (e) => {
     };
 
     const response = await axios.post(
-      `${import.meta.env.VITE_BACKEND_URL}/api/patients`,
+      `${import.meta.env.VITE_BACKEND_URL}/patients`,
       payload
     );
 

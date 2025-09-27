@@ -26,7 +26,7 @@ const RoomList = () => {
 
   const fetchRooms = async () => {
     try {
-      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/rooms`);
+      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/rooms`);
       setRooms(response.data);
       console.log('Fetched rooms:', response.data);
     } catch (error) {
@@ -42,7 +42,7 @@ const RoomList = () => {
     }
 
     try {
-      await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/api/rooms/${roomId}`);
+      await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/rooms/${roomId}`);
       toast.success('Room deleted successfully');
       fetchRooms();
     } catch (error) {
@@ -72,7 +72,7 @@ const RoomList = () => {
   const handleEditSubmit = async (roomId) => {
     try {
       await axios.put(
-        `${import.meta.env.VITE_BACKEND_URL}/api/rooms/${roomId}`,
+        `${import.meta.env.VITE_BACKEND_URL}/rooms/${roomId}`,
         editFormData
       );
       toast.success('Room updated successfully');

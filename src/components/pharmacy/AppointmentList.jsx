@@ -33,7 +33,7 @@ const [appointmentType, setAppointmentType] = useState(null);
   useEffect(() => {
     const fetchAppointments = async () => {
       try {
-        const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/appointments`);
+        const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/appointments`);
         const data = response.data;
 
         const enriched = data.map((appt) => ({

@@ -12,7 +12,7 @@ const PharmacyList = () => {
   useEffect(() => {
     const fetchPharmacies = async () => {
       try {
-        const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/pharmacy`);
+        const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/pharmacy`);
         setPharmacies(res.data);
       } catch (err) {
         console.error('Failed to fetch pharmacies:', err);

@@ -35,8 +35,8 @@ const AppointmentList = () => {
       setLoading(true);
       try {
         const [appointmentRes, hospitalRes] = await Promise.all([
-          axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/appointments`),
-          axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/hospitals`)
+          axios.get(`${import.meta.env.VITE_BACKEND_URL}/appointments`),
+          axios.get(`${import.meta.env.VITE_BACKEND_URL}/hospitals`)
         ]);
 
         // Add patientId to the enriched data

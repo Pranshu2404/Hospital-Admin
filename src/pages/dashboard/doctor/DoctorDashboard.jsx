@@ -63,13 +63,13 @@ const DoctorDashboard = () => {
         console.log(doctorId)
         const [patientsRes, appointmentsRes, doctorsRes, calendarRes] = await Promise.all([
           
-          axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/patients`),
-          axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/appointments/doctor/${doctorId}`),
-          axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/doctors`),
-          axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/calendar/doctor/${doctorId}`)
+          axios.get(`${import.meta.env.VITE_BACKEND_URL}/patients`),
+          axios.get(`${import.meta.env.VITE_BACKEND_URL}/appointments/doctor/${doctorId}`),
+          axios.get(`${import.meta.env.VITE_BACKEND_URL}/doctors`),
+          axios.get(`${import.meta.env.VITE_BACKEND_URL}/calendar/doctor/${doctorId}`)
         ]);
         console.log("API response for patients:", patientsRes.data); // Add this line
-        const currentDoctor = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/doctors/${doctorId}`);
+        const currentDoctor = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/doctors/${doctorId}`);
 
         setName(currentDoctor.data.firstName)
         const today = dayjs();

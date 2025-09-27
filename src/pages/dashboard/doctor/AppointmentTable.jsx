@@ -19,7 +19,7 @@ const DoctorAppointments = () => {
 
   const fetchAppointments = async () => {
     try {
-      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/appointments/doctor/${doctorId}`);
+      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/appointments/doctor/${doctorId}`);
       setAppointments(response.data || []);
       setLoading(false);
     } catch (err) {
@@ -64,7 +64,7 @@ const DoctorAppointments = () => {
 
   const handleStartAppointment = async (appointmentId) => {
     try {
-      await axios.put(`${import.meta.env.VITE_BACKEND_URL}/api/appointments/${appointmentId}`, {
+      await axios.put(`${import.meta.env.VITE_BACKEND_URL}/appointments/${appointmentId}`, {
         status: 'In Progress'
       });
       fetchAppointments(); // Refresh the list
