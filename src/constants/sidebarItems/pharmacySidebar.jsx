@@ -156,28 +156,28 @@ export const pharmacySidebar = [
   },
   
   // Reports & Analytics
-  {
-    label: 'Reports',
-    icon: FaChartBar,
-    submenu: [
-      { label: 'Sales Reports', path: '/dashboard/pharmacy/reports/sales' },
-      { label: 'Inventory Reports', path: '/dashboard/pharmacy/reports/inventory' },
-      { label: 'Profit & Loss', path: '/dashboard/pharmacy/reports/profit-loss' },
-      { label: 'Expiry Reports', path: '/dashboard/pharmacy/reports/expiry' },
-      { label: 'Supplier Reports', path: '/dashboard/pharmacy/reports/suppliers' },
-    ],
-  },
+  // {
+  //   label: 'Reports',
+  //   icon: FaChartBar,
+  //   submenu: [
+  //     { label: 'Sales Reports', path: '/dashboard/pharmacy/reports/sales' },
+  //     { label: 'Inventory Reports', path: '/dashboard/pharmacy/reports/inventory' },
+  //     { label: 'Profit & Loss', path: '/dashboard/pharmacy/reports/profit-loss' },
+  //     { label: 'Expiry Reports', path: '/dashboard/pharmacy/reports/expiry' },
+  //     { label: 'Supplier Reports', path: '/dashboard/pharmacy/reports/suppliers' },
+  //   ],
+  // },
   
   // Transfers & Returns
-  {
-    label: 'Transfers & Returns',
-    icon: FaExchangeAlt,
-    submenu: [
-      { label: 'Stock Transfers', path: '/dashboard/pharmacy/transfers/stock' },
-      { label: 'Returns to Supplier', path: '/dashboard/pharmacy/transfers/returns' },
-      { label: 'Damage/Waste', path: '/dashboard/pharmacy/transfers/damage' },
-    ],
-  },
+  // {
+  //   label: 'Transfers & Returns',
+  //   icon: FaExchangeAlt,
+  //   submenu: [
+  //     { label: 'Stock Transfers', path: '/dashboard/pharmacy/transfers/stock' },
+  //     { label: 'Returns to Supplier', path: '/dashboard/pharmacy/transfers/returns' },
+  //     { label: 'Damage/Waste', path: '/dashboard/pharmacy/transfers/damage' },
+  //   ],
+  // },
   
   // Profile & Settings
   {
@@ -185,14 +185,14 @@ export const pharmacySidebar = [
     icon: UserProfileIcon,
     path: '/dashboard/pharmacy/profile',
   },
-  {
-    label: 'Settings',
-    icon: SettingsIcon,
-    submenu: [
-      { label: 'Pharmacy Settings', path: '/dashboard/pharmacy/settings/general' },
-      { label: 'Tax Configuration', path: '/dashboard/pharmacy/settings/tax' },
-      { label: 'User Management', path: '/dashboard/pharmacy/settings/users' },
-      { label: 'Backup & Restore', path: '/dashboard/pharmacy/settings/backup' },
-    ],
-  },
+  // {
+  //   label: 'Settings',
+  //   icon: SettingsIcon,
+  //   submenu: [
+  //     { label: 'Pharmacy Settings', path: '/dashboard/pharmacy/settings/general' },
+  //     { label: 'Tax Configuration', path: '/dashboard/pharmacy/settings/tax' },
+  //     { label: 'User Management', path: '/dashboard/pharmacy/settings/users' },
+  //     { label: 'Backup & Restore', path: '/dashboard/pharmacy/settings/backup' },
+  //   ],
+  // },
 ];

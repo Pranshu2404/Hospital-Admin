@@ -147,13 +147,13 @@ const PharmacyDashboard = () => {
           revenueResponse,
           lowStockResponse
         ] = await Promise.all([
-          apiClient.get('/api/medicines?limit=100'),
-          apiClient.get('/api/suppliers'),
-          apiClient.get('/api/medicines/expired'),
-          apiClient.get('/api/orders/sale?limit=5&page=1'),
-          apiClient.get('/api/prescriptions?limit=5&page=1'),
-          apiClient.get('/api/invoices/stats/pharmacy-monthly'),
-          apiClient.get('/api/medicines/low-stock')
+          apiClient.get('/medicines?limit=100'),
+          apiClient.get('/suppliers'),
+          apiClient.get('/medicines/expired'),
+          apiClient.get('/orders/sale?limit=5&page=1'),
+          apiClient.get('/prescriptions?limit=5&page=1'),
+          apiClient.get('/invoices/stats/pharmacy-monthly'),
+          apiClient.get('/medicines/low-stock')
         ]);
 
         const medicines = medicinesResponse.data.medicines || medicinesResponse.data;

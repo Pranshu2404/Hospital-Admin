@@ -24,8 +24,8 @@ const StockAdjustments = () => {
     const fetchData = async () => {
       try {
         const [adjustmentsRes, medicinesRes] = await Promise.all([
-          apiClient.get('/api/stock-adjustments?limit=50'),
-          apiClient.get('/api/medicines?limit=100')
+          apiClient.get('/stock-adjustments?limit=50'),
+          apiClient.get('/medicines?limit=100')
         ]);
 
         setAdjustments(adjustmentsRes.data.adjustments || adjustmentsRes.data);

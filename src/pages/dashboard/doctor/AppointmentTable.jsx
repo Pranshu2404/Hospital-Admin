@@ -20,6 +20,7 @@ const DoctorAppointments = () => {
   const fetchAppointments = async () => {
     try {
       const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/appointments/doctor/${doctorId}`);
+      console.log(response.data)
       setAppointments(response.data || []);
       setLoading(false);
     } catch (err) {

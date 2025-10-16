@@ -26,7 +26,7 @@ const SuppliersList = () => {
   useEffect(() => {
     const fetchSuppliers = async () => {
       try {
-        const response = await apiClient.get('/api/suppliers');
+        const response = await apiClient.get('/suppliers');
         setSuppliers(response.data);
       } catch (err) {
         setError('Failed to fetch suppliers. Please try again later.');
@@ -45,7 +45,7 @@ const SuppliersList = () => {
     }
 
     try {
-      await apiClient.delete(`/api/suppliers/${supplierId}`);
+      await apiClient.delete(`/suppliers/${supplierId}`);
       setSuppliers(prev => prev.filter(s => s._id !== supplierId));
       alert('Supplier deleted successfully');
     } catch (err) {
@@ -56,7 +56,7 @@ const SuppliersList = () => {
 
   const handleStatusToggle = async (supplierId, currentStatus) => {
     try {
-      const response = await apiClient.patch(`/api/suppliers/${supplierId}`, {
+      const response = await apiClient.patch(`/suppliers/${supplierId}`, {
         isActive: !currentStatus
       });
       
@@ -295,7 +295,7 @@ const SuppliersList = () => {
             Add New Supplier
           </Link>
           <Link
-            to="/dashboard/pharmacy/purchasing/orders"
+            to="/dashboard/pharmacy/orders"
             className="border border-blue-600 text-blue-600 px-4 py-2 rounded-lg hover:bg-blue-50"
           >
             View Purchase Orders

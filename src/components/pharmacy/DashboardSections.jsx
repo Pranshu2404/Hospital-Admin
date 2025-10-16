@@ -202,7 +202,7 @@ export const QuickActions = () => {
 
   // Fetch count initially for the badge
   useEffect(() => {
-    apiClient.get('/api/prescriptions') // Assuming an endpoint like this exists
+    apiClient.get('/prescriptions') // Assuming an endpoint like this exists
       .then(response => {
         setPrescriptionCount(response.data.prescriptions.length() || 0);
       })
@@ -216,7 +216,7 @@ export const QuickActions = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await apiClient.get('/api/prescriptions');
+      const response = await apiClient.get('/prescriptions');
       setPrescriptions(response.data.prescriptions);
     } catch (err) {
       setError(err.message || 'Failed to fetch prescriptions');

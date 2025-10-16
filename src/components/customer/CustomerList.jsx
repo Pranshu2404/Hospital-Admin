@@ -38,17 +38,17 @@ const CustomerProfileModal = ({ customer, onClose }) => {
         const base = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
         
         // Fetch detailed customer information
-        const customerRes = await axios.get(`${base}/api/customers/${customer._id}`);
+        const customerRes = await axios.get(`${base}/customers/${customer._id}`);
         setCustomerDetails(customerRes.data);
 
         // Fetch purchase history
-        const purchasesRes = await axios.get(`${base}/api/sales/customer/${customer._id}`);
+        const purchasesRes = await axios.get(`${base}/sales/customer/${customer._id}`);
         setPurchaseHistory(purchasesRes.data.sales || []);
 
         // Fetch prescriptions if patient
         if (customer.isPatient) {
           try {
-            const prescRes = await axios.get(`${base}/api/prescriptions/patient/${customer._id}`);
+            const prescRes = await axios.get(`${base}/prescriptions/patient/${customer._id}`);
             setPrescriptions(prescRes.data.prescriptions || []);
           } catch (err) {
             console.debug('Prescriptions not available');
@@ -58,7 +58,7 @@ const CustomerProfileModal = ({ customer, onClose }) => {
         // Fetch appointments if patient
         if (customer.isPatient) {
           try {
-            const apptRes = await axios.get(`${base}/api/appointments/patient/${customer._id}`);
+            const apptRes = await axios.get(`${base}/appointments/patient/${customer._id}`);
             setAppointments(apptRes.data.appointments || []);
           } catch (err) {
             console.debug('Appointments not available');
@@ -67,7 +67,7 @@ const CustomerProfileModal = ({ customer, onClose }) => {
 
         // Fetch invoices
         try {
-          const invRes = await axios.get(`${base}/api/invoices/customer/${customer._id}`);
+          const invRes = await axios.get(`${base}/invoices/customer/${customer._id}`);
           setInvoices(invRes.data.invoices || []);
         } catch (err) {
           console.debug('Invoices not available');
@@ -455,7 +455,7 @@ const CustomerList = () => {
     const fetchCustomers = async () => {
       try {
         const base = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
-        const response = await axios.get(`${base}/api/customers`);
+        const response = await axios.get(`${base}/customers`);
         console.log(response.data);
         
         // Transform API response to match expected format

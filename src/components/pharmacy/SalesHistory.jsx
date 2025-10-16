@@ -31,7 +31,7 @@ const SalesHistory = () => {
       if (dateFilter) params.date = dateFilter;
       if (statusFilter) params.status = statusFilter;
       
-      const response = await apiClient.get('/api/orders/sale', { params });
+      const response = await apiClient.get('/orders/sale', { params });
       setSales(response.data.sales);
       setTotalPages(response.data.totalPages);
     } catch (err) {

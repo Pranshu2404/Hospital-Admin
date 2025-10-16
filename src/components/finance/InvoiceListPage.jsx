@@ -76,7 +76,7 @@ const AppointmentInvoicesPage = () => {
         }
       }
 
-      const response = await apiClient.get('/api/invoices/type/Appointment', { params });
+      const response = await apiClient.get('/invoices/type/Appointment', { params });
       setInvoices(response.data.invoices);
       setTotalPages(response.data.totalPages);
       setTotalInvoices(response.data.total);
@@ -145,7 +145,7 @@ const AppointmentInvoicesPage = () => {
 
   const downloadInvoice = async (invoiceId, invoiceNumber) => {
     try {
-      const response = await apiClient.get(`/api/invoices/${invoiceId}/download`, {
+      const response = await apiClient.get(`/invoices/${invoiceId}/download`, {
         responseType: 'blob'
       });
       

@@ -40,7 +40,7 @@ const PurchaseOrdersList = () => {
       const params = { page, limit: 10 };
       if (statusFilter) params.status = statusFilter;
       
-      const response = await apiClient.get('/api/orders/purchase', { params });
+      const response = await apiClient.get('/orders/purchase', { params });
       console.log('Fetched Orders:', response.data);
       setOrders(response.data.orders);
       setTotalPages(response.data.totalPages);
@@ -54,7 +54,7 @@ const PurchaseOrdersList = () => {
 
   const fetchOrderDetails = async (orderId) => {
     try {
-      const response = await apiClient.get(`/api/orders/purchase/${orderId}`);
+      const response = await apiClient.get(`/orders/purchase/${orderId}`);
       setSelectedOrder(response.data);
       setShowModal(true);
       
@@ -101,7 +101,7 @@ const PurchaseOrdersList = () => {
 
       console.log('Submitting Receive Data:', receiveData.items);
       
-      await apiClient.post(`/api/orders/purchase/${selectedOrder._id}/receive`, { received_items: receiveData.items });
+      await apiClient.post(`/orders/purchase/${selectedOrder._id}/receive`, { received_items: receiveData.items });
       
       // Refresh the orders list and close the modal
       fetchPurchaseOrders();

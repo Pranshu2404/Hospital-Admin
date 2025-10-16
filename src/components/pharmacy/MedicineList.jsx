@@ -34,7 +34,7 @@ const MedicineList = () => {
   useEffect(() => {
     const fetchMedicines = async () => {
       try {
-        const response = await apiClient.get('/api/medicines?limit=200');
+        const response = await apiClient.get('/medicines?limit=200');
         setMedicines(response.data.medicines || response.data);
       } catch (err) {
         setError('Failed to fetch medicines. Please try again later.');

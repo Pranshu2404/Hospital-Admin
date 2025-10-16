@@ -45,7 +45,7 @@ const OutstandingPayments = () => {
         invoice_type: typeFilter
       };
       
-      const response = await apiClient.get('/api/invoices', { params });
+      const response = await apiClient.get('/invoices', { params });
       setInvoices(response.data.invoices);
       setTotalPages(response.data.totalPages);
     } catch (err) {
@@ -58,7 +58,7 @@ const OutstandingPayments = () => {
 
   const fetchStats = async () => {
     try {
-      const response = await apiClient.get('/api/invoices/stats');
+      const response = await apiClient.get('/invoices/stats');
       setStats({
         totalOutstanding: response.data.pendingRevenue || 0,
         totalInvoices: response.data.totalInvoices || 0,

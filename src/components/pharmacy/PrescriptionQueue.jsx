@@ -27,7 +27,7 @@ const PrescriptionQueue = () => {
       const params = { status: 'Active' };
       if (priorityFilter) params.priority = priorityFilter;
       
-      const response = await apiClient.get('/api/prescriptions', { params });
+      const response = await apiClient.get('/prescriptions', { params });
       // Filter prescriptions that have undispensed items
       const queuePrescriptions = response.data.prescriptions.filter(prescription =>
         prescription.items.some(item => !item.is_dispensed)

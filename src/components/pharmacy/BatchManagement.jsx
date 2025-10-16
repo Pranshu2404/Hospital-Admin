@@ -23,7 +23,7 @@ const BatchManagement = () => {
   useEffect(() => {
     const fetchBatches = async () => {
       try {
-        const response = await apiClient.get('/api/batches');
+        const response = await apiClient.get('/batches');
         setBatches(response.data.batches);
       } catch (err) {
         setError('Failed to fetch batches. Please try again later.');
@@ -85,7 +85,7 @@ const BatchManagement = () => {
           <p className="text-gray-600">Manage medicine batches and expiry dates</p>
         </div>
         <Link 
-          to="/dashboard/pharmacy/purchasing/create-order"
+          to="/dashboard/pharmacy/create-order"
           className="flex items-center gap-2 bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700"
         >
           <FaPlus /> Receive New Batch

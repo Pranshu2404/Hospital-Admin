@@ -12,6 +12,29 @@ import {
 import Layout from '@/components/Layout';
 import { pharmacySidebar } from '@/constants/sidebarItems/pharmacySidebar';
 
+// ✅ 1. Define FormField OUTSIDE and pass `value` and `onChange` as props.
+const FormField = ({ label, icon, name, type = 'text', required = false, value, onChange, ...props }) => (
+  <div className="space-y-2">
+    <label className="block text-sm font-medium text-gray-700">
+      <div className="flex items-center gap-2">
+        {icon}
+        {label}
+        {required && <span className="text-red-500">*</span>}
+      </div>
+    </label>
+    <input
+      type={type}
+      name={name}
+      value={value}         // Use the prop
+      onChange={onChange}   // Use the prop
+      required={required}
+      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+      {...props}
+    />
+  </div>
+);
+
+
 const AddSupplier = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
@@ -40,11 +63,11 @@ const AddSupplier = () => {
     setError('');
 
     try {
-      const response = await apiClient.post('/api/suppliers', formData);
+      const response = await apiClient.post('/suppliers', formData);
       
       if (response.status === 201) {
         alert('Supplier added successfully!');
-        navigate('/dashboard/pharmacy/purchasing/suppliers');
+        navigate('/dashboard/pharmacy/suppliers');
       }
     } catch (err) {
       console.error('Error adding supplier:', err);
@@ -54,31 +77,10 @@ const AddSupplier = () => {
     }
   };
 
-  const FormField = ({ label, icon, name, type = 'text', required = false, ...props }) => (
-    <div className="space-y-2">
-      <label className="block text-sm font-medium text-gray-700">
-        <div className="flex items-center gap-2">
-          {icon}
-          {label}
-          {required && <span className="text-red-500">*</span>}
-        </div>
-      </label>
-      <input
-        type={type}
-        name={name}
-        value={formData[name]}
-        onChange={handleChange}
-        required={required}
-        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-        {...props}
-      />
-    </div>
-  );
-
   return (
     <Layout sidebarItems={pharmacySidebar}>
     <div className="p-6 max-w-2xl mx-auto">
-      {/* Header */}
+      {/* ... Header and Error Message ... */}
       <div className="mb-6">
         <button
           onClick={() => navigate('/dashboard/pharmacy/suppliers')}
@@ -92,8 +94,7 @@ const AddSupplier = () => {
         </h1>
         <p className="text-gray-600">Add a new supplier to your pharmacy network</p>
       </div>
-
-      {/* Error Message */}
+      
       {error && (
         <div className="bg-red-50 border border-red-200 p-4 rounded-lg mb-6">
           <p className="text-red-700">{error}</p>
@@ -103,26 +104,32 @@ const AddSupplier = () => {
       {/* Form */}
       <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* ✅ 2. Pass `value` and `onChange` to each FormField */}
           <FormField
             label="Supplier Name"
             icon={<FaBuilding className="text-gray-400" />}
             name="name"
             required
             placeholder="Enter supplier company name"
+            value={formData.name}
+            onChange={handleChange}
           />
           <FormField
             label="Company Name"
             icon={<FaBuilding className="text-gray-400" />}
             name="companyName"
             placeholder="Enter company name"
+            value={formData.companyName}
+            onChange={handleChange}
           />
           <FormField
             label="Contact Person"
             icon={<FaUser className="text-gray-400" />}
             name="contactPerson"
             placeholder="Enter contact person name"
+            value={formData.contactPerson}
+            onChange={handleChange}
           />
-
           <FormField
             label="Phone Number"
             icon={<FaPhone className="text-gray-400" />}
@@ -130,8 +137,9 @@ const AddSupplier = () => {
             type="tel"
             required
             placeholder="Enter phone number"
+            value={formData.phone}
+            onChange={handleChange}
           />
-
           <FormField
             label="Email Address"
             icon={<FaEnvelope className="text-gray-400" />}
@@ -139,6 +147,8 @@ const AddSupplier = () => {
             type="email"
             required
             placeholder="Enter email address"
+            value={formData.email}
+            onChange={handleChange}
           />
         </div>
 
@@ -147,20 +157,21 @@ const AddSupplier = () => {
           icon={<FaMapMarkerAlt className="text-gray-400" />}
           name="address"
           placeholder="Enter full address"
+          value={formData.address}
+          onChange={handleChange}
         />
-
-        <div className="flex items-center gap-3">
+        {/* ... Rest of your form ... */}
+         <div className="flex items-center gap-3">
           <input
             type="checkbox"
             name="isActive"
+            id="isActiveCheckbox"
             checked={formData.isActive}
             onChange={handleChange}
             className="rounded border-gray-300 text-teal-600 focus:ring-teal-500"
           />
-          <label className="text-sm text-gray-700">Active Supplier</label>
+          <label htmlFor="isActiveCheckbox" className="text-sm text-gray-700">Active Supplier</label>
         </div>
-
-        {/* Submit Buttons */}
         <div className="flex gap-4 pt-6 border-t">
           <button
             type="submit"
@@ -171,7 +182,7 @@ const AddSupplier = () => {
           </button>
           <button
             type="button"
-            onClick={() => navigate('/dashboard/pharmacy/purchasing/suppliers')}
+            onClick={() => navigate('/dashboard/pharmacy/suppliers')}
             className="px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50"
           >
             Cancel
@@ -179,7 +190,7 @@ const AddSupplier = () => {
         </div>
       </form>
 
-      {/* Additional Information */}
+      {/* ... Additional Information ... */}
       <div className="mt-6 bg-blue-50 p-4 rounded-lg border border-blue-200">
         <h3 className="font-semibold text-blue-800 mb-2">Supplier Information</h3>
         <p className="text-sm text-blue-700">

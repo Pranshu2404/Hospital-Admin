@@ -236,7 +236,7 @@ const InvoicesList = () => {
         status: statusFilter
       };
       
-      const response = await apiClient.get('/api/invoices', { params });
+      const response = await apiClient.get('/invoices', { params });
       setInvoices(response.data.invoices);
       setTotalPages(response.data.totalPages);
     } catch (err) {
@@ -248,7 +248,7 @@ const InvoicesList = () => {
 
   const handleViewInvoice = async (invoiceId) => {
     try {
-      const response = await apiClient.get(`/api/invoices/${invoiceId}`);
+      const response = await apiClient.get(`/invoices/${invoiceId}`);
       setSelectedInvoice(response.data);
       setIsModalOpen(true);
     } catch (err) {
@@ -259,7 +259,7 @@ const InvoicesList = () => {
   const handleDownloadPDF = async (invoiceId) => {
     try {
       setPdfLoading(true);
-      const response = await apiClient.get(`/api/invoices/${invoiceId}/download`, {
+      const response = await apiClient.get(`/invoices/${invoiceId}/download`, {
         responseType: 'blob'
       });
       
