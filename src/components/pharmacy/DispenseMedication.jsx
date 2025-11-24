@@ -49,12 +49,12 @@ const DispenseMedication = () => {
     setLoading(true);
     try {
       const [patientsRes, customersRes] = await Promise.all([
-        apiClient.get(`/api/patients?search=${searchTerm}`)
+        apiClient.get(`/patients?search=${searchTerm}`)
           .catch(err => {
             console.error('Error fetching patients:', err.message);
             return { data: { patients: [] } };
           }),
-        apiClient.get(`/api/customers?search=${searchTerm}`)
+        apiClient.get(`/customers?search=${searchTerm}`)
           .catch(err => {
             console.error('Error fetching customers:', err.message);
             return { data: { customers: [] } };
@@ -63,7 +63,8 @@ const DispenseMedication = () => {
 
       const patientsData = patientsRes.data.patients || [];
       const customersData = customersRes.data.customers || [];
-
+      console.log(patientsData)
+      console.log(searchTerm)
       const combinedResults = [
         ...patientsData.map(p => ({ 
           ...p, 
@@ -89,7 +90,7 @@ const DispenseMedication = () => {
   const searchMedicineByName = async (medicineName) => {
     setMedicineSearchLoading(prev => ({ ...prev, [medicineName]: true }));
     try {
-      const response = await apiClient.get(`/api/medicines/search?query=${encodeURIComponent(medicineName)}`);
+      const response = await apiClient.get(`/medicines/search?query=${encodeURIComponent(medicineName)}`);
       console.log('Fetched medicines:', response.data);
       return response.data;
     } catch (err) {
@@ -104,7 +105,7 @@ const DispenseMedication = () => {
   const fetchMedicineBatches = async (medicineId) => {
     setBatchLoading(prev => ({ ...prev, [medicineId]: true }));
     try {
-      const response = await apiClient.get(`/api/batches/medicine/${medicineId}`);
+      const response = await apiClient.get(`/batches/medicine/${medicineId}`);
       console.log('Fetched batches:', response.data);
       return response.data;
     } catch (err) {
@@ -127,9 +128,9 @@ const DispenseMedication = () => {
     try {
       let endpoint = '';
       if (customer.type === 'Patient') {
-        endpoint = `/api/prescriptions/patient/${customer._id}`;
+        endpoint = `/prescriptions/patient/${customer._id}`;
       } else {
-        endpoint = `/api/prescriptions?customerPhone=${customer.phone}`;
+        endpoint = `/prescriptions?customerPhone=${customer.phone}`;
       }
       
       const response = await apiClient.get(endpoint);
@@ -315,7 +316,7 @@ const DispenseMedication = () => {
 
       console.log('Creating sale with data:', saleData);
       
-      const response = await apiClient.post('/api/orders/sale', saleData);
+      const response = await apiClient.post('/orders/sale', saleData);
       console.log('Sale created:', response.data);
       
       // Reset form and show success
