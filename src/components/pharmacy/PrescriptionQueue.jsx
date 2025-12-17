@@ -40,6 +40,18 @@ const PrescriptionQueue = () => {
     }
   };
 
+  const handleDispense = (prescription) => {
+    // Store the selected prescription in sessionStorage
+    sessionStorage.setItem('selectedPrescription', JSON.stringify({
+      _id: prescription._id,
+      patient_id: prescription.patient_id,
+      prescription_number: prescription.prescription_number
+    }));
+    
+    // Navigate to dispense page
+    window.location.href = '/dashboard/pharmacy/prescriptions/dispense';
+  };
+
   const getPriorityBadge = (priority) => {
     const priorities = {
       High: 'bg-red-100 text-red-800',
@@ -214,7 +226,7 @@ const PrescriptionQueue = () => {
                 
                 <div className="flex gap-2">
                   <button
-                    onClick={() => window.location.href = `/dashboard/pharmacy/prescriptions/dispense`}
+                    onClick={() => handleDispense(prescription)}
                     className="px-3 py-1 bg-teal-600 text-white text-sm rounded-lg hover:bg-teal-700"
                   >
                     Dispense

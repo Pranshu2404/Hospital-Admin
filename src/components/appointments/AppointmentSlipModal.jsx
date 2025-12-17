@@ -16,13 +16,13 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
   const [prescriptionForm, setPrescriptionForm] = useState({
     diagnosis: '',
     notes: '',
-    items: [{ medicine_name: '', dosage: '', duration: '', instructions: '' }],
+    items: [{ medicine_name: '', dosage: '', frequency: '', duration: '', instructions: '' }],
     prescriptionImage: null
   });
   const [showUploadForm, setShowUploadForm] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [submittingPrescription, setSubmittingPrescription] = useState(false);
-  
+  console.log('Loaded prescription from appointment-specific endpoint:', hospitalInfo);
   // helper to load prescription from server (cache-busted)
   const loadPrescription = async () => {
     if (!appointmentData || !appointmentData._id) return;
@@ -35,6 +35,7 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
         appointmentEndpointAvailable = true;
         const pres = resp.data.prescription || resp.data || null;
         console.log('Loaded prescription from appointment-specific endpoint:', pres);
+        
         if (pres) {
           setPrescription(pres);
           return;
@@ -50,57 +51,53 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
         }
       }
     }
-
     // Fallback: fetch all prescriptions and try to find one matching appointment_id or patient_id
     try {
-      // const respAll = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/prescriptions?_=${Date.now()}`);
-      // const list = Array.isArray(respAll.data) ? respAll.data : (respAll.data.prescriptions || []);
-      // if (!list || !list.length) {
-      //   setPrescription(null);
-      //   return;
-      // }
+      const respAll = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/prescriptions?_=${Date.now()}`);
+      const list = Array.isArray(respAll.data) ? respAll.data : (respAll.data.prescriptions || respAll.data.data || []);
+      if (!list || !list.length) {
+        setPrescription(null);
+        setCandidatePrescriptions([]);
+        return;
+      }
 
-      // const appointmentId = appointmentData._id;
-      // const patientId = appointmentData.patient_id && appointmentData.patient_id._id ? appointmentData.patient_id._id : appointmentData.patient_id;
+      const appointmentId = appointmentData._id;
+      const appointmentPatientId = appointmentData.patient_id && (appointmentData.patient_id._id || appointmentData.patient_id);
+      const patientIdStr = appointmentPatientId ? String(appointmentPatientId) : null;
+      const appointmentIdStr = appointmentId ? String(appointmentId) : null;
 
-      // // Prefer exact appointment match OR exact patient match
-      // const normalizeId = (x) => (x && (x._id || x)) ? String(x._id || x) : null;
-      // const appointmentIdStr = String(appointmentId);
-      // const appointmentPatientId = appointmentData.patient_id && (appointmentData.patient_id._id || appointmentData.patient_id);
-      // const patientIdStr = appointmentPatientId ? String(appointmentPatientId) : null;
+      // Find prescription linked to this appointment
+      let found = list.find(p => {
+        const pAppt = p.appointment_id && (p.appointment_id._id || p.appointment_id);
+        return pAppt && String(pAppt) === appointmentIdStr;
+      });
 
-      // // Find prescription linked to this appointment
-      // let found = list.find(p => {
-      //   const pAppt = p.appointment_id && (p.appointment_id._id || p.appointment_id);
-      //   return pAppt && String(pAppt) === appointmentIdStr;
-      // });
+      if (!found && patientIdStr) {
+        // find prescriptions whose patient_id exactly matches appointment patient
+        const byPatient = list.filter(p => {
+          const pid = p.patient_id && (p.patient_id._id || p.patient_id);
+          return pid && String(pid) === patientIdStr;
+        });
+        if (byPatient.length) {
+          // pick most recent by created_at or createdAt
+          byPatient.sort((a,b) => {
+            const ta = a.created_at ? new Date(a.created_at).getTime() : (a.createdAt ? new Date(a.createdAt).getTime() : 0);
+            const tb = b.created_at ? new Date(b.created_at).getTime() : (b.createdAt ? new Date(b.createdAt).getTime() : 0);
+            return tb - ta;
+          });
+          found = byPatient[0];
+        }
+        // keep full patient-matching list for attach UI
+        setCandidatePrescriptions(byPatient);
+      } else {
+        setCandidatePrescriptions([]);
+      }
 
-      // if (!found && patientIdStr) {
-      //   // find prescriptions whose patient_id exactly matches appointment patient
-      //   const byPatient = list.filter(p => {
-      //     const pid = p.patient_id && (p.patient_id._id || p.patient_id);
-      //     return pid && String(pid) === patientIdStr;
-      //   });
-      //   if (byPatient.length) {
-      //     // pick most recent by created_at
-      //     byPatient.sort((a,b) => {
-      //       const ta = a.created_at ? new Date(a.created_at).getTime() : 0;
-      //       const tb = b.created_at ? new Date(b.created_at).getTime() : 0;
-      //       return tb - ta;
-      //     });
-      //     found = byPatient[0];
-      //   }
-      //   // keep full patient-matching list for attach UI
-      //   setCandidatePrescriptions(byPatient);
-      // } else {
-      //   setCandidatePrescriptions([]);
-      // }
-
-      // setPrescription(found || null);
-      return;
+      setPrescription(found || null);
     } catch (errAll) {
       console.debug('Generic prescriptions list fetch failed:', errAll?.response?.status || errAll.message);
       setPrescription(null);
+      setCandidatePrescriptions([]);
     }
   };
   
@@ -111,7 +108,7 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
       setPrescriptionForm({
         diagnosis: '',
         notes: '',
-        items: [{ medicine_name: '', dosage: '', duration: '', instructions: '' }],
+        items: [{ medicine_name: '', dosage: '', frequency: '', duration: '', instructions: '' }],
         prescriptionImage: null
       });
       loadPrescription();
@@ -170,7 +167,7 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
   };
 
   const addMedicine = () => {
-    setPrescriptionForm(prev => ({ ...prev, items: [...prev.items, { medicine_name: '', dosage: '', duration: '', instructions: '' }] }));
+    setPrescriptionForm(prev => ({ ...prev, items: [...prev.items, { medicine_name: '', dosage: '', frequency: '', duration: '', instructions: '' }] }));
   };
 
   const removeMedicine = (index) => {
@@ -239,7 +236,28 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
   };
 
   if (!isOpen || !appointmentData) return null;
-  
+  // derive display values for patient, doctor and department with fallbacks
+  const patientObj = appointmentData.patient_id || {};
+  const billingPatient = billingDetails && billingDetails.patient_id ? billingDetails.patient_id : null;
+  const patientNameDisplay = appointmentData.patientName ||
+    (patientObj && (patientObj.first_name || patientObj.firstName || patientObj.name)
+      ? `${patientObj.first_name || patientObj.firstName || patientObj.name} ${patientObj.last_name || patientObj.lastName || ''}`.trim()
+      : (billingPatient ? `${billingPatient.first_name || billingPatient.firstName || billingPatient.name || ''} ${billingPatient.last_name || billingPatient.lastName || ''}`.trim() : 'N/A'));
+
+  const patientIdDisplay = appointmentData.patientId ||
+    (patientObj && (patientObj.patientID || patientObj.patientId || patientObj._id) ? (patientObj.patientID || patientObj.patientId || (typeof patientObj._id === 'string' ? patientObj._id : (patientObj._id && patientObj._id._id) || '')) : (billingPatient ? (billingPatient.patientID || billingPatient.patientId || billingPatient._id || '') : '')) || 'N/A';
+
+  const doctorObj = appointmentData.doctor_id || {};
+  const billingDoctor = billingDetails && billingDetails.doctor_id ? billingDetails.doctor_id : null;
+  const doctorNameDisplay = appointmentData.doctorName ||
+    (doctorObj && (doctorObj.firstName || doctorObj.first_name || doctorObj.name)
+      ? `${doctorObj.firstName || doctorObj.first_name || doctorObj.name} ${doctorObj.lastName || doctorObj.last_name || ''}`.trim()
+      : (billingDoctor ? `${billingDoctor.firstName || billingDoctor.first_name || billingDoctor.name || ''} ${billingDoctor.lastName || billingDoctor.last_name || ''}`.trim() : 'N/A'));
+
+  const deptObj = appointmentData.department_id || {};
+  const billingDept = billingDetails && billingDetails.department_id ? billingDetails.department_id : null;
+  const departmentNameDisplay = appointmentData.departmentName || deptObj.name || deptObj.department || (billingDept ? (billingDept.name || billingDept.department) : 'N/A') || 'N/A';
+
   const handlePrint = () => {
     window.print();
   };
@@ -249,14 +267,16 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
       <style>{`
         @media print {
           @page {
-            size: auto;
+            size: A4 portrait;
             margin: 10mm;
           }
           body, html {
             height: 100%;
             margin: 0;
             padding: 0;
+            -webkit-print-color-adjust: exact;
           }
+          /* hide everything first, reveal only printable slip */
           body * { 
             visibility: hidden; 
           }
@@ -275,33 +295,65 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
           .printable-slip, .printable-slip * { 
             visibility: visible; 
           }
+
+          /* keep header in normal flow so content flows below it */
+          .slip-header {
+            position: static;
+            display: block;
+            background: white;
+            z-index: 10000;
+            padding: 3mm 0;
+            margin: 0 0 6mm 0;
+            border-bottom: 2px dashed #ccc !important;
+          }
+
+          /* Make the printable area A4 width and reduce overall font-size slightly */
           .printable-slip { 
             width: 210mm; /* A4 width */
             min-height: 297mm; /* A4 height */
             margin: 0 auto;
-            padding: 15mm;
+            padding: 18mm 12mm 12mm 12mm;
             background: white;
-            font-size: 12pt;
+            font-size: 11pt;
+            box-sizing: border-box;
             box-shadow: none;
           }
+
+          /* Reduce sizes of utility text classes used in the component */
+          .printable-slip .text-2xl { font-size: 18pt; }
+          .printable-slip .text-xl { font-size: 14pt; }
+          .printable-slip .text-lg { font-size: 12pt; }
+          .printable-slip .text-sm { font-size: 10pt; }
+          .printable-slip .text-xs { font-size: 8.5pt; }
+
+          /* Tables and grids: slightly smaller font and tighter spacing */
+          .printable-slip .grid { font-size: 10pt; }
+          .printable-slip .grid > div { line-height: 1.1; }
+
+          /* Limit images so they don't push content to next page (smaller for print) */
+          .printable-slip img { max-height: 60mm; width: auto; max-width: 100%; object-fit: contain; display: block; }
+
+          /* hide the Important Instructions block in print */
+          .printable-slip .important-instructions { display: none !important; }
+
+          /* Avoid internal page breaks within important sections */
+          .printable-slip .slip-section { page-break-inside: avoid; }
+          .printable-slip h2, .printable-slip h3, .printable-slip h4 { page-break-after: avoid; }
+
           .no-print { 
             display: none !important; 
           }
-          .slip-header {
-            border-bottom: 2px dashed #ccc;
-            padding-bottom: 10px;
-            margin-bottom: 15px;
-          }
+
           .slip-section {
-            margin-bottom: 12px;
-            padding-bottom: 8px;
+            margin-bottom: 10px;
+            padding-bottom: 6px;
             border-bottom: 1px dashed #eee;
           }
           .slip-footer {
-            margin-top: 20px;
-            padding-top: 10px;
+            margin-top: 12px;
+            padding-top: 8px;
             border-top: 2px dashed #ccc;
-            font-size: 10pt;
+            font-size: 9pt;
           }
         }
 
@@ -331,40 +383,85 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
         }
       `}</style>
 
-      <div className="printable-slip-container no-print">
+      <div className="printable-slip-container">
         <div className="printable-slip">
           {/* Header */}
           <div className="text-center slip-header">
             <h2 className="text-2xl font-bold text-gray-900 mb-2">APPOINTMENT SLIP</h2>
-            <h3 className="text-xl font-semibold text-blue-800">{hospitalInfo?.name || 'MEDICAL CENTER'}</h3>
+            <h3 className="text-xl font-semibold text-blue-800">{hospitalInfo?.hospitalName || 'MEDICAL CENTER'}</h3>
             <p className="text-sm text-gray-600 mt-1">{hospitalInfo?.address || 'Hospital Address'}</p>
             <p className="text-sm text-gray-600">
-              {hospitalInfo?.phone ? `Tel: ${hospitalInfo.phone} • ` : ''}
+              {hospitalInfo?.contact ? `Tel: ${hospitalInfo.contact} • ` : ''}
               {hospitalInfo?.email || ''}
             </p>
           </div>
 
           {/* Appointment Details */}
-          <div className="slip-section">
-            <h4 className="text-lg font-semibold text-gray-800 mb-3 border-b pb-1">APPOINTMENT DETAILS</h4>
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              <div><span className="text-gray-600 font-medium">Slip No:</span> <span className="font-semibold">#{appointmentData._id?.slice(-8).toUpperCase() || 'N/A'}</span></div>
-              <div><span className="text-gray-600 font-medium">Date:</span> <span className="font-semibold">{new Date().toLocaleDateString()}</span></div>
-              
-              <div><span className="text-gray-600 font-medium">Patient Name:</span> <strong className="text-blue-800">{appointmentData.patientName}</strong></div>
-              <div><span className="text-gray-600 font-medium">Patient ID:</span> <strong>{appointmentData.patientId || 'N/A'}</strong></div>
-              
-              <div><span className="text-gray-600 font-medium">Appointment Type:</span> <strong>{appointmentData.type || 'Consultation'}</strong></div>
-              <div><span className="text-gray-600 font-medium">Department:</span> <strong>{appointmentData.departmentName}</strong></div>
-              
-              <div><span className="text-gray-600 font-medium">Doctor:</span> <strong className="text-green-700">{appointmentData.doctorName}</strong></div>
-              <div><span className="text-gray-600 font-medium">Status:</span> <span className="font-semibold">{appointmentData.status}</span></div>
-              {appointmentData.type === "time-based" && (
-                <div className="col-span-2">
-                  <span className="text-gray-600 font-medium">Appointment Date & Time:</span>{' '}
-                  <strong className="text-red-600">{appointmentData.date}, {appointmentData.time}</strong>
-                </div>
-              )}
+          {/* Appointment Details */}
+<div className="slip-section">
+  <h4 className="text-lg font-semibold text-gray-800 mb-3 border-b pb-1">APPOINTMENT DETAILS</h4>
+  <div className="grid grid-cols-2 gap-3 text-sm">
+    <div>
+      <span className="text-gray-600 font-medium">Slip No:</span>{' '}
+      <span className="font-semibold">
+        #{appointmentData._id?.slice(-8).toUpperCase() || billingDetails?.bill_id?.slice(-8).toUpperCase() || 'N/A'}
+      </span>
+    </div>
+    <div>
+      <span className="text-gray-600 font-medium">Date:</span>{' '}
+      <span className="font-semibold">{new Date().toLocaleDateString()}</span>
+    </div>
+
+    {/* Patient Name - Checks appointmentData first, then billingDetails */}
+    <div>
+      <span className="text-gray-600 font-medium">Patient Name:</span>{' '}
+      <strong className="text-blue-800">{patientNameDisplay}</strong>
+    </div>
+
+    {/* Patient ID */}
+    <div>
+      <span className="text-gray-600 font-medium">Patient ID:</span>{' '}
+      <strong>{patientIdDisplay}</strong>
+    </div>
+
+    {/* Appointment Type */}
+    <div>
+      <span className="text-gray-600 font-medium">Appointment Type:</span>{' '}
+      <strong>
+        {appointmentData.type || billingDetails?.appointment_id?.appointment_type || 'Consultation'}
+      </strong>
+    </div>
+
+    {/* Department */}
+    <div>
+      <span className="text-gray-600 font-medium">Department:</span>{' '}
+      <strong>{departmentNameDisplay}</strong>
+    </div>
+
+    {/* Doctor Name */}
+    <div>
+      <span className="text-gray-600 font-medium">Doctor:</span>{' '}
+      <strong className="text-green-700">{doctorNameDisplay}</strong>
+    </div>
+
+    <div>
+      <span className="text-gray-600 font-medium">Status:</span>{' '}
+      <span className="font-semibold">
+        {appointmentData.status || billingDetails?.status || 'Scheduled'}
+      </span>
+    </div>
+
+    {/* Date & Time Logic - Falls back to formatting the ISO string from billingDetails if appointmentData is empty */}
+    <div className="col-span-2">
+      <span className="text-gray-600 font-medium">Appointment Date & Time:</span>{' '}
+      <strong className="text-red-600">
+        {appointmentData.date && appointmentData.time 
+          ? `${appointmentData.date}, ${appointmentData.time}`
+          : billingDetails?.appointment_id?.appointment_date 
+            ? new Date(billingDetails.appointment_id.appointment_date).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })
+            : 'N/A'}
+      </strong>
+    </div>
               {appointmentData.type === "number-based" && (
                 <div className="col-span-2">
                   <span className="text-gray-600 font-medium">Appointment Number:</span>{' '}
@@ -426,7 +523,7 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
                     {prescription.items && prescription.items.length > 0 ? prescription.items.map((it, i) => (
                       <div key={i} className="p-2 bg-gray-50 rounded border">
                         <div className="text-sm font-medium">{it.medicine_name || 'Medicine'}</div>
-                        <div className="text-xs text-gray-600">{it.dosage} • {it.duration} • {it.instructions}</div>
+                        <div className="text-xs text-gray-600">{it.dosage}{it.frequency ? ` • ${it.frequency}` : ''}{it.duration ? ` • ${it.duration}` : ''}{it.instructions ? ` • ${it.instructions}` : ''}</div>
                       </div>
                     )) : <div className="text-sm text-gray-500">No medication items</div>}
                   </div>
@@ -492,9 +589,10 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
                       <label className="block text-sm font-medium">Medications</label>
                       <div className="space-y-2 mt-2">
                         {prescriptionForm.items.map((item, idx) => (
-                          <div key={idx} className="grid grid-cols-1 md:grid-cols-4 gap-2 p-2 bg-white rounded border">
+                          <div key={idx} className="grid grid-cols-1 md:grid-cols-5 gap-2 p-2 bg-white rounded border">
                             <input name="medicine_name" placeholder="Medicine" value={item.medicine_name} onChange={(e) => handleMedicineChange(idx, e)} className="border rounded px-2 py-1" />
                             <input name="dosage" placeholder="Dosage" value={item.dosage} onChange={(e) => handleMedicineChange(idx, e)} className="border rounded px-2 py-1" />
+                            <input name="frequency" placeholder="Frequency" value={item.frequency} onChange={(e) => handleMedicineChange(idx, e)} className="border rounded px-2 py-1" />
                             <input name="duration" placeholder="Duration" value={item.duration} onChange={(e) => handleMedicineChange(idx, e)} className="border rounded px-2 py-1" />
                             <div className="flex items-center">
                               <input name="instructions" placeholder="Instructions" value={item.instructions} onChange={(e) => handleMedicineChange(idx, e)} className="border rounded px-2 py-1 flex-1" />
@@ -517,7 +615,7 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
           </div>
 
           {/* Instructions */}
-          <div className="slip-section mt-4">
+          <div className="slip-section mt-4 important-instructions">
             <h4 className="text-md font-semibold text-gray-800 mb-2">IMPORTANT INSTRUCTIONS</h4>
             <ul className="text-xs text-gray-600 space-y-1 list-disc pl-4">
               <li>Please arrive 15 minutes before your appointment time</li>

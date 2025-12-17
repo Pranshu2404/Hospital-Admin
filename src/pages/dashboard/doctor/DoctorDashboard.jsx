@@ -1,8 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import axios from 'axios';
 import dayjs from 'dayjs';
 import { Calendar as BigCalendar, momentLocalizer } from 'react-big-calendar';
-import { format } from 'date-fns';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import moment from 'moment';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend } from 'recharts';
@@ -29,7 +28,27 @@ const DoctorDashboard = () => {
   const [isApptModalOpen, setIsApptModalOpen] = useState(false);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [currentView, setCurrentView] = useState("week");
+  const [hospital, setHospital] = useState(null);
   const [name, setName] = useState("");
+  useEffect(() => {
+  const fetchHospitalData = async () => {
+    try {
+      const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/hospitals`);
+
+      if (res.data && res.data.length > 0) {
+        const hospital = res.data[0]; 
+        console.log('Hospital data fetched:', hospital);
+        setHospital(hospital); 
+      } else {
+        console.warn('No hospital data received from API.');
+      }
+    } catch (err) {
+      console.error('Failed to fetch hospital data:', err);
+    }
+  };
+
+  fetchHospitalData();
+}, []);
 
   const doctorId = localStorage.getItem("doctorId");
 
@@ -317,7 +336,7 @@ const DoctorDashboard = () => {
         isOpen={isApptModalOpen}
         onClose={() => setIsApptModalOpen(false)}
         appointmentData={selectedCalendarAppt}
-        hospitalInfo={null}
+        hospitalInfo={hospital}
       />
     )}
     </>

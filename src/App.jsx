@@ -115,6 +115,7 @@ import NewPrescriptionPage from './pages/dashboard/pharmacy/NewPrescriptionPage'
 import DispensePage from './pages/dashboard/pharmacy/DispensePage';
 import PrescriptionQueue from './pages/dashboard/pharmacy/PrescriptionsQueue';
 import PrescriptionsQueue from './pages/dashboard/pharmacy/PrescriptionsQueue';
+import PrescriptionDetail from './pages/dashboard/pharmacy/PrescriptionDetail';
 import PaymentCollection from './pages/dashboard/pharmacy/PaymentCollectionPage';
 import OutstandingPayments from './pages/dashboard/pharmacy/OutstandingPaymentsPage';
 import PaySalaryPage from './pages/dashboard/admin/PaySalaryPage';
@@ -335,6 +336,7 @@ export default function App() {
           <Route path="/dashboard/admin/finance/salary" element={<PaySalaryPage />} />
           <Route path="/dashboard/doctor/salary" element={<DoctorSalaryPage />} />
           <Route path="/dashboard/pharmacy/prescriptions/queue" element={<PrescriptionsQueue />} />
+          <Route path="/dashboard/pharmacy/prescriptions/:id" element={<PrescriptionDetail />} />
           <Route path="/dashboard/pharmacy/invoice-detail" element={<InvoiceDetailPage />} />
           <Route path="/dashboard/pharmacy/billing/payments" element={<PaymentCollection />} />
           <Route path="/dashboard/pharmacy/billing/outstanding" element={<OutstandingPayments />} />
