@@ -159,7 +159,7 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient, updatePatientBa
               
               <Button
                 variant="primary"
-                onClick={() => navigate('/dashboard/admin/add-patient')}
+                onClick={() => navigate('/dashboard/staff/add-patient')}
               >
                 <PlusIcon />
                 Add New Patient
