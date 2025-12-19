@@ -9,7 +9,7 @@ const RecentSalesTable = () => {
   useEffect(() => {
     const fetchRecentSales = async () => {
       try {
-        const response = await apiClient.get('/api/invoices/pharmacy');
+        const response = await apiClient.get('/invoices/pharmacy');
         const recentInvoices = response.data.invoices.slice(0, 3); // Get top 3
 
         // UPDATED: Format the data to include patient name instead of item list

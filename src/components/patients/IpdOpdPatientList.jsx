@@ -20,7 +20,7 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient, updatePatientBa
   // Fetch patient data from API
   const fetchPatients = async () => {
   try {
-    const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/patients`);
+    const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/patients`);
     const data = response.data;
     const patientArray = data.patients || []; // You correctly get the array here
 
@@ -64,7 +64,7 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient, updatePatientBa
       complete: async (results) => {
         try {
           const response = await axios.post(
-            `${import.meta.env.VITE_BACKEND_URL}/api/patients/bulk-add`,
+            `${import.meta.env.VITE_BACKEND_URL}/patients/bulk-add`,
             results.data
           );
           setUploadSuccess(response.data.message || 'Patients uploaded successfully!');

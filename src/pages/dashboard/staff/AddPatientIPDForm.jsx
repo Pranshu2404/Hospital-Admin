@@ -48,7 +48,7 @@
 //       };
 
 //       const response = await axios.post(
-//         `${import.meta.env.VITE_BACKEND_URL}/api/patients`,
+//         `${import.meta.env.VITE_BACKEND_URL}/patients`,
 //         payload
 //       );
 
@@ -185,7 +185,7 @@ const AddPatientIPDForm = () => {
       };
 
       const response = await axios.post(
-        `${import.meta.env.VITE_BACKEND_URL}/api/patients`,
+        `${import.meta.env.VITE_BACKEND_URL}/patients`,
         payload
       );
 

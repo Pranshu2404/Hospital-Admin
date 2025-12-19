@@ -13,7 +13,7 @@ const PharmacyProfile = () => {
   useEffect(() => {
     const fetchPharmacy = async () => {
       try {
-        const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/pharmacy/${id}`);
+        const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/pharmacy/${id}`);
         setPharmacy(res.data);
       } catch (err) {
         console.error('Error loading pharmacy:', err);

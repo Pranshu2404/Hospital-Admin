@@ -32,7 +32,7 @@ const PointOfSale = () => {
 
   const fetchMedicines = async () => {
     try {
-      const response = await apiClient.get('/api/medicines?is_active=true&stock_quantity[gt]=0');
+      const response = await apiClient.get('/medicines?is_active=true&stock_quantity[gt]=0');
       setMedicines(response.data);
     } catch (err) {
       console.error('Error fetching medicines:', err);
@@ -91,7 +91,7 @@ const PointOfSale = () => {
     setProcessing(true);
 
     try {
-      const response = await apiClient.post('/api/sales', {
+      const response = await apiClient.post('/sales', {
         items: cart,
         patient_id: customer.patient_id || undefined,
         customer_name: customer.customer_name,

@@ -26,7 +26,7 @@ const PersonalProfileTab = ({ hospitalData }) => {
     try {
       setLoading(true);
       await axios.patch(
-        `${import.meta.env.VITE_BACKEND_URL}/api/hospitals/${hospitalData._id}/details`,
+        `${import.meta.env.VITE_BACKEND_URL}/hospitals/${hospitalData._id}/details`,
         {
           hospitalName: profileData.hospitalName,
           name: profileData.adminName,

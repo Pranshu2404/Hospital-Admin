@@ -17,7 +17,7 @@ const LowStockAlert = () => {
   useEffect(() => {
     const fetchLowStockMedicines = async () => {
       try {
-        const response = await apiClient.get('/api/medicines/low-stock');
+        const response = await apiClient.get('/medicines/low-stock');
         setLowStockMedicines(response.data);
       } catch (err) {
         setError('Failed to fetch low stock medicines. Please try again later.');
@@ -60,7 +60,7 @@ const LowStockAlert = () => {
           <p className="text-gray-600">Medicines that need restocking attention</p>
         </div>
         <Link 
-          to="/dashboard/pharmacy/purchasing/create-order"
+          to="/dashboard/pharmacy/create-order"
           className="flex items-center gap-2 bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700"
         >
           <FaShoppingCart /> Create Purchase Order
@@ -152,7 +152,7 @@ const LowStockAlert = () => {
                     </td>
                     <td className="px-6 py-4">
                       <Link
-                        to="/dashboard/pharmacy/purchasing/create-order"
+                        to="/dashboard/pharmacy/create-order"
                         className="text-teal-600 hover:text-teal-800 text-sm font-medium"
                       >
                         Order Now
@@ -186,7 +186,7 @@ const LowStockAlert = () => {
             </div>
             <div className="flex gap-3">
               <Link
-                to="/dashboard/pharmacy/purchasing/create-order"
+                to="/dashboard/pharmacy/create-order"
                 className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
               >
                 Create Bulk Order

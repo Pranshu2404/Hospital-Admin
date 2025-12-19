@@ -51,6 +51,7 @@ import DoctorAllList from './pages/dashboard/doctor/DoctorAllList.jsx';
 import Reports from './pages/dashboard/doctor/Reports.jsx';
 import Schedule from './pages/dashboard/doctor/Schedule.jsx'
 import PatientList from './pages/dashboard/doctor/PatientList.jsx'
+import DoctorProfilePage1 from './pages/dashboard/doctor/DoctorProfilePage.jsx'
 
 
 
@@ -115,10 +116,12 @@ import NewPrescriptionPage from './pages/dashboard/pharmacy/NewPrescriptionPage'
 import DispensePage from './pages/dashboard/pharmacy/DispensePage';
 import PrescriptionQueue from './pages/dashboard/pharmacy/PrescriptionsQueue';
 import PrescriptionsQueue from './pages/dashboard/pharmacy/PrescriptionsQueue';
+import PrescriptionDetail from './pages/dashboard/pharmacy/PrescriptionDetail';
 import PaymentCollection from './pages/dashboard/pharmacy/PaymentCollectionPage';
 import OutstandingPayments from './pages/dashboard/pharmacy/OutstandingPaymentsPage';
 import PaySalaryPage from './pages/dashboard/admin/PaySalaryPage';
 import DoctorSalaryPage from './pages/dashboard/doctor/DoctorSalaryPage';
+import StaffProfilePage1 from './pages/dashboard/staff/staff-profile';
 
 export default function App() {
   return (
@@ -231,6 +234,7 @@ export default function App() {
           />
 
           <Route path="/dashboard/doctor/department" element={<MyDepartmentPage />} />
+          <Route path="/dashboard/doctor/profile" element={<DoctorProfilePage1 />} />
 
           <Route
             path="/dashboard/doctor/prescriptions"
@@ -307,6 +311,7 @@ export default function App() {
           <Route path="/dashboard/staff/appointments" element={<AppointmentsPage1 />} />
           <Route path="/dashboard/staff/add-patient" element={<AddPatientPage1 />} />
           <Route path="/dashboard/staff/patient-list" element={<PatientListPage1 />} />
+          <Route path="/dashboard/staff/profile" element={<StaffProfilePage1/>} />
           <Route path="/dashboard/staff/patient-profile" element={<PatientProfilePage1 />} />
             {/* Pharmacy Routes */}
           <Route path="/dashboard/pharmacy" element={<PharmacyDashboard />} />
@@ -335,6 +340,7 @@ export default function App() {
           <Route path="/dashboard/admin/finance/salary" element={<PaySalaryPage />} />
           <Route path="/dashboard/doctor/salary" element={<DoctorSalaryPage />} />
           <Route path="/dashboard/pharmacy/prescriptions/queue" element={<PrescriptionsQueue />} />
+          <Route path="/dashboard/pharmacy/prescriptions/:id" element={<PrescriptionDetail />} />
           <Route path="/dashboard/pharmacy/invoice-detail" element={<InvoiceDetailPage />} />
           <Route path="/dashboard/pharmacy/billing/payments" element={<PaymentCollection />} />
           <Route path="/dashboard/pharmacy/billing/outstanding" element={<OutstandingPayments />} />

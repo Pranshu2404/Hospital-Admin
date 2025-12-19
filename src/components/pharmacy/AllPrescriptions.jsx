@@ -37,7 +37,7 @@ const AllPrescriptions = () => {
         status: statusFilter
       };
       
-      const response = await apiClient.get('/api/prescriptions', { params });
+      const response = await apiClient.get('/prescriptions', { params });
       setPrescriptions(response.data.prescriptions);
       setTotalPages(response.data.totalPages);
     } catch (err) {
@@ -50,7 +50,7 @@ const AllPrescriptions = () => {
   const deletePrescription = async (id) => {
     if (window.confirm('Are you sure you want to delete this prescription?')) {
       try {
-        await apiClient.delete(`/api/prescriptions/${id}`);
+        await apiClient.delete(`/prescriptions/${id}`);
         fetchPrescriptions(); // Refresh the list
       } catch (err) {
         console.error('Error deleting prescription:', err);

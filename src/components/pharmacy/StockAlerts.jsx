@@ -15,14 +15,14 @@ const StockAlerts = ({ lowStockCount, expiringCount, expiredCount }) => {
       icon: <FaCalendarTimes className="text-orange-600" />,
       title: 'Expiring Soon',
       count: expiringCount,
-      link: '/dashboard/pharmacy/inventory/expiring',
+      link: '/dashboard/pharmacy/expired',
       color: 'orange'
     },
     {
       icon: <FaBox className="text-gray-600" />,
       title: 'Expired',
       count: expiredCount,
-      link: '/dashboard/pharmacy/inventory/expired',
+      link: '/dashboard/pharmacy/expired',
       color: 'gray'
     }
   ];

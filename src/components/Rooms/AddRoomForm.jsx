@@ -23,7 +23,7 @@ const AddRoom = () => {
 
   const fetchDepartments = async () => {
     try {
-      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/departments`);
+      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/departments`);
       setDepartments(response.data);
     } catch (error) {
       toast.error('Failed to fetch departments');
@@ -52,7 +52,7 @@ const AddRoom = () => {
 
   try {
     const response = await axios.post(
-      `${import.meta.env.VITE_BACKEND_URL}/api/rooms`,
+      `${import.meta.env.VITE_BACKEND_URL}/rooms`,
       submitData
     );
 

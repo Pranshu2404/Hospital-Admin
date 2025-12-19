@@ -15,7 +15,7 @@ const StaffList = ({ setCurrentPage, setSelectedStaff }) => {
   useEffect(() => {
     const fetchStaff = async () => {
       try {
-        const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/staff`);
+        const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/staff`);
         setStaffMembers(response.data); 
         console.log(response.data)
       } catch (err) {

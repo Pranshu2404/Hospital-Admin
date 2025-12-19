@@ -14,7 +14,7 @@ const InvoiceListPage = () => {
   useEffect(() => {
     const fetchInvoices = async () => {
       try {
-        const response = await apiClient.get('/api/invoices/pharmacy');
+        const response = await apiClient.get('/invoices/pharmacy');
         setInvoices(response.data.invoices);
       } catch (err) {
         setError('Failed to fetch invoices.');
@@ -29,7 +29,7 @@ const InvoiceListPage = () => {
   const handleDownload = async (invoiceId) => {
     setDownloading(prev => ({ ...prev, [invoiceId]: true }));
     try {
-      const response = await apiClient.get(`/api/invoices/${invoiceId}/download`, {
+      const response = await apiClient.get(`/invoices/${invoiceId}/download`, {
         responseType: 'blob'
       });
       

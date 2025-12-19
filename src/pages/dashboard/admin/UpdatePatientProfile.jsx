@@ -23,7 +23,7 @@
 //   useEffect(() => {
 //     const fetchPatient = async () => {
 //       try {
-//         const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/patients/${id}`);
+//         const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/patients/${id}`);
 //         setPatient(res.data);
 //         setFormData(res.data);
 //       } catch (error) {
@@ -43,7 +43,7 @@
 //   const handleSubmit = async (e) => {
 //     e.preventDefault();
 //     try {
-//       await axios.put(`${import.meta.env.VITE_BACKEND_URL}/api/patients/${id}`, formData);
+//       await axios.put(`${import.meta.env.VITE_BACKEND_URL}/patients/${id}`, formData);
 //       alert('✅ Patient updated');
 //       navigate('/dashboard/admin/patients');
 //     } catch (err) {
@@ -136,7 +136,7 @@ const UpdatePatientProfile = () => {
   useEffect(() => {
     const fetchPatient = async () => {
       try {
-        const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/patients/${id}`);
+        const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/patients/${id}`);
         setPatient(res.data);
         setFormData({
           ...res.data,
@@ -158,7 +158,7 @@ const UpdatePatientProfile = () => {
 const handleSubmit = async (e) => {
   e.preventDefault();
   try {
-    await axios.put(`${import.meta.env.VITE_BACKEND_URL}/api/patients/${id}`, formData);
+    await axios.put(`${import.meta.env.VITE_BACKEND_URL}/patients/${id}`, formData);
     alert('✅ Patient updated successfully');
     // navigate('/dashboard/admin/patients'); // ❌ Remove this line
   } catch (err) {
@@ -169,7 +169,7 @@ const handleSubmit = async (e) => {
 //   const handleSubmit = async (e) => {
 //     e.preventDefault();
 //     try {
-//       await axios.put(`${import.meta.env.VITE_BACKEND_URL}/api/patients/${id}`, formData);
+//       await axios.put(`${import.meta.env.VITE_BACKEND_URL}/patients/${id}`, formData);
 //       alert('✅ Patient updated');
 //       navigate('/dashboard/admin/patients');
 //     } catch (err) {

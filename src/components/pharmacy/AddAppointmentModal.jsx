@@ -45,8 +45,8 @@ const AddAppointmentModal = ({ isOpen, onClose, type }) => {
     const fetchOptions = async () => {
       try {
         const [patientRes, doctorRes] = await Promise.all([
-          axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/patients`),
-          axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/doctors`)
+          axios.get(`${import.meta.env.VITE_BACKEND_URL}/patients`),
+          axios.get(`${import.meta.env.VITE_BACKEND_URL}/doctors`)
         ]);
 
         setPatients(patientRes.data);
@@ -75,7 +75,7 @@ const AddAppointmentModal = ({ isOpen, onClose, type }) => {
   };
 
   try {
-    await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/appointments`, payload);
+    await axios.post(`${import.meta.env.VITE_BACKEND_URL}/appointments`, payload);
     onClose();
     setFormData({
       patientId: '',

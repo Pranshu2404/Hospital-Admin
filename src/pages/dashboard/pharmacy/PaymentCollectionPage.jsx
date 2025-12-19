@@ -50,7 +50,7 @@ const PaymentCollection = () => {
         invoice_type: typeFilter
       };
       
-      const response = await apiClient.get('/api/invoices', { params });
+      const response = await apiClient.get('/invoices', { params });
       setInvoices(response.data.invoices);
       setTotalPages(response.data.totalPages);
     } catch (err) {
@@ -64,7 +64,7 @@ const PaymentCollection = () => {
   const handlePaymentSubmit = async (e) => {
     e.preventDefault();
     try {
-      await apiClient.put(`/api/invoices/${selectedInvoice._id}/payment`, paymentData);
+      await apiClient.put(`/invoices/${selectedInvoice._id}/payment`, paymentData);
       alert('Payment recorded successfully!');
       setShowPaymentModal(false);
       setSelectedInvoice(null);
@@ -116,7 +116,7 @@ const PaymentCollection = () => {
    const handleDownload = async (invoiceId) => {
     setDownloading(prev => ({ ...prev, [invoiceId]: true }));
     try {
-      const response = await apiClient.get(`/api/invoices/${invoiceId}/download`, {
+      const response = await apiClient.get(`/invoices/${invoiceId}/download`, {
         responseType: 'blob'
       });
       

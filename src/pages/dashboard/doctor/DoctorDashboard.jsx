@@ -1,21 +1,44 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import dayjs from 'dayjs';
 import { Calendar as BigCalendar, momentLocalizer } from 'react-big-calendar';
-import { format } from 'date-fns';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import moment from 'moment';
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend } from 'recharts';
+import { 
+  PieChart, Pie, Cell, Tooltip, ResponsiveContainer, 
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend 
+} from 'recharts';
 import AppointmentSlipModal from '@/components/appointments/AppointmentSlipModal';
 import {
   FaUsers,
   FaCalendarCheck,
   FaTooth,
+  FaUserInjured,
+  FaClock,
+  FaCheck,
+  FaTimes,
+  FaEllipsisH,
+  FaChevronRight
 } from 'react-icons/fa';
 
-const localizer = momentLocalizer(moment);
+// --- Custom Styles for Calendar Override ---
+const calendarStyles = `
+  .rbc-calendar { font-family: inherit; color: #475569; border: none; }
+  .rbc-header { padding: 12px; font-weight: 600; color: #0f766e; border-bottom: 2px solid #f1f5f9; background: #f0fdfa; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.05em; }
+  .rbc-month-view { border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; background: white; }
+  .rbc-day-bg + .rbc-day-bg { border-left: 1px solid #f1f5f9; }
+  .rbc-off-range-bg { background: #f8fafc; }
+  .rbc-today { background-color: #f0fdfa; }
+  .rbc-event { border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); padding: 2px 5px; font-size: 0.8rem; border: none; }
+  .rbc-toolbar { margin-bottom: 20px; }
+  .rbc-toolbar button { border: 1px solid #e2e8f0; color: #64748b; font-weight: 500; }
+  .rbc-toolbar button.rbc-active { background-color: #0d9488; color: white; border-color: #0d9488; }
+  .rbc-toolbar button:hover { background-color: #f1f5f9; color: #0f172a; }
+`;
 
-const COLORS = ['#14b8a6', '#2dd4bf', '#5eead4'];
+const localizer = momentLocalizer(moment);
+const COLORS = ['#0d9488', '#2dd4bf', '#99f6e4', '#ccfbf1']; // Teal palette
 
 const DoctorDashboard = () => {
   const [stats, setStats] = useState({ patients: 0, consultations: 0, procedures: 0, todayAppointments: 0 });
@@ -28,10 +51,26 @@ const DoctorDashboard = () => {
   const [selectedCalendarAppt, setSelectedCalendarAppt] = useState(null);
   const [isApptModalOpen, setIsApptModalOpen] = useState(false);
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [currentView, setCurrentView] = useState("week");
+  const [currentView, setCurrentView] = useState("month");
+  const [hospital, setHospital] = useState(null);
   const [name, setName] = useState("");
 
   const doctorId = localStorage.getItem("doctorId");
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchHospitalData = async () => {
+      try {
+        const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/hospitals`);
+        if (res.data && res.data.length > 0) {
+          setHospital(res.data[0]);
+        }
+      } catch (err) {
+        console.error('Failed to fetch hospital data:', err);
+      }
+    };
+    fetchHospitalData();
+  }, []);
 
   useEffect(() => {
     const calculateAge = (dob) => {
@@ -40,306 +79,360 @@ const DoctorDashboard = () => {
       const today = new Date();
       let age = today.getFullYear() - birth.getFullYear();
       const m = today.getMonth() - birth.getMonth();
-      if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
-        age--;
-      }
+      if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
       return age;
     };
 
     const formatApptTime = (appt) => {
       if (!appt) return null;
-      // try multiple fields
       if (appt.start_time) return new Date(appt.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       if (appt.time) return String(appt.time);
-      if (appt.time_slot) {
-        return String(appt.time_slot).split('-')[0].trim();
-      }
-      // try startTime
-      if (appt.startTime) return new Date(appt.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      if (appt.time_slot) return String(appt.time_slot).split('-')[0].trim();
       return null;
     };
+
     const fetchDashboardStats = async () => {
       try {
-        console.log(doctorId)
         const [patientsRes, appointmentsRes, doctorsRes, calendarRes] = await Promise.all([
-          
-          axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/patients`),
-          axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/appointments/doctor/${doctorId}`),
-          axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/doctors`),
-          axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/calendar/doctor/${doctorId}`)
+          axios.get(`${import.meta.env.VITE_BACKEND_URL}/patients`),
+          axios.get(`${import.meta.env.VITE_BACKEND_URL}/appointments/doctor/${doctorId}`),
+          axios.get(`${import.meta.env.VITE_BACKEND_URL}/doctors`),
+          axios.get(`${import.meta.env.VITE_BACKEND_URL}/calendar/doctor/${doctorId}`)
         ]);
-        console.log("API response for patients:", patientsRes.data); // Add this line
-        const currentDoctor = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/doctors/${doctorId}`);
 
-        setName(currentDoctor.data.firstName)
+        const currentDoctor = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/doctors/${doctorId}`);
+        setName(currentDoctor.data.firstName);
+
         const today = dayjs();
-        const patients = patientsRes.data.patients || [];
-        const appointments = appointmentsRes.data || [];
-        setAppointments(appointments);
-        setPatients(patients);
+        const patientsData = patientsRes.data.patients || [];
+        const apptsData = appointmentsRes.data || [];
+        
+        setAppointments(apptsData);
+        setPatients(patientsData);
         setDoctors(doctorsRes.data);
-        const todayAppointments = appointments.filter(appt =>
-          dayjs(appt.appointment_date).isSame(today, 'day')
-        );
+
+        const todayAppointments = apptsData.filter(appt =>
+          dayjs(appt.appointment_date).isSame(today, 'day') && appt.status !== 'Cancelled'
+        ).sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
 
         setStats({
-          patients: patients.length,
-          consultations: appointments.filter(a => a.type === 'Consultation').length,
-          procedures: appointments.filter(a => a.type === 'Procedure').length,
+          patients: patientsData.length,
+          consultations: apptsData.filter(a => a.type === 'Consultation').length,
+          procedures: apptsData.filter(a => a.type === 'Procedure').length,
           todayAppointments: todayAppointments.length,
         });
 
         if (todayAppointments.length > 0) {
-          const appt = todayAppointments[0];
+          const appt = todayAppointments.find(a => dayjs(a.start_time || a.appointment_date).isAfter(dayjs())) || todayAppointments[todayAppointments.length - 1];
           const patient = appt.patient_id || {};
           setNextPatient({
-            first_name: patient.first_name || patient.firstName || patient.name || '',
+            first_name: patient.first_name || patient.firstName || '',
             last_name: patient.last_name || patient.lastName || '',
-            phone: patient.phone || patient.mobile || '',
+            phone: patient.phone || '',
             gender: patient.gender || '',
-            dob: patient.dob || patient.date_of_birth || null,
-            age: calculateAge(patient.dob || patient.date_of_birth),
+            age: calculateAge(patient.dob),
             treatment: appt.type,
             date: appt.appointment_date,
-            time: formatApptTime(appt)
+            time: formatApptTime(appt),
+            status: appt.status
           });
         }
 
-        // Build calendar events from appointments (preferred) so events show at booked times
-        const appts = appointmentsRes.data || [];
+        // Calendar Events
         const events = [];
-
-        const parseEventTimes = (appt) => {
-          try {
-            // appointment_date may be ISO date string
-            const apptDate = appt.appointment_date ? new Date(appt.appointment_date) : (appt.created_at ? new Date(appt.created_at) : null);
-
-            // helper to parse time-slot string like 'HH:MM - HH:MM' or 'HH:MM'
-            const parseTimeSlot = (slotStr, which = 'start') => {
-              if (!slotStr) return null;
-              const parts = slotStr.split('-').map(s => s.trim());
-              const timePart = which === 'start' ? parts[0] : (parts[1] || null);
-              if (!timePart) return null;
-              const [h, m] = timePart.split(':').map(x => parseInt(x, 10));
-              if (isNaN(h)) return null;
-              const dt = apptDate ? new Date(apptDate) : new Date();
-              dt.setHours(h, isNaN(m) ? 0 : m, 0, 0);
-              return dt;
-            };
-
-            // start priority: start_time | startTime | time_slot start
-            let start = appt.start_time ? new Date(appt.start_time) : (appt.startTime ? new Date(appt.startTime) : null);
-            if (!start && appt.time_slot) start = parseTimeSlot(appt.time_slot, 'start');
-            if (!start && appt.appointment_date && appt.time) {
-              // legacy fields
-              const [h, m] = String(appt.time).split(':').map(x => parseInt(x, 10));
-              start = new Date(appt.appointment_date);
-              start.setHours(isNaN(h) ? 0 : h, isNaN(m) ? 0 : m, 0, 0);
-            }
-
-            // end priority: end_time | endTime | time_slot end | duration
-            let end = appt.end_time ? new Date(appt.end_time) : (appt.endTime ? new Date(appt.endTime) : null);
-            if (!end && appt.time_slot) end = parseTimeSlot(appt.time_slot, 'end');
-            if (!end && start) {
-              const dur = appt.duration || 30;
-              end = new Date(start.getTime() + (dur * 60 * 1000));
-            }
-
-            return { start, end };
-          } catch (err) {
-            return { start: null, end: null };
+        apptsData.forEach(appt => {
+          const start = appt.start_time ? new Date(appt.start_time) : new Date(appt.appointment_date);
+          const end = appt.end_time ? new Date(appt.end_time) : new Date(new Date(start).setMinutes(start.getMinutes() + 30));
+          
+          if (appt.status !== 'Cancelled') {
+            events.push({
+              title: `${appt.patient_id?.first_name || 'Patient'} - ${appt.type}`,
+              start,
+              end,
+              resource: appt,
+              status: appt.status
+            });
           }
-        };
-
-        appts.forEach(appt => {
-          // only include appointments for this doctor
-          const apptDoctorId = appt.doctor_id && (appt.doctor_id._id || appt.doctor_id);
-          if (String(apptDoctorId) !== String(doctorId)) return;
-          const { start, end } = parseEventTimes(appt);
-          if (!start || !end) return; // skip ill-formed
-          events.push({
-            title: `${appt.patient_id?.first_name || appt.patientName || 'Appointment'}`,
-            start,
-            end,
-            allDay: false,
-            resource: appt
-          });
         });
-
         setCalendarEvents(events);
 
-        setApprovalRequests(todayAppointments.slice(1, 5).map(a => ({
-          name: a.patient_id?.first_name || 'Unknown',
+        // Mock Approval Requests (using upcoming appointments for demo)
+        setApprovalRequests(todayAppointments.slice(0, 4).map(a => ({
+          id: a._id,
+          name: `${a.patient_id?.first_name} ${a.patient_id?.last_name}`,
           treatment: a.type,
+          time: formatApptTime(a)
         })));
+
       } catch (error) {
-        console.error('Failed to load doctor dashboard stats:', error);
+        console.error('Failed to load dashboard:', error);
       }
     };
 
-    fetchDashboardStats();
+    if (doctorId) fetchDashboardStats();
   }, [doctorId]);
 
-  const appointmentStats = [
-    { name: 'Completed', value: appointments.filter(a => a.status === 'completed').length },
-    { name: 'Pending', value: appointments.filter(a => a.status === 'pending').length },
-    { name: 'Cancelled', value: appointments.filter(a => a.status === 'cancelled').length }
-  ];
+  // --- UI Components ---
 
-  const patientByDepartment =  Array.isArray(patients) ? patients.reduce((acc, p) => {
-    acc[p.department] = (acc[p.department] || 0) + 1;
-    return acc;
-  }, {}): {};
+  const StatCard = ({ title, value, icon: Icon, color }) => {
+    const colors = {
+      teal: 'bg-teal-50 text-teal-600 border-teal-100',
+      blue: 'bg-blue-50 text-blue-600 border-blue-100',
+      rose: 'bg-rose-50 text-rose-600 border-rose-100',
+      indigo: 'bg-indigo-50 text-indigo-600 border-indigo-100',
+    };
 
-  const departmentData = Object.entries(patientByDepartment).map(([key, value]) => ({
-    name: key,
-    count: value
-  }));
-
-  return (
-    <>
-    <div className="p-4 bg-gray-50 min-h-screen">
-      <h1 className="text-2xl font-bold text-gray-800 mb-6">Welcome Back, Dr. {name}!</h1>
-
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <StatCard title="Total Patients" value={stats.patients} icon={<FaUsers />} color="teal" />
-        <StatCard title="Consultations" value={stats.consultations} icon={<FaCalendarCheck />} color="blue" />
-        <StatCard title="Procedures" value={stats.procedures} icon={<FaTooth />} color="red" />
-        <StatCard title="Today's Appointments" value={stats.todayAppointments} icon={<FaCalendarCheck />} color="green" />
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Professional Calendar */}
-      <div className="bg-white rounded-xl shadow p-4 mb-6">
-        <h2 className="text-lg font-semibold mb-4 text-teal-700">My Professional Calendar</h2>
-        <BigCalendar
-          localizer={localizer}
-          events={calendarEvents}
-          startAccessor="start"
-          endAccessor="end"
-          style={{ height: 500 }}
-          views={['month', 'week', 'day']}
-          date={currentDate} // controlled date
-          view={currentView} // controlled view
-          onNavigate={(date) => setCurrentDate(date)} // navigation handler
-          onView={(view) => setCurrentView(view)} // view change handler
-          onSelectEvent={(event) => {
-            const appt = event.resource || event;
-            setSelectedCalendarAppt(appt);
-            setIsApptModalOpen(true);
-          }}
-        />
-      </div>
-        <div className="bg-white p-4 rounded-xl shadow">
-          <h2 className="font-semibold mb-2">Next Patient Details</h2>
-          {nextPatient ? (
-            <div>
-                  <div className="flex items-center gap-4">
-                    <img src="https://randomuser.me/api/portraits/women/44.jpg" alt="Patient" className="w-16 h-16 rounded-full" />
-                    <div>
-                      <div className="font-bold">{`${nextPatient.first_name || ''} ${nextPatient.last_name || ''}`.trim()}</div>
-                      <div className="text-sm text-gray-600">{nextPatient.treatment} {nextPatient.time ? `• ${nextPatient.time}` : ''}</div>
-                      {nextPatient.phone && <div className="text-xs text-gray-500">{nextPatient.phone}</div>}
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4 mt-4 text-sm text-gray-600">
-                    <div>Appointment: <span className="font-semibold">{dayjs(nextPatient.date).format('DD.MM.YYYY')} {nextPatient.time ? `• ${nextPatient.time}` : ''}</span></div>
-                    <div>Gender: {nextPatient.gender}</div>
-                    <div>Age: {nextPatient.age ?? 'N/A'}</div>
-                    <div>Phone: {nextPatient.phone || 'N/A'}</div>
-                  </div>
-            </div>
-          ) : <div className="text-sm text-gray-500">No upcoming patient today.</div>}
-        </div>
-
-        <div className="bg-white p-4 rounded-xl shadow">
-          <h2 className="font-semibold mb-2">Approval Requests</h2>
-          <div className="space-y-2 text-sm">
-            {approvalRequests.map((req, i) => (
-              <div key={i} className="flex justify-between items-center border p-2 rounded">
-                <div>
-                  <div className="font-semibold">{req.name}</div>
-                  <div className="text-gray-500 text-xs">{req.treatment}</div>
-                </div>
-                <div className="flex gap-2">
-                  <button className="text-green-600">✔</button>
-                  <button className="text-red-600">✖</button>
-                  <button className="text-blue-600">📩</button>
-                </div>
-              </div>
-            ))}
+    return (
+      <div className={`p-5 rounded-2xl border transition-all duration-300 hover:shadow-md ${colors[color] || colors.teal} bg-white border-slate-100`}>
+        <div className="flex justify-between items-start">
+          <div>
+            <p className="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">{title}</p>
+            <h3 className="text-3xl font-bold text-slate-800">{value}</h3>
+          </div>
+          <div className={`p-3 rounded-xl ${colors[color].split(' ')[0]} ${colors[color].split(' ')[1]}`}>
+            <Icon size={22} />
           </div>
         </div>
       </div>
-      {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-5">
+    );
+  };
+
+  const appointmentStats = [
+    { name: 'Completed', value: appointments.filter(a => a.status === 'Completed').length },
+    { name: 'Scheduled', value: appointments.filter(a => a.status === 'Scheduled').length },
+    { name: 'Cancelled', value: appointments.filter(a => a.status === 'Cancelled').length }
+  ];
+
+  const departmentData = Object.entries(
+    patients.reduce((acc, p) => {
+      acc[p.department || 'General'] = (acc[p.department || 'General'] || 0) + 1;
+      return acc;
+    }, {})
+  ).map(([key, value]) => ({ name: key, count: value }));
+
+  const eventStyleGetter = (event) => {
+    const style = {
+      backgroundColor: event.status === 'Completed' ? '#10b981' : '#0d9488',
+      borderRadius: '4px',
+      opacity: 0.9,
+      color: 'white',
+      border: 'none',
+      fontSize: '0.8rem'
+    };
+    return { style };
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-50/50 p-6 font-sans">
+      <style>{calendarStyles}</style>
+
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between mb-8">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800">Welcome Back, Dr. {name}</h1>
+          <p className="text-slate-500 text-sm mt-1">Here is your daily activity digest.</p>
+        </div>
+        <div className="mt-4 md:mt-0 bg-white px-4 py-2 rounded-lg shadow-sm border border-slate-200 flex items-center gap-2 text-slate-600">
+          <FaCalendarCheck className="text-teal-500" />
+          <span className="font-medium text-sm">{dayjs().format('dddd, MMMM D, YYYY')}</span>
+        </div>
+      </div>
+
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <StatCard title="Total Patients" value={stats.patients} icon={FaUsers} color="indigo" />
+        <StatCard title="Consultations" value={stats.consultations} icon={FaUserInjured} color="blue" />
+        <StatCard title="Procedures" value={stats.procedures} icon={FaTooth} color="rose" />
+        <StatCard title="Today's Visits" value={stats.todayAppointments} icon={FaClock} color="teal" />
+      </div>
+
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 mb-8">
+        
+        {/* Left Column: Calendar (2/3 width on large screens) */}
+        <div className="xl:col-span-2 space-y-8">
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-lg font-bold text-slate-800">Appointment Calendar</h2>
+              <button onClick={() => setCurrentView(v => v === 'week' ? 'month' : 'week')} className="text-sm text-teal-600 font-semibold hover:underline">
+                Switch to {currentView === 'week' ? 'Month' : 'Week'} View
+              </button>
+            </div>
+            <div className="h-[600px]">
+              <BigCalendar
+                localizer={localizer}
+                events={calendarEvents}
+                startAccessor="start"
+                endAccessor="end"
+                views={['month', 'week', 'day']}
+                view={currentView}
+                onView={setCurrentView}
+                date={currentDate}
+                onNavigate={setCurrentDate}
+                eventPropGetter={eventStyleGetter}
+                onSelectEvent={(event) => {
+                  setSelectedCalendarAppt(event.resource);
+                  setIsApptModalOpen(true);
+                }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column: Next Patient & Lists (1/3 width) */}
+        <div className="space-y-8">
+          
+          {/* Next Patient Card */}
+          <div className="bg-gradient-to-br from-teal-600 to-teal-800 rounded-2xl shadow-lg p-6 text-white relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-3 opacity-10">
+              <FaUserInjured size={120} />
+            </div>
+            
+            <h2 className="text-teal-100 font-semibold text-sm uppercase tracking-wider mb-6">Next Appointment</h2>
+            
+            {nextPatient ? (
+              <>
+                <div className="flex items-start gap-4 mb-6 relative z-10">
+                  <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center text-2xl font-bold backdrop-blur-sm border border-white/30">
+                    {nextPatient.first_name.charAt(0)}
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-bold leading-tight">
+                      {nextPatient.first_name} {nextPatient.last_name}
+                    </h3>
+                    <p className="text-teal-100 text-sm mt-1">{nextPatient.treatment}</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 text-sm relative z-10 mb-6">
+                  <div className="bg-white/10 p-2 rounded-lg backdrop-blur-sm">
+                    <p className="text-teal-200 text-xs">Time</p>
+                    <p className="font-semibold">{nextPatient.time}</p>
+                  </div>
+                  <div className="bg-white/10 p-2 rounded-lg backdrop-blur-sm">
+                    <p className="text-teal-200 text-xs">Age / Gender</p>
+                    <p className="font-semibold">{nextPatient.age || '--'} / {nextPatient.gender || '--'}</p>
+                  </div>
+                </div>
+
+                <button 
+                  className="w-full py-3 bg-white text-teal-700 font-bold rounded-xl shadow-md hover:bg-teal-50 transition-colors flex items-center justify-center gap-2"
+                  onClick={() => navigate('/dashboard/doctor/appointments')}
+                >
+                  View Details <FaChevronRight size={12} />
+                </button>
+              </>
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-teal-100">No upcoming appointments scheduled for today.</p>
+              </div>
+            )}
+          </div>
+
+          {/* Pending Requests List */}
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-bold text-slate-800">Pending Actions</h2>
+              <span className="bg-amber-100 text-amber-700 text-xs px-2 py-1 rounded-full font-bold">{approvalRequests.length}</span>
+            </div>
+            
+            <div className="space-y-4">
+              {approvalRequests.length > 0 ? approvalRequests.map((req, i) => (
+                <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-100 hover:border-teal-200 transition-colors group">
+                  <div>
+                    <p className="font-bold text-slate-700 text-sm">{req.name}</p>
+                    <p className="text-xs text-slate-500">{req.treatment} • {req.time}</p>
+                  </div>
+                  <div className="flex gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
+                    <button className="p-2 bg-white text-green-600 rounded-lg shadow-sm border border-slate-100 hover:bg-green-50" title="Approve">
+                      <FaCheck size={12} />
+                    </button>
+                    <button className="p-2 bg-white text-red-500 rounded-lg shadow-sm border border-slate-100 hover:bg-red-50" title="Reject">
+                      <FaTimes size={12} />
+                    </button>
+                  </div>
+                </div>
+              )) : (
+                <p className="text-slate-400 text-center text-sm py-4">All caught up!</p>
+              )}
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      {/* Analytics Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        
         {/* Pie Chart */}
-        <div className="bg-white rounded-xl shadow p-6">
-          <h2 className="text-lg font-semibold mb-4 text-teal-700">Appointment Status</h2>
-          <ResponsiveContainer width="100%" height={250}>
-            <PieChart>
-              <Pie
-                data={appointmentStats}
-                dataKey="value"
-                nameKey="name"
-                cx="50%"
-                cy="50%"
-                outerRadius={80}
-                label
-              >
-                {appointmentStats.map((_, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip />
-            </PieChart>
-          </ResponsiveContainer>
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+          <h2 className="text-lg font-bold text-slate-800 mb-6">Appointment Status Overview</h2>
+          <div className="h-[300px] w-full">
+            <ResponsiveContainer>
+              <PieChart>
+                <Pie
+                  data={appointmentStats}
+                  dataKey="value"
+                  nameKey="name"
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={100}
+                  paddingAngle={5}
+                >
+                  {appointmentStats.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} stroke="none" />
+                  ))}
+                </Pie>
+                <Tooltip 
+                  contentStyle={{ backgroundColor: '#fff', borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} 
+                  itemStyle={{ color: '#334155', fontWeight: 600 }}
+                />
+                <Legend verticalAlign="bottom" height={36} iconType="circle" />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
         </div>
 
         {/* Bar Chart */}
-        <div className="bg-white rounded-xl shadow p-6">
-          <h2 className="text-lg font-semibold mb-4 text-teal-700">Patients by Department</h2>
-          <ResponsiveContainer width="100%" height={250}>
-            <BarChart data={departmentData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Bar dataKey="count" fill="#14b8a6" />
-            </BarChart>
-          </ResponsiveContainer>
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+          <h2 className="text-lg font-bold text-slate-800 mb-6">Patient Demographics</h2>
+          <div className="h-[300px] w-full">
+            <ResponsiveContainer>
+              <BarChart data={departmentData}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <XAxis 
+                  dataKey="name" 
+                  tick={{ fill: '#64748b', fontSize: 12 }} 
+                  axisLine={false} 
+                  tickLine={false}
+                />
+                <YAxis 
+                  tick={{ fill: '#64748b', fontSize: 12 }} 
+                  axisLine={false} 
+                  tickLine={false}
+                />
+                <Tooltip 
+                  cursor={{ fill: '#f8fafc' }}
+                  contentStyle={{ backgroundColor: '#fff', borderRadius: '8px', border: '1px solid #e2e8f0' }}
+                />
+                <Bar dataKey="count" fill="#0d9488" radius={[4, 4, 0, 0]} barSize={40} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
-      </div>
-    </div>
-    {isApptModalOpen && selectedCalendarAppt && (
-      <AppointmentSlipModal
-        isOpen={isApptModalOpen}
-        onClose={() => setIsApptModalOpen(false)}
-        appointmentData={selectedCalendarAppt}
-        hospitalInfo={null}
-      />
-    )}
-    </>
-  );
-};
 
-const StatCard = ({ title, value, icon, color }) => {
-  const bgMap = {
-    teal: 'bg-teal-100 text-teal-600',
-    blue: 'bg-blue-100 text-blue-600',
-    red: 'bg-red-100 text-red-600',
-    green: 'bg-green-100 text-green-600',
-  };
-  return (
-    <div className="bg-white rounded-xl shadow p-4 flex items-center">
-      <div className={`w-12 h-12 ${bgMap[color]} rounded-full flex items-center justify-center mr-4`}>
-        {icon}
       </div>
-      <div>
-        <div className="text-sm text-gray-500">{title}</div>
-        <div className="text-xl font-bold text-gray-800">{value}</div>
-      </div>
+
+      {/* Appointment Modal */}
+      {isApptModalOpen && selectedCalendarAppt && (
+        <AppointmentSlipModal
+          isOpen={isApptModalOpen}
+          onClose={() => setIsApptModalOpen(false)}
+          appointmentData={selectedCalendarAppt}
+          hospitalInfo={hospital}
+        />
+      )}
     </div>
   );
 };

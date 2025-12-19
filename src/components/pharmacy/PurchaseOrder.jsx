@@ -29,7 +29,7 @@ const CreatePurchaseOrder = () => {
 
   const fetchSuppliers = async () => {
     try {
-      const response = await apiClient.get('/api/suppliers?isActive=true');
+      const response = await apiClient.get('/suppliers?isActive=true');
       setSuppliers(response.data);
     } catch (err) {
       console.error('Error fetching suppliers:', err);
@@ -38,7 +38,7 @@ const CreatePurchaseOrder = () => {
 
   const fetchMedicines = async () => {
     try {
-      const response = await apiClient.get('/api/medicines?is_active=true');
+      const response = await apiClient.get('/medicines?is_active=true');
       setMedicines(response.data);
     } catch (err) {
       console.error('Error fetching medicines:', err);
@@ -86,7 +86,7 @@ const CreatePurchaseOrder = () => {
     setLoading(true);
 
     try {
-      const response = await apiClient.post('/api/orders/purchase-orders', {
+      const response = await apiClient.post('/orders/purchase-orders', {
         ...formData,
         total_amount: calculateTotal(),
         user_id: 'currentUserId' // Replace with actual user ID from auth context or state

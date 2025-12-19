@@ -35,11 +35,11 @@ const StockOverview = () => {
           expiredRes,
           activityRes
         ] = await Promise.all([
-          apiClient.get('/api/medicines?limit=1'),
-          apiClient.get('/api/medicines/low-stock'),
-          apiClient.get('/api/batches/expiring-soon'),
-          apiClient.get('/api/medicines/expired'),
-          apiClient.get('/api/stock-adjustments?limit=5')
+          apiClient.get('/medicines?limit=1'),
+          apiClient.get('/medicines/low-stock'),
+          apiClient.get('/batches/expiring-soon'),
+          apiClient.get('/medicines/expired'),
+          apiClient.get('/stock-adjustments?limit=5')
         ]);
 
         const totalMedicines = medicinesRes.data.total || medicinesRes.data.length;

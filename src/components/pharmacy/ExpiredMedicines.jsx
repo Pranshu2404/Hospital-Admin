@@ -16,7 +16,7 @@ const ExpiredMedicines = () => {
   useEffect(() => {
     const fetchExpiredMedicines = async () => {
       try {
-        const response = await apiClient.get('/api/medicines/expired');
+        const response = await apiClient.get('/medicines/expired');
         setExpiredMedicines(response.data);
       } catch (err) {
         setError('Failed to fetch expired medicines. Please try again later.');
@@ -35,7 +35,7 @@ const ExpiredMedicines = () => {
     }
 
     try {
-      await apiClient.post('/api/stock-adjustments', {
+      await apiClient.post('/stock-adjustments', {
         medicine_id: medicineId,
         adjustment_type: 'Expiry',
         quantity: 0, // This will be set to the current stock quantity

@@ -1,588 +1,409 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { FormInput, FormSelect, FormTextarea, FormCheckbox, Button } from '../common/FormElements';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+
+// --- Icons ---
+const Icons = {
+  User: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>,
+  Briefcase: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>,
+  Clock: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
+  Shield: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>,
+  Check: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>,
+};
+
+// --- Reusable Modern Input Component ---
+const FormInput = ({ label, type = "text", value, onChange, placeholder, required, className = "", icon, maxLength }) => (
+  <div className={`space-y-1.5 ${className}`}>
+    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide ml-1">
+      {label} {required && <span className="text-rose-500">*</span>}
+    </label>
+    <div className="relative group">
+      {icon && (
+        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 group-focus-within:text-emerald-500 transition-colors">
+          {icon}
+        </div>
+      )}
+      <input
+        type={type}
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        required={required}
+        maxLength={maxLength}
+        className={`block w-full ${icon ? 'pl-10' : 'pl-4'} pr-4 py-3 bg-slate-50 border border-slate-200 text-slate-900 text-sm rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all placeholder-slate-400 hover:bg-white hover:shadow-sm`}
+      />
+    </div>
+  </div>
+);
+
+const FormSelect = ({ label, value, onChange, options, required, className = "", icon }) => (
+  <div className={`space-y-1.5 ${className}`}>
+    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide ml-1">
+      {label} {required && <span className="text-rose-500">*</span>}
+    </label>
+    <div className="relative group">
+      {icon && (
+        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 group-focus-within:text-emerald-500 transition-colors">
+          {icon}
+        </div>
+      )}
+      <select
+        value={value}
+        onChange={onChange}
+        required={required}
+        className={`block w-full ${icon ? 'pl-10' : 'pl-4'} pr-10 py-3 bg-slate-50 border border-slate-200 text-slate-900 text-sm rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all appearance-none cursor-pointer hover:bg-white hover:shadow-sm`}
+      >
+        <option value="" disabled>Select an option</option>
+        {options.map((opt) => (
+          <option key={opt.value} value={opt.value}>{opt.label}</option>
+        ))}
+      </select>
+      <div className="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none text-slate-500">
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
+      </div>
+    </div>
+  </div>
+);
 
 const AddDoctorNurseForm = () => {
-  // Function to get today's date in YYYY-MM-DD format
-  const getTodayDate = () => {
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = (today.getMonth() + 1).toString().padStart(2, '0');
-    const day = today.getDate().toString().padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
+  const getTodayDate = () => new Date().toISOString().split('T')[0];
+
+  const [step, setStep] = useState(1);
+  const totalSteps = 3; // Increased to 3 to accommodate all fields comfortably
+  const [departmentOptions, setDepartmentOptions] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    password: '',
-    phone: '',
-    dateOfBirth: '',
-    gender: '',
-    address: '',
-    city: '',
-    state: '',
-    zipCode: '',
-    department: '',
-    specialization: '',
-    licenseNumber: '',
-    experience: '',
-    education: '',
-    shift: '', // Only if Full-time
-    emergencyContact: '',
-    emergencyPhone: '',
-    startDate: getTodayDate(),
-    isFullTime: true, // Toggle
-    paymentType: 'Salary', // Default if full-time
-    amount: '', // Replaces salary, feePerVisit, ratePerHour
-    contractStartDate: '',
-    contractEndDate: '',
-    visitsPerWeek: '',
-    workingDaysPerWeek: [], // For part-time doctors - array of selected days
-    timeSlots: [{ start: '', end: '' }], // For part-time availability
-    aadharNumber: '',
-    panNumber: '',
-    notes: ''
+    firstName: '', lastName: '', email: '', password: '', phone: '', dateOfBirth: '', gender: '',
+    address: '', city: '', state: '', zipCode: '', aadharNumber: '', panNumber: '',
+    department: '', specialization: '', licenseNumber: '', experience: '', education: '',
+    startDate: getTodayDate(), isFullTime: true, paymentType: 'Salary', amount: '',
+    contractStartDate: '', contractEndDate: '', visitsPerWeek: '', workingDaysPerWeek: [],
+    shift: '', timeSlots: [{ start: '', end: '' }], notes: '', emergencyContact: '', emergencyPhone: ''
   });
-
-  const [departmentOptions, setDepartmentOptions] = useState([]);
-  const [showForgotModal, setShowForgotModal] = useState(false);
-  const [forgotData, setForgotData] = useState({ username: '', phone: '' });
-  const [showTimeSlotModal, setShowTimeSlotModal] = useState(false);
-  const [tempTimeSlots, setTempTimeSlots] = useState([{ start: '', end: '' }]);
-
-  const educationOptions = [
-    { value: 'MBBS', label: 'MBBS' },
-    { value: 'BDS', label: 'BDS' },
-    { value: 'MD', label: 'MD' },
-    { value: 'MS', label: 'MS' },
-    { value: 'DNB', label: 'DNB' },
-    { value: 'DM', label: 'DM' },
-    { value: 'MCh', label: 'MCh' },
-    { value: 'PhD', label: 'PhD' },
-    { value: 'Fellowship', label: 'Fellowship' },
-    { value: 'Diploma', label: 'Diploma' },
-    { value: 'Resident Doctor', label: 'Resident Doctor' },
-    { value: 'Intern', label: 'Intern' },
-    { value: 'Trainee', label: 'Trainee' }
-  ];
-
-  const dayOptions = [
-    { value: 'Monday', label: 'Monday' },
-    { value: 'Tuesday', label: 'Tuesday' },
-    { value: 'Wednesday', label: 'Wednesday' },
-    { value: 'Thursday', label: 'Thursday' },
-    { value: 'Friday', label: 'Friday' },
-    { value: 'Saturday', label: 'Saturday' },
-    { value: 'Sunday', label: 'Sunday' }
-  ];
 
   useEffect(() => {
     const fetchDepartments = async () => {
       try {
-        const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/departments`);
-        const departments = res.data?.map(dep => ({
-          value: dep._id,
-          label: dep.name
-        })) || [];
-        setDepartmentOptions(departments);
-      } catch (err) {
-        console.error('❌ Failed to fetch departments:', err);
-      }
+        const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/departments`);
+        setDepartmentOptions(res.data?.map(d => ({ value: d._id, label: d.name })) || []);
+      } catch (err) { console.error(err); }
     };
     fetchDepartments();
   }, []);
 
-  const handleInputChange = (field, value) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
+  const handleInputChange = (field, value) => setFormData(prev => ({ ...prev, [field]: value }));
 
-  const handleForgotChange = (field, value) => {
-    setForgotData(prev => ({ ...prev, [field]: value }));
-  };
-
-  const handleForgotSubmit = (e) => {
-    e.preventDefault();
-    alert(`Reset link sent for user: ${forgotData.username} and phone: ${forgotData.phone}`);
-    setShowForgotModal(false);
-    setForgotData({ username: '', phone: '' });
-  };
-
-  const handleTimeSlotChange = (idx, field, value) => {
-    setFormData(prev => {
-      const updated = [...prev.timeSlots];
-      updated[idx][field] = value;
-      return { ...prev, timeSlots: updated };
-    });
-  };
-
-  const handleTempTimeSlotChange = (idx, field, value) => {
-    setTempTimeSlots(prev => {
-      const updated = [...prev];
-      updated[idx][field] = value;
-      return updated;
-    });
-  };
-
-  const handleAddTimeSlot = () => {
-    setTempTimeSlots(prev => [...prev, { start: '', end: '' }]);
-  };
-
-  const handleRemoveTimeSlot = (idx) => {
-    setTempTimeSlots(prev => prev.filter((_, i) => i !== idx));
-  };
-
-  const handleSaveTimeSlots = () => {
-    // Filter out empty time slots
-    const filteredSlots = tempTimeSlots.filter(slot => slot.start && slot.end);
-    setFormData(prev => ({ ...prev, timeSlots: filteredSlots }));
-    setShowTimeSlotModal(false);
+  const handleShiftChange = (value) => {
+    let slots = [{ start: '', end: '' }];
+    if (value === 'Morning') slots = [{ start: '07:00', end: '15:00' }];
+    else if (value === 'Evening') slots = [{ start: '15:00', end: '23:00' }];
+    else if (value === 'Night') slots = [{ start: '23:00', end: '07:00' }];
+    else if (value === 'Rotating') slots = [
+        { start: '07:00', end: '15:00' }, { start: '15:00', end: '23:00' }, { start: '23:00', end: '07:00' }
+    ];
+    setFormData(prev => ({ ...prev, shift: value, timeSlots: slots }));
   };
 
   const handleWorkingDaysChange = (e) => {
-  const day = String(e.target.value); // Ensure it's a string
-  const isChecked = e.target.checked;
-  
-  setFormData(prev => {
-    const prevDays = Array.isArray(prev.workingDaysPerWeek) ? prev.workingDaysPerWeek : []; // Safeguard against non-array values
-
-    if (isChecked) {
-      // Add day only if it doesn't already exist and is a valid string
-      if (day && !prevDays.includes(day)) {
-        return { 
-          ...prev, 
-          workingDaysPerWeek: [...prevDays, day] 
-        };
-      }
-    } else {
-      // Remove the day
-      return { 
-        ...prev, 
-        workingDaysPerWeek: prevDays.filter(d => d !== day) 
-      };
-    }
-    
-    // Return previous state if no change occurred
-    return prev;
-  });
-};
-
-  const handleShiftChange = (value) => {
-    setFormData(prev => ({
-      ...prev,
-      shift: value
-    }));
-    
-    // If rotating shift is selected, set default time slots
-    if (value === 'Rotating') {
-      setFormData(prev => ({
-        ...prev,
-        timeSlots: [
-          { start: '07:00', end: '15:00' },
-          { start: '15:00', end: '23:00' },
-          { start: '23:00', end: '07:00' }
-        ]
-      }));
-    } else {
-      // For fixed shifts, set appropriate time slots
-      let timeSlots = [];
-      switch(value) {
-        case 'Morning':
-          timeSlots = [{ start: '07:00', end: '15:00' }];
-          break;
-        case 'Evening':
-          timeSlots = [{ start: '15:00', end: '23:00' }];
-          break;
-        case 'Night':
-          timeSlots = [{ start: '23:00', end: '07:00' }];
-          break;
-        default:
-          timeSlots = [{ start: '', end: '' }];
-      }
-      setFormData(prev => ({ ...prev, timeSlots }));
-    }
+    const day = String(e.target.value);
+    const isChecked = e.target.checked;
+    setFormData(prev => {
+        const prevDays = Array.isArray(prev.workingDaysPerWeek) ? prev.workingDaysPerWeek : [];
+        if (isChecked) {
+            return day && !prevDays.includes(day) ? { ...prev, workingDaysPerWeek: [...prevDays, day] } : prev;
+        } else {
+            return { ...prev, workingDaysPerWeek: prevDays.filter(d => d !== day) };
+        }
+    });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsLoading(true);
     try {
-      // Prepare data for submission
       const submissionData = {
         ...formData,
-        // For full-time doctors, ensure workingDaysPerWeek is not sent
         workingDaysPerWeek: formData.isFullTime ? [] : formData.workingDaysPerWeek,
-        // For part-time doctors, ensure shift is not sent
         shift: formData.isFullTime ? formData.shift : ''
       };
-      
-      const response = await axios.post(
-        `${import.meta.env.VITE_BACKEND_URL}/api/doctors`,
-        submissionData
-      );
-      console.log('✅ Doctor added successfully:', response.data);
+      await axios.post(`${import.meta.env.VITE_BACKEND_URL}/doctors`, submissionData);
       alert('Doctor added successfully!');
+      navigate('/dashboard/admin/doctor-list');
+      alert('Doctor added successfully.');
     } catch (err) {
-      console.error('❌ Error adding doctor:', err.response?.data || err.message);
       alert(err.response?.data?.error || 'Failed to add doctor.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleEmploymentTypeChange = (isFullTime) => {
-  setFormData(prev => ({
-    ...prev,
-    isFullTime,
-    // Clear working days when switching to full-time
-    workingDaysPerWeek: isFullTime ? [] : prev.workingDaysPerWeek
-  }));
-};
+  const nextStep = () => setStep(prev => Math.min(prev + 1, totalSteps));
+  const prevStep = () => setStep(prev => Math.max(prev - 1, 1));
 
-  const shiftOptions = [
-    { value: 'Morning', label: 'Morning (7 AM - 3 PM)' },
-    { value: 'Evening', label: 'Evening (3 PM - 11 PM)' },
-    { value: 'Night', label: 'Night (11 PM - 7 AM)' },
-    { value: 'Rotating', label: 'Rotating Shifts' }
-  ];
-
-  const genderOptions = [
-    { value: 'male', label: 'Male' },
-    { value: 'female', label: 'Female' },
-    { value: 'other', label: 'Other' }
-  ];
+  // --- Step Indicator ---
+  const StepIndicator = () => {
+    
+    const steps = ['Personal Details', 'Professional Info', 'Employment & Shift'];
+    
+    return (
+      <div className="mb-10 px-4">
+          <div className="relative flex justify-between items-center w-full">
+              {/* Background Line */}
+              <div className="absolute top-1/2 left-0 w-full h-1 bg-slate-100 -z-0 rounded-full transform -translate-y-1/2"></div>
+              {/* Active Line */}
+              <div 
+                  className="absolute top-1/2 left-0 h-1 bg-emerald-500 -z-0 rounded-full transition-all duration-500 ease-in-out transform -translate-y-1/2" 
+                  style={{ width: `${((step - 1) / (totalSteps - 1)) * 100}%` }}
+              ></div>
+  
+              {steps.map((label, index) => {
+                  const stepNum = index + 1;
+                  const isActive = step >= stepNum;
+                  const isCurrent = step === stepNum;
+                  const isFirst = index === 0;
+                  const isLast = index === steps.length - 1;
+  
+                  // Alignment logic to prevent cut-off
+                  let labelClass = "left-1/2 -translate-x-1/2 text-center"; // Default Center
+                  if (isFirst) labelClass = "left-0 translate-x-0 text-left"; // Left align first
+                  if (isLast) labelClass = "right-0 translate-x-0 text-right"; // Right align last
+  
+                  return (
+                      <div key={index} className="flex flex-col items-center relative z-10 group cursor-default">
+                          <div 
+                              className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all duration-300 border-4 
+                              ${isActive ? 'bg-emerald-600 border-emerald-100 text-white shadow-lg shadow-emerald-500/20 scale-110' : 'bg-white border-slate-100 text-slate-400'}`}
+                          >
+                              {isActive && step > stepNum ? <Icons.Check /> : stepNum}
+                          </div>
+                          <span className={`absolute top-12 text-xs font-bold uppercase tracking-wider whitespace-nowrap w-40 transition-colors duration-300 ${labelClass} ${isCurrent ? 'text-emerald-700' : 'text-slate-400'}`}>
+                              {label}
+                          </span>
+                      </div>
+                  );
+              })}
+          </div>
+      </div>
+    );
+  };
 
   return (
-    <div className="p-6">
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-        <div className="p-6 border-b border-gray-100">
-          <h2 className="text-2xl font-bold text-gray-900">Add Doctor</h2>
-          <p className="text-gray-600 mt-1">Enter staff information to create a new record</p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="p-6">
-          {/* Personal Information */}
-          <div className="mb-8">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Personal Information</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormInput label="First Name" value={formData.firstName} onChange={(e) => handleInputChange('firstName', e.target.value)} placeholder="Enter first name" required />
-              <FormInput label="Last Name" value={formData.lastName} onChange={(e) => handleInputChange('lastName', e.target.value)} placeholder="Enter last name" required />
-              <FormInput label="Email" type="email" value={formData.email} onChange={(e) => handleInputChange('email', e.target.value)} placeholder="Enter email address" required />
-              <FormInput label="Password" type="password" value={formData.password} onChange={(e) => handleInputChange('password', e.target.value)} placeholder="Create password" required />
-              <FormInput label="Phone Number" type="tel" value={formData.phone} onChange={(e) => handleInputChange('phone', e.target.value)} placeholder="Enter phone number" required />
-              <FormInput label="Date of Birth" type="date" value={formData.dateOfBirth} onChange={(e) => handleInputChange('dateOfBirth', e.target.value)} required />
-              <FormSelect label="Gender" value={formData.gender} onChange={(e) => handleInputChange('gender', e.target.value)} options={genderOptions} placeholder="Select gender" required />
-              <FormInput label="Aadhar Number" value={formData.aadharNumber} onChange={(e) => handleInputChange('aadharNumber', e.target.value)} placeholder="Enter Aadhar number" maxLength={12} />
-              <FormInput label="PAN Number" value={formData.panNumber} onChange={(e) => handleInputChange('panNumber', e.target.value)} placeholder="Enter PAN number" maxLength={10} />
-            </div>
-          </div>
-
-          {/* Address Information */}
-          <div className="mb-8">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Address Information</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormTextarea label="Address" value={formData.address} onChange={(e) => handleInputChange('address', e.target.value)} placeholder="Enter full address" rows={3} className="md:col-span-2" />
-              <FormInput label="City" value={formData.city} onChange={(e) => handleInputChange('city', e.target.value)} placeholder="Enter city" />
-              <FormInput label="State" value={formData.state} onChange={(e) => handleInputChange('state', e.target.value)} placeholder="Enter state" />
-              <FormInput label="ZIP Code" value={formData.zipCode} onChange={(e) => handleInputChange('zipCode', e.target.value)} placeholder="Enter ZIP code" />
-            </div>
-          </div>
-          
-          {/* Professional Information */}
-          <div className="mb-8">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Professional Information</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormSelect label="Department" value={formData.department} onChange={(e) => handleInputChange('department', e.target.value)} options={departmentOptions} placeholder="Select department" required />
-              <FormInput label="Specialization" value={formData.specialization} onChange={(e) => handleInputChange('specialization', e.target.value)} placeholder="Enter specialization" />
-              <FormInput label="Registration Number" value={formData.licenseNumber} onChange={(e) => handleInputChange('licenseNumber', e.target.value)} placeholder="Enter Registration number" required />
-              <FormInput label="Years of Experience" type="number" value={formData.experience} onChange={(e) => handleInputChange('experience', e.target.value)} placeholder="Enter years of experience" />
-              <FormSelect
-                label="Education"
-                value={formData.education}
-                onChange={(e) => handleInputChange('education', e.target.value)}
-                options={educationOptions}
-                placeholder="Select highest qualification"
-                required
-              />
-            </div>
-          </div>
-
-          {/* Employment Information */}
-          <div className="mb-8">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Employment Information</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormInput label="Start Date" type="date" value={formData.startDate} onChange={(e) => handleInputChange('startDate', e.target.value)} required />
-              
-              {/* Full-time / Part-time toggle */}
-              <FormSelect
-                label="Employment Type"
-                value={formData.isFullTime ? 'Full-time' : 'Part-time'}
-                onChange={(e) => handleEmploymentTypeChange(e.target.value === 'Full-time')}
-                options={[
-                  { value: 'Full-time', label: 'Full-time' },
-                  { value: 'Part-time', label: 'Part-time' }
-                ]}
-              />
-
-              {formData.isFullTime ? (
-                <>
-                  <FormSelect
-                    label="Shift"
-                    value={formData.shift}
-                    onChange={(e) => handleShiftChange(e.target.value)}
-                    options={shiftOptions}
-                    placeholder="Select shift"
-                    required
-                  />
-                  
-                  {/* Display time slots for full-time doctors */}
-                  {formData.shift && (
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Time Slots</label>
-                      <div className="bg-gray-50 p-3 rounded-md">
-                        {formData.shift === 'Rotating' ? (
-                          <div>
-                            <p className="text-sm text-gray-600">Rotating shifts cover all time periods:</p>
-                            <ul className="list-disc list-inside mt-1 text-sm text-gray-700">
-                              <li>Morning: 7 AM - 3 PM</li>
-                              <li>Evening: 3 PM - 11 PM</li>
-                              <li>Night: 11 PM - 7 AM</li>
-                            </ul>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-2">
-                            {formData.timeSlots.map((slot, idx) => (
-                              <div key={idx} className="flex items-center gap-1">
-                                <span className="text-sm font-medium">{slot.start} to {slot.end}</span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                        {formData.shift === 'Rotating' && (
-                          <button 
-                            type="button" 
-                            onClick={() => {
-                              setTempTimeSlots(formData.timeSlots);
-                              setShowTimeSlotModal(true);
-                            }}
-                            className="mt-2 text-blue-600 text-sm hover:underline"
-                          >
-                            Customize Time Slots
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                  
-                  <FormInput
-                    label="Salary"
-                    type="number"
-                    value={formData.amount}
-                    onChange={(e) => handleInputChange('amount', e.target.value)}
-                    placeholder="Enter salary"
-                    required
-                  />
-                </>
-              ) : (
-                <>
-                  <FormSelect
-                    label="Payment Type"
-                    value={formData.paymentType}
-                    onChange={(e) => handleInputChange('paymentType', e.target.value)}
-                    options={[
-                      { value: 'Fee per Visit', label: 'Fee per Visit' },
-                      { value: 'Per Hour', label: 'Per Hour' },
-                      { value: 'Contractual Salary', label: 'Contractual Salary' }
-                    ]}
-                    required
-                  />
-                  <FormInput
-                    label="Amount"
-                    type="number"
-                    value={formData.amount}
-                    onChange={(e) => handleInputChange('amount', e.target.value)}
-                    placeholder="Enter amount"
-                    required
-                  />
-                  <FormInput label="Contract Start Date" type="date" value={formData.contractStartDate} onChange={(e) => handleInputChange('contractStartDate', e.target.value)} />
-                  <FormInput label="Contract End Date" type="date" value={formData.contractEndDate} onChange={(e) => handleInputChange('contractEndDate', e.target.value)} />
-                  <FormInput label="Visits per Week" type="number" value={formData.visitsPerWeek} onChange={(e) => handleInputChange('visitsPerWeek', e.target.value)} />
-                  
-                  {/* Working Days Selection for Part-time Doctors */}
-                  <div className="md:col-span-2">
-  <label className="block text-sm font-medium text-gray-700 mb-1">
-    Working Days per Week
-  </label>
-  <div className="flex flex-wrap gap-3">
-    {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(day => (
-      <label key={day} className="inline-flex items-center">
-        <input
-          type="checkbox"
-          value={day}
-          checked={formData.workingDaysPerWeek.includes(day)}
-          onChange={handleWorkingDaysChange} // Directly use the handler
-          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-        />
-        <span className="ml-2 text-sm text-gray-700">{day}</span>
-      </label>
-    ))}
-  </div>
-</div>
-                  
-                  {/* Time Slots for Part-time Doctors */}
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Time Slots</label>
-                    {formData.timeSlots.map((slot, idx) => (
-                      <div key={idx} className="flex items-center gap-2 mb-2">
-                        <input 
-                          type="time" 
-                          value={slot.start} 
-                          onChange={(e) => handleTimeSlotChange(idx, 'start', e.target.value)} 
-                          className="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
-                        />
-                        <span className="text-gray-600">to</span>
-                        <input 
-                          type="time" 
-                          value={slot.end} 
-                          onChange={(e) => handleTimeSlotChange(idx, 'end', e.target.value)} 
-                          className="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
-                        />
-                        <button 
-                          type="button" 
-                          onClick={() => {
-                            setFormData(prev => ({
-                              ...prev,
-                              timeSlots: prev.timeSlots.filter((_, i) => i !== idx)
-                            }));
-                          }}
-                          className="text-red-600 hover:text-red-800 text-sm"
-                        >
-                          Remove
-                        </button>
-                      </div>
-                    ))}
-                    <button 
-                      type="button" 
-                      onClick={() => {
-                        setFormData(prev => ({
-                          ...prev,
-                          timeSlots: [...prev.timeSlots, { start: '', end: '' }]
-                        }));
-                      }}
-                      className="mt-2 text-blue-600 hover:text-blue-800 text-sm"
-                    >
-                      + Add Time Slot
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* Emergency Contact */}
-          <div className="mb-8">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Emergency Contact</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormInput label="Contact Name" value={formData.emergencyContact} onChange={(e) => handleInputChange('emergencyContact', e.target.value)} placeholder="Enter emergency contact name" />
-              <FormInput label="Contact Phone" type="tel" value={formData.emergencyPhone} onChange={(e) => handleInputChange('emergencyPhone', e.target.value)} placeholder="Enter emergency contact phone" />
-            </div>
-          </div>
-
-          {/* Additional Notes */}
-          <div className="mb-8">
-            <FormTextarea label="Additional Notes" value={formData.notes} onChange={(e) => handleInputChange('notes', e.target.value)} placeholder="Enter any additional notes or comments" rows={3} />
-          </div>
-
-          {/* Submit Buttons */}
-          <div className="flex justify-end space-x-4">
-            <Button variant="secondary" type="button">Cancel</Button>
-            <Button variant="primary" type="submit">Add Doctor</Button>
-            <button type="button" onClick={() => setShowForgotModal(true)} className="text-blue-600 hover:underline hover:text-blue-800 transition">Forgot Password?</button>
-          </div>
-        </form>
-      </div>
-
-      {showForgotModal && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-30 z-50">
-          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
-            <h3 className="text-xl font-semibold text-gray-800 mb-4">Forgot Password</h3>
-            <form onSubmit={handleForgotSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
-                <input type="text" value={forgotData.username} onChange={(e) => handleForgotChange('username', e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2" required />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
-                <input type="tel" value={forgotData.phone} onChange={(e) => handleForgotChange('phone', e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2" required />
-              </div>
-              <div className="flex justify-end space-x-3 mt-4">
-                <button type="button" onClick={() => setShowForgotModal(false)} className="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400">Cancel</button>
-                <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Submit</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Time Slot Modal for Rotating Shift */}
-      {showTimeSlotModal && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-30 z-50">
-          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
-            <h3 className="text-xl font-semibold text-gray-800 mb-4">Customize Time Slots</h3>
-            <div className="space-y-4">
-              {tempTimeSlots.map((slot, idx) => (
-                <div key={idx} className="flex items-center gap-2">
-                  <input 
-                    type="time" 
-                    value={slot.start} 
-                    onChange={(e) => handleTempTimeSlotChange(idx, 'start', e.target.value)} 
-                    className="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
-                  />
-                  <span className="text-gray-600">to</span>
-                  <input 
-                    type="time" 
-                    value={slot.end} 
-                    onChange={(e) => handleTempTimeSlotChange(idx, 'end', e.target.value)} 
-                    className="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
-                  />
-                  <button 
-                    type="button" 
-                    onClick={() => handleRemoveTimeSlot(idx)}
-                    className="text-red-600 hover:text-red-800"
-                  >
-                    ×
-                  </button>
+    <div className="min-h-screen bg-slate-50/50 font-sans text-slate-800 flex justify-center py-10 px-4">
+      <div className="w-full max-w-5xl bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden flex flex-col">
+        
+        {/* Header */}
+        <div className="bg-white px-8 py-8 pb-0">
+            <div className="flex justify-between items-end mb-8">
+                <div>
+                    <h2 className="text-3xl font-bold text-slate-900 tracking-tight">Register New Doctor</h2>
+                    <p className="text-slate-500 text-sm mt-1">Complete the wizard to onboard a new medical professional.</p>
                 </div>
-              ))}
-              <button 
-                type="button" 
-                onClick={handleAddTimeSlot}
-                className="text-blue-600 hover:text-blue-800 text-sm"
-              >
-                + Add Another Time Slot
-              </button>
             </div>
-            <div className="flex justify-end space-x-3 mt-6">
-              <button 
-                type="button" 
-                onClick={() => setShowTimeSlotModal(false)}
-                className="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400"
-              >
-                Cancel
-              </button>
-              <button 
-                type="button" 
-                onClick={handleSaveTimeSlots}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-              >
-                Save
-              </button>
-            </div>
-          </div>
+            <StepIndicator />
         </div>
-      )}
+
+        <div className="p-8 pt-12 flex-grow overflow-y-auto">
+            <form onSubmit={handleSubmit} className="h-full flex flex-col justify-between">
+                
+                {/* --- STEP 1: PERSONAL DETAILS --- */}
+                {step === 1 && (
+                    <div className="space-y-8 animate-fade-in-right">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                            <FormInput label="First Name" value={formData.firstName} onChange={(e) => handleInputChange('firstName', e.target.value)} required placeholder="e.g. John" />
+                            <FormInput label="Last Name" value={formData.lastName} onChange={(e) => handleInputChange('lastName', e.target.value)} required placeholder="e.g. Doe" />
+                            
+                            <FormInput label="Email Address" type="email" value={formData.email} onChange={(e) => handleInputChange('email', e.target.value)} required placeholder="doctor@hospital.com" />
+                            <FormInput label="Phone Number" type="tel" value={formData.phone} onChange={(e) => handleInputChange('phone', e.target.value.replace(/[^0-9]/g, '').slice(0,10))} required placeholder="e.g. 9876543210" maxLength={10} />
+                            
+                            <FormInput label="Password" type="password" value={formData.password} onChange={(e) => handleInputChange('password', e.target.value)} required placeholder="••••••••" />
+                            <FormInput label="Date of Birth" type="date" value={formData.dateOfBirth} onChange={(e) => handleInputChange('dateOfBirth', e.target.value)} required />
+                            
+                            <FormSelect label="Gender" value={formData.gender} onChange={(e) => handleInputChange('gender', e.target.value)} options={[{value:'male',label:'Male'},{value:'female',label:'Female'},{value:'other',label:'Other'}]} required />
+                            <FormInput label="Aadhar Number" value={formData.aadharNumber} onChange={(e) => handleInputChange('aadharNumber', e.target.value.replace(/[^0-9]/g, '').slice(0,12))} maxLength={12} placeholder="12-digit UID" />
+                        </div>
+
+                        <div className="pt-6 border-t border-slate-100">
+                            <h3 className="text-sm font-bold text-slate-900 mb-6 flex items-center gap-2">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Address & Emergency
+                            </h3>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div className="md:col-span-3">
+                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide ml-1 mb-1.5">Full Address</label>
+                                    <textarea 
+                                        value={formData.address} 
+                                        onChange={(e) => handleInputChange('address', e.target.value)} 
+                                        rows={2}
+                                        className="block w-full px-4 py-3 bg-slate-50 border border-slate-200 text-slate-900 text-sm rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all resize-none"
+                                        placeholder="Street, Apartment, etc."
+                                    ></textarea>
+                                </div>
+                                <FormInput label="City" value={formData.city} onChange={(e) => handleInputChange('city', e.target.value)} />
+                                <FormInput label="State" value={formData.state} onChange={(e) => handleInputChange('state', e.target.value)} />
+                                <FormInput label="ZIP Code" value={formData.zipCode} onChange={(e) => handleInputChange('zipCode', e.target.value)} />
+                                
+                                <FormInput label="Emergency Contact Name" value={formData.emergencyContact} onChange={(e) => handleInputChange('emergencyContact', e.target.value)} />
+                                <FormInput label="Emergency Contact Phone" type="tel" value={formData.emergencyPhone} onChange={(e) => handleInputChange('emergencyPhone', e.target.value.replace(/[^0-9]/g, '').slice(0,10))} placeholder="e.g. 9876543210" maxLength={10} />
+                                
+                            </div>
+                            <div>
+                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide ml-1 mb-1.5 mt-5">Additional Notes</label>
+                            <textarea 
+                                value={formData.notes} 
+                                onChange={(e) => handleInputChange('notes', e.target.value)} 
+                                rows={4}
+                                className="block w-full px-4 py-3 bg-slate-50 border border-slate-200 text-slate-900 text-sm rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all resize-none"
+                                placeholder="Any specific requirements or comments..."
+                            ></textarea>
+                        </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* --- STEP 2: PROFESSIONAL INFO --- */}
+                {step === 2 && (
+                    <div className="space-y-8 animate-fade-in-right">
+                        <div className="bg-slate-50/50 p-6 rounded-2xl border border-slate-100">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                                <FormSelect label="Department" value={formData.department} onChange={(e) => handleInputChange('department', e.target.value)} options={departmentOptions} required icon={<Icons.Briefcase />} />
+                                <FormInput label="Specialization" value={formData.specialization} onChange={(e) => handleInputChange('specialization', e.target.value)} required placeholder="e.g. Cardiology" />
+                                
+                                <FormInput label="License / Registration No." value={formData.licenseNumber} onChange={(e) => handleInputChange('licenseNumber', e.target.value)} required placeholder="MED-12345" />
+                                <FormSelect 
+                                    label="Highest Qualification" 
+                                    value={formData.education} 
+                                    onChange={(e) => handleInputChange('education', e.target.value)} 
+                                    options={['MBBS','MD','MS','BDS','PhD','Fellowship'].map(v=>({value:v, label:v}))} 
+                                    required 
+                                />
+                                
+                                <FormInput label="Years of Experience" type="number" value={formData.experience} onChange={(e) => handleInputChange('experience', e.target.value)} placeholder="e.g. 5" />
+                                <FormInput label="PAN Number" value={formData.panNumber} onChange={(e) => handleInputChange('panNumber', e.target.value)} maxLength={10} placeholder="ABCDE1234F" />
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* --- STEP 3: EMPLOYMENT & SHIFT --- */}
+                {step === 3 && (
+                    <div className="space-y-8 animate-fade-in-right">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <FormInput label="Joining Date" type="date" value={formData.startDate} onChange={(e) => handleInputChange('startDate', e.target.value)} required />
+                            <FormSelect 
+                                label="Employment Type" 
+                                value={formData.isFullTime ? 'Full-time' : 'Part-time'} 
+                                onChange={(e) => {
+                                    const isFull = e.target.value === 'Full-time';
+                                    setFormData(prev => ({ ...prev, isFullTime: isFull, workingDaysPerWeek: isFull ? [] : prev.workingDaysPerWeek }));
+                                }}
+                                options={[{value:'Full-time',label:'Full-time (Salaried)'}, {value:'Part-time',label:'Part-time (Consultant)'}]} 
+                            />
+                        </div>
+
+                        {formData.isFullTime ? (
+                            <div className="bg-emerald-50/50 rounded-2xl p-6 border border-emerald-100">
+                                <h3 className="text-sm font-bold text-emerald-800 mb-6 flex items-center gap-2">
+                                    <Icons.Clock /> Shift Configuration
+                                </h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <FormSelect 
+                                        label="Select Shift" 
+                                        value={formData.shift} 
+                                        onChange={(e) => handleShiftChange(e.target.value)} 
+                                        options={['Morning','Evening','Night','Rotating'].map(v=>({value:v, label:v}))} 
+                                        required 
+                                    />
+                                    <FormInput label="Annual Salary (₹)" type="number" value={formData.amount} onChange={(e) => handleInputChange('amount', e.target.value)} placeholder="e.g. 1200000" />
+                                </div>
+                                {formData.shift && (
+                                    <div className="mt-6 p-4 bg-white rounded-xl border border-emerald-100 shadow-sm">
+                                        <label className="text-xs font-bold text-emerald-600 uppercase mb-2 block">Active Timings</label>
+                                        <div className="flex flex-wrap gap-2">
+                                            {formData.timeSlots.map((slot, i) => (
+                                                <span key={i} className="inline-flex items-center px-3 py-1.5 bg-emerald-100 text-emerald-700 rounded-lg text-sm font-medium border border-emerald-200">
+                                                    {slot.start} - {slot.end}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+                            <div className="bg-blue-50/50 rounded-2xl p-6 border border-blue-100">
+                                <h3 className="text-sm font-bold text-blue-800 mb-6 flex items-center gap-2">
+                                    <Icons.Briefcase /> Consultant Configuration
+                                </h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                                    <FormSelect label="Payment Model" value={formData.paymentType} onChange={(e) => handleInputChange('paymentType', e.target.value)} options={[{value:'Fee per Visit',label:'Fee per Visit'}, {value:'Per Hour',label:'Per Hour'}]} />
+                                    <FormInput label="Rate / Amount (₹)" type="number" value={formData.amount} onChange={(e) => handleInputChange('amount', e.target.value)} />
+                                    <FormInput label="Contract Start" type="date" value={formData.contractStartDate} onChange={(e) => handleInputChange('contractStartDate', e.target.value)} />
+                                    <FormInput label="Contract End" type="date" value={formData.contractEndDate} onChange={(e) => handleInputChange('contractEndDate', e.target.value)} />
+                                </div>
+                                
+                                <div>
+                                    <label className="block text-xs font-bold text-blue-700 uppercase mb-3">Available Working Days</label>
+                                    <div className="flex flex-wrap gap-3">
+                                        {['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(day => (
+                                            <label key={day} className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border cursor-pointer transition-all ${formData.workingDaysPerWeek.includes(day) ? 'bg-blue-600 border-blue-600 text-white shadow-md' : 'bg-white border-blue-200 text-blue-900 hover:bg-blue-50'}`}>
+                                                <input 
+                                                    type="checkbox" 
+                                                    value={day} 
+                                                    checked={formData.workingDaysPerWeek.includes(day)}
+                                                    onChange={handleWorkingDaysChange}
+                                                    className="hidden" // Hiding default checkbox for custom style
+                                                />
+                                                <span className="text-sm font-semibold">{day}</span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* --- NAVIGATION ACTIONS --- */}
+                <div className="mt-12 pt-6 border-t border-slate-100 flex justify-between items-center">
+                    {step > 1 ? (
+                        <button 
+                            type="button" 
+                            onClick={prevStep}
+                            className="px-6 py-3 rounded-xl bg-white border border-slate-200 text-slate-600 font-bold hover:bg-slate-50 hover:text-slate-900 transition-colors shadow-sm"
+                        >
+                            Back
+                        </button>
+                    ) : (
+                        <div /> 
+                    )}
+
+                    {step < 3 ? (
+                        <button 
+                            type="button" 
+                            onClick={nextStep}
+                            className="px-8 py-3 rounded-xl bg-emerald-600 text-white font-bold hover:bg-emerald-700 shadow-lg shadow-emerald-600/20 transition-all hover:-translate-y-0.5"
+                        >
+                            Next Step
+                        </button>
+                    ) : (
+                        <button 
+                            type="submit" 
+                            disabled={isLoading}
+                            className="px-10 py-3 rounded-xl bg-emerald-600 text-white font-bold hover:bg-emerald-700 shadow-lg shadow-emerald-600/20 transition-all hover:-translate-y-0.5 disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-2"
+                        >
+                            {isLoading ? (
+                                <>
+                                    <svg className="animate-spin h-5 w-5 text-white" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                    Processing...
+                                </>
+                            ) : 'Create Account'}
+                        </button>
+                    )}
+                </div>
+
+            </form>
+        </div>
+      </div>
     </div>
   );
 };

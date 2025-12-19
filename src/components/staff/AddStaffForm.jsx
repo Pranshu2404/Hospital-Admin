@@ -31,7 +31,7 @@
 //   useEffect(() => {
 //     const fetchDepartments = async () => {
 //       try {
-//         const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/departments`);
+//         const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/departments`);
 //         const departments = res.data?.map(dep => ({
 //           value: dep.name,
 //           label: dep.name
@@ -56,7 +56,7 @@
 //     try {
 //       console.log('Submitting form data:', finalData);
 //       const response = await axios.post(
-//         `${import.meta.env.VITE_BACKEND_URL}/api/staff`,
+//         `${import.meta.env.VITE_BACKEND_URL}/staff`,
 //         finalData
 //       );
 //       console.log('✅ Staff added successfully:', response.data);
@@ -170,7 +170,7 @@ const AddStaffForm = () => {
   useEffect(() => {
     const fetchDepartments = async () => {
       try {
-        const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/departments`);
+        const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/departments`);
         const departments = res.data?.map(dep => ({
           value: dep.name,
           label: dep.name
@@ -199,7 +199,7 @@ const AddStaffForm = () => {
     try {
       console.log('Submitting form data:', finalData);
       const response = await axios.post(
-        `${import.meta.env.VITE_BACKEND_URL}/api/staff`,
+        `${import.meta.env.VITE_BACKEND_URL}/staff`,
         finalData
       );
       console.log('✅ Staff added successfully:', response.data);

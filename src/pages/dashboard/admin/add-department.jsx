@@ -1,564 +1,3 @@
-
-// // import { useState, useEffect } from 'react';
-// // import { useNavigate } from 'react-router-dom';
-// // import Layout from '../../../components/Layout';
-// // import { adminSidebar } from '../../../constants/sidebarItems/adminSidebar';
-// // import axios from 'axios';
-
-// // const SelectDepartment = () => {
-// //   const [departments, setDepartments] = useState([]);
-// //   const [newDeptName, setNewDeptName] = useState('');
-// //   const [editingDept, setEditingDept] = useState(null);
-// //   const [editedName, setEditedName] = useState('');
-// //   const navigate = useNavigate();
-
-// //   useEffect(() => {
-// //     const fetchDepartments = async () => {
-// //       try {
-// //         const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/departments`);
-// //         setDepartments(res.data);
-// //       } catch (err) {
-// //         console.error('❌ Failed to fetch departments:', err);
-// //       }
-// //     };
-
-// //     fetchDepartments();
-// //   }, []);
-
-// //   const departmentOptions = [
-// //     'General Medicine', 'Cardiology', 'Orthopedics', 'Pediatrics',
-// //     'Emergency', 'ICU', 'Surgery', 'Radiology', 'Laboratory', 'Pharmacy'
-// //   ];
-
-// //   const handleAddDepartment = async (e) => {
-// //     e.preventDefault();
-// //     const trimmed = newDeptName.trim();
-// //     if (!trimmed) return;
-
-// //     const exists = departments.some(
-// //       (dept) => dept.name.toLowerCase() === trimmed.toLowerCase()
-// //     );
-
-// //     if (exists) {
-// //       alert('Department already exists');
-// //       return;
-// //     }
-
-// //     try {
-// //       const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/departments`, {
-// //         name: trimmed,
-// //       });
-// //       setDepartments((prev) => [...prev, res.data]);
-// //       setNewDeptName('');
-// //     } catch (err) {
-// //       alert('Failed to add department');
-// //     }
-// //   };
-
-// //   const handleSuggestionClick = (name) => setNewDeptName(name);
-
-// //   const handleDepartmentClick = (id, name) => {
-// //     navigate(`/dashboard/admin/add-hod/${id}?departmentName=${encodeURIComponent(name)}`);
-// //   };
-
-// //   const handleDeleteDepartment = async (id) => {
-// //     if (!window.confirm('Are you sure you want to delete this department?')) return;
-// //     try {
-// //       await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/api/departments/${id}`);
-// //       setDepartments((prev) => prev.filter((dept) => dept._id !== id));
-// //     } catch (err) {
-// //       alert('Failed to delete department');
-// //     }
-// //   };
-
-// //   const handleEditDepartment = (id, currentName) => {
-// //     setEditingDept(id);
-// //     setEditedName(currentName);
-// //   };
-
-// //   const handleUpdateDepartment = async (id) => {
-// //     const trimmed = editedName.trim();
-// //     if (!trimmed) return;
-// //     try {
-// //       const res = await axios.put(`${import.meta.env.VITE_BACKEND_URL}/api/departments/${id}`, {
-// //         name: trimmed
-// //       });
-// //       setDepartments((prev) =>
-// //         prev.map((dept) => (dept._id === id ? { ...dept, name: res.data.name } : dept))
-// //       );
-// //       setEditingDept(null);
-// //     } catch (err) {
-// //       alert('Failed to update department');
-// //     }
-// //   };
-
-// //   return (
-// //     <Layout sidebarItems={adminSidebar}>
-// //       <div className="p-6">
-// //         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
-// //           <h2 className="text-2xl font-bold text-gray-900 mb-2">Add New Department</h2>
-// //           <form onSubmit={handleAddDepartment} className="relative flex flex-col sm:flex-row gap-4">
-// //             <div className="relative w-full sm:w-auto flex-1 z-10">
-// //               <input
-// //                 type="text"
-// //                 placeholder="Enter department name"
-// //                 value={newDeptName}
-// //                 onChange={(e) => setNewDeptName(e.target.value)}
-// //                 className="w-full border border-gray-300 rounded-lg px-4 py-2"
-// //               />
-// //               {newDeptName.trim() !== '' && (
-// //                 <ul className="absolute z-50 bg-white border border-gray-300 rounded-md shadow-md w-full max-h-48 overflow-y-auto mt-1">
-// //                   {departmentOptions
-// //                     .filter(
-// //                       (label) =>
-// //                         label.toLowerCase().includes(newDeptName.toLowerCase()) &&
-// //                         label.toLowerCase() !== newDeptName.toLowerCase()
-// //                     )
-// //                     .map((label, idx) => (
-// //                       <li
-// //                         key={idx}
-// //                         onClick={() => handleSuggestionClick(label)}
-// //                         className="px-4 py-2 hover:bg-blue-100 cursor-pointer"
-// //                       >
-// //                         {label}
-// //                       </li>
-// //                     ))}
-// //                 </ul>
-// //               )}
-// //             </div>
-// //             <button type="submit" className="bg-blue-600 text-white rounded-lg px-6 py-2 hover:bg-blue-700">
-// //               Add Department
-// //             </button>
-// //           </form>
-// //         </div>
-
-// //         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-// //           <div className="flex justify-between items-center mb-2">
-// //             <h2 className="text-2xl font-bold text-gray-900">Select Department</h2>
-// //           </div>
-
-// //           <p className="text-gray-600 mb-6">Click a department to Edit its Head Doctor</p>
-
-// //           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-// //             {departments.map((dept) => (
-// //               <div key={dept._id} className="relative">
-// //                 <button
-// //                   onClick={() => handleDepartmentClick(dept._id, dept.name)}
-// //                   className="w-full bg-blue-50 border border-blue-200 rounded-xl p-4 text-left hover:bg-blue-100 transition"
-// //                 >
-// //                   {editingDept === dept._id ? (
-// //                     <input
-// //                       type="text"
-// //                       value={editedName}
-// //                       onChange={(e) => setEditedName(e.target.value)}
-// //                       onBlur={() => handleUpdateDepartment(dept._id)}
-// //                       onKeyDown={(e) => e.key === 'Enter' && handleUpdateDepartment(dept._id)}
-// //                       autoFocus
-// //                       className="text-lg font-medium text-blue-900 bg-white border border-blue-300 rounded px-2 py-1 w-full"
-// //                     />
-// //                   ) : (
-// //                     <>
-// //                       <h3 className="text-lg font-medium text-blue-900">{dept.name}</h3>
-// //                       <p className="text-sm text-blue-600">Click to Edit Head of Department</p>
-// //                     </>
-// //                   )}
-// //                 </button>
-
-// //                 <button
-// //                   onClick={() => handleEditDepartment(dept._id, dept.name)}
-// //                   className="absolute top-2 right-10 text-gray-500 hover:text-blue-600 p-1 rounded-full bg-white shadow"
-// //                   title="Edit Department"
-// //                   type="button"
-// //                 >
-// //                   <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none"
-// //                     viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-// //                     <path strokeLinecap="round" strokeLinejoin="round"
-// //                       d="M15.232 5.232l3.536 3.536M9 11l6.536-6.536a2 2 0 112.828 2.828L11.828 13.828a2 2 0 01-.707.464L9 15l.707-2.121a2 2 0 01.464-.707z" />
-// //                   </svg>
-// //                 </button>
-
-// //                 <button
-// //                   onClick={() => handleDeleteDepartment(dept._id)}
-// //                   className="absolute top-2 right-2 text-red-500 hover:text-red-700 p-1 rounded-full bg-white shadow"
-// //                   title="Delete Department"
-// //                   type="button"
-// //                 >
-// //                   <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none"
-// //                     viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-// //                     <path strokeLinecap="round" strokeLinejoin="round"
-// //                       d="M6 7.5V19a2 2 0 002 2h8a2 2 0 002-2V7.5M4 7.5h16M9.75 11.25v4.5m4.5-4.5v4.5M10.5 7.5V5.25A1.5 1.5 0 0112 3.75a1.5 1.5 0 011.5 1.5V7.5" />
-// //                   </svg>
-// //                 </button>
-// //               </div>
-// //             ))}
-// //           </div>
-// //         </div>
-// //       </div>
-// //     </Layout>
-// //   );
-// // };
-
-// // export default SelectDepartment;
-
-
-
-// import { useState, useEffect } from 'react';
-// import { useNavigate } from 'react-router-dom';
-// import Layout from '../../../components/Layout';
-// import { adminSidebar } from '../../../constants/sidebarItems/adminSidebar';
-// import axios from 'axios';
-
-// const SelectDepartment = () => {
-//   const [departments, setDepartments] = useState([]);
-//   const [newDeptName, setNewDeptName] = useState('');
-//   const [editingDept, setEditingDept] = useState(null);
-//   const [editedName, setEditedName] = useState('');
-//   const navigate = useNavigate();
-
-//   useEffect(() => {
-//     const fetchDepartments = async () => {
-//       try {
-//         const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/departments`);
-//         setDepartments(res.data);
-//       } catch (err) {
-//         console.error('❌ Failed to fetch departments:', err);
-//       }
-//     };
-//     fetchDepartments();
-//   }, []);
-
-//   const departmentOptions = [
-//     'General Medicine', 'Cardiology', 'Orthopedics', 'Pediatrics',
-//     'Emergency', 'ICU', 'Surgery', 'Radiology', 'Laboratory', 'Pharmacy'
-//   ];
-
-//   const handleAddDepartment = async (e) => {
-//     e.preventDefault();
-//     const trimmed = newDeptName.trim();
-//     if (!trimmed) return;
-//     const exists = departments.some((dept) => dept.name.toLowerCase() === trimmed.toLowerCase());
-//     if (exists) {
-//       alert('Department already exists');
-//       return;
-//     }
-//     try {
-//       const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/departments`, { name: trimmed });
-//       setDepartments((prev) => [...prev, res.data]);
-//       setNewDeptName('');
-//     } catch (err) {
-//       alert('Failed to add department');
-//     }
-//   };
-
-//   const handleSuggestionClick = (name) => setNewDeptName(name);
-
-//   // --- REMOVED this function ---
-//   // const handleDepartmentClick = (id, name) => {
-//   //   navigate(`/dashboard/admin/add-hod/${id}?departmentName=${encodeURIComponent(name)}`);
-//   // };
-
-//   const handleDeleteDepartment = async (id) => {
-//     if (!window.confirm('Are you sure you want to delete this department?')) return;
-//     try {
-//       await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/api/departments/${id}`);
-//       setDepartments((prev) => prev.filter((dept) => dept._id !== id));
-//     } catch (err) {
-//       alert('Failed to delete department');
-//     }
-//   };
-
-//   const handleEditDepartment = (id, currentName) => {
-//     setEditingDept(id);
-//     setEditedName(currentName);
-//   };
-
-//   const handleUpdateDepartment = async (id) => {
-//     const trimmed = editedName.trim();
-//     if (!trimmed) return;
-//     try {
-//       const res = await axios.put(`${import.meta.env.VITE_BACKEND_URL}/api/departments/${id}`, { name: trimmed });
-//       setDepartments((prev) =>
-//         prev.map((dept) => (dept._id === id ? { ...dept, name: res.data.name } : dept))
-//       );
-//       setEditingDept(null);
-//     } catch (err) {
-//       alert('Failed to update department');
-//     }
-//   };
-
-//   return (
-//     <Layout sidebarItems={adminSidebar}>
-//       <div className="p-6">
-//         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
-//           <h2 className="text-2xl font-bold text-gray-900 mb-2">Add New Department</h2>
-//           <form onSubmit={handleAddDepartment} className="relative flex flex-col sm:flex-row gap-4">
-//             <div className="relative w-full sm:w-auto flex-1 z-10">
-//               <input
-//                 type="text"
-//                 placeholder="Enter department name"
-//                 value={newDeptName}
-//                 onChange={(e) => setNewDeptName(e.target.value)}
-//                 className="w-full border border-gray-300 rounded-lg px-4 py-2"
-//               />
-//               {newDeptName.trim() !== '' && (
-//                 <ul className="absolute z-50 bg-white border border-gray-300 rounded-md shadow-md w-full max-h-48 overflow-y-auto mt-1">
-//                   {departmentOptions
-//                     .filter((label) => label.toLowerCase().includes(newDeptName.toLowerCase()) && label.toLowerCase() !== newDeptName.toLowerCase())
-//                     .map((label, idx) => (
-//                       <li key={idx} onClick={() => handleSuggestionClick(label)} className="px-4 py-2 hover:bg-blue-100 cursor-pointer">{label}</li>
-//                     ))}
-//                 </ul>
-//               )}
-//             </div>
-//             <button type="submit" className="bg-blue-600 text-white rounded-lg px-6 py-2 hover:bg-blue-700">Add Department</button>
-//           </form>
-//         </div>
-
-//         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-//           <div className="flex justify-between items-center mb-2">
-//             <h2 className="text-2xl font-bold text-gray-900">Manage Departments</h2>
-//           </div>
-//           <p className="text-gray-600 mb-6">Add, edit, or delete departments from the list below.</p>
-//           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-//             {departments.map((dept) => (
-//               <div key={dept._id} className="relative">
-//                 {/* --- CHANGED: This is now a div instead of a button --- */}
-//                 <div className="w-full bg-blue-50 border border-blue-200 rounded-xl p-4 text-left">
-//                   {editingDept === dept._id ? (
-//                     <input
-//                       type="text"
-//                       value={editedName}
-//                       onChange={(e) => setEditedName(e.target.value)}
-//                       onBlur={() => handleUpdateDepartment(dept._id)}
-//                       onKeyDown={(e) => e.key === 'Enter' && handleUpdateDepartment(dept._id)}
-//                       autoFocus
-//                       className="text-lg font-medium text-blue-900 bg-white border border-blue-300 rounded px-2 py-1 w-full"
-//                     />
-//                   ) : (
-//                     <>
-//                       <h3 className="text-lg font-medium text-blue-900">{dept.name}</h3>
-//                       {/* --- REMOVED: "Click to Edit Head of Department" text --- */}
-//                     </>
-//                   )}
-//                 </div>
-
-//                 <button
-//                   onClick={() => handleEditDepartment(dept._id, dept.name)}
-//                   className="absolute top-2 right-10 text-gray-500 hover:text-blue-600 p-1 rounded-full bg-white shadow"
-//                   title="Edit Department Name"
-//                   type="button"
-//                 >
-//                   <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-//                     <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
-//                   </svg>
-//                 </button>
-
-//                 <button
-//                   onClick={() => handleDeleteDepartment(dept._id)}
-//                   className="absolute top-2 right-2 text-red-500 hover:text-red-700 p-1 rounded-full bg-white shadow"
-//                   title="Delete Department"
-//                   type="button"
-//                 >
-//                   <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-//                     <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.134-2.033-2.134H8.033C6.913 3.75 6 4.704 6 5.834v.916m7.5 0" />
-//                   </svg>
-//                 </button>
-//               </div>
-//             ))}
-//           </div>
-//         </div>
-//       </div>
-//     </Layout>
-//   );
-// };
-
-// export default SelectDepartment;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// import { useState, useEffect } from 'react';
-// import { useNavigate } from 'react-router-dom';
-// import Layout from '../../../components/Layout';
-// import { adminSidebar } from '../../../constants/sidebarItems/adminSidebar';
-// import { Button } from '../../../components/common/FormElements';
-// import axios from 'axios';
-
-// // --- Modal to prompt for HOD assignment ---
-// const AssignHODPromptModal = ({ isOpen, onClose, onConfirm, departmentName }) => {
-//   if (!isOpen) return null;
-
-//   return (
-//     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-//       <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md text-center">
-//         <h3 className="text-xl font-bold text-gray-900">Department Added!</h3>
-//         <p className="text-gray-600 my-4">
-//           Would you like to assign a Head of Department (HOD) for "{departmentName}" now?
-//         </p>
-//         <div className="flex justify-center space-x-4">
-//           <Button variant="secondary" onClick={onClose}>No, Later</Button>
-//           <Button variant="primary" onClick={onConfirm}>Yes, Assign HOD</Button>
-//         </div>
-//       </div>
-//     </div>
-//   );
-// };
-
-// // --- Main Component ---
-// const SelectDepartment = () => {
-//   const [departments, setDepartments] = useState([]);
-//   const [newDeptName, setNewDeptName] = useState('');
-//   const [editingDept, setEditingDept] = useState(null);
-//   const [editedName, setEditedName] = useState('');
-//   const [showAssignPrompt, setShowAssignPrompt] = useState(false);
-//   const [newlyAddedDept, setNewlyAddedDept] = useState(null);
-//   const navigate = useNavigate();
-
-//   useEffect(() => {
-//     const fetchDepartments = async () => {
-//       try {
-//         const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/departments`);
-//         setDepartments(res.data);
-//       } catch (err) {
-//         console.error('❌ Failed to fetch departments:', err);
-//       }
-//     };
-//     fetchDepartments();
-//   }, []);
-
-//   const handleAddDepartment = async (e) => {
-//     e.preventDefault();
-//     const trimmed = newDeptName.trim();
-//     if (!trimmed) return;
-//     if (departments.some(d => d.name.toLowerCase() === trimmed.toLowerCase())) {
-//       alert('This department name already exists on the list.');
-//       return;
-//     }
-//     try {
-//       const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/departments`, { name: trimmed });
-//       const newDept = res.data;
-//       setDepartments((prev) => [...prev, newDept]);
-//       setNewDeptName('');
-//       setNewlyAddedDept(newDept);
-//       setShowAssignPrompt(true);
-//     } catch (err) {
-//       let errorMessage = 'An unexpected error occurred.';
-//       if (err.response?.data?.error) {
-//         errorMessage = err.response.data.error;
-//       } else if (err.request) {
-//         errorMessage = 'Could not connect to the server.';
-//       } else {
-//         errorMessage = err.message;
-//       }
-//       alert(`Error: ${errorMessage}`);
-//       console.error('❌ Failed to add department:', err);
-//     }
-//   };
-
-//   const handleDeleteDepartment = async (id) => {
-//     if (!window.confirm('Are you sure you want to delete this department?')) return;
-//     try {
-//       await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/api/departments/${id}`);
-//       setDepartments((prev) => prev.filter((dept) => dept._id !== id));
-//     } catch (err) {
-//       alert('Failed to delete department');
-//     }
-//   };
-
-//   const handleEditDepartment = (id, currentName) => {
-//     setEditingDept(id);
-//     setEditedName(currentName);
-//   };
-
-//   const handleUpdateDepartment = async (id) => {
-//     const trimmed = editedName.trim();
-//     if (!trimmed) return;
-//     try {
-//       const res = await axios.put(`${import.meta.env.VITE_BACKEND_URL}/api/departments/${id}`, { name: trimmed });
-//       setDepartments((prev) => prev.map((dept) => (dept._id === id ? { ...dept, name: res.data.name } : dept)));
-//       setEditingDept(null);
-//     } catch (err) {
-//       alert('Failed to update department');
-//     }
-//   };
-
-//   const handleNavigateToAssignHOD = () => {
-//     if (!newlyAddedDept) return;
-//     navigate(`/dashboard/admin/add-hod/${newlyAddedDept._id}?departmentName=${encodeURIComponent(newlyAddedDept.name)}`);
-//     setShowAssignPrompt(false);
-//   };
-
-//   return (
-//     <Layout sidebarItems={adminSidebar}>
-//       <div className="p-6">
-//         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
-//           <h2 className="text-2xl font-bold text-gray-900 mb-2">Add New Department</h2>
-//           <form onSubmit={handleAddDepartment} className="flex flex-col sm:flex-row gap-4">
-//             <input
-//               type="text"
-//               placeholder="Enter department name"
-//               value={newDeptName}
-//               onChange={(e) => setNewDeptName(e.target.value)}
-//               className="w-full border border-gray-300 rounded-lg px-4 py-2 flex-1"
-//             />
-//             <Button type="submit" variant="primary">Add Department</Button>
-//           </form>
-//         </div>
-
-//         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-//           <h2 className="text-2xl font-bold text-gray-900">Manage Departments</h2>
-//           <p className="text-gray-600 mb-6">Edit or delete departments from the list below.</p>
-//           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-//             {departments.map((dept) => (
-//               <div key={dept._id} className="relative group bg-blue-50 border border-blue-200 rounded-xl p-4">
-//                 {editingDept === dept._id ? (
-//                   <input
-//                     type="text"
-//                     value={editedName}
-//                     onChange={(e) => setEditedName(e.target.value)}
-//                     onBlur={() => handleUpdateDepartment(dept._id)}
-//                     onKeyDown={(e) => e.key === 'Enter' && handleUpdateDepartment(dept._id)}
-//                     autoFocus
-//                     className="text-lg font-medium text-blue-900 bg-white border border-blue-300 rounded px-2 py-1 w-full"
-//                   />
-//                 ) : (
-//                   <h3 className="text-lg font-medium text-blue-900">{dept.name}</h3>
-//                 )}
-//                 <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-//                   <button onClick={() => handleEditDepartment(dept._id, dept.name)} className="text-gray-500 hover:text-blue-600 p-2 rounded-full bg-white/80 shadow" title="Edit Department Name">
-//                     ✏️
-//                   </button>
-//                   <button onClick={() => handleDeleteDepartment(dept._id)} className="text-red-500 hover:text-red-700 p-2 rounded-full bg-white/80 shadow" title="Delete Department">
-//                     🗑️
-//                   </button>
-//                 </div>
-//               </div>
-//             ))}
-//           </div>
-//         </div>
-//       </div>
-
-//       <AssignHODPromptModal
-//         isOpen={showAssignPrompt}
-//         onClose={() => setShowAssignPrompt(false)}
-//         onConfirm={handleNavigateToAssignHOD}
-//         departmentName={newlyAddedDept?.name}
-//       />
-//     </Layout>
-//   );
-// };
-
-// export default SelectDepartment;
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../../../components/Layout';
@@ -566,55 +5,362 @@ import { adminSidebar } from '../../../constants/sidebarItems/adminSidebar';
 import { Button } from '../../../components/common/FormElements';
 import axios from 'axios';
 
-// A comprehensive list of hospital departments for suggestions
-const hospitalDepartmentSuggestions = [
-  // Clinical & Medical
-  'General Medicine', 'Pediatrics', 'Geriatrics', 'Obstetrics and Gynecology (OB/GYN)', 'Cardiology',
-  'Neurology', 'Oncology (Cancer Center)', 'Dermatology', 'Endocrinology', 'Gastroenterology',
-  'Nephrology (Renal Unit)', 'Pulmonology (Respiratory Medicine)', 'Rheumatology', 'Infectious Diseases',
-  'Psychiatry and Behavioral Health', 'Palliative Care',
-  // Surgical
-  'General Surgery', 'Orthopedic Surgery', 'Cardiothoracic Surgery', 'Neurosurgery', 'Plastic and Reconstructive Surgery',
-  'Urology', 'Otolaryngology (ENT)', 'Ophthalmology (Eye Care)', 'Anesthesiology', 'Vascular Surgery',
-  // Diagnostic & Imaging
-  'Radiology (X-Ray, CT, MRI)', 'Pathology and Laboratory Medicine', 'Nuclear Medicine', 'Interventional Radiology', 'Ultrasound',
-  // Critical & Emergency Care
-  'Emergency Department (ED/ER)', 'Intensive Care Unit (ICU)', 'Pediatric Intensive Care Unit (PICU)',
-  'Neonatal Intensive Care Unit (NICU)', 'Coronary Care Unit (CCU)', 'Trauma Center',
-  // Therapeutic & Rehabilitation
-  'Physical Therapy', 'Occupational Therapy', 'Speech-Language Pathology', 'Nutrition and Dietetics', 'Pharmacy',
-  // Administrative & Support
-  'Patient Registration / Admissions', 'Medical Records', 'Billing and Insurance', 'Information Technology (IT)',
-  'Biomedical Engineering', 'Housekeeping / Environmental Services', 'Security', 'Human Resources', 'Administration'
-];
+// --- Icons ---
+const Icons = {
+  Building: () => (
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+    </svg>
+  ),
+  Edit: () => (
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+    </svg>
+  ),
+  Trash: () => (
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+    </svg>
+  ),
+  Plus: () => (
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+      <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+    </svg>
+  ),
+  Search: () => (
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+    </svg>
+  ),
+  X: () => (
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+    </svg>
+  ),
+  Check: () => (
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+    </svg>
+  ),
+  User: () => (
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+      <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+    </svg>
+  ),
+  UserPlus: () => (
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+    </svg>
+  ),
+  ArrowRight: () => (
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+    </svg>
+  )
+};
 
+// Department Popup Modal Component
+const DepartmentPopup = ({ department, onClose, onUpdate, onDelete, onAssignHod }) => {
+  const [editedName, setEditedName] = useState(department?.name || '');
+  const [doctors, setDoctors] = useState([]);
+  const [loadingDoctors, setLoadingDoctors] = useState(true);
+  const [successMessage, setSuccessMessage] = useState('');
+  const navigate = useNavigate();
 
-// --- Modal to prompt for HOD assignment (No changes needed here) ---
-const AssignHODPromptModal = ({ isOpen, onClose, onConfirm, departmentName }) => {
-  if (!isOpen) return null;
+  useEffect(() => {
+    if (department) {
+      fetchDoctors();
+    }
+  }, [department]);
+
+  const fetchDoctors = async () => {
+    try {
+      setLoadingDoctors(true);
+      const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/doctors/department/${department._id}`);
+      setDoctors(res.data);
+    } catch (err) {
+      console.error('Failed to fetch doctors:', err);
+      setDoctors([]);
+    } finally {
+      setLoadingDoctors(false);
+    }
+  };
+
+  const handleUpdate = async () => {
+    const trimmed = editedName.trim();
+    if (!trimmed || trimmed === department.name) return;
+    
+    try {
+      await onUpdate(department._id, trimmed);
+      setSuccessMessage('Department name updated successfully!');
+      setTimeout(() => setSuccessMessage(''), 3000);
+    } catch (err) {
+      setSuccessMessage('Failed to update department');
+    }
+  };
+
+  const handleAssignHod = async (doctorId) => {
+    try {
+      await axios.put(`${import.meta.env.VITE_BACKEND_URL}/departments/${department._id}`, {
+        head_doctor_id: doctorId
+      });
+      setSuccessMessage('HOD assigned successfully!');
+      fetchDoctors(); // Refresh doctors list
+      setTimeout(() => setSuccessMessage(''), 3000);
+    } catch (err) {
+      setSuccessMessage('Failed to assign HOD');
+    }
+  };
+
+  const handleNavigateToAssignHOD = () => {
+    navigate(`/dashboard/admin/add-hod/${department._id}?departmentName=${encodeURIComponent(department.name)}`);
+    onClose();
+  };
+
+  if (!department) return null;
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md text-center">
-        <h3 className="text-xl font-bold text-gray-900">Department Added!</h3>
-        <p className="text-gray-600 my-4">
-          Would you like to assign a Head of Department (HOD) for "{departmentName}" now?
-        </p>
-        <div className="flex justify-center space-x-4">
-          <Button variant="secondary" onClick={onClose}>No, Later</Button>
-          <Button variant="primary" onClick={onConfirm}>Yes, Assign HOD</Button>
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-fade-in">
+      <div 
+        className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden animate-slide-up"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-slate-200">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center">
+              <Icons.Building />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-slate-900">Manage Department</h2>
+              <p className="text-slate-500 text-sm">Edit department details and assign HOD</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+          >
+            <Icons.X />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="p-6 overflow-y-auto max-h-[calc(90vh-200px)]">
+          {/* Success Message */}
+          {successMessage && (
+            <div className={`mb-6 p-4 rounded-xl border flex items-center gap-3 ${successMessage.includes('Failed') ? 'bg-red-50 border-red-200 text-red-700' : 'bg-emerald-50 border-emerald-200 text-emerald-700'}`}>
+              <span className={`p-1 rounded-full ${successMessage.includes('Failed') ? 'bg-red-100' : 'bg-emerald-100'}`}>
+                {successMessage.includes('Failed') ? (
+                  <Icons.X />
+                ) : (
+                  <Icons.Check />
+                )}
+              </span>
+              <span className="font-medium text-sm">{successMessage}</span>
+            </div>
+          )}
+
+          {/* Department Info */}
+          <div className="mb-8">
+            <div className="flex items-center gap-4 mb-6">
+              <div className="flex-grow">
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Department Name
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={editedName}
+                    onChange={(e) => setEditedName(e.target.value)}
+                    className="flex-grow px-4 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 focus:outline-none"
+                    placeholder="Enter department name"
+                  />
+                  <button
+                    onClick={handleUpdate}
+                    disabled={!editedName.trim() || editedName.trim() === department.name}
+                    className="px-4 py-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+                  >
+                    Update
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Current HOD */}
+            {department.head_doctor_id && (
+              <div className="mb-6 p-4 bg-emerald-50 rounded-xl border border-emerald-100">
+                <h3 className="text-sm font-bold text-emerald-800 uppercase tracking-wide mb-2">Current Head of Department</h3>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-emerald-600 border border-emerald-200">
+                    <Icons.User />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-slate-900">
+                      Dr. {department.head_doctor_id.firstName} {department.head_doctor_id.lastName}
+                    </p>
+                    <p className="text-sm text-slate-600">
+                      {department.head_doctor_id.specialization || 'General'} • {department.head_doctor_id.experience || 'N/A'} Yrs Experience
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Available Doctors */}
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-slate-900">Available Doctors</h3>
+              <button
+                onClick={handleNavigateToAssignHOD}
+                className="text-sm font-medium text-emerald-600 hover:text-emerald-700 flex items-center gap-1"
+              >
+                Full HOD Management <Icons.ArrowRight className="h-3 w-3" />
+              </button>
+            </div>
+            
+            {loadingDoctors ? (
+              <div className="text-center py-8">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
+                <p className="text-slate-500 mt-2">Loading doctors...</p>
+              </div>
+            ) : doctors.length === 0 ? (
+              <div className="text-center py-8 bg-slate-50 rounded-xl">
+                <Icons.User className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                <p className="text-slate-500">No doctors found in this department.</p>
+                <p className="text-slate-400 text-sm mt-1">Add doctors to assign as HOD.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {doctors.map((doctor) => (
+                  <div
+                    key={doctor._id}
+                    className="flex items-center justify-between p-4 bg-white border border-slate-200 rounded-xl hover:border-emerald-200 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-semibold border border-slate-200">
+                        {doctor.firstName?.[0]}{doctor.lastName?.[0]}
+                      </div>
+                      <div>
+                        <p className="font-semibold text-slate-900">
+                          Dr. {doctor.firstName} {doctor.lastName}
+                        </p>
+                        <p className="text-sm text-slate-500">
+                          {doctor.specialization || 'General'} • {doctor.experience || 'N/A'} Yrs Exp
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleAssignHod(doctor._id)}
+                      disabled={department.head_doctor_id?._id === doctor._id}
+                      className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
+                        department.head_doctor_id?._id === doctor._id
+                          ? 'bg-emerald-100 text-emerald-700 border border-emerald-200 cursor-default'
+                          : 'bg-white text-emerald-600 border border-emerald-300 hover:bg-emerald-50 hover:border-emerald-400'
+                      }`}
+                    >
+                      {department.head_doctor_id?._id === doctor._id ? 'Current HOD' : 'Assign as HOD'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex justify-between gap-3 p-6 border-t border-slate-200 bg-slate-50">
+          <div className="flex gap-3">
+            <button
+              onClick={() => {
+                if (window.confirm('Are you sure you want to delete this department? This action cannot be undone.')) {
+                  onDelete(department._id);
+                }
+              }}
+              className="px-4 py-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg font-medium transition-colors flex items-center gap-2"
+            >
+              <Icons.Trash className="h-4 w-4" />
+              Delete Department
+            </button>
+            <button
+              onClick={handleNavigateToAssignHOD}
+              className="px-4 py-2 text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg font-medium transition-colors flex items-center gap-2"
+            >
+              <Icons.UserPlus className="h-4 w-4" />
+              Manage HOD
+            </button>
+          </div>
+          <button
+            onClick={onClose}
+            className="px-6 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-900 font-medium transition-colors"
+          >
+            Close
+          </button>
         </div>
       </div>
     </div>
   );
 };
 
+// --- Modal to prompt for HOD assignment ---
+const AssignHODPromptModal = ({ isOpen, onClose, onConfirm, departmentName }) => {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-fade-in">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all scale-100">
+        <div className="bg-gradient-to-r from-emerald-50 to-teal-50 p-6 border-b border-emerald-100 text-center">
+            <div className="mx-auto w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center mb-3">
+                 <Icons.Building className="text-emerald-600 h-6 w-6"/>
+            </div>
+          <h3 className="text-xl font-bold text-gray-800">Department Added!</h3>
+        </div>
+        
+        <div className="p-6 text-center">
+          <p className="text-gray-600 mb-6">
+            Would you like to assign a Head of Department (HOD) for <span className="font-bold text-gray-800">"{departmentName}"</span> now?
+          </p>
+          <div className="flex justify-center space-x-3">
+            <button 
+                onClick={onClose}
+                className="px-5 py-2.5 rounded-xl text-gray-600 bg-gray-100 hover:bg-gray-200 font-semibold text-sm transition-colors"
+            >
+                No, Later
+            </button>
+            <button 
+                onClick={onConfirm}
+                className="px-5 py-2.5 rounded-xl text-white bg-emerald-600 hover:bg-emerald-700 font-semibold text-sm shadow-lg shadow-emerald-500/30 transition-all"
+            >
+                Yes, Assign HOD
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// A comprehensive list of hospital departments for suggestions
+const hospitalDepartmentSuggestions = [
+  'General Medicine', 'Pediatrics', 'Geriatrics', 'Obstetrics and Gynecology (OB/GYN)', 'Cardiology',
+  'Neurology', 'Oncology (Cancer Center)', 'Dermatology', 'Endocrinology', 'Gastroenterology',
+  'Nephrology (Renal Unit)', 'Pulmonology (Respiratory Medicine)', 'Rheumatology', 'Infectious Diseases',
+  'Psychiatry and Behavioral Health', 'Palliative Care',
+  'General Surgery', 'Orthopedic Surgery', 'Cardiothoracic Surgery', 'Neurosurgery', 'Plastic and Reconstructive Surgery',
+  'Urology', 'Otolaryngology (ENT)', 'Ophthalmology (Eye Care)', 'Anesthesiology', 'Vascular Surgery',
+  'Radiology (X-Ray, CT, MRI)', 'Pathology and Laboratory Medicine', 'Nuclear Medicine', 'Interventional Radiology', 'Ultrasound',
+  'Emergency Department (ED/ER)', 'Intensive Care Unit (ICU)', 'Pediatric Intensive Care Unit (PICU)',
+  'Neonatal Intensive Care Unit (NICU)', 'Coronary Care Unit (CCU)', 'Trauma Center',
+  'Physical Therapy', 'Occupational Therapy', 'Speech-Language Pathology', 'Nutrition and Dietetics', 'Pharmacy',
+  'Patient Registration / Admissions', 'Medical Records', 'Billing and Insurance', 'Information Technology (IT)',
+  'Biomedical Engineering', 'Housekeeping / Environmental Services', 'Security', 'Human Resources', 'Administration'
+];
 
 // --- Main Component ---
 const SelectDepartment = () => {
   const [departments, setDepartments] = useState([]);
   const [newDeptName, setNewDeptName] = useState('');
-  const [editingDept, setEditingDept] = useState(null);
-  const [editedName, setEditedName] = useState('');
+  const [selectedDepartment, setSelectedDepartment] = useState(null);
+  const [showPopup, setShowPopup] = useState(false);
   const [showAssignPrompt, setShowAssignPrompt] = useState(false);
   const [newlyAddedDept, setNewlyAddedDept] = useState(null);
   const [suggestions, setSuggestions] = useState([]);
@@ -623,7 +369,7 @@ const SelectDepartment = () => {
   useEffect(() => {
     const fetchDepartments = async () => {
       try {
-        const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/departments`);
+        const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/departments`);
         setDepartments(res.data);
       } catch (err) {
         console.error('❌ Failed to fetch departments:', err);
@@ -632,7 +378,6 @@ const SelectDepartment = () => {
     fetchDepartments();
   }, []);
 
-  // <<< MODIFIED: Handler now suggests from the predefined list and excludes existing departments
   const handleInputChange = (e) => {
     const value = e.target.value;
     setNewDeptName(value);
@@ -651,7 +396,7 @@ const SelectDepartment = () => {
 
   const handleSuggestionClick = (name) => {
     setNewDeptName(name);
-    setSuggestions([]); // Hide suggestions after selection
+    setSuggestions([]);
   };
   
   const handleAddDepartment = async (e) => {
@@ -660,17 +405,17 @@ const SelectDepartment = () => {
     if (!trimmed) return;
     if (departments.some(d => d.name.toLowerCase() === trimmed.toLowerCase())) {
       alert('This department name already exists on the list.');
-      setSuggestions([]); // Hide suggestions if name already exists
+      setSuggestions([]);
       return;
     }
     try {
-      const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/departments`, { name: trimmed });
+      const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/departments`, { name: trimmed });
       const newDept = res.data;
       setDepartments((prev) => [...prev, newDept]);
       setNewDeptName('');
       setNewlyAddedDept(newDept);
       setShowAssignPrompt(true);
-      setSuggestions([]); // Clear suggestions on successful add
+      setSuggestions([]);
     } catch (err) {
       let errorMessage = 'An unexpected error occurred.';
       if (err.response?.data?.error) {
@@ -688,28 +433,33 @@ const SelectDepartment = () => {
   const handleDeleteDepartment = async (id) => {
     if (!window.confirm('Are you sure you want to delete this department?')) return;
     try {
-      await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/api/departments/${id}`);
+      await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/departments/${id}`);
       setDepartments((prev) => prev.filter((dept) => dept._id !== id));
+      if (selectedDepartment && selectedDepartment._id === id) {
+        setShowPopup(false);
+        setSelectedDepartment(null);
+      }
     } catch (err) {
       alert('Failed to delete department');
     }
   };
 
-  const handleEditDepartment = (id, currentName) => {
-    setEditingDept(id);
-    setEditedName(currentName);
+  const handleUpdateDepartment = async (id, newName) => {
+    try {
+      const res = await axios.put(`${import.meta.env.VITE_BACKEND_URL}/departments/${id}`, { name: newName });
+      setDepartments(prev =>
+        prev.map(dept => (dept._id === id ? { ...dept, name: res.data.name } : dept))
+      );
+      setSelectedDepartment(prev => prev ? { ...prev, name: res.data.name } : null);
+    } catch (err) {
+      alert('Failed to update department.');
+      throw err;
+    }
   };
 
-  const handleUpdateDepartment = async (id) => {
-    const trimmed = editedName.trim();
-    if (!trimmed) return;
-    try {
-      const res = await axios.put(`${import.meta.env.VITE_BACKEND_URL}/api/departments/${id}`, { name: trimmed });
-      setDepartments((prev) => prev.map((dept) => (dept._id === id ? { ...dept, name: res.data.name } : dept)));
-      setEditingDept(null);
-    } catch (err) {
-      alert('Failed to update department');
-    }
+  const handleDepartmentClick = (dept) => {
+    setSelectedDepartment(dept);
+    setShowPopup(true);
   };
 
   const handleNavigateToAssignHOD = () => {
@@ -720,71 +470,140 @@ const SelectDepartment = () => {
   
   return (
     <Layout sidebarItems={adminSidebar}>
-      <div className="p-6">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Add New Department</h2>
-          <form onSubmit={handleAddDepartment} className="flex flex-col sm:flex-row gap-4">
-            <div className="relative w-full flex-1">
-              <input
-                type="text"
-                placeholder="Enter department name"
-                value={newDeptName}
-                onChange={handleInputChange}
-                className="w-full border border-gray-300 rounded-lg px-4 py-2"
-                autoComplete="off"
-              />
-              {/* <<< MODIFIED: Suggestions list now maps over an array of strings */}
-              {suggestions.length > 0 && (
-                <ul className="absolute z-10 w-full bg-white border border-gray-200 rounded-b-lg shadow-lg mt-1 max-h-60 overflow-y-auto">
-                  {suggestions.map((name, index) => (
-                    <li
-                      key={`${name}-${index}`}
-                      className="px-4 py-2 cursor-pointer hover:bg-gray-100"
-                      onClick={() => handleSuggestionClick(name)}
-                    >
-                      {name}
-                    </li>
-                  ))}
-                </ul>
-              )}
+      <div className="p-8 min-h-screen bg-slate-50/50 font-sans text-slate-800">
+        
+        {/* Header Section */}
+        <div className="mb-10">
+          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Manage Departments</h1>
+          <p className="text-slate-500 mt-2 font-medium">Add, edit, or remove hospital departments</p>
+        </div>
+
+        {/* Add Department Section */}
+        <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-8 mb-10">
+          <div className="flex items-center gap-3 mb-6">
+             <div className="p-2 bg-emerald-100 rounded-lg text-emerald-600">
+                <Icons.Plus />
+             </div>
+             <h2 className="text-xl font-bold text-slate-900">Add New Department</h2>
+          </div>
+          
+          <form onSubmit={handleAddDepartment} className="relative">
+            <div className="flex flex-col sm:flex-row gap-4 items-start">
+                <div className="relative w-full flex-1 group">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 group-focus-within:text-emerald-500 transition-colors">
+                        <Icons.Search />
+                    </div>
+                    <input
+                        type="text"
+                        placeholder="E.g. Cardiology, Neurology..."
+                        value={newDeptName}
+                        onChange={handleInputChange}
+                        className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 text-slate-900 text-sm rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all duration-200 placeholder-slate-400"
+                        autoComplete="off"
+                    />
+                    
+                    {/* Suggestions Dropdown */}
+                    {suggestions.length > 0 && (
+                        <ul className="absolute z-40 w-full bg-white border border-slate-200 rounded-xl shadow-xl mt-2 max-h-60 overflow-y-auto overflow-x-hidden animate-fade-in-down">
+                        {suggestions.map((name, index) => (
+                            <li
+                            key={`${name}-${index}`}
+                            className="px-4 py-3 cursor-pointer hover:bg-emerald-50 hover:text-emerald-700 text-sm font-medium text-slate-600 transition-colors border-b border-slate-50 last:border-b-0"
+                            onClick={() => handleSuggestionClick(name)}
+                            >
+                            {name}
+                            </li>
+                        ))}
+                        </ul>
+                    )}
+                </div>
+                
+                <button 
+                    type="submit" 
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl text-sm font-bold shadow-lg shadow-emerald-600/20 transition-all flex items-center gap-2 transform active:scale-95 whitespace-nowrap"
+                >
+                    <Icons.Plus />
+                    Add Department
+                </button>
             </div>
-            <Button type="submit" variant="primary">Add Department</Button>
           </form>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h2 className="text-2xl font-bold text-gray-900">Manage Departments</h2>
-          <p className="text-gray-600 mb-6">Edit or delete departments from the list below.</p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-            {departments.map((dept) => (
-              <div key={dept._id} className="relative group bg-blue-50 border border-blue-200 rounded-xl p-4">
-                {editingDept === dept._id ? (
-                  <input
-                    type="text"
-                    value={editedName}
-                    onChange={(e) => setEditedName(e.target.value)}
-                    onBlur={() => handleUpdateDepartment(dept._id)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleUpdateDepartment(dept._id)}
-                    autoFocus
-                    className="text-lg font-medium text-blue-900 bg-white border border-blue-300 rounded px-2 py-1 w-full"
-                  />
-                ) : (
-                  <h3 className="text-lg font-medium text-blue-900">{dept.name}</h3>
-                )}
-                <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button onClick={() => handleEditDepartment(dept._id, dept.name)} className="text-gray-500 hover:text-blue-600 p-2 rounded-full bg-white/80 shadow" title="Edit Department Name">
-                    ✏️
-                  </button>
-                  <button onClick={() => handleDeleteDepartment(dept._id)} className="text-red-500 hover:text-red-700 p-2 rounded-full bg-white/80 shadow" title="Delete Department">
-                    🗑️
-                  </button>
+        {/* Departments Grid */}
+        <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-8">
+            <div className="flex items-center justify-between mb-8">
+                <h2 className="text-xl font-bold text-slate-900">Existing Departments</h2>
+                <span className="bg-slate-100 text-slate-600 text-sm font-bold px-3 py-1 rounded-full">
+                    Total: {departments.length}
+                </span>
+            </div>
+          
+          {departments.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {departments.map((dept) => (
+                <div 
+                  key={dept._id} 
+                  className="group relative bg-white border border-slate-200 rounded-2xl p-5 cursor-pointer hover:shadow-lg hover:border-emerald-200 transition-all duration-300 transform hover:-translate-y-1"
+                  onClick={() => handleDepartmentClick(dept)}
+                >
+                    <div className="flex items-center gap-3 mb-3">
+                        <div className="w-10 h-10 rounded-full bg-slate-50 text-emerald-600 flex items-center justify-center group-hover:bg-emerald-50 transition-colors">
+                            <Icons.Building />
+                        </div>
+                        <div className="flex-grow">
+                          <h3 className="text-sm font-bold text-slate-700 group-hover:text-slate-900 truncate" title={dept.name}>
+                            {dept.name}
+                          </h3>
+                          <p className="text-xs text-slate-400 mt-1">
+                            {dept.head_doctor_id 
+                              ? `HOD: Dr. ${dept.head_doctor_id.firstName?.charAt(0)}. ${dept.head_doctor_id.lastName}`
+                              : 'Click to manage'
+                            }
+                          </p>
+                        </div>
+                    </div>
+
+                    {/* Action Buttons (Visible on Hover) */}
+                    <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-white pl-2 rounded-lg shadow-sm">
+                        <button 
+                            onClick={(e) => { 
+                              e.stopPropagation(); 
+                              handleDepartmentClick(dept);
+                            }} 
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors" 
+                            title="Manage Department"
+                        >
+                            <Icons.Edit />
+                        </button>
+                    </div>
                 </div>
+                ))}
+            </div>
+          ) : (
+              <div className="text-center py-12">
+                  <div className="inline-block p-4 rounded-full bg-slate-50 mb-4">
+                      <Icons.Building className="w-8 h-8 text-slate-400" />
+                  </div>
+                  <p className="text-slate-500 font-medium">No departments added yet.</p>
+                  <p className="text-slate-400 text-sm mt-1">Start by adding a department above.</p>
               </div>
-            ))}
-          </div>
+          )}
         </div>
       </div>
       
+      {/* Department Popup Modal */}
+      {showPopup && selectedDepartment && (
+        <DepartmentPopup
+          department={selectedDepartment}
+          onClose={() => {
+            setShowPopup(false);
+            setSelectedDepartment(null);
+          }}
+          onUpdate={handleUpdateDepartment}
+          onDelete={handleDeleteDepartment}
+        />
+      )}
+
       <AssignHODPromptModal
         isOpen={showAssignPrompt}
         onClose={() => setShowAssignPrompt(false)}

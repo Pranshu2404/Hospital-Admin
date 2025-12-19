@@ -13,6 +13,20 @@ import {
   FaInfoCircle
 } from 'react-icons/fa';
 
+// ✅ Define FormField OUTSIDE of the AddMedicine component
+const FormField = ({ label, icon, children, required = false }) => (
+  <div className="space-y-2">
+    <label className="block text-sm font-medium text-gray-700">
+      <div className="flex items-center gap-2">
+        {icon}
+        {label}
+        {required && <span className="text-red-500">*</span>}
+      </div>
+    </label>
+    {children}
+  </div>
+);
+
 const AddMedicine = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -42,7 +56,7 @@ const AddMedicine = () => {
     const fetchData = async () => {
       try {
         const [suppliersRes] = await Promise.all([
-          apiClient.get('/api/suppliers')
+          apiClient.get('/suppliers')
         ]);
         setSuppliers(suppliersRes.data);
         
@@ -86,7 +100,7 @@ const AddMedicine = () => {
         tax_rate: parseFloat(formData.tax_rate)
       };
 
-      const response = await apiClient.post('/api/medicines', payload);
+      const response = await apiClient.post('/medicines', payload);
       
       if (response.status === 201) {
         alert('Medicine added successfully!');
@@ -100,18 +114,18 @@ const AddMedicine = () => {
     }
   };
 
-  const FormField = ({ label, icon, children, required = false }) => (
-    <div className="space-y-2">
-      <label className="block text-sm font-medium text-gray-700">
-        <div className="flex items-center gap-2">
-          {icon}
-          {label}
-          {required && <span className="text-red-500">*</span>}
-        </div>
-      </label>
-      {children}
-    </div>
-  );
+  // const FormField = ({ label, icon, children, required = false }) => (
+  //   <div className="space-y-2">
+  //     <label className="block text-sm font-medium text-gray-700">
+  //       <div className="flex items-center gap-2">
+  //         {icon}
+  //         {label}
+  //         {required && <span className="text-red-500">*</span>}
+  //       </div>
+  //     </label>
+  //     {children}
+  //   </div>
+  // );
 
   return (
     <div className="p-6 max-w-4xl mx-auto">

@@ -8,6 +8,7 @@ import {
   FaPills, // Added icon
 } from 'react-icons/fa';
 import apiClient from '../../api/apiClient';
+import { useNavigate } from 'react-router-dom';
 
 // --- A modern, professional modal for managing prescriptions ---
 const PrescriptionsManagerModal = ({ initialPrescriptions, isLoading, error, onClose }) => {
@@ -200,11 +201,17 @@ export const QuickActions = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  const navigate = useNavigate();
+
   // Fetch count initially for the badge
   useEffect(() => {
-    apiClient.get('/api/prescriptions') // Assuming an endpoint like this exists
+    apiClient.get('/prescriptions') // Assuming an endpoint like this exists
       .then(response => {
-        setPrescriptionCount(response.data.prescriptions.length() || 0);
+        // support both shapes: array or { prescriptions: [] }
+        const data = response?.data;
+        const list = Array.isArray(data) ? data : (data && data.prescriptions) ? data.prescriptions : [];
+        const activeCount = list.filter(p => (p?.status || '').toString().toLowerCase() === 'active').length;
+        setPrescriptionCount(activeCount);
       })
       .catch(() => {
         // Silently fail or handle error for count
@@ -216,7 +223,7 @@ export const QuickActions = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await apiClient.get('/api/prescriptions');
+      const response = await apiClient.get('/prescriptions');
       setPrescriptions(response.data.prescriptions);
     } catch (err) {
       setError(err.message || 'Failed to fetch prescriptions');
@@ -233,7 +240,7 @@ export const QuickActions = () => {
         <h2 className="font-bold text-lg text-gray-700 mb-4">Quick Actions</h2>
         <div className="space-y-3">
           <button
-            onClick={handleOpenModal}
+            onClick={() => navigate('/dashboard/pharmacy/prescriptions/queue')}
             className="w-full flex items-center justify-between text-left p-3 rounded-lg bg-teal-50 hover:bg-teal-100 transition-colors group"
           >
             <div className="flex items-center gap-3">

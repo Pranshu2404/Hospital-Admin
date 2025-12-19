@@ -27,7 +27,7 @@ const PrescriptionQueue = () => {
       const params = { status: 'Active' };
       if (priorityFilter) params.priority = priorityFilter;
       
-      const response = await apiClient.get('/api/prescriptions', { params });
+      const response = await apiClient.get('/prescriptions', { params });
       // Filter prescriptions that have undispensed items
       const queuePrescriptions = response.data.prescriptions.filter(prescription =>
         prescription.items.some(item => !item.is_dispensed)
@@ -38,6 +38,18 @@ const PrescriptionQueue = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDispense = (prescription) => {
+    // Store the selected prescription in sessionStorage
+    sessionStorage.setItem('selectedPrescription', JSON.stringify({
+      _id: prescription._id,
+      patient_id: prescription.patient_id,
+      prescription_number: prescription.prescription_number
+    }));
+    
+    // Navigate to dispense page
+    window.location.href = '/dashboard/pharmacy/prescriptions/dispense';
   };
 
   const getPriorityBadge = (priority) => {
@@ -214,7 +226,7 @@ const PrescriptionQueue = () => {
                 
                 <div className="flex gap-2">
                   <button
-                    onClick={() => window.location.href = `/dashboard/pharmacy/prescriptions/dispense`}
+                    onClick={() => handleDispense(prescription)}
                     className="px-3 py-1 bg-teal-600 text-white text-sm rounded-lg hover:bg-teal-700"
                   >
                     Dispense
