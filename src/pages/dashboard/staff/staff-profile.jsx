@@ -1,6 +1,6 @@
 import { useLocation } from 'react-router-dom';
 import Layout from '../../../components/Layout';;
-import { adminSidebar } from '../../../constants/sidebarItems/adminSidebar';
+import { staffSidebar } from '../../../constants/sidebarItems/staffSidebar';
 import StaffProfile from '../../../components/staff/StaffProfile';
 
 const StaffProfilePage1 = () => {
@@ -8,7 +8,7 @@ const StaffProfilePage1 = () => {
   // const patient = location.state?.patient || null;
 
   return (
-    <Layout sidebarItems={adminSidebar} section="Staff">
+    <Layout sidebarItems={staffSidebar} section="Staff">
       <StaffProfile/>
     </Layout>
   );
