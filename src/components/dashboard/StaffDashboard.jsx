@@ -387,6 +387,8 @@ const StaffDashboard = () => {
                     throw new Error('Failed to fetch data. Please check API endpoints and server status.');
                 }
 
+                console.log(staffRes, patientRes, departmentRes, appointmentRes);
+
                 const staffData = await staffRes.json();
                 const patientData = await patientRes.json();
                 console.log("Patient API Data:", patientData); // Add this line for debugging

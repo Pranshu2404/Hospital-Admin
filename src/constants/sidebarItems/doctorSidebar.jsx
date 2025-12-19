@@ -18,14 +18,14 @@ export const doctorSidebar = [
   { label: 'Doctor Guide', path: '/dashboard/doctor/guide', icon: FaFileAlt },
   { label: 'Appointments', path: '/dashboard/doctor/appointments', icon: FaCalendarCheck },
   { label: 'Schedule', path: '/dashboard/doctor/schedule', icon: FaFileAlt },
-  {
-    label: 'Doctors',
-    icon: FaUserMd,
-    submenu: [
-      { label: 'All Doctors', path: '/dashboard/doctor/all-doctors' },
-      { label: 'Doctor Details', path: '/dashboard/doctor/doctor-details/1' },
-    ],
-  },
+  // {
+  //   label: 'Doctors',
+  //   icon: FaUserMd,
+  //   submenu: [
+  //     { label: 'All Doctors', path: '/dashboard/doctor/all-doctors' },
+  //     { label: 'Doctor Details', path: '/dashboard/doctor/doctor-details/1' },
+  //   ],
+  // },
   { label: 'My Patients', path: '/dashboard/doctor/patients', icon: FaUserFriends },
   { label: 'My Department', path: '/dashboard/doctor/department', icon: DepartmentIcon },
   { label: 'Reports & Tests', path: '/dashboard/doctor/reports', icon: FaUsers },
