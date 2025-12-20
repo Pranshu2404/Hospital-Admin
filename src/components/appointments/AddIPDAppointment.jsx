@@ -30,11 +30,19 @@ const priorityOptions = [
 
 const AddIPDAppointment = ({ type = "ipd", fixedDoctorId, embedded = false, onClose = () => {} }) => {
   const navigate = useNavigate();
+  // Helper to get local YYYY-MM-DD date string (avoids timezone-shift issues)
+  const getLocalDateString = () => {
+    const t = new Date();
+    const yyyy = t.getFullYear();
+    const mm = String(t.getMonth() + 1).padStart(2, '0');
+    const dd = String(t.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  };
   const [formData, setFormData] = useState({
     patientId: '',
     doctorId: fixedDoctorId || '',
     department: '',
-    date: new Date().toISOString().split('T')[0],
+    date: getLocalDateString(),
     start_time: '',
     duration: '30',
     type: 'time-based',
@@ -72,6 +80,8 @@ const AddIPDAppointment = ({ type = "ipd", fixedDoctorId, embedded = false, onCl
   const [existingAppointments, setExistingAppointments] = useState([]);
   const [existingPatients, setExistingPatients] = useState([]);
   const [doctorWorkingHours, setDoctorWorkingHours] = useState([]);
+  const [autoAssignedTime, setAutoAssignedTime] = useState(null);
+  const [showErrors, setShowErrors] = useState(false);
   const [slipModal, setSlipModal] = useState(false);
   const [hospitalInfo, setHospitalInfo] = useState(null);
   const [submitDetails, setSubmitDetails] = useState(null);
@@ -342,11 +352,13 @@ useEffect(() => {
       }
     }
 
-    // Update the form state with the newly found time
+    // Update the form state with the newly found time and track if it was auto-assigned
     setFormData(prev => ({ ...prev, start_time: proposedTime || '' }));
+    setAutoAssignedTime(proposedTime || null);
 
   } else if (formData.type !== 'time-based') {
     setFormData(prev => ({ ...prev, start_time: '' }));
+    setAutoAssignedTime(null);
   }
 }, [formData.doctorId, formData.date, formData.duration, formData.type, existingAppointments, doctorWorkingHours]);
 
@@ -486,6 +498,19 @@ const fetchDoctorData = async () => {
     start.setMinutes(minutes + parseInt(durationMinutes));
     return start.toTimeString().slice(0, 5);
   };
+
+  // Form validation
+  const errors = {};
+  if (!formData.department) errors.department = 'Please select a department';
+  if (!formData.doctorId) errors.doctorId = 'Please select a doctor';
+  if (!showFields && !formData.patientId) errors.patientId = 'Please select a patient';
+  if (formData.type === 'time-based') {
+    if (!formData.start_time) errors.start_time = 'Please pick a start time';
+    else if (!isWithinWorkingHours(formData.start_time)) errors.start_time = 'Selected time is outside doctor working hours';
+  }
+
+  const displayEndTime = formData.start_time ? calculateEndTime(formData.start_time, formData.duration) : null;
+  const isFormValid = Object.keys(errors).length === 0;
 
   const checkTimeSlotAvailability = (proposedStart, proposedEnd) => {
     if (!proposedStart || !proposedEnd) return false;
@@ -711,6 +736,7 @@ const calculateDOBFromAge = (age) => {
       setSubmitDetails(enriched);
 
       setSlipModal(true);
+      onClose(); // Close the form if embedded
 
       setFormData({
         patientId: '',
@@ -738,8 +764,9 @@ const calculateDOBFromAge = (age) => {
 
   // Format date for display
   const formatDateDisplay = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
+    // Parse as local midnight to avoid timezone shift when dateString is YYYY-MM-DD
+    const date = new Date(dateString + 'T00:00:00');
+    return date.toLocaleDateString('en-US', {
       weekday: 'long', 
       year: 'numeric', 
       month: 'long', 
@@ -749,7 +776,7 @@ const calculateDOBFromAge = (age) => {
 
   const innerContent = (
     <>
-    <div className='bg-white p-62'>
+    <div className='bg-white p-6 max-w-5xl mx-auto rounded-lg shadow-sm relative'>
         {type && (
           <div className="mb-2">
             <h3 className="text-2xl font-semibold text-gray-800 capitalize">{type} Appointment</h3>
@@ -775,11 +802,10 @@ const calculateDOBFromAge = (age) => {
             <div className="lg:col-span-2 space-y-4">
               {/* Patient Selection */}
               {!showFields&&(
-              <FormSelect
+                <FormSelect
   label="Select Patient"
   value={formData.patientId}
   onChange={(e) => handleInputChange('patientId', e.target.value)}
-  // ✅ CORRECTED LINE:
   options={(filteredPatients || []).map(p => ({
     value: p._id,
     label: `${p.first_name} ${p.last_name} - ${p.phone || ''} (${p.patientId || ''})`
@@ -810,6 +836,9 @@ const calculateDOBFromAge = (age) => {
                   options={departments.map(dep => ({ value: dep._id, label: dep.name }))}
                   required
                 />
+                {showErrors && errors.department && (
+                  <p className="text-xs text-red-500 mt-1">{errors.department}</p>
+                )}
                 
                 {!fixedDoctorId && (
                   <FormSelect
@@ -821,8 +850,11 @@ const calculateDOBFromAge = (age) => {
                       label: (d.isFullTime) ? `Dr. ${d.firstName} ${d.lastName} (Full Time)` : `Dr. ${d.firstName} ${d.lastName} (Part Time)`
                     }))}
                     required
-                  />
-                )}
+                  />)}
+                  {showErrors && errors.doctorId && (
+                    <p className="text-xs text-red-500 mt-1">{errors.doctorId}</p>
+                  )}
+                
               </div>
 
               {/* Date, Type and Duration */}
@@ -833,11 +865,11 @@ const calculateDOBFromAge = (age) => {
                   value={formData.date}
                   onChange={(e) => handleInputChange('date', e.target.value)}
                   required
-                  min={new Date().toISOString().split('T')[0]}
+                  min={getLocalDateString()}
                 />
                 
                 <FormSelect
-                  label="Scheduling Type"
+                  label="Type"
                   value={formData.type}
                   onChange={(e) => handleInputChange('type', e.target.value)}
                   options={schedulingTypeOptions}
@@ -845,7 +877,7 @@ const calculateDOBFromAge = (age) => {
                 />
                 
                 <FormSelect
-                  label="Duration (minutes)"
+                  label="Duration (min)"
                   value={formData.duration}
                   onChange={(e) => handleInputChange('duration', e.target.value)}
                   options={[
@@ -885,12 +917,27 @@ const calculateDOBFromAge = (age) => {
                     label="Start Time (HH:MM)"
                     type="time"
                     value={formData.start_time}
-                    onChange={(e) => handleInputChange('start_time', e.target.value)}
+                    onChange={(e) => { handleInputChange('start_time', e.target.value); setShowErrors(false); setAutoAssignedTime(null); }}
+                    onBlur={() => setShowErrors(true)}
                     required
                     min={minTime}
                     max={maxTime}
                     step="300" // 5 minute increments
                   />
+                  {autoAssignedTime && !formData.start_time && (
+                    <p className="text-sm text-slate-500">Suggested slot: <span className="font-semibold">{autoAssignedTime}</span></p>
+                  )}
+                  {formData.start_time && (
+                    <div className="text-sm text-slate-600">
+                      <p>End Time: <span className="font-medium">{displayEndTime}</span></p>
+                      <p className={`mt-1 ${isWithinWorkingHours(formData.start_time) ? 'text-green-600' : 'text-red-600'}`}>
+                        {isWithinWorkingHours(formData.start_time) ? 'Within doctor working hours' : 'Outside working hours'}
+                      </p>
+                    </div>
+                  )}
+                  {showErrors && errors.start_time && (
+                    <p className="text-xs text-red-500 mt-1">{errors.start_time}</p>
+                  )}
                   <div className="text-sm text-gray-500">
                     <p>Doctor's available hours:</p>
                     <ul className="list-disc pl-5">
@@ -984,6 +1031,27 @@ const calculateDOBFromAge = (age) => {
                 ) : (
                   <p className="text-sm text-gray-500">Select a doctor and appointment type to see charges</p>
                 )}
+              </div>
+
+              {/* Live Preview Card */}
+              <div className="mt-4 p-4 bg-slate-50 rounded-lg border border-slate-100">
+                <h4 className="font-bold text-sm text-slate-800 mb-2">Appointment Preview</h4>
+                <div className="text-sm text-slate-700 space-y-1">
+                  <div><span className="font-medium">Patient:</span> {showFields ? `${formData2.firstName} ${formData2.lastName}` : (filteredPatients.find(p => p._id === formData.patientId)?.first_name ? `${filteredPatients.find(p => p._id === formData.patientId)?.first_name} ${filteredPatients.find(p => p._id === formData.patientId)?.last_name}` : '—')}</div>
+                  <div><span className="font-medium">Doctor:</span> {doctors.find(d => d._id === formData.doctorId) ? `Dr. ${doctors.find(d => d._id === formData.doctorId).firstName} ${doctors.find(d => d._id === formData.doctorId).lastName}` : (doctorDetails ? `Dr. ${doctorDetails.firstName} ${doctorDetails.lastName}` : '—')}</div>
+                  <div><span className="font-medium">Date:</span> {formData.date}</div>
+                  <div><span className="font-medium">Time:</span> {formData.start_time || '—'} {displayEndTime && <span className="text-slate-500">to {displayEndTime}</span>}</div>
+                  <div><span className="font-medium">Duration:</span> {formData.duration} mins</div>
+                  <div className="pt-2 border-t mt-2 flex justify-between items-center">
+                    <div>
+                      <div className="text-xs text-slate-500">Estimated Total</div>
+                      <div className="text-lg font-bold text-slate-800">₹{totalAmount.toFixed(2)}</div>
+                    </div>
+                    <div>
+                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${formData.type === 'time-based' ? 'bg-teal-50 text-teal-700' : 'bg-indigo-50 text-indigo-700'}`}>{formData.type}</span>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {/* Notes */}
@@ -1111,12 +1179,8 @@ const calculateDOBFromAge = (age) => {
           <Button
             variant="primary"
             type="submit"
-            disabled={isLoading || 
-              (formData.type === 'time-based' && 
-               formData.start_time && 
-               !isWithinWorkingHours(formData.start_time)) ||
-              !formData.doctorId ||
-              !formData.department}
+            disabled={isLoading || !isFormValid}
+            onClick={() => setShowErrors(true)}
           >
             {isLoading ? 'Scheduling...' : 'Schedule Appointment'}
           </Button>
