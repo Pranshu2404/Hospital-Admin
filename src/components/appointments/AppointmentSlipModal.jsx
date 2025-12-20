@@ -262,6 +262,72 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
     window.print();
   };
 
+  // Derive a user-friendly appointment date & time display from multiple possible fields
+  const getAppointmentDateTimeDisplay = () => {
+    if (!appointmentData) return 'N/A';
+
+    // Prefer explicit ISO start_time / startTime / start (calendar resource)
+    const possibleStarts = [appointmentData.start_time, appointmentData.startTime, appointmentData.start];
+    for (const s of possibleStarts) {
+      if (!s) continue;
+      const d = new Date(s);
+      if (!isNaN(d)) return d.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
+    }
+
+    // If we have an appointment_date (YYYY-MM-DD or ISO) and a time string
+    const apptDateRaw = appointmentData.appointment_date || appointmentData.date;
+    const timeRaw = appointmentData.time || appointmentData.start_time_local || appointmentData.time_slot;
+    if (apptDateRaw) {
+      // parse as local date (avoid timezone shift)
+      let dateObj;
+      try {
+        if (typeof apptDateRaw === 'string' && /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(apptDateRaw)) {
+          dateObj = new Date(apptDateRaw + 'T00:00:00');
+        } else {
+          dateObj = new Date(apptDateRaw);
+        }
+      } catch (e) {
+        dateObj = null;
+      }
+      const dateStr = dateObj && !isNaN(dateObj) ? dateObj.toLocaleDateString([], { dateStyle: 'medium' }) : String(apptDateRaw);
+
+      // Normalize time: handle "HH:MM - HH:MM" strings, or object shapes
+      let timeStr = '';
+      if (timeRaw) {
+        if (typeof timeRaw === 'string') {
+          // if a range like '08:30 - 09:00'
+          if (timeRaw.includes('-')) {
+            timeStr = timeRaw.split('-')[0].trim();
+          } else {
+            timeStr = timeRaw;
+          }
+        } else if (typeof timeRaw === 'object') {
+          timeStr = timeRaw.start_time || timeRaw.start || '';
+        }
+
+        // If timeStr looks like HH:MM, convert to localized short time
+        if (/^\d{1,2}:\d{2}/.test(timeStr)) {
+          const [hh, mm] = timeStr.split(':');
+          const tmp = new Date();
+          tmp.setHours(parseInt(hh, 10));
+          tmp.setMinutes(parseInt(mm, 10));
+          timeStr = tmp.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+        }
+      }
+
+      return timeStr ? `${dateStr}, ${timeStr}` : `${dateStr}`;
+    }
+
+    // Fallback to billing appointment date if present
+    if (billingDetails?.appointment_id?.appointment_date) {
+      const d = new Date(billingDetails.appointment_id.appointment_date);
+      if (!isNaN(d)) return d.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
+      return String(billingDetails.appointment_id.appointment_date);
+    }
+
+    return 'N/A';
+  };
+
   return (
     <>
       <style>{`
@@ -360,7 +426,7 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
         /* Screen styles */
         @media screen {
           .printable-slip-container {
-            position: fixed;
+            position: absolute;
             inset: 0;
             z-index: 50;
             display: flex;
@@ -368,6 +434,7 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
             justify-content: center;
             background: rgba(0, 0, 0, 0.5);
             padding: 20px;
+            z-index: 100;
             overflow-y: auto;
           }
           .printable-slip {
@@ -378,13 +445,14 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
             max-width: 600px;
             max-height: 90vh;
             overflow-y: auto;
+            z-index: 101;
             padding: 24px;
           }
         }
       `}</style>
 
       <div className="printable-slip-container">
-        <div className="printable-slip">
+        <div className="printable-slip mt-32">
           {/* Header */}
           <div className="text-center slip-header">
             <h2 className="text-2xl font-bold text-gray-900 mb-2">APPOINTMENT SLIP</h2>
@@ -396,7 +464,6 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
             </p>
           </div>
 
-          {/* Appointment Details */}
           {/* Appointment Details */}
 <div className="slip-section">
   <h4 className="text-lg font-semibold text-gray-800 mb-3 border-b pb-1">APPOINTMENT DETAILS</h4>
@@ -454,13 +521,7 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
     {/* Date & Time Logic - Falls back to formatting the ISO string from billingDetails if appointmentData is empty */}
     <div className="col-span-2">
       <span className="text-gray-600 font-medium">Appointment Date & Time:</span>{' '}
-      <strong className="text-red-600">
-        {appointmentData.date && appointmentData.time 
-          ? `${appointmentData.date}, ${appointmentData.time}`
-          : billingDetails?.appointment_id?.appointment_date 
-            ? new Date(billingDetails.appointment_id.appointment_date).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })
-            : 'N/A'}
-      </strong>
+      <strong className="text-red-600">{getAppointmentDateTimeDisplay()}</strong>
     </div>
               {appointmentData.type === "number-based" && (
                 <div className="col-span-2">
