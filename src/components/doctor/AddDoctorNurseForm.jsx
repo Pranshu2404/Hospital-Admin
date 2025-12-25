@@ -190,8 +190,8 @@ const AddDoctorNurseForm = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50/50 font-sans text-slate-800 flex justify-center py-10 px-4">
-      <div className="w-full max-w-5xl bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden flex flex-col">
+    <div className="min-h-screen bg-slate-50/50 font-sans text-slate-800 flex justify-start py-1 px-5">
+      <div className="w-full max-w-7xl bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden flex flex-col">
         
         {/* Header */}
         <div className="bg-white px-8 py-8 pb-0">

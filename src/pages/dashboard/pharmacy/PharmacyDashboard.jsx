@@ -413,7 +413,7 @@ const PharmacyDashboard = () => {
             value={dashboardData.stats.totalMedicines} 
             icon={FaBoxes} 
             color="indigo"
-            linkTo="/dashboard/pharmacy/inventory/medicines"
+            linkTo="/dashboard/pharmacy/medicine-list"
             change={`${dashboardData.lowStockMedicines.length} low stock`}
           />
           <StatCard 
@@ -421,7 +421,7 @@ const PharmacyDashboard = () => {
             value={dashboardData.stats.totalSuppliers} 
             icon={FaTruck} 
             color="blue"
-            linkTo="/dashboard/pharmacy/purchasing/suppliers"
+            linkTo="/dashboard/pharmacy/suppliers"
             change="Active suppliers"
           />
           <StatCard 
@@ -438,7 +438,7 @@ const PharmacyDashboard = () => {
             value={formatCurrency(dashboardData.stats.todaysRevenue)} 
             icon={FaMoneyBillWave} 
             color="teal"
-            linkTo="/dashboard/pharmacy/sales/history"
+            linkTo="/dashboard/pharmacy/history"
             change="Sales performance"
             changeColor="text-teal-600"
           />
@@ -447,7 +447,7 @@ const PharmacyDashboard = () => {
             value={dashboardData.stats.totalSales} 
             icon={FaShoppingCart} 
             color="purple"
-            linkTo="/dashboard/pharmacy/sales/history"
+            linkTo="/dashboard/pharmacy/history"
             change="Transactions today"
           />
           <StatCard 
@@ -463,7 +463,7 @@ const PharmacyDashboard = () => {
             value={dashboardData.stats.lowStockCount} 
             icon={FaExclamationTriangle} 
             color="red"
-            linkTo="/dashboard/pharmacy/inventory/low-stock"
+            linkTo="/dashboard/pharmacy/low-stock"
             change="Need restocking"
             changeColor="text-red-600"
           />
@@ -472,7 +472,7 @@ const PharmacyDashboard = () => {
             value={dashboardData.stats.expiredStockCount} 
             icon={FaFileInvoiceDollar} 
             color="gray"
-            linkTo="/dashboard/pharmacy/inventory/expired"
+            linkTo="/dashboard/pharmacy/expired"
             change="Needs attention"
             changeColor="text-slate-600"
           />

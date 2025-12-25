@@ -65,7 +65,7 @@ const Dashboard = () => {
           axios.get(`${import.meta.env.VITE_BACKEND_URL}/doctors`),
         ]);
 
-        const patients = patientsRes.data || [];
+        const patients = patientsRes.data.patients || [];
         const staff = staffRes.data || [];
         const appointments = appointmentsRes.data || [];
         const doctors = doctorRes.data || [];
@@ -170,7 +170,7 @@ const Dashboard = () => {
   if (isLoading) return <div className="flex h-screen items-center justify-center text-slate-400 font-medium">Loading Dashboard...</div>;
 
   return (
-    <div className="p-8 min-h-screen bg-slate-50/50 font-sans text-slate-800">
+    <div className="p-4 min-h-screen bg-slate-50/50 font-sans text-slate-800">
       
       {/* --- Header Section --- */}
       <div className="flex flex-col md:flex-row md:items-end justify-between mb-10">
@@ -294,7 +294,7 @@ const Dashboard = () => {
                     <div className="p-2.5 bg-white rounded-xl text-emerald-600 shadow-sm mb-3 group-hover:scale-110 group-hover:bg-emerald-500 group-hover:text-white transition-all duration-300">
                       {item.icon && <item.icon className="w-5 h-5" />}
                     </div>
-                    <span className="text-xs font-bold text-slate-600 group-hover:text-emerald-700">{item.label}</span>
+                    <span className="text-sm font-bold text-slate-600 group-hover:text-emerald-700">{item.label}</span>
                   </div>
                 ))}
             </div>

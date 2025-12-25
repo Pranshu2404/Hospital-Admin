@@ -128,7 +128,7 @@ const RoomList = () => {
             <h2 className="text-2xl font-bold text-gray-900">Room Management</h2>
             <p className="text-gray-600 mt-1">Manage hospital rooms and their status</p>
           </div>
-          <Button variant="primary" onClick={() => window.location.href = '/rooms/add'}>
+          <Button variant="primary" onClick={() => window.location.href = '/dashboard/admin/add-room'}>
             <PlusIcon className="w-4 h-4 mr-2" />
             Add Room
           </Button>

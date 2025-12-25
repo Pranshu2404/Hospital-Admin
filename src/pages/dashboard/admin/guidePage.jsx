@@ -140,7 +140,7 @@ const guideData = [
   {
     title: 'System Settings',
     icon: Settings,
-    path: '/dashboard/admin/settings/general',
+    path: '/dashboard/admin/settings',
     color: 'bg-gradient-to-br from-slate-50 to-slate-100 border-slate-200',
     iconColor: 'text-slate-600',
     priority: 'Medium',
@@ -519,13 +519,13 @@ export default function AdminGuide() {
             <h3 className="font-bold text-teal-800 text-sm mb-3">Quick Actions</h3>
             <div className="flex gap-2">
               <button 
-                onClick={() => navigate('/dashboard/admin/settings/general')}
+                onClick={() => navigate('/dashboard/admin/settings')}
                 className="flex-1 bg-white text-teal-700 text-xs font-semibold px-3 py-2 rounded-lg border border-teal-200 hover:bg-teal-50 transition-colors"
               >
                 Settings
               </button>
               <button 
-                onClick={() => navigate('/dashboard/admin/reports')}
+                onClick={() => navigate('/dashboard/admin/birth-report')}
                 className="flex-1 bg-white text-teal-700 text-xs font-semibold px-3 py-2 rounded-lg border border-teal-200 hover:bg-teal-50 transition-colors"
               >
                 Reports
@@ -536,7 +536,7 @@ export default function AdminGuide() {
           <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-2xl shadow-sm border border-emerald-200 p-6">
             <h3 className="font-bold text-emerald-800 text-sm mb-3">Next Steps</h3>
             <button 
-              onClick={() => navigate('/dashboard/admin/security')}
+              onClick={() => navigate('/dashboard/admin/settings')}
               className="w-full bg-emerald-600 text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-emerald-700 transition-colors shadow-sm"
             >
               Configure Security Settings

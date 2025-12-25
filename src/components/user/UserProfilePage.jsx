@@ -35,7 +35,7 @@ const tabs = [
   const ActiveComponent = tabs.find(tab => tab.id === activeTab)?.component;
 
   return (
-    <div className="p-6">
+    <div className="p-0">
       <div className="bg-white rounded-xl shadow-sm border border-gray-100">
         {/* Profile Header */}
         <div className="p-6 border-b border-gray-100">

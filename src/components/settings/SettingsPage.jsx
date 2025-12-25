@@ -40,22 +40,22 @@ const SettingsPage = () => {
       ),
       component: EmailSettingsTab
     },
-    {
-      id: 'users',
-      label: 'User Management',
-      icon: (
-        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 016-6h6a6 6 0 016 6v1z" />
-        </svg>
-      ),
-      component: UsersSettingsTab
-    }
+    // {
+    //   id: 'users',
+    //   label: 'User Management',
+    //   icon: (
+    //     <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    //       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 016-6h6a6 6 0 016 6v1z" />
+    //     </svg>
+    //   ),
+    //   component: UsersSettingsTab
+    // }
   ];
 
   const ActiveComponent = settingsTabs.find(tab => tab.id === activeTab)?.component;
 
   return (
-    <div className="p-6">
+    <div className="p-0">
       <div className="bg-white rounded-xl shadow-sm border border-gray-100">
         <div className="p-6 border-b border-gray-100">
           <h1 className="text-2xl font-bold text-gray-900">Settings</h1>

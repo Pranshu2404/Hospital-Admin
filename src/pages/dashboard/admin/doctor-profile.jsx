@@ -86,7 +86,7 @@ const DoctorProfilePage = () => {
 
   return (
     <Layout sidebarItems={adminSidebar}>
-      <div className="p-8 min-h-screen bg-slate-50/50 font-sans text-slate-800">
+      <div className="p-4 min-h-screen bg-slate-50/50 font-sans text-slate-800">
         
         {/* --- Header --- */}
         <div className="mb-8">

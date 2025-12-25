@@ -193,7 +193,7 @@ const StockOverview = () => {
                 <FaBox className="text-blue-600" size={22} />
               </div>
             </div>
-            <Link to="/dashboard/pharmacy/medicines" className="text-sm font-semibold text-blue-600 hover:text-blue-700 mt-4 block flex items-center gap-1">
+            <Link to="/dashboard/pharmacy/medicine-list" className="text-sm font-semibold text-blue-600 hover:text-blue-700 mt-4 block flex items-center gap-1">
               View all <FaChevronRight className="w-3 h-3" />
             </Link>
           </div>
@@ -225,7 +225,7 @@ const StockOverview = () => {
                 <FaCalendarTimes className="text-rose-600" size={22} />
               </div>
             </div>
-            <Link to="/dashboard/pharmacy/expiring" className="text-sm font-semibold text-rose-600 hover:text-rose-700 mt-4 block flex items-center gap-1">
+            <Link to="/dashboard/pharmacy/expired" className="text-sm font-semibold text-rose-600 hover:text-rose-700 mt-4 block flex items-center gap-1">
               Check items <FaChevronRight className="w-3 h-3" />
             </Link>
           </div>
@@ -276,7 +276,7 @@ const StockOverview = () => {
                 <Package className="text-emerald-600" size={22} />
               </div>
             </div>
-            <Link to="/dashboard/pharmacy/reorder" className="text-sm font-semibold text-emerald-600 hover:text-emerald-700 mt-4 block flex items-center gap-1">
+            <Link to="/dashboard/pharmacy/low-stock" className="text-sm font-semibold text-emerald-600 hover:text-emerald-700 mt-4 block flex items-center gap-1">
               Reorder <FaChevronRight className="w-3 h-3" />
             </Link>
           </div>
@@ -317,7 +317,7 @@ const StockOverview = () => {
                   <option value="week">This Week</option>
                   <option value="month">This Month</option>
                 </select>
-                <Link to="/dashboard/pharmacy/inventory/adjustments" className="text-sm font-semibold text-teal-600 hover:text-teal-700 hover:bg-teal-50 px-3 py-1.5 rounded-lg transition-colors">
+                <Link to="/dashboard/pharmacy/adjustments" className="text-sm font-semibold text-teal-600 hover:text-teal-700 hover:bg-teal-50 px-3 py-1.5 rounded-lg transition-colors">
                   View All <FaChevronRight className="inline ml-1" size={10} />
                 </Link>
               </div>
@@ -381,7 +381,7 @@ const StockOverview = () => {
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
               <h3 className="text-lg font-bold text-slate-800 mb-4">Quick Actions</h3>
               <div className="space-y-3">
-                <Link to="/dashboard/pharmacy/inventory/add-medicine" className="flex items-center justify-between p-3 rounded-xl bg-blue-50 border border-blue-100 text-blue-700 hover:bg-blue-100 transition-colors group">
+                <Link to="/dashboard/pharmacy/add-medicine" className="flex items-center justify-between p-3 rounded-xl bg-blue-50 border border-blue-100 text-blue-700 hover:bg-blue-100 transition-colors group">
                   <div className="flex items-center gap-3">
                     <div className="p-2 bg-white rounded-lg shadow-sm">
                       <FaPlus className="w-4 h-4" />
@@ -394,7 +394,7 @@ const StockOverview = () => {
                   <FaChevronRight className="w-4 h-4 text-blue-400 group-hover:text-blue-600" />
                 </Link>
 
-                <Link to="/dashboard/pharmacy/purchasing/create-order" className="flex items-center justify-between p-3 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-700 hover:bg-emerald-100 transition-colors group">
+                <Link to="/dashboard/pharmacy/create-order" className="flex items-center justify-between p-3 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-700 hover:bg-emerald-100 transition-colors group">
                   <div className="flex items-center gap-3">
                     <div className="p-2 bg-white rounded-lg shadow-sm">
                       <FaTruck className="w-4 h-4" />
@@ -407,7 +407,7 @@ const StockOverview = () => {
                   <FaChevronRight className="w-4 h-4 text-emerald-400 group-hover:text-emerald-600" />
                 </Link>
 
-                <Link to="/dashboard/pharmacy/inventory/adjustments" className="flex items-center justify-between p-3 rounded-xl bg-amber-50 border border-amber-100 text-amber-700 hover:bg-amber-100 transition-colors group">
+                <Link to="/dashboard/pharmacy/adjustments" className="flex items-center justify-between p-3 rounded-xl bg-amber-50 border border-amber-100 text-amber-700 hover:bg-amber-100 transition-colors group">
                   <div className="flex items-center gap-3">
                     <div className="p-2 bg-white rounded-lg shadow-sm">
                       <FaExchangeAlt className="w-4 h-4" />

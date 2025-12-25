@@ -307,7 +307,7 @@ const AddStaffForm = () => {
   ];
 
   return (
-    <div className="p-6">
+    <div className="p-4">
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm">
         <div className="p-6 border-b border-gray-100">
           <h2 className="text-2xl font-bold text-gray-900">Add New Staff</h2>
