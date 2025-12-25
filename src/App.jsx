@@ -1,7 +1,10 @@
+// App.jsx - Complete updated version with Setup Tracker
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { SetupTrackerProvider } from './context/SetupTrackerContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import SetupTracker from './components/SetupTracker';
 
 // Public pages
 import Login from './pages/index';
@@ -33,12 +36,9 @@ import AddPatientIPD from "./pages/dashboard/admin/AddPatientIPD.jsx";
 import DepartmentList from "./pages/dashboard/admin/DepartmentList.jsx";
 import DepartmentAdd from "./pages/dashboard/admin/add-department.jsx";
 import AddHodPage from './pages/dashboard/admin/AddHodPage.jsx';
-
 import AdminGuidePage from './pages/dashboard/admin/guidePage.jsx';
-
 import UpdatePatientProfile from './pages/dashboard/admin/UpdatePatientProfile';
 import EditDoctor from './pages/dashboard/admin/EditDoctor'; 
-
 import AddHodMain from './pages/dashboard/admin/add-Hod-main';
 
 // Doctor pages
@@ -52,8 +52,6 @@ import Reports from './pages/dashboard/doctor/Reports.jsx';
 import Schedule from './pages/dashboard/doctor/Schedule.jsx'
 import PatientList from './pages/dashboard/doctor/PatientList.jsx'
 import DoctorProfilePage1 from './pages/dashboard/doctor/DoctorProfilePage.jsx'
-
-
 
 // Staff pages
 import StaffDashboard from './pages/dashboard/staff/index';
@@ -95,7 +93,6 @@ import MyDepartmentPage from './pages/dashboard/doctor/DepartmentPage';
 import IPDAppointmentsPage from './pages/dashboard/admin/ipdappointment';
 import RoomListPage from './pages/dashboard/admin/RoomList';
 import AddRoomPage from './pages/dashboard/admin/AddRoom';
-// import PharmacyDashboardPage from './pages/dashboard/pharmacy/';
 import SuppliersListPage from './pages/dashboard/pharmacy/SuppliersListPage';
 import AddSupplierPage from './pages/dashboard/pharmacy/AddSupplierPage';
 import ExpiredMedicineAlready from './pages/dashboard/pharmacy/ExpiredMedicineAlready';
@@ -107,14 +104,12 @@ import Expired from './pages/dashboard/pharmacy/Expired';
 import Adjustments from './pages/dashboard/pharmacy/Adjustments';
 import Orders from './pages/dashboard/pharmacy/Orders';
 import CreateOrder from './pages/dashboard/pharmacy/CreateOrder';
-import ReceiveStock from './components/pharmacy/ReceiveStock';
 import ReceiveStockPage from './pages/dashboard/pharmacy/ReceiveStock';
 import POSPage from './pages/dashboard/pharmacy/POSPage';
 import SalesHistoryPage from './pages/dashboard/pharmacy/SalesHistoryPage';
 import PrescriptionsList from './pages/dashboard/pharmacy/PrescriptionsList';
 import NewPrescriptionPage from './pages/dashboard/pharmacy/NewPrescriptionPage';
 import DispensePage from './pages/dashboard/pharmacy/DispensePage';
-import PrescriptionQueue from './pages/dashboard/pharmacy/PrescriptionsQueue';
 import PrescriptionsQueue from './pages/dashboard/pharmacy/PrescriptionsQueue';
 import PrescriptionDetail from './pages/dashboard/pharmacy/PrescriptionDetail';
 import PaymentCollection from './pages/dashboard/pharmacy/PaymentCollectionPage';
@@ -123,6 +118,35 @@ import PaySalaryPage from './pages/dashboard/admin/PaySalaryPage';
 import DoctorSalaryPage from './pages/dashboard/doctor/DoctorSalaryPage';
 import StaffProfilePage1 from './pages/dashboard/staff/staff-profile';
 
+// Custom Layout Wrappers
+const AdminLayout = ({ children }) => (
+  <SetupTrackerProvider userRole="admin">
+    {children}
+    <SetupTracker />
+  </SetupTrackerProvider>
+);
+
+const DoctorLayout = ({ children }) => (
+  <SetupTrackerProvider userRole="doctor">
+    {children}
+    <SetupTracker />
+  </SetupTrackerProvider>
+);
+
+const StaffLayout = ({ children }) => (
+  <SetupTrackerProvider userRole="staff">
+    {children}
+    <SetupTracker />
+  </SetupTrackerProvider>
+);
+
+const PharmacyLayout = ({ children }) => (
+  <SetupTrackerProvider userRole="pharmacy">
+    {children}
+    <SetupTracker />
+  </SetupTrackerProvider>
+);
+
 export default function App() {
   return (
     <Router>
@@ -130,64 +154,409 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Login />} />
           <Route path="/register" element={<Register />} />
-
-          {/* Admin Routes */}
-          <Route path="/dashboard/admin" element={<AdminHome />} />
-          <Route path="/dashboard/admin/appointments" element={<AppointmentsPage />} />
-          <Route path="/dashboard/admin/ipd-appointments" element={<IPDAppointmentsPage />} />
-          <Route path="/dashboard/admin/add-patient" element={<AddPatientPage />} />
-          <Route path="/dashboard/admin/patient-list" element={<PatientListPage />} />
-          <Route path="/dashboard/admin/patient-profile" element={<PatientProfilePage />} />
-          <Route path="/dashboard/admin/add-staff" element={<AddStaffPage />} />
-          <Route path="/dashboard/admin/add-registrar" element={<AddRegistrarPage />} />
-          <Route path="/dashboard/admin/add-doctor" element={<AddDoctorPage />} />
-          <Route path="/dashboard/admin/doctor-list" element={<DoctorListPage />} />
-          <Route path="/dashboard/admin/room-list" element={<RoomListPage />} />
-          <Route path="/dashboard/admin/add-room" element={<AddRoomPage />} />
-          <Route path="/dashboard/admin/staff-list" element={<StaffListPage />} />
-          <Route path="/dashboard/admin/registrar-list" element={<RegistrarListPage />} />
-          <Route path="/dashboard/admin/staff-profile" element={<StaffProfilePage />} />
-          <Route path="/dashboard/admin/doctor-profile/:id" element={<DoctorProfilePage />} />
-          <Route path="/dashboard/admin/income" element={<IncomePage />} />
-          <Route path="/dashboard/admin/expense" element={<ExpensePage />} />
-          <Route path="/dashboard/admin/invoices" element={<InvoiceListPage />} />
-          <Route path="/dashboard/admin/invoice-details" element={<InvoiceDetailsPage />} />
-          <Route path="/dashboard/admin/inventory" element={<InventoryItemsPage />} />
-          <Route path="/dashboard/admin/birth-report" element={<BirthReportPage />} />
-          <Route path="/dashboard/admin/blood-bank" element={<BloodBankPage />} />
-          <Route path="/dashboard/admin/profile" element={<UserProfilePage />} />
-          <Route path="/dashboard/admin/settings" element={<SettingsPage />} />
-          <Route path="dashboard/admin/pharmacies" element={<PharmacyList />} />
-          <Route path="dashboard/admin/pharmacies/add" element={<AddPharmacy />} />
-          <Route path="dashboard/admin/pharmacies/:id" element={<PharmacyProfile />} />
-          <Route path="/dashboard/admin/patients/add-opd" element={<AddPatientOPD />} />
-          <Route path="/dashboard/admin/patients/add-ipd" element={<AddPatientIPD />} />         
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password/:token" element={<ResetPassword />} />
 
-          {/* <Route path="/dashboard/admin/departments" element={<DepartmentList />} /> */}
-          <Route path="/dashboard/admin/departments/:deptName" element={<DepartmentAdd />} />
-          <Route path="/dashboard/admin/add-department" element={<DepartmentAdd />} /> 
-          <Route path="/dashboard/admin/add-department" element={<DepartmentAdd />} />  
-          <Route path="/dashboard/admin/add-hod" element={<AddHodPage />} />
-          <Route path="/dashboard/admin/DepartmentList" element={<DepartmentList />} />
+          {/* Admin Routes with Tracker */}
+          <Route 
+            path="/dashboard/admin" 
+            element={
+              <ProtectedRoute role="admin">
+                <AdminLayout>
+                  <AdminHome />
+                </AdminLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/admin/appointments" 
+            element={
+              <ProtectedRoute role="admin">
+                <AdminLayout>
+                  <AppointmentsPage />
+                </AdminLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/admin/ipd-appointments" 
+            element={
+              <ProtectedRoute role="admin">
+                <AdminLayout>
+                  <IPDAppointmentsPage />
+                </AdminLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/admin/add-patient" 
+            element={
+              <ProtectedRoute role="admin">
+                <AdminLayout>
+                  <AddPatientPage />
+                </AdminLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/admin/patient-list" 
+            element={
+              <ProtectedRoute role="admin">
+                <AdminLayout>
+                  <PatientListPage />
+                </AdminLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/admin/patient-profile" 
+            element={
+              <ProtectedRoute role="admin">
+                <AdminLayout>
+                  <PatientProfilePage />
+                </AdminLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/admin/add-staff" 
+            element={
+              <ProtectedRoute role="admin">
+                <AdminLayout>
+                  <AddStaffPage />
+                </AdminLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/admin/add-registrar" 
+            element={
+              <ProtectedRoute role="admin">
+                <AdminLayout>
+                  <AddRegistrarPage />
+                </AdminLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/admin/add-doctor" 
+            element={
+              <ProtectedRoute role="admin">
+                <AdminLayout>
+                  <AddDoctorPage />
+                </AdminLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/admin/doctor-list" 
+            element={
+              <ProtectedRoute role="admin">
+                <AdminLayout>
+                  <DoctorListPage />
+                </AdminLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/admin/room-list" 
+            element={
+              <ProtectedRoute role="admin">
+                <AdminLayout>
+                  <RoomListPage />
+                </AdminLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/admin/add-room" 
+            element={
+              <ProtectedRoute role="admin">
+                <AdminLayout>
+                  <AddRoomPage />
+                </AdminLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/admin/staff-list" 
+            element={
+              <ProtectedRoute role="admin">
+                <AdminLayout>
+                  <StaffListPage />
+                </AdminLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/admin/registrar-list" 
+            element={
+              <ProtectedRoute role="admin">
+                <AdminLayout>
+                  <RegistrarListPage />
+                </AdminLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/admin/staff-profile" 
+            element={
+              <ProtectedRoute role="admin">
+                <AdminLayout>
+                  <StaffProfilePage />
+                </AdminLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/admin/doctor-profile/:id" 
+            element={
+              <ProtectedRoute role="admin">
+                <AdminLayout>
+                  <DoctorProfilePage />
+                </AdminLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/admin/income" 
+            element={
+              <ProtectedRoute role="admin">
+                <AdminLayout>
+                  <IncomePage />
+                </AdminLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/admin/expense" 
+            element={
+              <ProtectedRoute role="admin">
+                <AdminLayout>
+                  <ExpensePage />
+                </AdminLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/admin/invoices" 
+            element={
+              <ProtectedRoute role="admin">
+                <AdminLayout>
+                  <InvoiceListPage />
+                </AdminLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/admin/invoice-details" 
+            element={
+              <ProtectedRoute role="admin">
+                <AdminLayout>
+                  <InvoiceDetailsPage />
+                </AdminLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/admin/inventory" 
+            element={
+              <ProtectedRoute role="admin">
+                <AdminLayout>
+                  <InventoryItemsPage />
+                </AdminLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/admin/birth-report" 
+            element={
+              <ProtectedRoute role="admin">
+                <AdminLayout>
+                  <BirthReportPage />
+                </AdminLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/admin/blood-bank" 
+            element={
+              <ProtectedRoute role="admin">
+                <AdminLayout>
+                  <BloodBankPage />
+                </AdminLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/admin/profile" 
+            element={
+              <ProtectedRoute role="admin">
+                <AdminLayout>
+                  <UserProfilePage />
+                </AdminLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/admin/settings" 
+            element={
+              <ProtectedRoute role="admin">
+                <AdminLayout>
+                  <SettingsPage />
+                </AdminLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="dashboard/admin/pharmacies" 
+            element={
+              <ProtectedRoute role="admin">
+                <AdminLayout>
+                  <PharmacyList />
+                </AdminLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="dashboard/admin/pharmacies/add" 
+            element={
+              <ProtectedRoute role="admin">
+                <AdminLayout>
+                  <AddPharmacy />
+                </AdminLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="dashboard/admin/pharmacies/:id" 
+            element={
+              <ProtectedRoute role="admin">
+                <AdminLayout>
+                  <PharmacyProfile />
+                </AdminLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/admin/patients/add-opd" 
+            element={
+              <ProtectedRoute role="admin">
+                <AdminLayout>
+                  <AddPatientOPD />
+                </AdminLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/admin/patients/add-ipd" 
+            element={
+              <ProtectedRoute role="admin">
+                <AdminLayout>
+                  <AddPatientIPD />
+                </AdminLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/admin/departments/:deptName" 
+            element={
+              <ProtectedRoute role="admin">
+                <AdminLayout>
+                  <DepartmentAdd />
+                </AdminLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/admin/add-department" 
+            element={
+              <ProtectedRoute role="admin">
+                <AdminLayout>
+                  <DepartmentAdd />
+                </AdminLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/admin/add-hod" 
+            element={
+              <ProtectedRoute role="admin">
+                <AdminLayout>
+                  <AddHodPage />
+                </AdminLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/admin/DepartmentList" 
+            element={
+              <ProtectedRoute role="admin">
+                <AdminLayout>
+                  <DepartmentList />
+                </AdminLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/admin/update-patient/:id" 
+            element={
+              <ProtectedRoute role="admin">
+                <AdminLayout>
+                  <UpdatePatientProfile />
+                </AdminLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/admin/edit-doctor/:id" 
+            element={
+              <ProtectedRoute role="admin">
+                <AdminLayout>
+                  <EditDoctor />
+                </AdminLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/admin/guide" 
+            element={
+              <ProtectedRoute role="admin">
+                <AdminLayout>
+                  <AdminGuidePage />
+                </AdminLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/admin/add-hod-main" 
+            element={
+              <ProtectedRoute role="admin">
+                <AdminLayout>
+                  <AddHodMain />
+                </AdminLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/admin/finance/salary" 
+            element={
+              <ProtectedRoute role="admin">
+                <AdminLayout>
+                  <PaySalaryPage />
+                </AdminLayout>
+              </ProtectedRoute>
+            } 
+          />
 
-          <Route path="/dashboard/admin/update-patient/:id" element={<UpdatePatientProfile />} />
-          <Route path="/dashboard/staff/update-patient/:id" element={<UpdatePatientProfile />} />
-          <Route path="/dashboard/admin/edit-doctor/:id" element={<EditDoctor />} />
-
-          <Route path="/dashboard/admin/guide" element={<AdminGuidePage />} />
-          <Route path="/dashboard/doctor/guide" element={<DoctorGuide />} />
-          <Route path="/dashboard/pharmacy/guide" element={<PharmacyGuidePage />} />
-          <Route path="/dashboard/staff/guide" element={<StaffGuidePage />} />
-          <Route path="/dashboard/admin/add-hod-main" element={<AddHodMain />} />
-
-          {/* Doctor Routes */}
+          {/* Doctor Routes with Tracker */}
           <Route
             path="/dashboard/doctor"
             element={
               <ProtectedRoute role="doctor">
-                <DoctorDashboard />
+                <DoctorLayout>
+                  <DoctorDashboard />
+                </DoctorLayout>
               </ProtectedRoute>
             }
           />
@@ -195,89 +564,141 @@ export default function App() {
             path="/dashboard/doctor/appointments"
             element={
               <ProtectedRoute role="doctor">
-                <Appointments />
+                <DoctorLayout>
+                  <Appointments />
+                </DoctorLayout>
               </ProtectedRoute>
             }
           />
-          <Route path="/doctor/appointments/:id" element={
-            <ProtectedRoute role="doctor">
+          <Route 
+            path="/doctor/appointments/:id" 
+            element={
+              <ProtectedRoute role="doctor">
+                <DoctorLayout>
                   <AppointmentDetails/>
-            </ProtectedRoute>
+                </DoctorLayout>
+              </ProtectedRoute>
             } 
           />
-
           <Route
             path="/dashboard/doctor/records"
             element={
               <ProtectedRoute role="doctor">
-                <Records />
+                <DoctorLayout>
+                  <Records />
+                </DoctorLayout>
               </ProtectedRoute>
             }
           />
-
           <Route
             path="/dashboard/doctor/reports"
             element={
               <ProtectedRoute role="doctor">
-                <Reports />
+                <DoctorLayout>
+                  <Reports />
+                </DoctorLayout>
               </ProtectedRoute>
             }
           />
-
           <Route
             path="/dashboard/doctor/schedule"
             element={
               <ProtectedRoute role="doctor">
-                <Schedule />
+                <DoctorLayout>
+                  <Schedule />
+                </DoctorLayout>
               </ProtectedRoute>
             }
           />
-
-          <Route path="/dashboard/doctor/department" element={<MyDepartmentPage />} />
-          <Route path="/dashboard/doctor/profile" element={<DoctorProfilePage1 />} />
-
+          <Route 
+            path="/dashboard/doctor/department" 
+            element={
+              <ProtectedRoute role="doctor">
+                <DoctorLayout>
+                  <MyDepartmentPage />
+                </DoctorLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/doctor/profile" 
+            element={
+              <ProtectedRoute role="doctor">
+                <DoctorLayout>
+                  <DoctorProfilePage1 />
+                </DoctorLayout>
+              </ProtectedRoute>
+            } 
+          />
           <Route
             path="/dashboard/doctor/prescriptions"
             element={
               <ProtectedRoute role="doctor">
-                <Prescriptions />
+                <DoctorLayout>
+                  <Prescriptions />
+                </DoctorLayout>
               </ProtectedRoute>
             }
           />
-
           <Route
             path="/dashboard/doctor/all-doctors"
             element={
               <ProtectedRoute role="doctor">
-                <DoctorAllList/>
+                <DoctorLayout>
+                  <DoctorAllList/>
+                </DoctorLayout>
               </ProtectedRoute>
             }
           />
-
           <Route
             path="/dashboard/doctor/patients"
             element={
               <ProtectedRoute role="doctor">
-                <PatientList />
+                <DoctorLayout>
+                  <PatientList />
+                </DoctorLayout>
               </ProtectedRoute>
             }
           />
-
           <Route
             path="/dashboard/doctor/doctor-details/:id"
             element={
               <ProtectedRoute role="doctor">
-                <DoctorDetails />
+                <DoctorLayout>
+                  <DoctorDetails />
+                </DoctorLayout>
               </ProtectedRoute>
             }
           />
+          <Route 
+            path="/dashboard/doctor/guide" 
+            element={
+              <ProtectedRoute role="doctor">
+                <DoctorLayout>
+                  <DoctorGuide />
+                </DoctorLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/doctor/salary" 
+            element={
+              <ProtectedRoute role="doctor">
+                <DoctorLayout>
+                  <DoctorSalaryPage />
+                </DoctorLayout>
+              </ProtectedRoute>
+            } 
+          />
 
-          {/* Staff Routes */}
+          {/* Staff Routes with Tracker */}
           <Route
             path="/dashboard/staff"
             element={
               <ProtectedRoute role="staff">
-                <StaffDashboard />
+                <StaffLayout>
+                  <StaffDashboard />
+                </StaffLayout>
               </ProtectedRoute>
             }
           />
@@ -285,7 +706,9 @@ export default function App() {
             path="/dashboard/staff/admission"
             element={
               <ProtectedRoute role="staff">
-                <Admission />
+                <StaffLayout>
+                  <Admission />
+                </StaffLayout>
               </ProtectedRoute>
             }
           />
@@ -293,7 +716,9 @@ export default function App() {
             path="/dashboard/staff/discharges"
             element={
               <ProtectedRoute role="staff">
-                <Discharges />
+                <StaffLayout>
+                  <Discharges />
+                </StaffLayout>
               </ProtectedRoute>
             }
           />
@@ -301,68 +726,466 @@ export default function App() {
             path="/dashboard/staff/billing"
             element={
               <ProtectedRoute role="staff">
-                <Billing />
+                <StaffLayout>
+                  <Billing />
+                </StaffLayout>
               </ProtectedRoute>
             }
           />
-          <Route path="/dashboard/admin/add-hod/:id" element={<AddHodPage />} />
-          <Route path="/dashboard/staff/patients/add-opd" element={<AddPatientOPD1 />} />
-          <Route path="/dashboard/staff/patients/add-ipd" element={<AddPatientIPD1 />} />
-          <Route path="/dashboard/staff/appointments" element={<AppointmentsPage1 />} />
-          <Route path="/dashboard/staff/add-patient" element={<AddPatientPage1 />} />
-          <Route path="/dashboard/staff/patient-list" element={<PatientListPage1 />} />
-          <Route path="/dashboard/staff/profile" element={<StaffProfilePage1/>} />
-          <Route path="/dashboard/staff/patient-profile" element={<PatientProfilePage1 />} />
-            {/* Pharmacy Routes */}
-          <Route path="/dashboard/pharmacy" element={<PharmacyDashboard />} />
-          
-          <Route path="/dashboard/pharmacy/add-medicine" element={<AddMedicinePage />} />
-          <Route path="/dashboard/pharmacy/medicine-list" element={<MedicineListPage />} />
-          <Route path="/dashboard/pharmacy/inventory/overview" element={<StockOverview/>} />
-          <Route path="/dashboard/pharmacy/low-stock" element={<LowStock/>} />
-          <Route path="/dashboard/pharmacy/expired" element={<Expired/>} />
-          <Route path="/dashboard/pharmacy/adjustments" element={<Adjustments/>} />
-          <Route path="/dashboard/pharmacy/medicine-detail/:id" element={<MedicineDetailPage />} />
-          <Route path="/dashboard/pharmacy/batches" element={<BatchPage/>}/>
-          <Route path="/dashboard/pharmacy/orders" element={<Orders/>}/>
-          <Route path="/dashboard/pharmacy/pos" element={<POSPage/>}/>
-          <Route path="/dashboard/pharmacy/history" element={<SalesHistoryPage/>}/>
-          <Route path="/dashboard/pharmacy/pos" element={<POSPage/>}/>
-          <Route path="/dashboard/pharmacy/create-order" element={<CreateOrder/>}/>
-          <Route path="/dashboard/pharmacy/receive-stock/:id" element={<ReceiveStockPage/>}/>
-          <Route path="/dashboard/pharmacy/add-customer" element={<AddCustomerPage />} />
-          <Route path="/dashboard/pharmacy/customers" element={<CustomersPage />} />
-          <Route path="/dashboard/pharmacy/customer-profile" element={<CustomerProfilePage />} />
-          <Route path="/dashboard/pharmacy/invoices" element={<InvoicesPage />} />
-          <Route path="/dashboard/pharmacy/prescriptions/list" element={<PrescriptionsList />} />
-          <Route path="/dashboard/pharmacy/prescriptions/new" element={<NewPrescriptionPage />} />
-          <Route path="/dashboard/pharmacy/prescriptions/dispense" element={<DispensePage />} />
-          <Route path="/dashboard/admin/finance/salary" element={<PaySalaryPage />} />
-          <Route path="/dashboard/doctor/salary" element={<DoctorSalaryPage />} />
-          <Route path="/dashboard/pharmacy/prescriptions/queue" element={<PrescriptionsQueue />} />
-          <Route path="/dashboard/pharmacy/prescriptions/:id" element={<PrescriptionDetail />} />
-          <Route path="/dashboard/pharmacy/invoice-detail" element={<InvoiceDetailPage />} />
-          <Route path="/dashboard/pharmacy/billing/payments" element={<PaymentCollection />} />
-          <Route path="/dashboard/pharmacy/billing/outstanding" element={<OutstandingPayments />} />
-          <Route path="/dashboard/pharmacy/inventory" element={<InventoryPage />} />
-          <Route path="/dashboard/pharmacy/profile" element={<ProfilePage />} />
-          <Route path="/dashboard/pharmacy/settings" element={<Settings />} />
-          <Route path="/dashboard/pharmacy/suppliers" element={<SuppliersListPage />} />
-          <Route path="/dashboard/pharmacy/add-supplier" element={<AddSupplierPage />} /> 
+          <Route 
+            path="/dashboard/admin/add-hod/:id" 
+            element={
+              <ProtectedRoute role="admin">
+                <AdminLayout>
+                  <AddHodPage />
+                </AdminLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/staff/patients/add-opd" 
+            element={
+              <ProtectedRoute role="staff">
+                <StaffLayout>
+                  <AddPatientOPD1 />
+                </StaffLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/staff/patients/add-ipd" 
+            element={
+              <ProtectedRoute role="staff">
+                <StaffLayout>
+                  <AddPatientIPD1 />
+                </StaffLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/staff/appointments" 
+            element={
+              <ProtectedRoute role="staff">
+                <StaffLayout>
+                  <AppointmentsPage1 />
+                </StaffLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/staff/add-patient" 
+            element={
+              <ProtectedRoute role="staff">
+                <StaffLayout>
+                  <AddPatientPage1 />
+                </StaffLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/staff/patient-list" 
+            element={
+              <ProtectedRoute role="staff">
+                <StaffLayout>
+                  <PatientListPage1 />
+                </StaffLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/staff/profile" 
+            element={
+              <ProtectedRoute role="staff">
+                <StaffLayout>
+                  <StaffProfilePage1 />
+                </StaffLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/staff/patient-profile" 
+            element={
+              <ProtectedRoute role="staff">
+                <StaffLayout>
+                  <PatientProfilePage1 />
+                </StaffLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/staff/guide" 
+            element={
+              <ProtectedRoute role="staff">
+                <StaffLayout>
+                  <StaffGuidePage />
+                </StaffLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/staff/update-patient/:id" 
+            element={
+              <ProtectedRoute role="staff">
+                <StaffLayout>
+                  <UpdatePatientProfile />
+                </StaffLayout>
+              </ProtectedRoute>
+            } 
+          />
+
+          {/* Pharmacy Routes with Tracker */}
+          <Route 
+            path="/dashboard/pharmacy" 
+            element={
+              <ProtectedRoute role="pharmacy">
+                <PharmacyLayout>
+                  <PharmacyDashboard />
+                </PharmacyLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/pharmacy/add-medicine" 
+            element={
+              <ProtectedRoute role="pharmacy">
+                <PharmacyLayout>
+                  <AddMedicinePage />
+                </PharmacyLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/pharmacy/medicine-list" 
+            element={
+              <ProtectedRoute role="pharmacy">
+                <PharmacyLayout>
+                  <MedicineListPage />
+                </PharmacyLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/pharmacy/inventory/overview" 
+            element={
+              <ProtectedRoute role="pharmacy">
+                <PharmacyLayout>
+                  <StockOverview/>
+                </PharmacyLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/pharmacy/low-stock" 
+            element={
+              <ProtectedRoute role="pharmacy">
+                <PharmacyLayout>
+                  <LowStock/>
+                </PharmacyLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/pharmacy/expired" 
+            element={
+              <ProtectedRoute role="pharmacy">
+                <PharmacyLayout>
+                  <Expired/>
+                </PharmacyLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/pharmacy/adjustments" 
+            element={
+              <ProtectedRoute role="pharmacy">
+                <PharmacyLayout>
+                  <Adjustments/>
+                </PharmacyLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/pharmacy/medicine-detail/:id" 
+            element={
+              <ProtectedRoute role="pharmacy">
+                <PharmacyLayout>
+                  <MedicineDetailPage />
+                </PharmacyLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/pharmacy/batches" 
+            element={
+              <ProtectedRoute role="pharmacy">
+                <PharmacyLayout>
+                  <BatchPage/>
+                </PharmacyLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/pharmacy/orders" 
+            element={
+              <ProtectedRoute role="pharmacy">
+                <PharmacyLayout>
+                  <Orders/>
+                </PharmacyLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/pharmacy/pos" 
+            element={
+              <ProtectedRoute role="pharmacy">
+                <PharmacyLayout>
+                  <POSPage/>
+                </PharmacyLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/pharmacy/history" 
+            element={
+              <ProtectedRoute role="pharmacy">
+                <PharmacyLayout>
+                  <SalesHistoryPage/>
+                </PharmacyLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/pharmacy/create-order" 
+            element={
+              <ProtectedRoute role="pharmacy">
+                <PharmacyLayout>
+                  <CreateOrder/>
+                </PharmacyLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/pharmacy/receive-stock/:id" 
+            element={
+              <ProtectedRoute role="pharmacy">
+                <PharmacyLayout>
+                  <ReceiveStockPage/>
+                </PharmacyLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/pharmacy/add-customer" 
+            element={
+              <ProtectedRoute role="pharmacy">
+                <PharmacyLayout>
+                  <AddCustomerPage />
+                </PharmacyLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/pharmacy/customers" 
+            element={
+              <ProtectedRoute role="pharmacy">
+                <PharmacyLayout>
+                  <CustomersPage />
+                </PharmacyLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/pharmacy/customer-profile" 
+            element={
+              <ProtectedRoute role="pharmacy">
+                <PharmacyLayout>
+                  <CustomerProfilePage />
+                </PharmacyLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/pharmacy/invoices" 
+            element={
+              <ProtectedRoute role="pharmacy">
+                <PharmacyLayout>
+                  <InvoicesPage />
+                </PharmacyLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/pharmacy/prescriptions/list" 
+            element={
+              <ProtectedRoute role="pharmacy">
+                <PharmacyLayout>
+                  <PrescriptionsList />
+                </PharmacyLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/pharmacy/prescriptions/new" 
+            element={
+              <ProtectedRoute role="pharmacy">
+                <PharmacyLayout>
+                  <NewPrescriptionPage />
+                </PharmacyLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/pharmacy/prescriptions/dispense" 
+            element={
+              <ProtectedRoute role="pharmacy">
+                <PharmacyLayout>
+                  <DispensePage />
+                </PharmacyLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/pharmacy/prescriptions/queue" 
+            element={
+              <ProtectedRoute role="pharmacy">
+                <PharmacyLayout>
+                  <PrescriptionsQueue />
+                </PharmacyLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/pharmacy/prescriptions/:id" 
+            element={
+              <ProtectedRoute role="pharmacy">
+                <PharmacyLayout>
+                  <PrescriptionDetail />
+                </PharmacyLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/pharmacy/invoice-detail" 
+            element={
+              <ProtectedRoute role="pharmacy">
+                <PharmacyLayout>
+                  <InvoiceDetailPage />
+                </PharmacyLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/pharmacy/billing/payments" 
+            element={
+              <ProtectedRoute role="pharmacy">
+                <PharmacyLayout>
+                  <PaymentCollection />
+                </PharmacyLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/pharmacy/billing/outstanding" 
+            element={
+              <ProtectedRoute role="pharmacy">
+                <PharmacyLayout>
+                  <OutstandingPayments />
+                </PharmacyLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/pharmacy/inventory" 
+            element={
+              <ProtectedRoute role="pharmacy">
+                <PharmacyLayout>
+                  <InventoryPage />
+                </PharmacyLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/pharmacy/profile" 
+            element={
+              <ProtectedRoute role="pharmacy">
+                <PharmacyLayout>
+                  <ProfilePage />
+                </PharmacyLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/pharmacy/settings" 
+            element={
+              <ProtectedRoute role="pharmacy">
+                <PharmacyLayout>
+                  <Settings />
+                </PharmacyLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/pharmacy/suppliers" 
+            element={
+              <ProtectedRoute role="pharmacy">
+                <PharmacyLayout>
+                  <SuppliersListPage />
+                </PharmacyLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/pharmacy/add-supplier" 
+            element={
+              <ProtectedRoute role="pharmacy">
+                <PharmacyLayout>
+                  <AddSupplierPage />
+                </PharmacyLayout>
+              </ProtectedRoute>
+            } 
+          />
           <Route 
             path="/dashboard/pharmacy/expired-medicines" 
-            element={<ExpiredMedicineAlready />} 
-          />   
+            element={
+              <ProtectedRoute role="pharmacy">
+                <PharmacyLayout>
+                  <ExpiredMedicineAlready />
+                </PharmacyLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/pharmacy/guide" 
+            element={
+              <ProtectedRoute role="pharmacy">
+                <PharmacyLayout>
+                  <PharmacyGuidePage />
+                </PharmacyLayout>
+              </ProtectedRoute>
+            } 
+          />
           <Route 
             path="/dashboard/finance/create-invoice" 
-            element={<CreateInvoicePage />} 
-          />      
-          <Route path="/dashboard/pharmacy/purchase/:id" element={<BatchPage />} />
+            element={
+              <ProtectedRoute role="admin">
+                <AdminLayout>
+                  <CreateInvoicePage />
+                </AdminLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/dashboard/pharmacy/purchase/:id" 
+            element={
+              <ProtectedRoute role="pharmacy">
+                <PharmacyLayout>
+                  <BatchPage />
+                </PharmacyLayout>
+              </ProtectedRoute>
+            } 
+          />
         </Routes>
-        
-
-
       </AuthProvider>
     </Router>
-      );
+  );
 }

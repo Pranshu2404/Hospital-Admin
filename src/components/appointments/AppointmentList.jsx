@@ -301,7 +301,7 @@ const AppointmentList = () => {
       {/* --- Type Selection Modal --- */}
       {chooserOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden transform transition-all">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl overflow-hidden transform transition-all">
             
             {!selectedType ? (
               <div className="p-8">

@@ -32,7 +32,7 @@ import Layout from '../../../components/Layout';
 import { adminSidebar } from '../../../constants/sidebarItems/adminSidebar';
 import { FaUserMd, FaHospital, FaUserTie, FaUserNurse, FaFileMedical, FaCalendarAlt } from 'react-icons/fa';
 
-const guideData = [
+const adminGuideData = [
   {
     title: 'Department Setup',
     icon: Building2,
@@ -44,6 +44,32 @@ const guideData = [
       'Create departments like Cardiology, Orthopedics, Pediatrics, etc., with detailed descriptions and service offerings',
       'Configure department settings including consultation hours, emergency services, and specialty flags',
       'Assign physical locations, rooms, and resources to each department for facility management'
+    ]
+  },
+  {
+    title: 'Room Management',
+    icon: Building2,
+    path: '/dashboard/admin/add-room',
+    color: 'bg-gradient-to-br from-cyan-50 to-cyan-100 border-cyan-200',
+    iconColor: 'text-cyan-600',
+    priority: 'High',
+    content: [
+      'Create rooms and assign them to departments for inpatient services',
+      'Configure room types (General Ward, ICU, Private Room) with different tariffs',
+      'Manage bed allocation and room availability status'
+    ]
+  },
+  {
+    title: 'Financial Configuration',
+    icon: DollarSign,
+    path: '/dashboard/admin/settings',
+    color: 'bg-gradient-to-br from-green-50 to-green-100 border-green-200',
+    iconColor: 'text-green-600',
+    priority: 'High',
+    content: [
+      'Configure consultation fees, procedure charges, and room tariffs',
+      'Set up insurance provider integrations and claim processing rules',
+      'Establish discount policies, package deals, and promotional offers'
     ]
   },
   {
@@ -65,7 +91,7 @@ const guideData = [
     path: '/dashboard/admin/add-hod-main',
     color: 'bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200',
     iconColor: 'text-purple-600',
-    priority: 'Medium',
+    priority: 'High',
     content: [
       'Assign Head of Department roles with elevated administrative privileges',
       'Configure HOD responsibilities including staff management and department oversight',
@@ -86,16 +112,29 @@ const guideData = [
     ]
   },
   {
-    title: 'Patient Registration',
-    icon: FilePlus2,
-    path: '/dashboard/admin/add-patient',
-    color: 'bg-gradient-to-br from-indigo-50 to-indigo-100 border-indigo-200',
-    iconColor: 'text-indigo-600',
-    priority: 'High',
+    title: 'Registrar Appointment',
+    icon: UserCheck,
+    path: '/dashboard/admin/add-registrar',
+    color: 'bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200',
+    iconColor: 'text-orange-600',
+    priority: 'Medium',
     content: [
-      'Register OPD and IPD patients with comprehensive medical and demographic information',
-      'Capture medical history, allergies, insurance details, and emergency contacts',
-      'Assign beds, wards, and allocate resources based on patient requirements'
+      'Appoint registrars for patient admissions and discharge processes',
+      'Configure registrar access permissions and responsibilities',
+      'Set up registrar schedules and duty rosters'
+    ]
+  },
+  {
+    title: 'Pharmacy Setup',
+    icon: Pill,
+    path: '/dashboard/admin/pharmacies/add',
+    color: 'bg-gradient-to-br from-rose-50 to-rose-100 border-rose-200',
+    iconColor: 'text-rose-600',
+    priority: 'Medium',
+    content: [
+      'Set up pharmacy inventory with medicine categories, suppliers, and pricing',
+      'Configure stock alerts, expiry management, and batch tracking systems',
+      'Manage pharmacy billing, insurance claims, and prescription workflows'
     ]
   },
   {
@@ -112,29 +151,16 @@ const guideData = [
     ]
   },
   {
-    title: 'Pharmacy & Inventory',
-    icon: Pill,
-    path: '/dashboard/admin/pharmacies/add',
-    color: 'bg-gradient-to-br from-rose-50 to-rose-100 border-rose-200',
-    iconColor: 'text-rose-600',
+    title: 'IPD Appointments',
+    icon: CalendarClock,
+    path: '/dashboard/admin/ipd-appointments',
+    color: 'bg-gradient-to-br from-violet-50 to-violet-100 border-violet-200',
+    iconColor: 'text-violet-600',
     priority: 'Medium',
     content: [
-      'Set up pharmacy inventory with medicine categories, suppliers, and pricing',
-      'Configure stock alerts, expiry management, and batch tracking systems',
-      'Manage pharmacy billing, insurance claims, and prescription workflows'
-    ]
-  },
-  {
-    title: 'Financial Configuration',
-    icon: DollarSign,
-    path: '/dashboard/admin/finance/settings',
-    color: 'bg-gradient-to-br from-green-50 to-green-100 border-green-200',
-    iconColor: 'text-green-600',
-    priority: 'High',
-    content: [
-      'Configure consultation fees, procedure charges, and room tariffs',
-      'Set up insurance provider integrations and claim processing rules',
-      'Establish discount policies, package deals, and promotional offers'
+      'Schedule inpatient department appointments and admissions',
+      'Manage bed allocation and room assignments for IPD patients',
+      'Coordinate with departments for inpatient care scheduling'
     ]
   },
   {
@@ -150,17 +176,18 @@ const guideData = [
       'Manage system preferences, notifications, and integration settings'
     ]
   },
+
   {
-    title: 'Security & Compliance',
-    icon: Shield,
-    path: '/dashboard/admin/security',
-    color: 'bg-gradient-to-br from-red-50 to-red-100 border-red-200',
-    iconColor: 'text-red-600',
-    priority: 'High',
+    title: 'Salary Management',
+    icon: DollarSign,
+    path: '/dashboard/admin/finance/salary',
+    color: 'bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200',
+    iconColor: 'text-yellow-600',
+    priority: 'Medium',
     content: [
-      'Configure data privacy settings and patient confidentiality protocols',
-      'Set up audit trails, access logs, and compliance reporting',
-      'Establish backup procedures and disaster recovery plans'
+      'Manage salary structures for doctors, staff, and other employees',
+      'Process monthly salary payments and generate payslips',
+      'Track salary expenses and generate payroll reports'
     ]
   }
 ];
@@ -198,7 +225,7 @@ export default function AdminGuide() {
               </div>
             </div>
             <div className="text-sm font-semibold text-teal-600">
-              {guideData.filter(g => g.priority === 'High').length} critical steps remaining
+              {adminGuideData.filter(g => g.priority === 'High').length} critical steps remaining
             </div>
           </div>
           
@@ -267,13 +294,13 @@ export default function AdminGuide() {
                 </div>
               </div>
               <div className="text-xs text-slate-400 font-medium">
-                {guideData.length} modules • Priority-based order
+                {adminGuideData.length} modules • Priority-based order
               </div>
             </div>
           </div>
           
           <Accordion type="multiple" className="divide-y divide-slate-100">
-            {guideData.map((step, index) => {
+            {adminGuideData.map((step, index) => {
               const IconComponent = step.icon;
               return (
                 <AccordionItem
@@ -500,60 +527,6 @@ export default function AdminGuide() {
           </div>
         </div>
 
-        {/* System Status & Quick Actions */}
-        <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl shadow-sm border border-blue-200 p-6">
-            <h3 className="font-bold text-blue-800 text-sm mb-3">System Status</h3>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-blue-700">Setup Progress</span>
-                <span className="text-sm font-semibold text-blue-800">65%</span>
-              </div>
-              <div className="w-full bg-blue-200 rounded-full h-2">
-                <div className="bg-blue-600 h-2 rounded-full" style={{ width: '65%' }}></div>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-gradient-to-br from-teal-50 to-teal-100 rounded-2xl shadow-sm border border-teal-200 p-6">
-            <h3 className="font-bold text-teal-800 text-sm mb-3">Quick Actions</h3>
-            <div className="flex gap-2">
-              <button 
-                onClick={() => navigate('/dashboard/admin/settings')}
-                className="flex-1 bg-white text-teal-700 text-xs font-semibold px-3 py-2 rounded-lg border border-teal-200 hover:bg-teal-50 transition-colors"
-              >
-                Settings
-              </button>
-              <button 
-                onClick={() => navigate('/dashboard/admin/birth-report')}
-                className="flex-1 bg-white text-teal-700 text-xs font-semibold px-3 py-2 rounded-lg border border-teal-200 hover:bg-teal-50 transition-colors"
-              >
-                Reports
-              </button>
-            </div>
-          </div>
-          
-          <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-2xl shadow-sm border border-emerald-200 p-6">
-            <h3 className="font-bold text-emerald-800 text-sm mb-3">Next Steps</h3>
-            <button 
-              onClick={() => navigate('/dashboard/admin/settings')}
-              className="w-full bg-emerald-600 text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-emerald-700 transition-colors shadow-sm"
-            >
-              Configure Security Settings
-            </button>
-          </div>
-        </div>
-
-        {/* Footer CTA */}
-        <div className="mt-8 text-center">
-          <div className="inline-flex items-center gap-3 bg-gradient-to-r from-teal-600 to-emerald-600 text-white px-6 py-4 rounded-2xl shadow-lg">
-            <Hospital className="w-5 h-5" />
-            <div>
-              <p className="font-semibold">Ready to configure your hospital system?</p>
-              <p className="text-sm opacity-90">Start with high priority modules first</p>
-            </div>
-          </div>
-        </div>
       </div>
     </Layout>
   );

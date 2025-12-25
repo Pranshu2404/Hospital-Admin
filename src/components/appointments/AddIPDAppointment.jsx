@@ -811,12 +811,14 @@ const calculateDOBFromAge = (age) => {
     label: `${p.first_name} ${p.last_name} - ${p.phone || ''} (${p.patientId || ''})`
   }))}
   required
-/>)}
+/>
+)}
 
 {showFields&&(
-<div>
+  <div>
+<div className='border-b border-gray-400 py-4'>
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Patient Information</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               <FormInput label="First Name" value={formData2.firstName} onChange={(e) => handleInputChange('firstName', e.target.value)} required />
               <FormInput label="Last Name" value={formData2.lastName} onChange={(e) => handleInputChange('lastName', e.target.value)} required />
               <FormInput label="Email" type="email" value={formData2.email} onChange={(e) => handleInputChange('email', e.target.value)} required />
@@ -825,6 +827,8 @@ const calculateDOBFromAge = (age) => {
               <FormSelect label="Gender" value={formData2.gender} onChange={(e) => handleInputChange('gender', e.target.value)} options={genderOptions} required />
               <FormSelect label="Blood Group" value={formData2.bloodGroup} onChange={(e) => handleInputChange('bloodGroup', e.target.value)} options={bloodGroupOptions} />
             </div>
+          </div>
+          <h3 className="text-lg font-semibold text-gray-900 mt-4">Appointment Information</h3>
           </div>)}
 
               {/* Department and Doctor Selection */}

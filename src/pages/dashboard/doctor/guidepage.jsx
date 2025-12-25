@@ -18,7 +18,9 @@ import {
   FaNotesMedical,
   FaChevronRight,
   FaBookMedical,
-  FaBell
+  FaBell,
+  FaPrescription,
+  FaExchangeAlt
 } from 'react-icons/fa';
 import { 
   Calendar,
@@ -31,7 +33,8 @@ import {
   HelpCircle,
   Zap,
   BookOpen,
-  TrendingUp
+  TrendingUp,
+  DollarSign
 } from 'lucide-react';
 import { DepartmentIcon } from '@/components/common/Icons';
 
@@ -42,6 +45,7 @@ const doctorGuideData = [
     path: '/dashboard/doctor',
     color: 'bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200',
     iconColor: 'text-blue-600',
+    priority: 'High',
     content: [
       'Monitor patient metrics and schedules at a glance with interactive charts',
       'Track appointment volume, task updates, and key alerts in real-time',
@@ -54,6 +58,7 @@ const doctorGuideData = [
     path: '/dashboard/doctor/appointments',
     color: 'bg-gradient-to-br from-teal-50 to-teal-100 border-teal-200',
     iconColor: 'text-teal-600',
+    priority: 'High',
     content: [
       'Review all scheduled appointments with advanced filtering options',
       'Update appointment status or mark as completed in real-time',
@@ -61,11 +66,25 @@ const doctorGuideData = [
     ]
   },
   {
+    title: 'Appointment Details',
+    icon: Calendar,
+    path: '/doctor/appointments/:id',
+    color: 'bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200',
+    iconColor: 'text-emerald-600',
+    priority: 'High',
+    content: [
+      'View detailed information about specific appointments',
+      'Access patient history and previous consultations',
+      'Start consultation and write prescriptions for the patient'
+    ]
+  },
+  {
     title: 'My Schedule',
     icon: Calendar,
     path: '/dashboard/doctor/schedule',
-    color: 'bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200',
-    iconColor: 'text-emerald-600',
+    color: 'bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200',
+    iconColor: 'text-purple-600',
+    priority: 'Medium',
     content: [
       'Check your shift timings, availability, and department allocations',
       'Make adjustments or block time slots for emergencies or breaks',
@@ -73,47 +92,64 @@ const doctorGuideData = [
     ]
   },
   {
-    title: 'Doctors Directory',
-    icon: FaUserMd,
-    path: '/dashboard/doctor/all-doctors',
-    color: 'bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200',
-    iconColor: 'text-purple-600',
+    title: 'Prescription Writing',
+    icon: FaPrescription,
+    path: '/dashboard/doctor/prescriptions',
+    color: 'bg-gradient-to-br from-indigo-50 to-indigo-100 border-indigo-200',
+    iconColor: 'text-indigo-600',
+    priority: 'High',
     content: [
-      'View and collaborate with fellow doctors across departments',
-      'Access detailed profiles with specialization and contact information',
-      'Find on-call doctors and department heads for consultations'
+      'Create electronic prescriptions for patients with detailed medication instructions',
+      'Access prescription history and refill previous prescriptions',
+      'Send prescriptions directly to pharmacy for dispensing'
+    ]
+  },
+  {
+    title: 'Patient Discharge',
+    icon: FaExchangeAlt,
+    path: '/dashboard/doctor/patients',
+    color: 'bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200',
+    iconColor: 'text-amber-600',
+    priority: 'Medium',
+    content: [
+      'Review patient records and prepare discharge summaries',
+      'Coordinate with staff for patient discharge procedures',
+      'Provide follow-up instructions and medication plans'
     ]
   },
   {
     title: 'My Patients',
     icon: FaUserFriends,
     path: '/dashboard/doctor/patients',
-    color: 'bg-gradient-to-br from-indigo-50 to-indigo-100 border-indigo-200',
-    iconColor: 'text-indigo-600',
+    color: 'bg-gradient-to-br from-rose-50 to-rose-100 border-rose-200',
+    iconColor: 'text-rose-600',
+    priority: 'High',
     content: [
       'Access your assigned patient list with complete medical history',
-      'Add prescriptions, clinical notes, and recommendations after consultations',
+      'Review patient billing information and payment status',
       'Track patient progress and follow-up appointment schedules'
     ]
   },
   {
-    title: 'My Department',
-    icon: DepartmentIcon,
-    path: '/dashboard/doctor/department',
-    color: 'bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200',
-    iconColor: 'text-amber-600',
+    title: 'Salary & Payments',
+    icon: DollarSign,
+    path: '/dashboard/doctor/salary',
+    color: 'bg-gradient-to-br from-green-50 to-green-100 border-green-200',
+    iconColor: 'text-green-600',
+    priority: 'Medium',
     content: [
-      'Review department structure, staff, and your responsibilities',
-      'Communicate with department HODs and staff efficiently',
-      'Access department-specific resources and protocols'
+      'View salary details, payment history, and payslips',
+      'Check consultation fees and additional earnings',
+      'Track pending payments and reimbursement claims'
     ]
   },
   {
-    title: 'Reports & Tests',
+    title: 'Patient Reports',
     icon: FileText,
     path: '/dashboard/doctor/reports',
-    color: 'bg-gradient-to-br from-rose-50 to-rose-100 border-rose-200',
-    iconColor: 'text-rose-600',
+    color: 'bg-gradient-to-br from-slate-50 to-slate-100 border-slate-200',
+    iconColor: 'text-slate-600',
+    priority: 'High',
     content: [
       'Review diagnostic reports, lab test results, and imaging studies',
       'Download and annotate patient tests for clinical use',
@@ -121,11 +157,25 @@ const doctorGuideData = [
     ]
   },
   {
+    title: 'My Department',
+    icon: DepartmentIcon,
+    path: '/dashboard/doctor/department',
+    color: 'bg-gradient-to-br from-violet-50 to-violet-100 border-violet-200',
+    iconColor: 'text-violet-600',
+    priority: 'Medium',
+    content: [
+      'Review department structure, staff, and your responsibilities',
+      'Communicate with department HODs and staff efficiently',
+      'Access department-specific resources and protocols'
+    ]
+  },
+  {
     title: 'Profile & Settings',
     icon: Settings,
     path: '/dashboard/doctor/profile',
-    color: 'bg-gradient-to-br from-slate-50 to-slate-100 border-slate-200',
-    iconColor: 'text-slate-600',
+    color: 'bg-gradient-to-br from-gray-50 to-gray-100 border-gray-200',
+    iconColor: 'text-gray-600',
+    priority: 'Medium',
     content: [
       'Update your professional profile, contact info, and availability',
       'Set notification preferences, working hours, and consultation fees',
@@ -138,6 +188,7 @@ const doctorGuideData = [
     path: '/dashboard/doctor/security',
     color: 'bg-gradient-to-br from-red-50 to-red-100 border-red-200',
     iconColor: 'text-red-600',
+    priority: 'Low',
     content: [
       'Reset login credentials in case of access issues',
       'Enable two-factor authentication for enhanced security',

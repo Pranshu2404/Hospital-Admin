@@ -73,7 +73,7 @@ export default function Login() {
           </div>
 
           <h1 className="text-4xl font-extrabold text-gray-800 tracking-tight mb-4">
-            Welcome to <span className="text-emerald-600">Hospital ERP</span>
+            Welcome to <span className="text-emerald-600">Mediqliq</span>
           </h1>
           <p className="text-gray-600 text-lg max-w-md mx-auto leading-relaxed">
             Your integrated solution for seamless, efficient, and modern hospital management.

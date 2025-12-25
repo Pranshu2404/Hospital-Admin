@@ -243,15 +243,15 @@ export const adminSidebar = [
       { label: 'Invoices', path: '/dashboard/admin/invoices' },
     ],
   },
-  {
-    label: 'Reports',
-    icon: MonitorIcon,
-    submenu: [
-      { label: 'Inventory', path: '/dashboard/admin/inventory' },
-      { label: 'Birth Report', path: '/dashboard/admin/birth-report' },
-      { label: 'Blood Bank', path: '/dashboard/admin/blood-bank' },
-    ],
-  },
+  // {
+  //   label: 'Reports',
+  //   icon: MonitorIcon,
+  //   submenu: [
+  //     { label: 'Inventory', path: '/dashboard/admin/inventory' },
+  //     { label: 'Birth Report', path: '/dashboard/admin/birth-report' },
+  //     { label: 'Blood Bank', path: '/dashboard/admin/blood-bank' },
+  //   ],
+  // },
   {
     label: 'Profile',
     icon: UserProfileIcon,

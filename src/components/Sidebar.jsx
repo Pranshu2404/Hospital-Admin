@@ -9,7 +9,7 @@ import axios from 'axios';
 
 const Sidebar = ({ sidebarItems }) => {
   const [openMenu, setOpenMenu] = useState(null);
-  const [hospitalName, setHospitalName] = useState('Hospital Management'); 
+  const [hospitalName, setHospitalName] = useState('Mediqliq'); 
   const location = useLocation();
   const navigate = useNavigate();
 

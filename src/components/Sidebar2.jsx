@@ -11,7 +11,6 @@ import {
   UserProfileIcon, 
   SettingsIcon 
 } from './common/Icons';
-import { theme } from '../constants/theme';
 
 const Sidebar = ({ setCurrentPage, currentPage, setSelectedPatient, setSelectedInvoice }) => {
   const [openMenu, setOpenMenu] = useState('Monitor Hospital');
@@ -40,7 +39,7 @@ const Sidebar = ({ setCurrentPage, currentPage, setSelectedPatient, setSelectedI
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4a2 2 0 110-4m6 4a2 2 0 100 4m0-4a2 2 0 110-4m0 4V4a2 2 0 00-2-2H7a2 2 0 00-2 2v16a2 2 0 002 2h5.586a1 1 0 00.707-.293l5.414-5.414A1 1 0 0018 16.586V4a2 2 0 00-2-2z" />
           </svg>
         </div>
-        <h1 className="text-xl font-bold ml-3 text-gray-800">Hospital Management</h1>
+        <h1 className="text-xl font-bold ml-3 text-gray-800">Mediqliq</h1>
       </div>
 
       {/* Navigation */}

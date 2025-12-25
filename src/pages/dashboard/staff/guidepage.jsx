@@ -48,7 +48,8 @@ import {
   Clipboard,
   Wallet,
   Bell,
-  Activity
+  Activity,
+  FilePlus2
 } from 'lucide-react';
 
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
@@ -64,58 +65,115 @@ const staffGuideData = [
     path: '/dashboard/staff',
     color: 'bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200',
     iconColor: 'text-blue-600',
+    priority: 'High',
     content: [
-      'Get a quick snapshot of your daily tasks, notifications, and essential hospital updates',
-      'Access important alerts and reminders for your shift with priority indicators',
-      'View team schedules and department announcements in real-time'
+      'Check upcoming scheduled appointments for the day',
+      'View important alerts and reminders for your shift',
+      'Access team schedules and department announcements'
     ]
   },
   {
-    title: 'Appointment Management',
-    icon: FaCalendarAlt,
-    path: '/dashboard/staff/appointments',
+    title: 'Patient Registration',
+    icon: FaUserInjured,
+    path: '/dashboard/staff/add-patient',
     color: 'bg-gradient-to-br from-teal-50 to-teal-100 border-teal-200',
     iconColor: 'text-teal-600',
+    priority: 'High',
     content: [
-      'View upcoming appointments and manage bookings efficiently with color-coded status',
-      'Schedule new appointments and update existing ones with automatic conflict detection',
-      'Handle walk-in patients and emergency bookings with priority queuing'
+      'Register new OPD and IPD patients with comprehensive information',
+      'Capture medical history, allergies, and insurance details',
+      'Generate patient IDs and complete admission formalities'
+    ]
+  },
+  {
+    title: 'OPD Registration',
+    icon: FilePlus2,
+    path: '/dashboard/staff/patients/add-opd',
+    color: 'bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200',
+    iconColor: 'text-emerald-600',
+    priority: 'High',
+    content: [
+      'Register Outpatient Department patients',
+      'Schedule OPD appointments with doctors',
+      'Generate OPD cards and consultation slips'
+    ]
+  },
+  {
+    title: 'IPD Registration',
+    icon: FilePlus2,
+    path: '/dashboard/staff/patients/add-ipd',
+    color: 'bg-gradient-to-br from-indigo-50 to-indigo-100 border-indigo-200',
+    iconColor: 'text-indigo-600',
+    priority: 'High',
+    content: [
+      'Register Inpatient Department admissions',
+      'Assign beds and rooms for IPD patients',
+      'Complete IPD admission formalities and documentation'
+    ]
+  },
+  {
+    title: 'Appointment Scheduling',
+    icon: FaCalendarAlt,
+    path: '/dashboard/staff/appointments',
+    color: 'bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200',
+    iconColor: 'text-amber-600',
+    priority: 'High',
+    content: [
+      'Schedule new appointments and update existing ones',
+      'Handle walk-in patients and emergency bookings',
+      'Manage appointment reminders and confirmations'
+    ]
+  },
+  {
+    title: 'Patient Discharges',
+    icon: FaExchangeAlt,
+    path: '/dashboard/staff/discharges',
+    color: 'bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200',
+    iconColor: 'text-purple-600',
+    priority: 'High',
+    content: [
+      'Process patient discharges with billing settlement',
+      'Generate discharge summaries and follow-up instructions',
+      'Coordinate bed clearance and room preparation'
+    ]
+  },
+  {
+    title: 'Patient Billing',
+    icon: FaMoneyBillWave,
+    path: '/dashboard/staff/billing',
+    color: 'bg-gradient-to-br from-green-50 to-green-100 border-green-200',
+    iconColor: 'text-green-600',
+    priority: 'High',
+    content: [
+      'Review and manage patient billing with detailed breakdowns',
+      'Process payments and generate receipts',
+      'Manage insurance claims and billing disputes'
     ]
   },
   {
     title: 'Patient Management',
     icon: FaUserInjured,
     path: '/dashboard/staff/patient-list',
-    color: 'bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200',
-    iconColor: 'text-emerald-600',
+    color: 'bg-gradient-to-br from-rose-50 to-rose-100 border-rose-200',
+    iconColor: 'text-rose-600',
+    priority: 'Medium',
     content: [
-      'Access complete patient profiles with medical history and treatment records',
-      'Register new patients with automatic ID generation and insurance verification',
-      'Update patient information, add notes, and track admission status'
-    ]
-  },
-  {
-    title: 'Billing & Payments',
-    icon: FaMoneyBillWave,
-    path: '/dashboard/staff/billing',
-    color: 'bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200',
-    iconColor: 'text-amber-600',
-    content: [
-      'Review financial transactions and manage patient billing with detailed breakdowns',
-      'Monitor department income and expenses with real-time reporting',
-      'Process payments, generate receipts, and manage insurance claims'
+      'Access complete patient profiles with medical history',
+      'Update patient information and add clinical notes',
+      'Track admission status and treatment progress'
     ]
   },
   {
     title: 'Reports & Analytics',
     icon: FaChartBar,
     path: '/dashboard/staff/reports',
-    color: 'bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200',
-    iconColor: 'text-purple-600',
+    color: 'bg-gradient-to-br from-violet-50 to-violet-100 border-violet-200',
+    iconColor: 'text-violet-600',
+    priority: 'Medium',
     content: [
-      'Generate comprehensive hospital reports including inventory usage and patient history',
-      'Check blood bank status, bed occupancy, and other key departmental statistics',
-      'Export reports in multiple formats for meetings and compliance requirements'
+      'Generate hospital reports including admissions and discharges',
+      'Check bed occupancy and department statistics',
+      'Export reports for meetings and compliance requirements'
     ]
   },
   {
@@ -124,38 +182,27 @@ const staffGuideData = [
     path: '/dashboard/staff/profile',
     color: 'bg-gradient-to-br from-slate-50 to-slate-100 border-slate-200',
     iconColor: 'text-slate-600',
+    priority: 'Low',
     content: [
-      'Edit personal details, emergency contacts, and professional information',
-      'Update login credentials and enable two-factor authentication',
-      'Set availability preferences, notification settings, and shift preferences'
-    ]
-  },
-  {
-    title: 'Discharges & Transfers',
-    icon: FaExchangeAlt,
-    path: '/dashboard/staff/discharges',
-    color: 'bg-gradient-to-br from-indigo-50 to-indigo-100 border-indigo-200',
-    iconColor: 'text-indigo-600',
-    content: [
-      'Manage patient discharges with automatic billing settlement and documentation',
-      'Coordinate inter-department transfers with real-time bed availability checks',
-      'Generate discharge summaries and follow-up appointment scheduling'
+      'Edit personal details and professional information',
+      'Update login credentials and security settings',
+      'Set availability preferences and notification settings'
     ]
   },
   {
     title: 'Task Management',
     icon: FaTasks,
     path: '/dashboard/staff/tasks',
-    color: 'bg-gradient-to-br from-rose-50 to-rose-100 border-rose-200',
-    iconColor: 'text-rose-600',
+    color: 'bg-gradient-to-br from-gray-50 to-gray-100 border-gray-200',
+    iconColor: 'text-gray-600',
+    priority: 'Medium',
     content: [
-      'Track daily assignments and responsibilities with priority levels',
-      'Receive task assignments from supervisors with deadlines and instructions',
+      'Track daily assignments and responsibilities',
+      'Receive task assignments from supervisors',
       'Update task status and request assistance when needed'
     ]
   }
 ];
-
 export default function StaffGuidePage() {
   const navigate = useNavigate();
 
