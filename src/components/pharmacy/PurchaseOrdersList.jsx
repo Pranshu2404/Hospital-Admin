@@ -174,20 +174,30 @@ const PurchaseOrdersList = () => {
     }
   };
 
-  const handleReceiveItem = (itemId, value) => {
-    const numericValue = parseInt(value) || 0;
+  const handleReceiveItem = (itemId, field, value) => {
     const item = selectedOrder.items.find(item => item._id === itemId);
     if (!item) return;
     
-    const maxAllowed = item.quantity - (item.received || 0);
-    
-    setReceivingItems(prev => ({
-      ...prev,
-      [itemId]: {
-        ...prev[itemId],
-        toReceive: Math.min(Math.max(0, numericValue), maxAllowed)
-      }
-    }));
+    if (field === 'toReceive') {
+      const numericValue = parseInt(value) || 0;
+      const maxAllowed = item.quantity - (item.received || 0);
+      setReceivingItems(prev => ({
+        ...prev,
+        [itemId]: {
+          ...prev[itemId],
+          toReceive: Math.min(Math.max(0, numericValue), maxAllowed)
+        }
+      }));
+    } else {
+      // For batch_number, expiry_date, selling_price
+      setReceivingItems(prev => ({
+        ...prev,
+        [itemId]: {
+          ...prev[itemId],
+          [field]: value
+        }
+      }));
+    }
   };
 
   const submitReceiving = async () => {
@@ -196,10 +206,17 @@ const PurchaseOrdersList = () => {
       
       // Prepare the receive data
       const receiveData = {
-        items: Object.entries(receivingItems).map(([itemId, values]) => ({
-          item_id: itemId,
-          quantity_received: values.toReceive
-        }))
+        items: selectedOrder.items
+          .filter(item => receivingItems[item._id]?.toReceive > 0)
+          .map(item => ({
+            item_id: item._id,
+            quantity_received: receivingItems[item._id]?.toReceive || 0,
+            batch_number: receivingItems[item._id]?.batch_number || item.batch_number || '',
+            expiry_date: receivingItems[item._id]?.expiry_date || item.expiry_date || null,
+            selling_price: receivingItems[item._id]?.selling_price !== undefined 
+              ? parseFloat(receivingItems[item._id]?.selling_price) 
+              : item.selling_price || 0
+          }))
       };
 
       console.log('Submitting Receive Data:', receiveData.items);
@@ -893,14 +910,17 @@ const PurchaseOrdersList = () => {
                     <thead className="bg-gray-50/50">
                       <tr>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Item</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Batch Number</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Expiry Date</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ordered</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Received</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Pending</th>
                         {canReceiveStock(selectedOrder) && (
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Receive Now</th>
                         )}
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Price</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cost/Unit</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Selling Price</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total Cost</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
@@ -911,10 +931,34 @@ const PurchaseOrdersList = () => {
                             <td className="px-4 py-3">
                               <div>
                                 <p className="font-medium text-gray-800">{item.medicine_id?.name || 'N/A'}</p>
-                                {item.batch_number && (
-                                  <p className="text-xs text-gray-500">Batch: {item.batch_number}</p>
-                                )}
                               </div>
+                            </td>
+                            <td className="px-4 py-3">
+                              {canReceiveStock(selectedOrder) ? (
+                                <input
+                                  type="text"
+                                  value={receivingItems[item._id]?.batch_number ?? item.batch_number ?? ''}
+                                  onChange={(e) => handleReceiveItem(item._id, 'batch_number', e.target.value)}
+                                  className="w-full px-2 py-1.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 text-sm"
+                                  placeholder="Enter batch number"
+                                />
+                              ) : (
+                                <span className="text-sm text-gray-700">{item.batch_number || '-'}</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3">
+                              {canReceiveStock(selectedOrder) ? (
+                                <input
+                                  type="date"
+                                  value={receivingItems[item._id]?.expiry_date ? new Date(receivingItems[item._id]?.expiry_date).toISOString().split('T')[0] : (item.expiry_date ? new Date(item.expiry_date).toISOString().split('T')[0] : '')}
+                                  onChange={(e) => handleReceiveItem(item._id, 'expiry_date', e.target.value)}
+                                  className="w-full px-2 py-1.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 text-sm"
+                                />
+                              ) : (
+                                <span className="text-sm text-gray-700">
+                                  {item.expiry_date ? new Date(item.expiry_date).toLocaleDateString('en-IN') : '-'}
+                                </span>
+                              )}
                             </td>
                             <td className="px-4 py-3 font-medium">{item.quantity}</td>
                             <td className="px-4 py-3">
@@ -945,7 +989,7 @@ const PurchaseOrdersList = () => {
                                     min="0"
                                     max={pending}
                                     value={receivingItems[item._id]?.toReceive || 0}
-                                    onChange={(e) => handleReceiveItem(item._id, e.target.value)}
+                                    onChange={(e) => handleReceiveItem(item._id, 'toReceive', e.target.value)}
                                     className="w-24 px-3 py-1.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
                                     disabled={pending === 0}
                                   />
@@ -958,6 +1002,21 @@ const PurchaseOrdersList = () => {
                               </td>
                             )}
                             <td className="px-4 py-3 font-medium">{formatCurrency(item.unit_cost)}</td>
+                            <td className="px-4 py-3 font-medium">
+                              {canReceiveStock(selectedOrder) ? (
+                                <input
+                                  type="number"
+                                  min="0"
+                                  step="0.01"
+                                  value={receivingItems[item._id]?.selling_price ?? item.selling_price ?? 0}
+                                  onChange={(e) => handleReceiveItem(item._id, 'selling_price', e.target.value)}
+                                  className="w-32 px-2 py-1.5 border border-green-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 text-sm font-semibold text-green-600"
+                                  placeholder="₹0.00"
+                                />
+                              ) : (
+                                <span className="text-green-600 font-bold">{formatCurrency(item.selling_price || 0)}</span>
+                              )}
+                            </td>
                             <td className="px-4 py-3 font-bold text-gray-800">
                               {formatCurrency(item.unit_cost * item.quantity)}
                             </td>

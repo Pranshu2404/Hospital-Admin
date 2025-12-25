@@ -7,7 +7,8 @@ import {
   FaSearch, 
   FaShoppingCart,
   FaSave,
-  FaTimes
+  FaTimes,
+  FaMinusCircle
 } from 'react-icons/fa';
 
 const CreatePurchaseOrder = () => {
@@ -220,7 +221,7 @@ const CreatePurchaseOrder = () => {
                 />
               </div>
 
-              <div>
+              {/* <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Batch Number</label>
                 <input
                   type="text"
@@ -228,10 +229,10 @@ const CreatePurchaseOrder = () => {
                   onChange={(e) => updateItem(index, 'batch_number', e.target.value)}
                   className="w-full p-2 border border-gray-300 rounded-lg"
                 />
-              </div>
+              </div> */}
 
               <div className="flex items-end gap-2">
-                <div className="flex-1">
+                {/* <div className="flex-1">
                   <label className="block text-sm font-medium text-gray-700 mb-2">Expiry Date</label>
                   <input
                     type="date"
@@ -239,13 +240,13 @@ const CreatePurchaseOrder = () => {
                     onChange={(e) => updateItem(index, 'expiry_date', e.target.value)}
                     className="w-full p-2 border border-gray-300 rounded-lg"
                   />
-                </div>
+                </div> */}
                 <button
                   type="button"
                   onClick={() => removeItem(index)}
                   className="p-2 text-red-600 hover:text-red-800"
                 >
-                  <FaMinus />
+                  <FaMinusCircle />
                 </button>
               </div>
             </div>
