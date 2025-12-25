@@ -190,7 +190,7 @@ const AddMedicine = () => {
             </select>
           </FormField>
 
-          <FormField label="Dosage Form" icon={<FaBarcode className="text-gray-400" />}>
+          {/* <FormField label="Dosage Form" icon={<FaBarcode className="text-gray-400" />}>
             <select
               key="dosage_form"
               value={formData.dosage_form}
@@ -207,7 +207,7 @@ const AddMedicine = () => {
               <option value="Inhaler">Inhaler</option>
               <option value="Other">Other</option>
             </select>
-          </FormField>
+          </FormField> */}
 
           <FormField label="Strength" icon={<FaWeight className="text-gray-400" />}>
             <input
@@ -219,51 +219,6 @@ const AddMedicine = () => {
               placeholder="e.g., 500mg, 10ml"
             />
           </FormField>
-        </div>
-
-        {/* Pricing */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <FormField label="Selling Price (₹)" icon={<FaRupeeSign className="text-gray-400" />} required>
-            <input
-              key="price_per_unit"
-              type="number"
-              required
-              step="0.01"
-              min="0"
-              value={formData.price_per_unit}
-              onChange={(e) => handleInputChange('price_per_unit', e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              placeholder="0.00"
-            />
-          </FormField>
-
-          <FormField label="Cost Price (₹)" icon={<FaRupeeSign className="text-gray-400" />}>
-            <input
-              key="cost_price"
-              type="number"
-              step="0.01"
-              min="0"
-              value={formData.cost_price}
-              onChange={(e) => handleInputChange('cost_price', e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              placeholder="0.00"
-            />
-          </FormField>
-
-          <FormField label="Tax Rate (%)" icon={<FaInfoCircle className="text-gray-400" />}>
-            <input
-              key="tax_rate"
-              type="number"
-              step="0.1"
-              min="0"
-              max="100"
-              value={formData.tax_rate}
-              onChange={(e) => handleInputChange('tax_rate', e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              placeholder="0.0"
-            />
-          </FormField>
-
           <FormField label="Minimum Stock Level" icon={<FaInfoCircle className="text-gray-400" />}>
             <input
               key="min_stock_level"
@@ -275,6 +230,52 @@ const AddMedicine = () => {
             />
           </FormField>
         </div>
+
+        {/* Pricing */}
+        {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-"> */}
+          {/* <FormField label="Selling Price (₹)" icon={<FaRupeeSign className="text-gray-400" />} required>
+            <input
+              key="price_per_unit"
+              type="number"
+              required
+              step="0.01"
+              min="0"
+              value={formData.price_per_unit}
+              onChange={(e) => handleInputChange('price_per_unit', e.target.value)}
+              className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              placeholder="0.00"
+            />
+          </FormField> */}
+
+          {/* <FormField label="Cost Price (₹)" icon={<FaRupeeSign className="text-gray-400" />}>
+            <input
+              key="cost_price"
+              type="number"
+              step="0.01"
+              min="0"
+              value={formData.cost_price}
+              onChange={(e) => handleInputChange('cost_price', e.target.value)}
+              className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              placeholder="0.00"
+            />
+          </FormField> */}
+
+          {/* <FormField label="Tax Rate (%)" icon={<FaInfoCircle className="text-gray-400" />}>
+            <input
+              key="tax_rate"
+              type="number"
+              step="0.1"
+              min="0"
+              max="100"
+              value={formData.tax_rate}
+              onChange={(e) => handleInputChange('tax_rate', e.target.value)}
+              className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              placeholder="0.0"
+            />
+          </FormField> */}
+
+          
+        {/* </div> */}
 
         {/* Location */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

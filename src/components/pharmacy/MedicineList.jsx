@@ -49,11 +49,36 @@ import {
 } from 'lucide-react';
 import { navigate } from 'wouter/use-browser-location';
 
+const MEDICINE_CATEGORIES = [
+  'Tablet',
+  'Capsule',
+  'Syrup',
+  'Injection',
+  'Cream',
+  'Ointment',
+  'Powder',
+  'Drops',
+  'Suspension',
+  'Gel',
+  'Lotion',
+  'Spray',
+  'Inhalant',
+  'Patch',
+  'Suppository'
+];
+
 const MedicineList = () => {
   const [medicines, setMedicines] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedMedicine, setSelectedMedicine] = useState(null);
+  const [showDetailCard, setShowDetailCard] = useState(false);
+  const [detailMedicine, setDetailMedicine] = useState(null);
+  const [editMode, setEditMode] = useState(false);
+  const [formState, setFormState] = useState({});
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [stockFilter, setStockFilter] = useState('');
@@ -131,6 +156,86 @@ const MedicineList = () => {
 
     return filtered;
   }, [medicines, searchTerm, categoryFilter, stockFilter, sortBy, sortOrder]);
+
+  // Open detail card. If `toEdit` true, open in edit mode.
+  const openDetail = (med, toEdit = false) => {
+    setDetailMedicine(med);
+    setFormState({
+      name: med.name || '',
+      generic_name: med.generic_name || '',
+      brand: med.brand || '',
+      category: med.category || '',
+      strength: med.strength || '',
+      description: med.description || '',
+      min_stock_level: med.min_stock_level || 10,
+      prescription_required: !!med.prescription_required,
+      location: med.location || {},
+      is_active: med.is_active,
+    });
+    setEditMode(toEdit);
+    setShowDetailCard(true);
+  };
+
+  const closeDetail = () => {
+    setShowDetailCard(false);
+    setDetailMedicine(null);
+    setEditMode(false);
+    setFormState({});
+    setDeleteTarget(null);
+    setActionLoading(false);
+    setShowDeleteConfirm(false);
+  };
+
+  const startEdit = (med) => openDetail(med, true);
+
+  const handleFormChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setFormState(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
+  };
+
+  const handleSave = async () => {
+    if (!detailMedicine) return;
+    setActionLoading(true);
+    try {
+      const res = await apiClient.put(`/medicines/${detailMedicine._id}`, formState);
+      const updated = res.data;
+      setMedicines(prev => prev.map(m => m._id === updated._id ? updated : m));
+      setDetailMedicine(updated);
+      setEditMode(false);
+    } catch (err) {
+      console.error('Update failed', err);
+      alert('Failed to update medicine.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const confirmDelete = (med) => {
+    setDeleteTarget(med);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleDelete = async () => {
+    const med = deleteTarget || detailMedicine;
+    if (!med) return;
+    setActionLoading(true);
+    try {
+      await apiClient.delete(`/medicines/${med._id}`);
+      setMedicines(prev => prev.filter(m => m._id !== med._id));
+      setShowDeleteConfirm(false);
+      closeDetail();
+    } catch (err) {
+      console.error('Delete failed', err);
+      alert('Failed to delete medicine.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const closeDeleteConfirm = () => {
+    setShowDeleteConfirm(false);
+    setDeleteTarget(null);
+  };
 
   const getStockStatus = (quantity, minStock = 10) => {
     if (quantity === 0) return { 
@@ -364,7 +469,7 @@ const MedicineList = () => {
                   <th className="px-6 py-4">Medicine Details</th>
                   <th className="px-6 py-4">Category</th>
                   <th className="px-6 py-4">Stock Level</th>
-                  <th className="px-6 py-4">Pricing</th>
+                  {/* <th className="px-6 py-4">Pricing</th> */}
                   <th className="px-6 py-4">Status</th>
                   <th className="px-6 py-4 text-right">Actions</th>
                 </tr>
@@ -410,7 +515,7 @@ const MedicineList = () => {
                           )}
                         </div>
                       </td>
-                      <td className="px-6 py-4">
+                      {/* <td className="px-6 py-4">
                         <div className="space-y-1">
                           <div className="flex items-center gap-1">
                             <FaRupeeSign className="text-slate-400 text-sm" />
@@ -423,7 +528,7 @@ const MedicineList = () => {
                             </div>
                           )}
                         </div>
-                      </td>
+                      </td> */}
                       <td className="px-6 py-4">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ring-1 ring-inset ${
                           medicine.is_active 
@@ -436,25 +541,25 @@ const MedicineList = () => {
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-2">
                           <button
-                            onClick={() => navigate(`/dashboard/pharmacy/medicine-detail/${medicine._id}`)}
+                            onClick={() => openDetail(medicine)}
                             className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                             title="View Details"
                           >
                             <Eye className="w-4 h-4" />
                           </button>
                           <button
-                            onClick={() => navigate(`/dashboard/pharmacy/edit-medicine/${medicine._id}`)}
+                            onClick={() => startEdit(medicine)}
                             className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
                             title="Edit"
                           >
                             <Edit className="w-4 h-4" />
                           </button>
-                          <button className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100 transition-opacity" title="Delete">
+                          <button onClick={() => confirmDelete(medicine)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg  group-hover:opacity-100 transition-opacity" title="Delete">
                             <Trash2 className="w-4 h-4" />
                           </button>
-                          <button className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition-colors" title="More">
+                          {/* <button className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition-colors" title="More">
                             <MoreVertical className="w-4 h-4" />
-                          </button>
+                          </button> */}
                         </div>
                       </td>
                     </tr>
@@ -465,6 +570,156 @@ const MedicineList = () => {
           </div>
         )}
       </div>
+
+      {/* Detail Card (View / Edit / Delete) */}
+      {showDetailCard && detailMedicine && (
+        <div className="fixed inset-0 z-40 flex items-start justify-center pt-12 pb-6 overflow-y-auto ">
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" onClick={closeDetail}></div>
+          <div className="relative z-50 w-full max-w-2xl mx-4 my-auto">
+            <div className="bg-white border border-slate-200">
+              {/* Header */}
+              <div className="bg-gradient-to-r from-teal-50 to-cyan-50 border-b border-slate-200 px-6 py-5 flex items-start justify-between">
+                <div>
+                  <h3 className="text-xl font-bold text-slate-800">{editMode ? '✎ Edit Medicine' : '📋 Medicine Details'}</h3>
+                  <p className="text-sm text-slate-500 mt-1 font-semibold">{detailMedicine.name}</p>
+                </div>
+                <button onClick={closeDetail} className="text-slate-400 hover:text-slate-600 text-2xl">×</button>
+              </div>
+
+              {/* Content */}
+              <div className="px-6 py-5 max-h-[60vh] overflow-y-auto">
+                {!editMode ? (
+                  <div className="space-y-4">
+                    {/* View Mode Grid */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="bg-slate-50 p-3 rounded-lg">
+                        <p className="text-xs text-slate-500 font-bold uppercase mb-1">Name</p>
+                        <p className="text-sm font-semibold text-slate-800">{detailMedicine.name}</p>
+                      </div>
+                      <div className="bg-slate-50 p-3 rounded-lg">
+                        <p className="text-xs text-slate-500 font-bold uppercase mb-1">Category</p>
+                        <p className="text-sm font-semibold text-slate-800">{detailMedicine.category || '-'}</p>
+                      </div>
+                      <div className="bg-slate-50 p-3 rounded-lg">
+                        <p className="text-xs text-slate-500 font-bold uppercase mb-1">Generic Name</p>
+                        <p className="text-sm font-semibold text-slate-800">{detailMedicine.generic_name || '-'}</p>
+                      </div>
+                      <div className="bg-slate-50 p-3 rounded-lg">
+                        <p className="text-xs text-slate-500 font-bold uppercase mb-1">Brand</p>
+                        <p className="text-sm font-semibold text-slate-800">{detailMedicine.brand || '-'}</p>
+                      </div>
+                      <div className="bg-slate-50 p-3 rounded-lg">
+                        <p className="text-xs text-slate-500 font-bold uppercase mb-1">Strength</p>
+                        <p className="text-sm font-semibold text-slate-800">{detailMedicine.strength || '-'}</p>
+                      </div>
+                      <div className="bg-slate-50 p-3 rounded-lg">
+                        <p className="text-xs text-slate-500 font-bold uppercase mb-1">Min Stock Level</p>
+                        <p className="text-sm font-semibold text-slate-800">{detailMedicine.min_stock_level ?? 10} units</p>
+                      </div>
+                    </div>
+                    {detailMedicine.description && (
+                      <div className="bg-slate-50 p-3 rounded-lg">
+                        <p className="text-xs text-slate-500 font-bold uppercase mb-1">Description</p>
+                        <p className="text-sm text-slate-700">{detailMedicine.description}</p>
+                      </div>
+                    )}
+                    <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg flex items-center gap-2">
+                      <div className="w-4 h-4 bg-blue-500 rounded-full"></div>
+                      <p className="text-sm font-semibold text-blue-700">
+                        Prescription Required: <span className="text-blue-900">{detailMedicine.prescription_required ? 'Yes' : 'No'}</span>
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {/* Edit Mode Form */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="col-span-2">
+                        <label className="text-xs text-slate-600 font-bold uppercase">Name *</label>
+                        <input name="name" value={formState.name} onChange={handleFormChange} className="mt-1 block w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent" placeholder="Medicine name" />
+                      </div>
+                      <div>
+                        <label className="text-xs text-slate-600 font-bold uppercase">Generic Name</label>
+                        <input name="generic_name" value={formState.generic_name} onChange={handleFormChange} className="mt-1 block w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent" />
+                      </div>
+                      <div>
+                        <label className="text-xs text-slate-600 font-bold uppercase">Brand</label>
+                        <input name="brand" value={formState.brand} onChange={handleFormChange} className="mt-1 block w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent" />
+                      </div>
+                      <div>
+                        <label className="text-xs text-slate-600 font-bold uppercase">Category</label>
+                        <select name="category" value={formState.category} onChange={handleFormChange} className="mt-1 block w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent">
+                          <option value="">Select Category</option>
+                          {MEDICINE_CATEGORIES.map(cat => (
+                            <option key={cat} value={cat}>{cat}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-xs text-slate-600 font-bold uppercase">Strength</label>
+                        <input name="strength" value={formState.strength} onChange={handleFormChange} className="mt-1 block w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent" placeholder="e.g., 500mg" />
+                      </div>
+                      <div>
+                        <label className="text-xs text-slate-600 font-bold uppercase">Min Stock Level</label>
+                        <input name="min_stock_level" type="number" value={formState.min_stock_level} onChange={handleFormChange} className="mt-1 block w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-xs text-slate-600 font-bold uppercase">Description</label>
+                      <textarea name="description" value={formState.description} onChange={handleFormChange} className="mt-1 block w-full px-3 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent" rows="3" />
+                    </div>
+                    <div className="flex items-center gap-3 bg-blue-50 border border-blue-200 p-3 rounded-lg">
+                      <input id="prescription_required" name="prescription_required" type="checkbox" checked={!!formState.prescription_required} onChange={handleFormChange} className="w-4 h-4 text-teal-600 border-slate-300 rounded focus:ring-teal-500 cursor-pointer" />
+                      <label htmlFor="prescription_required" className="text-sm font-semibold text-slate-700 cursor-pointer">Prescription Required</label>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="bg-slate-50 border-t border-slate-200 px-6 py-4 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  {!editMode && (
+                    <button onClick={() => setEditMode(true)} className="px-4 py-2 bg-emerald-600 text-white font-semibold rounded-lg hover:bg-emerald-700 transition-colors text-sm">✎ Edit</button>
+                  )}
+                  <button onClick={closeDetail} className="px-4 py-2 bg-slate-200 text-slate-700 font-semibold rounded-lg hover:bg-slate-300 transition-colors text-sm">Close</button>
+                </div>
+                <div className="flex items-center gap-2">
+                  {editMode && (
+                    <>
+                      <button disabled={actionLoading} onClick={handleSave} className="px-4 py-2 bg-teal-600 text-white font-semibold rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-50 text-sm">{actionLoading ? '⏳ Saving...' : '✓ Save'}</button>
+                      <button onClick={() => setEditMode(false)} className="px-4 py-2 bg-slate-200 text-slate-700 font-semibold rounded-lg hover:bg-slate-300 transition-colors text-sm">Cancel</button>
+                    </>
+                  )}
+                  <button onClick={() => confirmDelete(detailMedicine)} className="px-4 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors text-sm">🗑️ Delete</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && deleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={closeDeleteConfirm}></div>
+          <div className="relative z-50 bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-md mx-4 overflow-hidden">
+            <div className="bg-red-50 border-b border-red-200 px-6 py-5">
+              <h3 className="text-lg font-bold text-red-700">🗑️ Delete Medicine</h3>
+              <p className="text-sm text-red-600 mt-1">This action cannot be undone</p>
+            </div>
+            <div className="px-6 py-5">
+              <p className="text-slate-700">
+                Are you sure you want to delete <span className="font-bold text-slate-900">"{deleteTarget.name}"</span>? This medicine will be deactivated and removed from the inventory.
+              </p>
+            </div>
+            <div className="bg-slate-50 border-t border-slate-200 px-6 py-4 flex items-center justify-end gap-2">
+              <button onClick={closeDeleteConfirm} className="px-4 py-2 bg-slate-200 text-slate-700 font-semibold rounded-lg hover:bg-slate-300 transition-colors">Cancel</button>
+              <button disabled={actionLoading} onClick={handleDelete} className="px-4 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50">{actionLoading ? 'Deleting...' : 'Yes, Delete'}</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Pagination/Footer */}
       {sortedAndFilteredMedicines.length > 0 && (
