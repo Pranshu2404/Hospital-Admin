@@ -79,7 +79,7 @@ const CreateInvoice = () => {
 
   const fetchCustomerDetails = async (id) => {
     try {
-      const response = await apiClient.get(`/api/customers/${id}`);
+      const response = await apiClient.get(`/customers/${id}`);
       const customer = response.data.customer;
       
       setFormData(prev => ({

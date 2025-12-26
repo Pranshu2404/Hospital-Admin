@@ -36,7 +36,7 @@ const DoctorSalaryDashboard = () => {
     try {
       // This would typically come from auth context or props
       const doctorId = 'current-doctor-id'; // Replace with actual doctor ID from auth
-      const response = await apiClient.get(`/api/doctors/${doctorId}`);
+      const response = await apiClient.get(`/doctors/${doctorId}`);
       setDoctorInfo(response.data);
     } catch (err) {
       console.error('Error fetching doctor info:', err);
@@ -55,7 +55,7 @@ const DoctorSalaryDashboard = () => {
         status: filters.status !== 'all' ? filters.status : undefined
       };
 
-      const response = await apiClient.get(`/api/salaries/doctor/${doctorId}`, { params });
+      const response = await apiClient.get(`/salaries/doctor/${doctorId}`, { params });
       setSalaryRecords(response.data.salaries);
     } catch (err) {
       setError('Failed to fetch salary data.');
@@ -68,7 +68,7 @@ const DoctorSalaryDashboard = () => {
   const fetchSalaryStats = async () => {
     try {
       const doctorId = 'current-doctor-id'; // Replace with actual doctor ID from auth
-      const response = await apiClient.get(`/api/salaries/stats?doctorId=${doctorId}`);
+      const response = await apiClient.get(`/salaries/stats?doctorId=${doctorId}`);
       setStats(response.data);
     } catch (err) {
       console.error('Error fetching salary stats:', err);
@@ -122,7 +122,7 @@ const DoctorSalaryDashboard = () => {
 
   const downloadPayslip = async (salaryId, period) => {
     try {
-      const response = await apiClient.get(`/api/salaries/${salaryId}/payslip`, {
+      const response = await apiClient.get(`/salaries/${salaryId}/payslip`, {
         responseType: 'blob'
       });
       

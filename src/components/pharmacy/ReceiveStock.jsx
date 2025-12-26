@@ -33,7 +33,7 @@ const ReceiveStock = () => {
   const fetchOrderDetails = async () => {
     try {
       setLoading(true);
-      const response = await apiClient.get(`/api/orders/purchase/${id}`);
+      const response = await apiClient.get(`/orders/purchase/${id}`);
       setOrder(response.data);
       
       // Initialize received quantities

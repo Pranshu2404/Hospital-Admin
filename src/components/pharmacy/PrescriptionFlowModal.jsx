@@ -16,7 +16,7 @@
 //     setSelectedPrescription(prescription);
 //     setIsLoadingDetails(true);
 //     try {
-//       const response = await apiClient.get(`/api/prescriptions/${prescription._id}`);
+//       const response = await apiClient.get(`/prescriptions/${prescription._id}`);
 //       setDetailedItems(response.data.items || []);
 //     } catch (error) {
 //       console.error(error);
@@ -136,7 +136,7 @@ const PrescriptionFlowModal = ({ prescriptions, onClose }) => {
     setSelectedPrescription(prescription);
     setIsLoadingDetails(true);
     try {
-      const presDetailsRes = await apiClient.get(`/api/prescriptions/${prescription._id}`);
+      const presDetailsRes = await apiClient.get(`/prescriptions/${prescription._id}`);
       const presItems = presDetailsRes.data.items || [];
 
       const inventoryRes = await apiClient.get('/api/pharmacy/medicines');

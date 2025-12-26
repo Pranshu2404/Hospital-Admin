@@ -34,7 +34,7 @@ const MedicineDetail = () => {
   const fetchMedicineDetails = async () => {
     try {
       setLoading(true);
-      const response = await apiClient.get(`/api/medicines/${id}`);
+      const response = await apiClient.get(`/medicines/${id}`);
       setMedicine(response.data);
       setFormData(response.data); // Initialize form data
     } catch (err) {
