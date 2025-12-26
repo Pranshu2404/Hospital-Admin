@@ -92,19 +92,6 @@ const doctorGuideData = [
     ]
   },
   {
-    title: 'Prescription Writing',
-    icon: FaPrescription,
-    path: '/dashboard/doctor/prescriptions',
-    color: 'bg-gradient-to-br from-indigo-50 to-indigo-100 border-indigo-200',
-    iconColor: 'text-indigo-600',
-    priority: 'High',
-    content: [
-      'Create electronic prescriptions for patients with detailed medication instructions',
-      'Access prescription history and refill previous prescriptions',
-      'Send prescriptions directly to pharmacy for dispensing'
-    ]
-  },
-  {
     title: 'Patient Discharge',
     icon: FaExchangeAlt,
     path: '/dashboard/doctor/patients',
