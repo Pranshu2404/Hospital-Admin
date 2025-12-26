@@ -68,7 +68,7 @@ const doctorGuideData = [
   {
     title: 'Appointment Details',
     icon: Calendar,
-    path: '/doctor/appointments',
+    path: 'dashboard/doctor/appointments',
     color: 'bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200',
     iconColor: 'text-emerald-600',
     priority: 'High',
