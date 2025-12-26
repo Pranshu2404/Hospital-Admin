@@ -4,7 +4,8 @@ import axios from 'axios';
 import { 
   FaUser, FaClock, FaStethoscope, FaNotesMedical, 
   FaCheckCircle, FaPlus, FaTimes, FaMoneyBillWave, 
-  FaArrowLeft, FaFilePrescription, FaCloudUploadAlt, FaTrash 
+  FaArrowLeft, FaFilePrescription, FaCloudUploadAlt, FaTrash,
+  FaHistory, FaCalendarCheck, FaPrescriptionBottleAlt
 } from 'react-icons/fa';
 import Layout from '@/components/Layout';
 import { doctorSidebar } from '@/constants/sidebarItems/doctorSidebar';
@@ -24,11 +25,53 @@ const AppointmentDetails = () => {
   const [calculatingSalary, setCalculatingSalary] = useState(false);
   const [message, setMessage] = useState('');
   const [salaryInfo, setSalaryInfo] = useState(null);
+  const [pastPrescriptions, setPastPrescriptions] = useState([]);
+  const [pastAppointments, setPastAppointments] = useState([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [activeTab, setActiveTab] = useState('current'); // 'current', 'prescriptions', 'appointments'
   
+  // Frequency options with common medical abbreviations
+  const frequencyOptions = [
+    { value: 'OD', label: 'Once daily (OD)' },
+    { value: 'BD', label: 'Twice daily (BD)' },
+    { value: 'TDS', label: 'Three times daily (TDS)' },
+    { value: 'QDS', label: 'Four times daily (QDS)' },
+    { value: 'q4h', label: 'Every 4 hours' },
+    { value: 'q6h', label: 'Every 6 hours' },
+    { value: 'q8h', label: 'Every 8 hours' },
+    { value: 'q12h', label: 'Every 12 hours' },
+    { value: 'Mane', label: 'In the morning' },
+    { value: 'Nocte', label: 'At night' },
+    { value: 'q.a.m.', label: 'Every morning' },
+    { value: 'q.p.m.', label: 'Every evening' },
+    { value: 'AC', label: 'Before meals' },
+    { value: 'PC', label: 'After meals' },
+    { value: 'PRN', label: 'As needed' },
+    { value: 'SOS', label: 'When required' },
+    { value: 'Stat', label: 'Immediately' },
+    { value: 'q.o.d.', label: 'Every other day' },
+    { value: '1-0-0', label: 'Once daily (1-0-0)' },
+    { value: '1-0-1', label: 'Twice daily (1-0-1)' },
+    { value: '1-1-1', label: 'Three times daily (1-1-1)' }
+  ];
+
+  // Duration options (1-30 days)
+  const durationOptions = Array.from({ length: 30 }, (_, i) => ({
+    value: `${i + 1} days`,
+    label: `${i + 1} day${i > 0 ? 's' : ''}`
+  }));
+
   const [prescription, setPrescription] = useState({
     diagnosis: '',
     notes: '',
-    items: [{ medicine_name: '', dosage: '', duration: '', frequency: '', instructions: '', quantity: '' }],
+    items: [{
+      medicine_name: '',
+      dosage: '',
+      duration: '7 days',
+      frequency: 'BD',
+      instructions: '',
+      quantity: ''
+    }],
     prescriptionImage: null
   });
 
@@ -37,6 +80,36 @@ const AppointmentDetails = () => {
       fetchAppointment();
     }
   }, [id, state]);
+
+  useEffect(() => {
+    if (appointment?.patient_id?._id || appointment?.patient_id) {
+      fetchPatientHistory();
+    }
+  }, [appointment]);
+
+  const fetchPatientHistory = async () => {
+    const patientId = appointment.patient_id?._id || appointment.patient_id;
+    if (!patientId) return;
+
+    setLoadingHistory(true);
+    try {
+      // Fetch past prescriptions
+      const prescriptionsRes = await axios.get(
+        `${import.meta.env.VITE_BACKEND_URL}/prescriptions/patient/${patientId}?status=Completed&limit=5`
+      );
+      setPastPrescriptions(prescriptionsRes.data.prescriptions || prescriptionsRes.data || []);
+
+      // Fetch past appointments
+      const appointmentsRes = await axios.get(
+        `${import.meta.env.VITE_BACKEND_URL}/appointments/patient/${patientId}?status=Completed&limit=5`
+      );
+      setPastAppointments(appointmentsRes.data.appointments || appointmentsRes.data || []);
+    } catch (err) {
+      console.error('Error fetching patient history:', err);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
 
   const searchMedicines = (query, index) => {
     setActiveSuggestionIndex(index);
@@ -76,6 +149,60 @@ const AppointmentDetails = () => {
     return age;
   };
 
+  const calculateQuantityFromFrequency = (frequency, duration) => {
+    // Parse duration (e.g., "7 days" -> 7)
+    const durationDays = parseInt(duration) || 0;
+    if (durationDays === 0) return '';
+
+    // Define daily frequency based on common abbreviations
+    const frequencyMap = {
+      // Once daily
+      'OD': 1, 'Mane': 1, 'Nocte': 1, 'q.a.m.': 1, 'q.p.m.': 1,
+      'q.o.d.': 0.5, // Every other day = 0.5 times per day
+      'Stat': 1, // Immediate single dose
+      
+      // Multiple times daily
+      'BD': 2, '1-0-1': 2, // Twice daily
+      'TDS': 3, '1-1-1': 3, // Three times daily
+      'QDS': 4, // Four times daily
+      
+      // Hourly frequencies
+      'q4h': Math.floor(24 / 4), // 6 times daily
+      'q6h': Math.floor(24 / 6), // 4 times daily
+      'q8h': Math.floor(24 / 8), // 3 times daily
+      'q12h': Math.floor(24 / 12), // 2 times daily
+      
+      // Meal related
+      'AC': 3, // Before each meal (assuming 3 meals)
+      'PC': 3, // After each meal
+      
+      // PRN and SOS don't have fixed quantities
+      'PRN': 0,
+      'SOS': 0
+    };
+
+    // Check for pattern like "1-0-1"
+    if (/^\d+-\d+-\d+$/.test(frequency)) {
+      const parts = frequency.split('-').map(Number);
+      const dailyDoses = parts.reduce((sum, num) => sum + num, 0);
+      return durationDays * dailyDoses;
+    }
+
+    // Check if frequency is in map
+    if (frequencyMap.hasOwnProperty(frequency)) {
+      const dailyFrequency = frequencyMap[frequency];
+      return dailyFrequency > 0 ? durationDays * dailyFrequency : '';
+    }
+
+    // Try to parse numeric frequency (e.g., "2 times daily")
+    const numericMatch = frequency.match(/(\d+)\s*(?:times|time)\s*(?:daily|per day)/i);
+    if (numericMatch) {
+      return durationDays * parseInt(numericMatch[1]);
+    }
+
+    return '';
+  };
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setPrescription(prev => ({ ...prev, [name]: value }));
@@ -84,7 +211,14 @@ const AppointmentDetails = () => {
   const addMedicine = () => {
     setPrescription(prev => ({
       ...prev,
-      items: [...prev.items, { medicine_name: '', dosage: '', duration: '', frequency: '', instructions: '', quantity: '' }]
+      items: [...prev.items, { 
+        medicine_name: '', 
+        dosage: '', 
+        duration: '7 days', 
+        frequency: 'BD', 
+        instructions: '', 
+        quantity: '' 
+      }]
     }));
   };
 
@@ -112,7 +246,6 @@ const AppointmentDetails = () => {
       const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/prescriptions/upload`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-      // Set the image URL for preview and submission
       setPrescription(prev => ({ ...prev, prescriptionImage: response.data.imageUrl }));
       setMessage('Image uploaded successfully!');
     } catch (err) {
@@ -132,6 +265,18 @@ const AppointmentDetails = () => {
     const { name, value } = e.target;
     const newItems = [...prescription.items];
     newItems[index][name] = value;
+    
+    // Auto-calculate quantity when frequency or duration changes
+    if (name === 'frequency' || name === 'duration') {
+      const frequency = name === 'frequency' ? value : newItems[index].frequency;
+      const duration = name === 'duration' ? value : newItems[index].duration;
+      const calculatedQuantity = calculateQuantityFromFrequency(frequency, duration);
+      
+      if (calculatedQuantity) {
+        newItems[index].quantity = calculatedQuantity.toString();
+      }
+    }
+    
     setPrescription(prev => ({ ...prev, items: newItems }));
 
     if (name === 'medicine_name') {
@@ -171,7 +316,10 @@ const AppointmentDetails = () => {
         appointment_id: appointment._id,
         diagnosis: prescription.diagnosis,
         notes: prescription.notes,
-        items: validItems,
+        items: validItems.map(item => ({
+          ...item,
+          quantity: parseInt(item.quantity) || 0
+        })),
         prescription_image: prescription.prescriptionImage
       };
 
@@ -206,6 +354,190 @@ const AppointmentDetails = () => {
       setMessage(err.response?.data?.error || err.message || 'Error submitting prescription.');
       setSubmitting(false);
     }
+  };
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    });
+  };
+
+  const PatientHistoryTabs = () => {
+    if (!appointment?.patient_id) return null;
+
+    return (
+      <div className="mt-6 bg-white rounded-xl shadow-sm border border-slate-200">
+        {/* Tabs Header */}
+        <div className="border-b border-slate-200">
+          <nav className="flex space-x-1 px-4" aria-label="Tabs">
+            <button
+              onClick={() => setActiveTab('current')}
+              className={`px-4 py-2.5 text-sm font-medium rounded-t-lg transition-colors ${
+                activeTab === 'current'
+                  ? 'bg-teal-50 text-teal-700 border-b-2 border-teal-600'
+                  : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+              }`}
+            >
+              Current Consultation
+            </button>
+            <button
+              onClick={() => setActiveTab('prescriptions')}
+              className={`px-4 py-2.5 text-sm font-medium rounded-t-lg transition-colors flex items-center gap-2 ${
+                activeTab === 'prescriptions'
+                  ? 'bg-teal-50 text-teal-700 border-b-2 border-teal-600'
+                  : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+              }`}
+            >
+              <FaPrescriptionBottleAlt /> Past Prescriptions ({pastPrescriptions.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('appointments')}
+              className={`px-4 py-2.5 text-sm font-medium rounded-t-lg transition-colors flex items-center gap-2 ${
+                activeTab === 'appointments'
+                  ? 'bg-teal-50 text-teal-700 border-b-2 border-teal-600'
+                  : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+              }`}
+            >
+              <FaHistory /> Past Appointments ({pastAppointments.length})
+            </button>
+          </nav>
+        </div>
+
+        {/* Tabs Content */}
+        <div className="p-4">
+          {loadingHistory ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-teal-600"></div>
+              <span className="ml-2 text-slate-500">Loading history...</span>
+            </div>
+          ) : (
+            <>
+              {/* Prescriptions Tab */}
+              {activeTab === 'prescriptions' && (
+                <div className="space-y-4">
+                  {pastPrescriptions.length > 0 ? (
+                    pastPrescriptions.map((rx, idx) => (
+                      <div key={rx._id} className="border border-slate-200 rounded-lg p-4 hover:border-teal-300 transition-colors">
+                        <div className="flex justify-between items-start mb-2">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold text-slate-800">#{rx.prescription_number}</span>
+                              <span className={`px-2 py-0.5 text-xs rounded-full ${
+                                rx.status === 'Completed' ? 'bg-green-100 text-green-700' :
+                                rx.status === 'Active' ? 'bg-blue-100 text-blue-700' :
+                                'bg-slate-100 text-slate-700'
+                              }`}>
+                                {rx.status}
+                              </span>
+                            </div>
+                            <p className="text-sm text-slate-600 mt-1">{rx.diagnosis}</p>
+                          </div>
+                          <span className="text-xs text-slate-500">{formatDate(rx.issue_date)}</span>
+                        </div>
+                        
+                        {rx.doctor_id && (
+                          <div className="text-xs text-slate-500 mb-3">
+                            By Dr. {rx.doctor_id.firstName} {rx.doctor_id.lastName}
+                          </div>
+                        )}
+
+                        <div className="space-y-2">
+                          {rx.items?.slice(0, 3).map((item, i) => (
+                            <div key={i} className="text-sm text-slate-700 flex items-center gap-2">
+                              <span className="w-2 h-2 rounded-full bg-teal-500"></span>
+                              <span className="font-medium">{item.medicine_name}</span>
+                              <span className="text-slate-500">{item.dosage}</span>
+                              <span className="text-slate-500">{item.frequency}</span>
+                              <span className="text-slate-500">{item.duration}</span>
+                            </div>
+                          ))}
+                          {rx.items?.length > 3 && (
+                            <div className="text-xs text-slate-500">
+                              +{rx.items.length - 3} more medicines
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-8 text-slate-500">
+                      <FaPrescriptionBottleAlt className="mx-auto text-3xl text-slate-300 mb-2" />
+                      <p>No past prescriptions found</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Appointments Tab */}
+              {activeTab === 'appointments' && (
+                <div className="space-y-4">
+                  {pastAppointments.length > 0 ? (
+                    pastAppointments.map((apt, idx) => (
+                      <div key={apt._id} className="border border-slate-200 rounded-lg p-4 hover:border-teal-300 transition-colors">
+                        <div className="flex justify-between items-start mb-2">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold text-slate-800">
+                                {apt.appointment_type ? apt.appointment_type.charAt(0).toUpperCase() + apt.appointment_type.slice(1) : 'Consultation'}
+                              </span>
+                              <span className={`px-2 py-0.5 text-xs rounded-full ${
+                                apt.status === 'Completed' ? 'bg-green-100 text-green-700' :
+                                apt.status === 'Cancelled' ? 'bg-red-100 text-red-700' :
+                                'bg-slate-100 text-slate-700'
+                              }`}>
+                                {apt.status}
+                              </span>
+                            </div>
+                            {apt.doctor_id && (
+                              <p className="text-sm text-slate-600 mt-1">
+                                Dr. {apt.doctor_id.firstName} {apt.doctor_id.lastName}
+                              </p>
+                            )}
+                          </div>
+                          <span className="text-xs text-slate-500">
+                            {formatDate(apt.appointment_date)}
+                          </span>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-4 text-sm mt-3">
+                          <div>
+                            <span className="text-slate-500">Type:</span>
+                            <span className="ml-2 font-medium capitalize">{apt.type || 'N/A'}</span>
+                          </div>
+                          <div>
+                            <span className="text-slate-500">Priority:</span>
+                            <span className={`ml-2 px-2 py-0.5 text-xs rounded-full ${
+                              apt.priority === 'High' ? 'bg-red-100 text-red-700' :
+                              apt.priority === 'Urgent' ? 'bg-red-100 text-red-700' :
+                              'bg-green-100 text-green-700'
+                            }`}>
+                              {apt.priority || 'Normal'}
+                            </span>
+                          </div>
+                          {apt.notes && (
+                            <div className="col-span-2">
+                              <span className="text-slate-500">Notes:</span>
+                              <p className="mt-1 text-slate-700">{apt.notes}</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-8 text-slate-500">
+                      <FaHistory className="mx-auto text-3xl text-slate-300 mb-2" />
+                      <p>No past appointments found</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    );
   };
 
   if (loading) {
@@ -361,223 +693,246 @@ const AppointmentDetails = () => {
               </div>
             </div>
 
-            {/* Right Column: Prescription Form */}
-            <div className="lg:col-span-3">
-              <div className="bg-white rounded-xl shadow-sm border border-slate-200 h-full">
-                
-                {appointment.status === 'Completed' ? (
-                   <div className="flex flex-col items-center justify-center h-full min-h-[400px] text-center p-8">
-                     <div className="h-20 w-20 bg-green-50 rounded-full flex items-center justify-center mb-6">
+            {/* Right Column: Main Content */}
+            <div className="lg:col-span-3 space-y-6">
+              {activeTab === 'current' ? (
+                /* Prescription Form */
+                <div className="bg-white rounded-xl shadow-sm border border-slate-200">
+                  {appointment.status === 'Completed' ? (
+                    <div className="flex flex-col items-center justify-center h-full min-h-[400px] text-center p-8">
+                      <div className="h-20 w-20 bg-green-50 rounded-full flex items-center justify-center mb-6">
                         <FaCheckCircle className="text-4xl text-green-500" />
-                     </div>
-                     <h2 className="text-2xl font-bold text-slate-800 mb-2">Consultation Completed</h2>
-                     <p className="text-slate-500 max-w-md">The prescription has been issued and saved to the patient's record.</p>
-                     
-                     <button onClick={() => navigate('/dashboard/doctor/appointments')} className="mt-8 text-teal-600 font-medium hover:underline">
+                      </div>
+                      <h2 className="text-2xl font-bold text-slate-800 mb-2">Consultation Completed</h2>
+                      <p className="text-slate-500 max-w-md">The prescription has been issued and saved to the patient's record.</p>
+                      
+                      <button onClick={() => navigate('/dashboard/doctor/appointments')} className="mt-8 text-teal-600 font-medium hover:underline">
                         Return to Dashboard
-                     </button>
-                   </div>
-                ) : (
-                  <>
-                    {!showPrescriptionForm ? (
-                      <div className="flex flex-col items-center justify-center h-full min-h-[400px] text-center p-8">
-                         <div className="h-24 w-24 bg-slate-50 rounded-full flex items-center justify-center mb-6 border border-slate-100">
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      {!showPrescriptionForm ? (
+                        <div className="flex flex-col items-center justify-center h-full min-h-[400px] text-center p-8">
+                          <div className="h-24 w-24 bg-slate-50 rounded-full flex items-center justify-center mb-6 border border-slate-100">
                             <FaNotesMedical className="text-4xl text-slate-300" />
-                         </div>
-                         <h3 className="text-xl font-semibold text-slate-800 mb-2">Start Consultation</h3>
-                         <p className="text-slate-500 max-w-sm mb-8">Begin the diagnosis process to prescribe medication and complete this appointment.</p>
-                         <button
+                          </div>
+                          <h3 className="text-xl font-semibold text-slate-800 mb-2">Start Consultation</h3>
+                          <p className="text-slate-500 max-w-sm mb-8">Begin the diagnosis process to prescribe medication and complete this appointment.</p>
+                          <button
                             onClick={() => setShowPrescriptionForm(true)}
                             className="bg-teal-600 hover:bg-teal-700 text-white font-medium py-3 px-8 rounded-lg shadow-lg shadow-teal-600/20 transition-all transform hover:-translate-y-1"
                           >
                             Create Prescription
                           </button>
-                      </div>
-                    ) : (
-                      <form onSubmit={handleSubmitPrescription} className="flex flex-col h-full">
-                        <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                          <h3 className="font-bold text-slate-800 flex items-center">
-                            <FaFilePrescription className="mr-2 text-teal-600" /> New Prescription
-                          </h3>
                         </div>
-
-                        <div className="p-6 space-y-6 flex-grow">
-                          
-                          {/* Diagnosis Section */}
-                          <div>
-                            <label className="block text-sm font-semibold text-slate-700 mb-2">Diagnosis <span className="text-red-500">*</span></label>
-                            <input
-                              type="text"
-                              name="diagnosis"
-                              value={prescription.diagnosis}
-                              onChange={handleInputChange}
-                              className="w-full border border-slate-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none transition-all"
-                              placeholder="e.g. Acute Viral Fever"
-                              required
-                            />
+                      ) : (
+                        <form onSubmit={handleSubmitPrescription} className="flex flex-col h-full">
+                          <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                            <h3 className="font-bold text-slate-800 flex items-center">
+                              <FaFilePrescription className="mr-2 text-teal-600" /> New Prescription
+                            </h3>
                           </div>
 
-                          {/* Image Upload Section - UPDATED UI */}
-                          <div className="bg-slate-50 rounded-lg border-2 border-dashed border-slate-300 p-6 text-center hover:bg-slate-100 transition-colors">
-                            {!prescription.prescriptionImage ? (
-                              <div className="relative">
-                                <input
-                                  type="file"
-                                  accept="image/*"
-                                  onChange={handleImageUpload}
-                                  disabled={uploadingImage}
-                                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                />
-                                <div className="flex flex-col items-center">
-                                  {uploadingImage ? (
-                                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600 mb-2"></div>
-                                  ) : (
-                                    <FaCloudUploadAlt className="text-3xl text-slate-400 mb-2" />
-                                  )}
-                                  <span className="text-sm font-medium text-slate-600">
-                                    {uploadingImage ? 'Uploading...' : 'Click to upload prescription image (Optional)'}
-                                  </span>
-                                  <span className="text-xs text-slate-400 mt-1">Supports JPG, PNG</span>
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="relative group">
-                                <img 
-                                  src={prescription.prescriptionImage} 
-                                  alt="Prescription Preview" 
-                                  className="max-h-64 mx-auto rounded-lg shadow-sm border border-slate-200 object-contain"
-                                />
-                                <button 
-                                  type="button"
-                                  onClick={removeImage}
-                                  className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
-                                >
-                                  <FaTimes />
-                                </button>
-                                <p className="text-xs text-green-600 mt-2 font-medium flex items-center justify-center">
-                                  <FaCheckCircle className="mr-1" /> Image attached successfully
-                                </p>
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Medicines Section */}
-                          <div>
-                            <div className="flex justify-between items-center mb-4">
-                              <label className="text-sm font-semibold text-slate-700">Prescribed Medicines</label>
-                              <button
-                                type="button"
-                                onClick={addMedicine}
-                                className="text-teal-600 text-sm font-semibold hover:text-teal-700 flex items-center"
-                              >
-                                <FaPlus className="mr-1" /> Add Medicine
-                              </button>
+                          <div className="p-6 space-y-6 flex-grow">
+                            
+                            {/* Diagnosis Section */}
+                            <div>
+                              <label className="block text-sm font-semibold text-slate-700 mb-2">Diagnosis <span className="text-red-500">*</span></label>
+                              <input
+                                type="text"
+                                name="diagnosis"
+                                value={prescription.diagnosis}
+                                onChange={handleInputChange}
+                                className="w-full border border-slate-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none transition-all"
+                                placeholder="e.g. Acute Viral Fever"
+                                required
+                              />
                             </div>
 
-                            <div className="space-y-4">
-                              {prescription.items.map((item, index) => (
-                                <div key={index} className="bg-slate-50 rounded-lg border border-slate-200 p-4 transition-all hover:shadow-md hover:border-teal-200 group">
-                                  <div className="flex justify-between items-start mb-3">
-                                    <h4 className="text-xs font-bold text-slate-400 uppercase">Medicine #{index + 1}</h4>
-                                    {prescription.items.length > 1 && (
-                                      <button onClick={() => removeMedicine(index)} className="text-slate-400 hover:text-red-500 transition-colors">
-                                        <FaTrash size={14} />
-                                      </button>
+                            {/* Image Upload Section */}
+                            <div className="bg-slate-50 rounded-lg border-2 border-dashed border-slate-300 p-6 text-center hover:bg-slate-100 transition-colors">
+                              {!prescription.prescriptionImage ? (
+                                <div className="relative">
+                                  <input
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={handleImageUpload}
+                                    disabled={uploadingImage}
+                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                  />
+                                  <div className="flex flex-col items-center">
+                                    {uploadingImage ? (
+                                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600 mb-2"></div>
+                                    ) : (
+                                      <FaCloudUploadAlt className="text-3xl text-slate-400 mb-2" />
                                     )}
+                                    <span className="text-sm font-medium text-slate-600">
+                                      {uploadingImage ? 'Uploading...' : 'Click to upload prescription image (Optional)'}
+                                    </span>
+                                    <span className="text-xs text-slate-400 mt-1">Supports JPG, PNG</span>
                                   </div>
-                                  
-                                  <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-                                    {/* Medicine Name with Search */}
-                                    <div className="md:col-span-4 relative">
-                                      <input
-                                        type="text"
-                                        name="medicine_name"
-                                        value={item.medicine_name}
-                                        onChange={(e) => handleMedicineChange(index, e)}
-                                        className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-teal-500 outline-none"
-                                        placeholder="Medicine Name"
-                                        required
-                                      />
-                                      {/* Suggestions Dropdown */}
-                                      {activeSuggestionIndex === index && suggestions.length > 0 && (
-                                        <ul className="absolute z-50 w-full bg-white border border-slate-200 rounded-lg mt-1 max-h-48 overflow-y-auto shadow-xl">
-                                          {suggestions.map((med, i) => (
-                                            <li
-                                              key={i}
-                                              onClick={() => handleSuggestionClick(index, med)}
-                                              className="px-4 py-2 hover:bg-teal-50 cursor-pointer text-sm text-slate-700 hover:text-teal-700"
-                                            >
-                                              {med}
-                                            </li>
-                                          ))}
-                                        </ul>
+                                </div>
+                              ) : (
+                                <div className="relative group">
+                                  <img 
+                                    src={prescription.prescriptionImage} 
+                                    alt="Prescription Preview" 
+                                    className="max-h-64 mx-auto rounded-lg shadow-sm border border-slate-200 object-contain"
+                                  />
+                                  <button 
+                                    type="button"
+                                    onClick={removeImage}
+                                    className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                                  >
+                                    <FaTimes />
+                                  </button>
+                                  <p className="text-xs text-green-600 mt-2 font-medium flex items-center justify-center">
+                                    <FaCheckCircle className="mr-1" /> Image attached successfully
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Medicines Section */}
+                            <div>
+                              <div className="flex justify-between items-center mb-4">
+                                <label className="text-sm font-semibold text-slate-700">Prescribed Medicines</label>
+                                <button
+                                  type="button"
+                                  onClick={addMedicine}
+                                  className="text-teal-600 text-sm font-semibold hover:text-teal-700 flex items-center"
+                                >
+                                  <FaPlus className="mr-1" /> Add Medicine
+                                </button>
+                              </div>
+
+                              <div className="space-y-4">
+                                {prescription.items.map((item, index) => (
+                                  <div key={index} className="bg-slate-50 rounded-lg border border-slate-200 p-4 transition-all hover:shadow-md hover:border-teal-200 group">
+                                    <div className="flex justify-between items-start mb-3">
+                                      <h4 className="text-xs font-bold text-slate-400 uppercase">Medicine #{index + 1}</h4>
+                                      {prescription.items.length > 1 && (
+                                        <button onClick={() => removeMedicine(index)} className="text-slate-400 hover:text-red-500 transition-colors">
+                                          <FaTrash size={14} />
+                                        </button>
                                       )}
                                     </div>
                                     
-                                    <div className="md:col-span-3">
-                                      <input
-                                        type="text"
-                                        name="dosage"
-                                        value={item.dosage}
-                                        onChange={(e) => handleMedicineChange(index, e)}
-                                        className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-teal-500 outline-none"
-                                        placeholder="Dosage (500mg)"
-                                        required
-                                      />
-                                    </div>
-                                    <div className="md:col-span-3">
-                                      <input
-                                        type="text"
-                                        name="frequency"
-                                        value={item.frequency}
-                                        onChange={(e) => handleMedicineChange(index, e)}
-                                        className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-teal-500 outline-none"
-                                        placeholder="Freq (1-0-1)"
-                                        required
-                                      />
-                                    </div>
-                                    <div className="md:col-span-3">
-                                      <input
-                                        type="text"
-                                        name="duration"
-                                        value={item.duration}
-                                        onChange={(e) => handleMedicineChange(index, e)}
-                                        className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-teal-500 outline-none"
-                                        placeholder="Duration (5 days)"
-                                        required
-                                      />
-                                    </div>
-                                    <div className="md:col-span-2">
-                                      <input
-                                        type="text"
-                                        name="quantity"
-                                        value={item.quantity}
-                                        onChange={(e) => handleMedicineChange(index, e)}
-                                        className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-teal-500 outline-none"
-                                        placeholder="Qty"
-                                        required
-                                      />
-                                    </div>
-                                    <div className="md:col-span-12">
-                                      <input
-                                        type="text"
-                                        name="instructions"
-                                        value={item.instructions}
-                                        onChange={(e) => handleMedicineChange(index, e)}
-                                        className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-teal-500 outline-none"
-                                        placeholder="Special Instructions (e.g. After food)"
-                                      />
+                                    <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+                                      {/* Medicine Name with Search */}
+                                      <div className="md:col-span-3 relative">
+                                        <input
+                                          type="text"
+                                          name="medicine_name"
+                                          value={item.medicine_name}
+                                          onChange={(e) => handleMedicineChange(index, e)}
+                                          className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-teal-500 outline-none"
+                                          placeholder="Medicine Name"
+                                          required
+                                        />
+                                        {/* Suggestions Dropdown */}
+                                        {activeSuggestionIndex === index && suggestions.length > 0 && (
+                                          <ul className="absolute z-50 w-full bg-white border border-slate-200 rounded-lg mt-1 max-h-48 overflow-y-auto shadow-xl">
+                                            {suggestions.map((med, i) => (
+                                              <li
+                                                key={i}
+                                                onClick={() => handleSuggestionClick(index, med)}
+                                                className="px-4 py-2 hover:bg-teal-50 cursor-pointer text-sm text-slate-700 hover:text-teal-700"
+                                              >
+                                                {med}
+                                              </li>
+                                            ))}
+                                          </ul>
+                                        )}
+                                      </div>
+                                      
+                                      <div className="md:col-span-2">
+                                        <input
+                                          type="text"
+                                          name="dosage"
+                                          value={item.dosage}
+                                          onChange={(e) => handleMedicineChange(index, e)}
+                                          className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-teal-500 outline-none"
+                                          placeholder="Dosage (500mg)"
+                                          required
+                                        />
+                                      </div>
+                                      
+                                      {/* Frequency Dropdown */}
+                                      <div className="md:col-span-2">
+                                        <select
+                                          name="frequency"
+                                          value={item.frequency}
+                                          onChange={(e) => handleMedicineChange(index, e)}
+                                          className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-teal-500 outline-none bg-white"
+                                          required
+                                        >
+                                          <option value="">Frequency</option>
+                                          {frequencyOptions.map(opt => (
+                                            <option key={opt.value} value={opt.value}>
+                                              {opt.label}
+                                            </option>
+                                          ))}
+                                        </select>
+                                      </div>
+                                      
+                                      {/* Duration Dropdown */}
+                                      <div className="md:col-span-2">
+                                        <select
+                                          name="duration"
+                                          value={item.duration}
+                                          onChange={(e) => handleMedicineChange(index, e)}
+                                          className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-teal-500 outline-none bg-white"
+                                          required
+                                        >
+                                          <option value="">Duration</option>
+                                          {durationOptions.map(opt => (
+                                            <option key={opt.value} value={opt.value}>
+                                              {opt.label}
+                                            </option>
+                                          ))}
+                                        </select>
+                                      </div>
+                                      
+                                      {/* Auto-calculated Quantity */}
+                                      <div className="md:col-span-2">
+                                        <input
+                                          type="text"
+                                          name="quantity"
+                                          value={item.quantity}
+                                          onChange={(e) => handleMedicineChange(index, e)}
+                                          className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-teal-500 outline-none"
+                                          placeholder="Auto-calculated"
+                                          readOnly
+                                        />
+                                        <div className="text-xs text-slate-500 mt-1">
+                                          {item.frequency && item.duration ? 
+                                            `Based on ${item.frequency} for ${item.duration}` : 
+                                            'Set freq & duration'}
+                                        </div>
+                                      </div>
+                                      
+                                      <div className="md:col-span-12">
+                                        <input
+                                          type="text"
+                                          name="instructions"
+                                          value={item.instructions}
+                                          onChange={(e) => handleMedicineChange(index, e)}
+                                          className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-teal-500 outline-none"
+                                          placeholder="Special Instructions (e.g. After food)"
+                                        />
+                                      </div>
                                     </div>
                                   </div>
-                                </div>
-                              ))}
+                                ))}
+                              </div>
                             </div>
-                          </div>
 
-                          {/* Notes */}
-                          <div>
-                             <label className="block text-sm font-semibold text-slate-700 mb-2">Clinical Notes</label>
-                             <textarea
+                            {/* Notes */}
+                            <div>
+                              <label className="block text-sm font-semibold text-slate-700 mb-2">Clinical Notes</label>
+                              <textarea
                                 name="notes"
                                 value={prescription.notes}
                                 onChange={handleInputChange}
@@ -585,37 +940,46 @@ const AppointmentDetails = () => {
                                 rows="3"
                                 placeholder="Any additional observations..."
                               />
+                            </div>
                           </div>
-                        </div>
 
-                        {/* Footer Action Buttons */}
-                        <div className="p-6 bg-slate-50 border-t border-slate-200 flex justify-between items-center rounded-b-xl">
-                          <button
-                            type="button"
-                            onClick={() => setShowPrescriptionForm(false)}
-                            className="text-slate-500 hover:text-slate-700 font-medium px-4 py-2"
-                          >
-                            Cancel
-                          </button>
-                          <button
-                            type="submit"
-                            disabled={submitting || calculatingSalary}
-                            className="bg-teal-600 hover:bg-teal-700 text-white font-semibold py-2.5 px-6 rounded-lg shadow-md hover:shadow-lg transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center"
-                          >
-                             {submitting ? (
-                               <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div> Saving...</>
-                             ) : (
-                               <>Complete Consultation <FaCheckCircle className="ml-2" /></>
-                             )}
-                          </button>
-                        </div>
-                      </form>
-                    )}
-                  </>
-                )}
-              </div>
+                          {/* Footer Action Buttons */}
+                          <div className="p-6 bg-slate-50 border-t border-slate-200 flex justify-between items-center rounded-b-xl">
+                            <button
+                              type="button"
+                              onClick={() => setShowPrescriptionForm(false)}
+                              className="text-slate-500 hover:text-slate-700 font-medium px-4 py-2"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              type="submit"
+                              disabled={submitting || calculatingSalary}
+                              className="bg-teal-600 hover:bg-teal-700 text-white font-semibold py-2.5 px-6 rounded-lg shadow-md hover:shadow-lg transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center"
+                            >
+                              {submitting ? (
+                                <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div> Saving...</>
+                              ) : (
+                                <>Complete Consultation <FaCheckCircle className="ml-2" /></>
+                              )}
+                            </button>
+                          </div>
+                        </form>
+                      )}
+                    </>
+                  )}
+                </div>
+              ) : (
+                /* History Tabs Content */
+                <PatientHistoryTabs />
+              )}
             </div>
           </div>
+
+          {/* History Tabs (shown when current tab is active and form is visible) */}
+          {activeTab === 'current' && showPrescriptionForm && appointment.patient_id && (
+            <PatientHistoryTabs />
+          )}
         </div>
       </div>
     </Layout>
