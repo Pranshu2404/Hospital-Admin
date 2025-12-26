@@ -32,7 +32,7 @@ const adminGuideData = [
   {
     title: 'Financial Configuration',
     icon: DollarSign,
-    path: '/dashboard/admin/settings',
+    path: '/dashboard/admin/profile',
     color: 'bg-gradient-to-br from-green-50 to-green-100 border-green-200',
     iconColor: 'text-green-600',
     priority: 'High',
@@ -146,7 +146,19 @@ const adminGuideData = [
       'Manage system preferences, notifications, and integration settings'
     ]
   },
-
+  {
+    title: 'Security & Compliance',
+    icon: Shield,
+    path: '/dashboard/admin/profile',
+    color: 'bg-gradient-to-br from-red-50 to-red-100 border-red-200',
+    iconColor: 'text-red-600',
+    priority: 'High',
+    content: [
+      'Configure data privacy settings and patient confidentiality protocols',
+      'Set up audit trails, access logs, and compliance reporting',
+      'Establish backup procedures and disaster recovery plans'
+    ]
+  },
   {
     title: 'Salary Management',
     icon: DollarSign,
@@ -192,7 +204,7 @@ const doctorGuideData = [
   {
     title: 'Appointment Details',
     icon: Calendar,
-    path: '/doctor/appointments/:id',
+    path: '/doctor/appointments',
     color: 'bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200',
     iconColor: 'text-emerald-600',
     priority: 'High',
@@ -377,7 +389,7 @@ const pharmacyGuideData = [
   {
     title: 'Receive Orders',
     icon: RefreshCw,
-    path: '/dashboard/pharmacy/receive-stock/:id',
+    path: '/dashboard/pharmacy/receive-stock',
     color: 'bg-gradient-to-br from-indigo-50 to-indigo-100 border-indigo-200',
     iconColor: 'text-indigo-600',
     priority: 'High',

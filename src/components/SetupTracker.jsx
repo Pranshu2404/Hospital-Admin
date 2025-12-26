@@ -11,6 +11,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { useSetupTracker } from '../context/SetupTrackerContext';
+import { FaRobot } from 'react-icons/fa';
 
 const SetupTracker = () => {
   const {
@@ -92,7 +93,7 @@ const SetupTracker = () => {
         title="Setup Assistant"
       >
         <div className="relative">
-          <Bell className="w-6 h-6" />
+          <FaRobot className="w-8 h-8" />
           {progress < 100 && (
             <div className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-xs rounded-full flex items-center justify-center animate-pulse">
               !
@@ -119,7 +120,7 @@ const SetupTracker = () => {
         className="fixed bottom-6 right-6 z-50 p-3 bg-gradient-to-r from-teal-500 to-teal-600 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110"
         title="Setup Assistant"
       >
-        <Bell className="w-6 h-6" />
+        <FaRobot className="w-8 h-8" />
       </button>
     );
   }
