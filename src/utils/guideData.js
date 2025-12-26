@@ -304,19 +304,6 @@ const doctorGuideData = [
       'Set notification preferences, working hours, and consultation fees',
       'Manage digital signature and professional certifications'
     ]
-  },
-  {
-    title: 'Security & Access',
-    icon: Shield,
-    path: '/dashboard/doctor/security',
-    color: 'bg-gradient-to-br from-red-50 to-red-100 border-red-200',
-    iconColor: 'text-red-600',
-    priority: 'Low',
-    content: [
-      'Reset login credentials in case of access issues',
-      'Enable two-factor authentication for enhanced security',
-      'Review login history and active sessions'
-    ]
   }
 ];
 
