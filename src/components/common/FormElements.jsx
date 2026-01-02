@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 
-export const FormInput = ({ label, type = "text", value, onChange, placeholder, required = false, className = "" }) => (
+export const FormInput = ({ label, type = "text", value, onChange, placeholder, required = false, className = "", maxLength, inputMode, pattern, title }) => (
   <div className={`mb-4 ${className}`}>
     <label className="block text-sm font-medium text-gray-700 mb-2">
       {label}
@@ -12,6 +12,10 @@ export const FormInput = ({ label, type = "text", value, onChange, placeholder, 
       onChange={onChange}
       placeholder={placeholder}
       required={required}
+      maxLength={maxLength}
+      inputMode={inputMode}
+      pattern={pattern}
+      title={title}
       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
     />
   </div>
@@ -50,6 +54,18 @@ export const FormSelect = ({
 }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isOpen, setIsOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleOutside = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutside);
+    return () => document.removeEventListener('mousedown', handleOutside);
+  }, [isOpen]);
 
   const filteredOptions = options.filter((option) =>
     option.label.toLowerCase().includes(searchTerm.toLowerCase())
@@ -64,11 +80,18 @@ export const FormSelect = ({
 
       {/* Selected Value (Clickable Input) */}
       <div
-        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white cursor-pointer focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-        onClick={() => setIsOpen(!isOpen)}
+        ref={ref}
+        className="relative"
       >
-        {value ? options.find((opt) => opt.value === value)?.label : placeholder}
-      </div>
+        <div
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white cursor-pointer focus:ring-2 focus:ring-teal-500 focus:border-teal-500 flex items-center justify-between"
+          onClick={() => setIsOpen(!isOpen)}
+        >
+          <span className="text-md text-gray-700">{value ? options.find((opt) => opt.value === value)?.label : placeholder}</span>
+          <svg className={`h-4 w-4 text-gray-500 transform transition-transform ${isOpen ? 'rotate-180' : ''}`} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </div>
 
       {/* Dropdown */}
       {isOpen && (
@@ -106,6 +129,7 @@ export const FormSelect = ({
           )}
         </div>
       )}
+    </div>
     </div>
   );
 };

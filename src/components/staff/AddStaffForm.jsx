@@ -137,8 +137,11 @@
 import { useState, useEffect } from 'react';
 import { FormInput, FormSelect, Button, FormTextarea } from '../common/FormElements'; // Ensure FormTextarea is imported
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
+
 
 const AddStaffForm = () => {
+  const navigate = useNavigate();
     const getTodayDate = () => {
     const today = new Date();
     const year = today.getFullYear();
@@ -148,7 +151,8 @@ const AddStaffForm = () => {
   };
 
   const [formData, setFormData] = useState({
-    fullName: '',
+    firstName: '',
+    lastName: '',
     email: '',
     phone: '',
     role: '',
@@ -160,8 +164,8 @@ const AddStaffForm = () => {
     aadharNumber: '',
     panNumber: '',
     // password: '',
-    registrationNo: '',       // ✅ Added Registration No.
-    qualificationDetails: '', // ✅ Added Qualification Details
+    registrationNo: '',
+    qualificationDetails: '',
   });
 
   const [customRole, setCustomRole] = useState('');
@@ -192,23 +196,38 @@ const AddStaffForm = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    // Validate phone number (Indian 10-digit mobile starting with 6-9)
+    if (!/^[6-9]\d{9}$/.test(formData.phone)) {
+      alert('Please enter a valid 10-digit Indian mobile number (starts with 6-9).');
+      return;
+    }
+
     const finalData = {
       ...formData,
-      role: formData.role === 'Others' ? customRole : formData.role
+      role: formData.role === 'Others' ? customRole : formData.role,
+      fullName: `${formData.firstName || ''} ${formData.lastName || ''}`.trim(),
+      firstName: formData.firstName,
+      lastName: formData.lastName
     };
     try {
-      console.log('Submitting form data:', finalData);
-      const response = await axios.post(
-        `${import.meta.env.VITE_BACKEND_URL}/staff`,
-        finalData
-      );
-      console.log('✅ Staff added successfully:', response.data);
-      alert('Staff added successfully!');
-      window.location.reload();
-    } catch (err) {
-      console.error('❌ Error adding staff:', err.response?.data || err.message);
-      alert(err.response?.data?.error || 'Failed to add staff.');
-    }
+  console.log('Submitting form data:', finalData);
+
+  const response = await axios.post(
+    `${import.meta.env.VITE_BACKEND_URL}/staff`,
+    finalData
+  );
+
+  console.log('✅ Staff added successfully:', response.data);
+  alert('Staff added successfully!');
+
+  // ✅ Navigate to staff list page
+  navigate('/dashboard/admin/staff-list');
+
+} catch (err) {
+  console.error('❌ Error adding staff:', err.response?.data || err.message);
+  alert(err.response?.data?.error || 'Failed to add staff.');
+}
+
   };
 
   const roleOptions = [
@@ -315,10 +334,30 @@ const AddStaffForm = () => {
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-          <FormInput label="Full Name" value={formData.fullName} onChange={(e) => handleInputChange('fullName', e.target.value)} required placeholder="Enter full name" />
+          <FormInput label="First Name" value={formData.firstName} onChange={(e) => handleInputChange('firstName', e.target.value)} required placeholder="Enter first name" />
+          <FormInput label="Last Name" value={formData.lastName} onChange={(e) => handleInputChange('lastName', e.target.value)} required placeholder="Enter last name" />
           <FormInput label="Email" type="email" value={formData.email} onChange={(e) => handleInputChange('email', e.target.value)} required placeholder="Enter email" />
           {/* <FormInput label="Password" type="password" value={formData.password} onChange={(e) => handleInputChange('password', e.target.value)} required placeholder="Set a password" /> */}
-          <FormInput label="Phone" type="tel" value={formData.phone} onChange={(e) => handleInputChange('phone', e.target.value)} required placeholder="Enter phone number" />
+          <div className="space-y-1">
+            <label className="block text-xs mt-2 font-bold text-gray-700 uppercase tracking-wide ml-1">Phone <span className="text-red-500">*</span></label>
+            <input
+              type="tel"
+              name="phone"
+              placeholder="9876543210"
+              value={formData.phone}
+              onChange={(e) => {
+                let val = e.target.value.replace(/\D/g, '');
+                if (val.length > 10) val = val.slice(0, 10);
+                setFormData(prev => ({ ...prev, phone: val }));
+              }}
+              required
+              maxLength={10}
+              inputMode="numeric"
+              pattern="^[6-9]\d{9}$"
+              title="10 digit Indian mobile number starting with 6-9"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
+            />
+          </div>
           <FormSelect label="Role" value={formData.role} onChange={(e) => handleInputChange('role', e.target.value)} options={roleOptions} required />
           {formData.role === 'Others' && (
             <FormInput label="Please specify role" value={customRole} onChange={(e) => setCustomRole(e.target.value)} required placeholder="Enter custom role" />
@@ -330,9 +369,24 @@ const AddStaffForm = () => {
           <FormInput label="Registration No." value={formData.registrationNo} onChange={(e) => handleInputChange('registrationNo', e.target.value)} placeholder="Enter registration number if any" />
           
           <FormInput label="Joining Date" type="date" value={formData.joiningDate} onChange={(e) => handleInputChange('joiningDate', e.target.value)} required />
-          <FormSelect label="Gender" value={formData.gender} onChange={(e) => handleInputChange('gender', e.target.value)} options={genderOptions} required />
-          <FormInput label="Aadhar Number" value={formData.aadharNumber} onChange={(e) => handleInputChange('aadharNumber', e.target.value)} placeholder="Enter Aadhar number" maxLength={12} />
-          <FormInput label="PAN Number" value={formData.panNumber} onChange={(e) => handleInputChange('panNumber', e.target.value)} placeholder="Enter PAN number" maxLength={10} />
+          <FormSelect label="Gender" value={formData.gender} onChange={(e) => handleInputChange('gender', e.target.value)} options={genderOptions} />
+          <FormInput
+            label="Aadhar Number"
+            value={formData.aadharNumber}
+            onChange={(e) => handleInputChange('aadharNumber', e.target.value.replace(/\D/g, '').slice(0, 12))}
+            placeholder="Enter Aadhar number"
+            maxLength={12}
+            inputMode="numeric"
+            title="12 digit Aadhar number"
+          />
+          <FormInput
+            label="PAN Number"
+            value={formData.panNumber}
+            onChange={(e) => handleInputChange('panNumber', e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10))}
+            placeholder="Enter PAN number"
+            maxLength={10}
+            title="PAN format: 5 letters, 4 digits, 1 letter (e.g. ABCDE1234F)"
+          />
 
           {/* ✅ Added Qualification Details section */}
           <div className="md:col-span-2">

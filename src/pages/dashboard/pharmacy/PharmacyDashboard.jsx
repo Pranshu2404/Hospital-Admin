@@ -525,7 +525,7 @@ const PharmacyDashboard = () => {
                 <h2 className="text-lg font-bold text-slate-800">Recent Sales</h2>
                 <p className="text-slate-500 text-sm">Latest transactions</p>
               </div>
-              <Link to="/dashboard/pharmacy/sales/history" className="text-sm font-semibold text-teal-600 hover:text-teal-700 hover:bg-teal-50 px-3 py-1 rounded-lg transition-colors">
+              <Link to="/dashboard/pharmacy/history" className="text-sm font-semibold text-teal-600 hover:text-teal-700 hover:bg-teal-50 px-3 py-1 rounded-lg transition-colors">
                 View All <FaChevronRight className="inline ml-1" size={10} />
               </Link>
             </div>
