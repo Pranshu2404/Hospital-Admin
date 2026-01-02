@@ -28,7 +28,7 @@ const priorityOptions = [
   { value: 'Urgent', label: 'Urgent' }
 ];
 
-const AddIPDAppointment = ({ type = "ipd", fixedDoctorId, embedded = false, onClose = () => {} }) => {
+const AddIPDAppointment = ({ type = "ipd", fixedDoctorId, embedded = false, onClose = () => { } }) => {
   const navigate = useNavigate();
   // Helper to get local YYYY-MM-DD date string (avoids timezone-shift issues)
   const getLocalDateString = () => {
@@ -93,134 +93,134 @@ const AddIPDAppointment = ({ type = "ipd", fixedDoctorId, embedded = false, onCl
 
   // Calculate charges whenever relevant form data changes
   useEffect(() => {
-  calculateCharges();
-}, [formData.appointment_type, formData.doctorId, formData.duration, includeRegistrationFee, formData.roomId, type]);
+    calculateCharges();
+  }, [formData.appointment_type, formData.doctorId, formData.duration, includeRegistrationFee, formData.roomId, type]);
 
-const calculateCharges = () => {
-  let charges = [];
-  let total = 0;
+  const calculateCharges = () => {
+    let charges = [];
+    let total = 0;
 
-  // Check if patient is new (assuming this based on includeRegistrationFee)
-  const isNewPatient = includeRegistrationFee;
+    // Check if patient is new (assuming this based on includeRegistrationFee)
+    const isNewPatient = includeRegistrationFee;
 
-  // Add OPD charges if applicable
-  if (type === 'opd' && hospitalCharges?.opdCharges) {
-    if (isNewPatient) {
-      const regFee = hospitalCharges.opdCharges.registrationFee || 0;
-      charges.push({
-        description: "OPD Registration Fee",
-        amount: regFee
-      });
-      total += regFee;
-    }
-    
-    const consultFee = hospitalCharges.opdCharges.consultationFee || 0;
-    charges.push({
-      description: "OPD Consultation Fee",
-      amount: consultFee
-    });
-    total += consultFee;
-    
-    if (hospitalCharges.opdCharges.discountValue > 0) {
-      let discount = 0;
-      if (hospitalCharges.opdCharges.discountType === 'Percentage') {
-        discount = (total * hospitalCharges.opdCharges.discountValue) / 100;
-      } else {
-        discount = hospitalCharges.opdCharges.discountValue;
-      }
-      charges.push({
-        description: "Discount",
-        amount: -discount
-      });
-      total -= discount;
-    }
-  }
-
-  // Add IPD charges if applicable
-  if (type === 'ipd' && hospitalCharges?.ipdCharges) {
-    const admissionFee = hospitalCharges.ipdCharges.admissionFee || 0;
-    charges.push({
-      description: "Admission Fee",
-      amount: admissionFee
-    });
-    total += admissionFee;
-    
-    if (isNewPatient) {
-      const regFee = hospitalCharges.ipdCharges.registrationFee || 0;
-      charges.push({
-        description: "Registration Fee",
-        amount: regFee
-      });
-      total += regFee;
-    }
-    
-    // Add room charges if room is selected
-    if (formData.roomId) {
-      const selectedRoom = rooms.find(r => r._id === formData.roomId);
-      if (selectedRoom) {
-        const roomCharge = hospitalCharges.ipdCharges.roomCharges?.find(rc => rc.type === selectedRoom.type)?.chargePerDay || 0;
+    // Add OPD charges if applicable
+    if (type === 'opd' && hospitalCharges?.opdCharges) {
+      if (isNewPatient) {
+        const regFee = hospitalCharges.opdCharges.registrationFee || 0;
         charges.push({
-          description: `Room Charge (${selectedRoom.type})`,
-          amount: roomCharge
+          description: "OPD Registration Fee",
+          amount: regFee
         });
-        total += roomCharge;
+        total += regFee;
+      }
+
+      const consultFee = hospitalCharges.opdCharges.consultationFee || 0;
+      charges.push({
+        description: "OPD Consultation Fee",
+        amount: consultFee
+      });
+      total += consultFee;
+
+      if (hospitalCharges.opdCharges.discountValue > 0) {
+        let discount = 0;
+        if (hospitalCharges.opdCharges.discountType === 'Percentage') {
+          discount = (total * hospitalCharges.opdCharges.discountValue) / 100;
+        } else {
+          discount = hospitalCharges.opdCharges.discountValue;
+        }
+        charges.push({
+          description: "Discount",
+          amount: -discount
+        });
+        total -= discount;
       }
     }
-  }
 
-  // Add doctor fees based on employment type
-  if (doctorDetails) {
-    if (doctorDetails.type === "part-time" && doctorDetails.payPerHour) {
-      const hours = Number(formData.duration) / 60;
-      const docFee = doctorDetails.payPerHour * hours;
+    // Add IPD charges if applicable
+    if (type === 'ipd' && hospitalCharges?.ipdCharges) {
+      const admissionFee = hospitalCharges.ipdCharges.admissionFee || 0;
       charges.push({
-        description: `Doctor Fee (${hours} hr)`,
-        amount: docFee
+        description: "Admission Fee",
+        amount: admissionFee
       });
-      total += docFee;
-    } else {
-      // For full-time doctors, use appointment type-based fees
-      let consultationFee = 0;
-      
-      switch (formData.appointment_type) {
-        case 'consultation':
-          consultationFee = doctorDetails.consultationFee || 500;
-          break;
-        case 'follow-up':
-          consultationFee = doctorDetails.followUpFee || 300;
-          break;
-        case 'checkup':
-          consultationFee = doctorDetails.checkupFee || 700;
-          break;
-        case 'procedure':
-          consultationFee = doctorDetails.procedureFee || 1500;
-          break;
-        case 'surgery':
-          consultationFee = doctorDetails.surgeryConsultationFee || 2000;
-          break;
-        case 'emergency':
-          consultationFee = doctorDetails.emergencyFee || 1000;
-          break;
-        default:
-          consultationFee = 500;
+      total += admissionFee;
+
+      if (isNewPatient) {
+        const regFee = hospitalCharges.ipdCharges.registrationFee || 0;
+        charges.push({
+          description: "Registration Fee",
+          amount: regFee
+        });
+        total += regFee;
       }
-      
-      // Adjust fee based on duration for full-time doctors too
-      const durationMultiplier = parseInt(formData.duration) / 30;
-      consultationFee = Math.round(consultationFee * durationMultiplier);
-      
-      charges.push({
-        description: `${formData.appointment_type.charAt(0).toUpperCase() + formData.appointment_type.slice(1)} Fee`,
-        amount: consultationFee
-      });
-      total += consultationFee;
-    }
-  }
 
-  // Ensure total is not negative
-  setChargesSummary(charges);
-  setTotalAmount(total > 0 ? total : 0);
-};
+      // Add room charges if room is selected
+      if (formData.roomId) {
+        const selectedRoom = rooms.find(r => r._id === formData.roomId);
+        if (selectedRoom) {
+          const roomCharge = hospitalCharges.ipdCharges.roomCharges?.find(rc => rc.type === selectedRoom.type)?.chargePerDay || 0;
+          charges.push({
+            description: `Room Charge (${selectedRoom.type})`,
+            amount: roomCharge
+          });
+          total += roomCharge;
+        }
+      }
+    }
+
+    // Add doctor fees based on employment type
+    if (doctorDetails) {
+      if (doctorDetails.type === "part-time" && doctorDetails.payPerHour) {
+        const hours = Number(formData.duration) / 60;
+        const docFee = doctorDetails.payPerHour * hours;
+        charges.push({
+          description: `Doctor Fee (${hours} hr)`,
+          amount: docFee
+        });
+        total += docFee;
+      } else {
+        // For full-time doctors, use appointment type-based fees
+        let consultationFee = 0;
+
+        switch (formData.appointment_type) {
+          case 'consultation':
+            consultationFee = doctorDetails.consultationFee || 500;
+            break;
+          case 'follow-up':
+            consultationFee = doctorDetails.followUpFee || 300;
+            break;
+          case 'checkup':
+            consultationFee = doctorDetails.checkupFee || 700;
+            break;
+          case 'procedure':
+            consultationFee = doctorDetails.procedureFee || 1500;
+            break;
+          case 'surgery':
+            consultationFee = doctorDetails.surgeryConsultationFee || 2000;
+            break;
+          case 'emergency':
+            consultationFee = doctorDetails.emergencyFee || 1000;
+            break;
+          default:
+            consultationFee = 500;
+        }
+
+        // Adjust fee based on duration for full-time doctors too
+        const durationMultiplier = parseInt(formData.duration) / 30;
+        consultationFee = Math.round(consultationFee * durationMultiplier);
+
+        charges.push({
+          description: `${formData.appointment_type.charAt(0).toUpperCase() + formData.appointment_type.slice(1)} Fee`,
+          amount: consultationFee
+        });
+        total += consultationFee;
+      }
+    }
+
+    // Ensure total is not negative
+    setChargesSummary(charges);
+    setTotalAmount(total > 0 ? total : 0);
+  };
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -238,129 +238,129 @@ const calculateCharges = () => {
 
   // Fetch initial lists
   // Inside the useEffect hook on line 281
-useEffect(() => {
-  const fetchOptions = async () => {
-    try {
-      const [patientRes, departmentRes, hospitalRes] = await Promise.all([
-        axios.get(`${import.meta.env.VITE_BACKEND_URL}/patients`),
-        axios.get(`${import.meta.env.VITE_BACKEND_URL}/departments`),
-        axios.get(`${import.meta.env.VITE_BACKEND_URL}/hospitals`)
-      ]);
+  useEffect(() => {
+    const fetchOptions = async () => {
+      try {
+        const [patientRes, departmentRes, hospitalRes] = await Promise.all([
+          axios.get(`${import.meta.env.VITE_BACKEND_URL}/patients`),
+          axios.get(`${import.meta.env.VITE_BACKEND_URL}/departments`),
+          axios.get(`${import.meta.env.VITE_BACKEND_URL}/hospitals`)
+        ]);
 
-      // ✅ Add a check to ensure the response is an array
-     const patientsData = Array.isArray(patientRes.data) 
-  ? patientRes.data 
-  : Array.isArray(patientRes.data.patients) 
-    ? patientRes.data.patients 
-    : [];
+        // ✅ Add a check to ensure the response is an array
+        const patientsData = Array.isArray(patientRes.data)
+          ? patientRes.data
+          : Array.isArray(patientRes.data.patients)
+            ? patientRes.data.patients
+            : [];
 
-      
-      setPatients(patientsData);
-      setFilteredPatients(patientsData);
-      setDepartments(departmentRes.data);
-      setHospitalInfo(hospitalRes.data[0]);
 
-      // ... rest of the code
-      if (formData.department) {
+        setPatients(patientsData);
+        setFilteredPatients(patientsData);
+        setDepartments(departmentRes.data);
+        setHospitalInfo(hospitalRes.data[0]);
+
+        // ... rest of the code
+        if (formData.department) {
           const doctorRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/doctors/department/${formData.department}`);
           setDoctors(doctorRes.data);
         } else {
           setDoctors([]);
         }
-    } catch (error) {
-      console.error('Error fetching data:', error);
-    }
-  };
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      }
+    };
 
-  fetchOptions();
-}, [formData.department]);
+    fetchOptions();
+  }, [formData.department]);
 
-// Add a new useEffect hook after the existing one that fetches doctor data
-// This hook will automatically set the start_time
-useEffect(() => {
-  if (formData.doctorId && formData.date && formData.type === 'time-based') {
-    // Sort existing appointments by start time
-    const sortedAppointments = [...existingAppointments].sort(
-      (a, b) => new Date(a.startTime) - new Date(b.startTime)
-    );
+  // Add a new useEffect hook after the existing one that fetches doctor data
+  // This hook will automatically set the start_time
+  useEffect(() => {
+    if (formData.doctorId && formData.date && formData.type === 'time-based') {
+      // Sort existing appointments by start time
+      const sortedAppointments = [...existingAppointments].sort(
+        (a, b) => new Date(a.startTime) - new Date(b.startTime)
+      );
 
-    let proposedTime = null;
-    const now = new Date();
-    const today = new Date(formData.date);
-    const isToday = today.toDateString() === now.toDateString();
+      let proposedTime = null;
+      const now = new Date();
+      const today = new Date(formData.date);
+      const isToday = today.toDateString() === now.toDateString();
 
-    // Loop through the doctor's working hours
-    for (const range of doctorWorkingHours) {
-      const [startH, startM] = range.start.split(':').map(Number);
-      const [endH, endM] = range.end.split(':').map(Number);
-      let currentTime = new Date();
-      currentTime.setHours(startH, startM, 0, 0);
+      // Loop through the doctor's working hours
+      for (const range of doctorWorkingHours) {
+        const [startH, startM] = range.start.split(':').map(Number);
+        const [endH, endM] = range.end.split(':').map(Number);
+        let currentTime = new Date();
+        currentTime.setHours(startH, startM, 0, 0);
 
-      // If it's today, start searching from the current time
-      if (isToday && currentTime < now) {
-        // Round up to the nearest appointment duration increment
-        const minutesToAdd = Math.ceil(now.getMinutes() / formData.duration) * formData.duration;
-        currentTime.setMinutes(minutesToAdd, 0, 0);
-        // Ensure we don't start before the doctor's actual start time
-        if (currentTime.getHours() * 60 + currentTime.getMinutes() < startH * 60 + startM) {
+        // If it's today, start searching from the current time
+        if (isToday && currentTime < now) {
+          // Round up to the nearest appointment duration increment
+          const minutesToAdd = Math.ceil(now.getMinutes() / formData.duration) * formData.duration;
+          currentTime.setMinutes(minutesToAdd, 0, 0);
+          // Ensure we don't start before the doctor's actual start time
+          if (currentTime.getHours() * 60 + currentTime.getMinutes() < startH * 60 + startM) {
             currentTime.setHours(startH, startM, 0, 0);
+          }
         }
-      }
 
-      // Check for available slots
-      while (currentTime.getHours() * 60 + currentTime.getMinutes() < endH * 60 + endM) {
-        const proposedStart = currentTime.toTimeString().slice(0, 5);
-        const proposedEnd = calculateEndTime(proposedStart, formData.duration);
+        // Check for available slots
+        while (currentTime.getHours() * 60 + currentTime.getMinutes() < endH * 60 + endM) {
+          const proposedStart = currentTime.toTimeString().slice(0, 5);
+          const proposedEnd = calculateEndTime(proposedStart, formData.duration);
 
-        const [proposedEndH, proposedEndM] = proposedEnd.split(':').map(Number);
-        const proposedEndInMinutes = proposedEndH * 60 + proposedEndM;
+          const [proposedEndH, proposedEndM] = proposedEnd.split(':').map(Number);
+          const proposedEndInMinutes = proposedEndH * 60 + proposedEndM;
 
-        // Check if the proposed end time is within the working hours range
-        if (proposedEndInMinutes > endH * 60 + endM) {
+          // Check if the proposed end time is within the working hours range
+          if (proposedEndInMinutes > endH * 60 + endM) {
             break; // Stop if the slot would end after the working hours
+          }
+
+          // Check for conflicts with existing appointments
+          const hasConflict = sortedAppointments.some(appt => {
+            const apptStart = new Date(appt.startTime);
+            const apptEnd = new Date(appt.endTime);
+            const newStart = new Date(today);
+            newStart.setHours(currentTime.getHours(), currentTime.getMinutes());
+            const newEnd = new Date(today);
+            newEnd.setHours(proposedEndH, proposedEndM);
+
+            // Check for overlap
+            return (
+              (newStart >= apptStart && newStart < apptEnd) ||
+              (newEnd > apptStart && newEnd <= apptEnd) ||
+              (newStart <= apptStart && newEnd >= apptEnd)
+            );
+          });
+
+          // If no conflict, this is our next available slot
+          if (!hasConflict) {
+            proposedTime = proposedStart;
+            break; // Exit the while loop
+          }
+
+          // Move to the next potential slot
+          currentTime.setMinutes(currentTime.getMinutes() + parseInt(formData.duration));
         }
 
-        // Check for conflicts with existing appointments
-        const hasConflict = sortedAppointments.some(appt => {
-          const apptStart = new Date(appt.startTime);
-          const apptEnd = new Date(appt.endTime);
-          const newStart = new Date(today);
-          newStart.setHours(currentTime.getHours(), currentTime.getMinutes());
-          const newEnd = new Date(today);
-          newEnd.setHours(proposedEndH, proposedEndM);
-
-          // Check for overlap
-          return (
-            (newStart >= apptStart && newStart < apptEnd) ||
-            (newEnd > apptStart && newEnd <= apptEnd) ||
-            (newStart <= apptStart && newEnd >= apptEnd)
-          );
-        });
-
-        // If no conflict, this is our next available slot
-        if (!hasConflict) {
-          proposedTime = proposedStart;
-          break; // Exit the while loop
+        if (proposedTime) {
+          break; // Exit the for loop once a slot is found
         }
-
-        // Move to the next potential slot
-        currentTime.setMinutes(currentTime.getMinutes() + parseInt(formData.duration));
       }
 
-      if (proposedTime) {
-        break; // Exit the for loop once a slot is found
-      }
+      // Update the form state with the newly found time and track if it was auto-assigned
+      setFormData(prev => ({ ...prev, start_time: proposedTime || '' }));
+      setAutoAssignedTime(proposedTime || null);
+
+    } else if (formData.type !== 'time-based') {
+      setFormData(prev => ({ ...prev, start_time: '' }));
+      setAutoAssignedTime(null);
     }
-
-    // Update the form state with the newly found time and track if it was auto-assigned
-    setFormData(prev => ({ ...prev, start_time: proposedTime || '' }));
-    setAutoAssignedTime(proposedTime || null);
-
-  } else if (formData.type !== 'time-based') {
-    setFormData(prev => ({ ...prev, start_time: '' }));
-    setAutoAssignedTime(null);
-  }
-}, [formData.doctorId, formData.date, formData.duration, formData.type, existingAppointments, doctorWorkingHours]);
+  }, [formData.doctorId, formData.date, formData.duration, formData.type, existingAppointments, doctorWorkingHours]);
 
   // Fetch hospital charges
   useEffect(() => {
@@ -394,77 +394,77 @@ useEffect(() => {
 
   // Fetch doctor data and appointments when doctor or date changes
   useEffect(() => {
-  if (formData.doctorId && hospitalId && formData.date) {
-const fetchDoctorData = async () => {
-  try {
-    // Fetch doctor details
-    const doctorRes = await axios.get(
-      `${import.meta.env.VITE_BACKEND_URL}/doctors/${formData.doctorId}`
-    );
-    const doctorData = doctorRes.data;
-    setDoctorDetails(doctorData);
+    if (formData.doctorId && hospitalId && formData.date) {
+      const fetchDoctorData = async () => {
+        try {
+          // Fetch doctor details
+          const doctorRes = await axios.get(
+            `${import.meta.env.VITE_BACKEND_URL}/doctors/${formData.doctorId}`
+          );
+          const doctorData = doctorRes.data;
+          setDoctorDetails(doctorData);
 
-    let workingHours = doctorData.timeSlots || [];
-    let appointments = [];
-    let patients = [];
+          let workingHours = doctorData.timeSlots || [];
+          let appointments = [];
+          let patients = [];
 
-    try {
-      // Try fetching doctor's schedule for the day
-      const scheduleRes = await axios.get(
-  `${import.meta.env.VITE_BACKEND_URL}/calendar/${hospitalId}/doctor/${formData.doctorId}/${formData.date}`
-);
+          try {
+            // Try fetching doctor's schedule for the day
+            const scheduleRes = await axios.get(
+              `${import.meta.env.VITE_BACKEND_URL}/calendar/${hospitalId}/doctor/${formData.doctorId}/${formData.date}`
+            );
 
 
-      const scheduleData = scheduleRes.data;
-      console.log("Schedule Data:", scheduleData);
+            const scheduleData = scheduleRes.data;
+            console.log("Schedule Data:", scheduleData);
 
-      if (scheduleData?.workingHours?.length) {
-        workingHours = scheduleData.workingHours;
-      }
+            if (scheduleData?.workingHours?.length) {
+              workingHours = scheduleData.workingHours;
+            }
 
-      appointments = scheduleData.bookedAppointments || [];
-      if (formData.type === "number-based") {
-        patients = scheduleData.bookedPatients || [];
-      }
-    } catch (err) {
-      // If calendar entry doesn’t exist, just use defaults
-      console.warn("No schedule found for this doctor/date, falling back to default slots.");
+            appointments = scheduleData.bookedAppointments || [];
+            if (formData.type === "number-based") {
+              patients = scheduleData.bookedPatients || [];
+            }
+          } catch (err) {
+            // If calendar entry doesn’t exist, just use defaults
+            console.warn("No schedule found for this doctor/date, falling back to default slots.");
+          }
+
+          setDoctorWorkingHours(workingHours);
+          setExistingAppointments(appointments);
+          setExistingPatients(patients);
+
+        } catch (err) {
+          console.error("Failed to fetch doctor data", err);
+          setDoctorDetails(null);
+          setDoctorWorkingHours([]);
+          setExistingAppointments([]);
+          setExistingPatients([]);
+        }
+      };
+
+      fetchDoctorData();
+    } else {
+      setExistingAppointments([]);
+      setExistingPatients([]);
+      setDoctorWorkingHours([]);
     }
-
-    setDoctorWorkingHours(workingHours);
-    setExistingAppointments(appointments);
-    setExistingPatients(patients);
-
-  } catch (err) {
-    console.error("Failed to fetch doctor data", err);
-    setDoctorDetails(null);
-    setDoctorWorkingHours([]);
-    setExistingAppointments([]);
-    setExistingPatients([]);
-  }
-};
-
-    fetchDoctorData();
-  } else {
-    setExistingAppointments([]);
-    setExistingPatients([]);
-    setDoctorWorkingHours([]);
-  }
-}, [formData.doctorId, formData.date, formData.type, hospitalId]);
+  }, [formData.doctorId, formData.date, formData.type, hospitalId]);
 
   // Helper function to check if time is within any working hour range
   const isWithinWorkingHours = (time) => {
     if (!time || doctorWorkingHours.length === 0) return false;
-    
+
     const [hours, minutes] = time.split(':').map(Number);
     const timeInMinutes = hours * 60 + minutes;
-    
+
     return doctorWorkingHours.some(range => {
       const [startH, startM] = range.start.split(':').map(Number);
       const [endH, endM] = range.end.split(':').map(Number);
       const startInMinutes = startH * 60 + startM;
       const endInMinutes = endH * 60 + endM;
-      
+
       // Handle overnight shifts (end time is next day)
       if (endInMinutes <= startInMinutes) {
         return timeInMinutes >= startInMinutes || timeInMinutes <= endInMinutes;
@@ -476,16 +476,16 @@ const fetchDoctorData = async () => {
   // Helper to get min/max time for time input
   const getTimeConstraints = () => {
     if (doctorWorkingHours.length === 0) return {};
-    
+
     // Find earliest start and latest end time
     let minTime = '23:59';
     let maxTime = '00:00';
-    
+
     doctorWorkingHours.forEach(range => {
       if (range.start < minTime) minTime = range.start;
       if (range.end > maxTime) maxTime = range.end;
     });
-    
+
     return { minTime, maxTime };
   };
 
@@ -524,13 +524,13 @@ const fetchDoctorData = async () => {
     // Check against existing appointments
     for (const appt of existingAppointments) {
       if (!appt.start_time || !appt.end_time) continue;
-      
+
       const apptStartTime = new Date(appt.startTime).toTimeString().slice(0, 5);
       const apptEndTime = new Date(appt.endTime).toTimeString().slice(0, 5);
-      
+
       const [apptStartH, apptStartM] = apptStartTime.split(':').map(Number);
       const [apptEndH, apptEndM] = apptEndTime.split(':').map(Number);
-      
+
       const apptStartMin = apptStartH * 60 + apptStartM;
       const apptEndMin = apptEndH * 60 + apptEndM;
 
@@ -543,11 +543,11 @@ const fetchDoctorData = async () => {
         return false; // Slot is not available
       }
     }
-    
+
     return true; // Slot is available
   };
 
-    const genderOptions = [
+  const genderOptions = [
     { value: 'male', label: 'Male' },
     { value: 'female', label: 'Female' },
     { value: 'other', label: 'Other' }
@@ -570,25 +570,25 @@ const fetchDoctorData = async () => {
   };
 
   // 3. Function to handle QR code generation
-const handleGenerateQR = async () => {
-  if (!formData.patientId || totalAmount <= 0) {
-    alert("Please select a patient and ensure there is an amount to pay.");
-    return;
-  }
+  const handleGenerateQR = async () => {
+    if (!formData.patientId || totalAmount <= 0) {
+      alert("Please select a patient and ensure there is an amount to pay.");
+      return;
+    }
 
-  setIsLoading(true);
-  setPaymentStatus('generating');
+    setIsLoading(true);
+    setPaymentStatus('generating');
 
-  try {
-    const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/payments/create-qr-order`, {
-      amount: totalAmount,
-      patientId: formData.patientId,
-    });
+    try {
+      const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/payments/create-qr-order`, {
+        amount: totalAmount,
+        patientId: formData.patientId,
+      });
 
-    setQrData({ imageUrl: res.data.qrImageUrl, orderId: res.data.orderId });
-    setPaymentStatus('waiting');
-    setIsQrModalOpen(true); // <-- open modal only AFTER we have data
-      
+      setQrData({ imageUrl: res.data.qrImageUrl, orderId: res.data.orderId });
+      setPaymentStatus('waiting');
+      setIsQrModalOpen(true); // <-- open modal only AFTER we have data
+
       // Start polling for payment status
       const intervalId = setInterval(async () => {
         try {
@@ -596,16 +596,16 @@ const handleGenerateQR = async () => {
           if (statusRes.data.status === 'paid') {
             setPaymentStatus('paid');
             stopPolling(); // Stop checking once paid
-            
+
             // Payment successful, now schedule the appointment
             alert('Payment successful! Scheduling appointment...');
             setIsQrModalOpen(false);
-            
+
             // Pass payment details to the submit handler
-            handleSubmit(null, { 
-                isPaid: true, 
-                method: 'QR Code', 
-                transactionId: res.data.orderId 
+            handleSubmit(null, {
+              isPaid: true,
+              method: 'QR Code',
+              transactionId: res.data.orderId
             });
           }
         } catch (pollError) {
@@ -617,14 +617,14 @@ const handleGenerateQR = async () => {
       setPollingIntervalId(intervalId);
 
     } catch (err) {
-    console.error('Error generating QR code:', err);
-    alert('Failed to generate QR code.');
-  } finally {
-    setIsLoading(false);
-  }
-};
+      console.error('Error generating QR code:', err);
+      alert('Failed to generate QR code.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-const calculateDOBFromAge = (age) => {
+  const calculateDOBFromAge = (age) => {
     const today = new Date();
     const dob = new Date(today.getFullYear() - age, today.getMonth(), today.getDate());
     return dob.toISOString().split('T')[0];
@@ -637,35 +637,35 @@ const calculateDOBFromAge = (age) => {
     // If payment was made via QR, use the details passed from the polling logic
     const finalPaymentMethod = paymentInfo ? paymentInfo.method : formData.paymentMethod;
     const finalBillStatus = paymentInfo ? 'Paid' : status;
-    
+
     try {
-      
-      if(showFields){
+
+      if (showFields) {
         const patientPayload = {
-        first_name: formData2.firstName,
-        last_name: formData2.lastName,
-        email: formData2.email,
-        phone: formData2.phone,
-        gender: formData2.gender,
-        dob: calculateDOBFromAge(formData2.age),
-        blood_group: formData2.bloodGroup,
-        patient_type: "opd"
-      };
+          first_name: formData2.firstName,
+          last_name: formData2.lastName,
+          email: formData2.email,
+          phone: formData2.phone,
+          gender: formData2.gender,
+          dob: calculateDOBFromAge(formData2.age),
+          blood_group: formData2.bloodGroup,
+          patient_type: "opd"
+        };
 
-      const patientRes = await axios.post(
-        `${import.meta.env.VITE_BACKEND_URL}/patients`,
-        patientPayload
+        const patientRes = await axios.post(
+          `${import.meta.env.VITE_BACKEND_URL}/patients`,
+          patientPayload
 
-      );
-      console.log(patientRes)
-      patientId = patientRes.data._id;
+        );
+        console.log(patientRes)
+        patientId = patientRes.data._id;
       }
 
 
       if (formData.type === 'time-based') {
         const proposedEnd = calculateEndTime(formData.start_time, formData.duration);
         const isAvailable = checkTimeSlotAvailability(formData.start_time, proposedEnd);
-        
+
         if (!isAvailable) {
           alert('The selected time slot is not available. Please choose another time.');
           return;
@@ -674,7 +674,7 @@ const calculateDOBFromAge = (age) => {
 
       // Prepare appointment data
       const appointmentData = {
-        patient_id: showFields?patientId:formData.patientId,
+        patient_id: showFields ? patientId : formData.patientId,
         doctor_id: fixedDoctorId || formData.doctorId,
         hospital_id: hospitalId,
         department_id: formData.department,
@@ -694,7 +694,7 @@ const calculateDOBFromAge = (age) => {
         appointmentData.end_time = `${formData.date}T${calculateEndTime(formData.start_time, formData.duration)}:00`;
       } else {
         // For number-based, calculate serial number
-        const lastSerial = existingPatients.length > 0 
+        const lastSerial = existingPatients.length > 0
           ? Math.max(...existingPatients.map(p => p.serialNumber))
           : 0;
         appointmentData.serialNumber = lastSerial + 1;
@@ -710,7 +710,7 @@ const calculateDOBFromAge = (age) => {
 
       // ✅ Create billing with charges summary
       await axios.post(`${import.meta.env.VITE_BACKEND_URL}/billing`, {
-        patient_id: showFields?patientId:formData.patientId,
+        patient_id: showFields ? patientId : formData.patientId,
         appointment_id: appointmentId,
         total_amount: totalAmount,
         payment_method: formData.paymentMethod,
@@ -724,15 +724,15 @@ const calculateDOBFromAge = (age) => {
       const appointmentDetails = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/appointments/${appointmentId}`);
       console.log("Appointment Details for Slip:", appointmentDetails.data);
       const appt = appointmentDetails.data;
-      const enriched = { // Wrap the single object in an array for consistent state handling
-          ...appt,
-          patientName: `${appt.patient_id?.first_name || ''} ${appt.patient_id?.last_name || ''}`.trim(),
-          doctorName: `Dr. ${appt.doctor_id?.firstName || ''} ${appt.doctor_id?.lastName || ''}`.trim(),
-          departmentName: appt.department_id?.name || 'N/A',
-          date: new Date(appt.appointment_date).toLocaleDateString(),
-          time: appt.time_slot?.split(' - ')[0] || 'N/A',
-          patientId: appt.patient_id?.patientId
-      };
+      const enriched = { // Wrap the single object in an array for consistent state handling
+        ...appt,
+        patientName: `${appt.patient_id?.first_name || ''} ${appt.patient_id?.last_name || ''}`.trim(),
+        doctorName: `Dr. ${appt.doctor_id?.firstName || ''} ${appt.doctor_id?.lastName || ''}`.trim(),
+        departmentName: appt.department_id?.name || 'N/A',
+        date: new Date(appt.appointment_date).toLocaleDateString(),
+        time: appt.time_slot?.split(' - ')[0] || 'N/A',
+        patientId: appt.patient_id?.patientId
+      };
       setSubmitDetails(enriched);
 
       setSlipModal(true);
@@ -767,16 +767,16 @@ const calculateDOBFromAge = (age) => {
     // Parse as local midnight to avoid timezone shift when dateString is YYYY-MM-DD
     const date = new Date(dateString + 'T00:00:00');
     return date.toLocaleDateString('en-US', {
-      weekday: 'long', 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
     });
   };
 
   const innerContent = (
     <>
-    <div className='bg-white p-6 max-w-5xl mx-auto rounded-lg shadow-sm relative'>
+      <div className='bg-white p-6 max-w-5xl mx-auto rounded-lg shadow-sm relative'>
         {type && (
           <div className="mb-2">
             <h3 className="text-2xl font-semibold text-gray-800 capitalize">{type} Appointment</h3>
@@ -787,7 +787,7 @@ const calculateDOBFromAge = (age) => {
                 size="sm"
                 onClick={() => {
                   type.toLowerCase() === 'ipd'
-                    ? navigate('/dashboard/admin/patients/add-ipd')
+                    ? navigate('/dashboard/staff/patients/add-ipd')
                     : setShowFields(true);
                 }}
               >
@@ -801,35 +801,35 @@ const calculateDOBFromAge = (age) => {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-4">
               {/* Patient Selection */}
-              {!showFields&&(
+              {!showFields && (
                 <FormSelect
-  label="Select Patient"
-  value={formData.patientId}
-  onChange={(e) => handleInputChange('patientId', e.target.value)}
-  options={(filteredPatients || []).map(p => ({
-    value: p._id,
-    label: `${p.first_name} ${p.last_name} - ${p.phone || ''} (${p.patientId || ''})`
-  }))}
-  required
-/>
-)}
+                  label="Select Patient"
+                  value={formData.patientId}
+                  onChange={(e) => handleInputChange('patientId', e.target.value)}
+                  options={(filteredPatients || []).map(p => ({
+                    value: p._id,
+                    label: `${p.first_name} ${p.last_name} - ${p.phone || ''} (${p.patientId || ''})`
+                  }))}
+                  required
+                />
+              )}
 
-{showFields&&(
-  <div>
-<div className='border-b border-gray-400 py-4'>
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Patient Information</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-              <FormInput label="First Name" value={formData2.firstName} onChange={(e) => handleInputChange('firstName', e.target.value)} required />
-              <FormInput label="Last Name" value={formData2.lastName} onChange={(e) => handleInputChange('lastName', e.target.value)} required />
-              <FormInput label="Email" type="email" value={formData2.email} onChange={(e) => handleInputChange('email', e.target.value)} required />
-              <FormInput label="Phone Number" type="tel" value={formData2.phone} onChange={(e) => handleInputChange('phone', e.target.value)} required />
-              <FormInput label="Age" type="number" value={formData2.age} onChange={(e) => handleInputChange('age', e.target.value)} required />
-              <FormSelect label="Gender" value={formData2.gender} onChange={(e) => handleInputChange('gender', e.target.value)} options={genderOptions} required />
-              <FormSelect label="Blood Group" value={formData2.bloodGroup} onChange={(e) => handleInputChange('bloodGroup', e.target.value)} options={bloodGroupOptions} />
-            </div>
-          </div>
-          <h3 className="text-lg font-semibold text-gray-900 mt-4">Appointment Information</h3>
-          </div>)}
+              {showFields && (
+                <div>
+                  <div className='border-b border-gray-400 py-4'>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Patient Information</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      <FormInput label="First Name" value={formData2.firstName} onChange={(e) => handleInputChange('firstName', e.target.value)} required />
+                      <FormInput label="Last Name" value={formData2.lastName} onChange={(e) => handleInputChange('lastName', e.target.value)} required />
+                      <FormInput label="Email" type="email" value={formData2.email} onChange={(e) => handleInputChange('email', e.target.value)} />
+                      <FormInput label="Phone Number" type="tel" value={formData2.phone} onChange={(e) => handleInputChange('phone', e.target.value)} required />
+                      <FormInput label="Age" type="number" value={formData2.age} onChange={(e) => handleInputChange('age', e.target.value)} required />
+                      <FormSelect label="Gender" value={formData2.gender} onChange={(e) => handleInputChange('gender', e.target.value)} options={genderOptions} />
+                      <FormSelect label="Blood Group" value={formData2.bloodGroup} onChange={(e) => handleInputChange('bloodGroup', e.target.value)} options={bloodGroupOptions} />
+                    </div>
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 mt-4">Appointment Information</h3>
+                </div>)}
 
               {/* Department and Doctor Selection */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -843,7 +843,7 @@ const calculateDOBFromAge = (age) => {
                 {showErrors && errors.department && (
                   <p className="text-xs text-red-500 mt-1">{errors.department}</p>
                 )}
-                
+
                 {!fixedDoctorId && (
                   <FormSelect
                     label="Select Doctor"
@@ -855,10 +855,10 @@ const calculateDOBFromAge = (age) => {
                     }))}
                     required
                   />)}
-                  {showErrors && errors.doctorId && (
-                    <p className="text-xs text-red-500 mt-1">{errors.doctorId}</p>
-                  )}
-                
+                {showErrors && errors.doctorId && (
+                  <p className="text-xs text-red-500 mt-1">{errors.doctorId}</p>
+                )}
+
               </div>
 
               {/* Date, Type and Duration */}
@@ -871,7 +871,7 @@ const calculateDOBFromAge = (age) => {
                   required
                   min={getLocalDateString()}
                 />
-                
+
                 <FormSelect
                   label="Type"
                   value={formData.type}
@@ -879,7 +879,7 @@ const calculateDOBFromAge = (age) => {
                   options={schedulingTypeOptions}
                   required
                 />
-                
+
                 <FormSelect
                   label="Duration (min)"
                   value={formData.duration}
@@ -905,7 +905,7 @@ const calculateDOBFromAge = (age) => {
                   options={appointmentTypeOptions}
                   required
                 />
-                
+
                 <FormSelect
                   label="Priority"
                   value={formData.priority}
@@ -1073,19 +1073,19 @@ const calculateDOBFromAge = (age) => {
               {formData.doctorId && (
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <h4 className="font-medium text-lg mb-3">
-                    {formData.type === 'time-based' ? 
-                      `Schedule for ${formatDateDisplay(formData.date)}` : 
+                    {formData.type === 'time-based' ?
+                      `Schedule for ${formatDateDisplay(formData.date)}` :
                       "Patient Queue"
                     }
                   </h4>
-                  
+
                   {doctorDetails && (
                     <div className="mb-4 p-3 bg-blue-50 rounded-md">
                       <p className="text-sm font-medium">
                         Dr. {doctorDetails.firstName} {doctorDetails.lastName}
                       </p>
                       <p className="text-sm text-gray-600">
-                        {doctorDetails.isFullTime ? 'Full-time' : 'Part-time'} • 
+                        {doctorDetails.isFullTime ? 'Full-time' : 'Part-time'} •
                         {doctorDetails.specialization}
                       </p>
                     </div>
@@ -1103,19 +1103,19 @@ const calculateDOBFromAge = (age) => {
                           ))}
                         </ul>
                       </div>
-                      
+
                       {existingAppointments.length > 0 ? (
                         <div>
                           <p className="text-sm font-medium mb-2">Booked Appointments:</p>
                           <div className="space-y-2 max-h-40 overflow-y-auto">
                             {existingAppointments.map((appt, index) => {
-                              const startTime = new Date(appt.startTime).toLocaleTimeString([], { 
-                                hour: '2-digit', minute: '2-digit' 
+                              const startTime = new Date(appt.startTime).toLocaleTimeString([], {
+                                hour: '2-digit', minute: '2-digit'
                               });
-                              const endTime = new Date(appt.endTime).toLocaleTimeString([], { 
-                                hour: '2-digit', minute: '2-digit' 
+                              const endTime = new Date(appt.endTime).toLocaleTimeString([], {
+                                hour: '2-digit', minute: '2-digit'
                               });
-                              
+
                               return (
                                 <div key={index} className="bg-white p-2 rounded border text-sm">
                                   <div className="flex justify-between">
@@ -1167,46 +1167,46 @@ const calculateDOBFromAge = (age) => {
 
           {/* CORRECTED FORM ACTIONS PLACEMENT */}
           {/* At the bottom of your form, around line 1030 */}
-        <div className="flex justify-end space-x-3 pt-4 border-t mt-6">
-          
-          {/* ✅ ADD THIS NEW BUTTON FOR QR PAYMENTS */}
-          <Button 
-            variant="secondary" 
-            type="button" 
-            onClick={handleGenerateQR}
-            disabled={isLoading || !formData.patientId || totalAmount <= 0}
-          >
-            {isLoading ? 'Processing...' : 'Pay with QR Code'}
-          </Button>
-          
-          {/* This is your existing submit button, now used for non-QR payments */}
-          <Button
-            variant="primary"
-            type="submit"
-            disabled={isLoading || !isFormValid}
-            onClick={() => setShowErrors(true)}
-          >
-            {isLoading ? 'Scheduling...' : 'Schedule Appointment'}
-          </Button>
-        </div>
+          <div className="flex justify-end space-x-3 pt-4 border-t mt-6">
+
+            {/* ✅ ADD THIS NEW BUTTON FOR QR PAYMENTS */}
+            <Button
+              variant="secondary"
+              type="button"
+              onClick={handleGenerateQR}
+              disabled={isLoading || !formData.patientId || totalAmount <= 0}
+            >
+              {isLoading ? 'Processing...' : 'Pay with QR Code'}
+            </Button>
+
+            {/* This is your existing submit button, now used for non-QR payments */}
+            <Button
+              variant="primary"
+              type="submit"
+              disabled={isLoading || !isFormValid}
+              onClick={() => setShowErrors(true)}
+            >
+              {isLoading ? 'Scheduling...' : 'Schedule Appointment'}
+            </Button>
+          </div>
         </form>
       </div>
 
       {/* MODALS SHOULD BE HERE, OUTSIDE THE MAIN CONTENT DIV BUT INSIDE THE FRAGMENT */}
       {isQrModalOpen && qrData.imageUrl && (
-  <QRCodeModal
-    isOpen={isQrModalOpen}
-    onClose={() => {
-      setIsQrModalOpen(false);
-      if (pollingIntervalId) clearInterval(pollingIntervalId);
-    }}
-    qrImageUrl={qrData.imageUrl}
-    amount={totalAmount}
-    paymentStatus={paymentStatus}
-  />
-)}
+        <QRCodeModal
+          isOpen={isQrModalOpen}
+          onClose={() => {
+            setIsQrModalOpen(false);
+            if (pollingIntervalId) clearInterval(pollingIntervalId);
+          }}
+          qrImageUrl={qrData.imageUrl}
+          amount={totalAmount}
+          paymentStatus={paymentStatus}
+        />
+      )}
 
-      
+
       <AppointmentSlipModal
         isOpen={slipModal}
         onClose={() => setSlipModal(false)}
