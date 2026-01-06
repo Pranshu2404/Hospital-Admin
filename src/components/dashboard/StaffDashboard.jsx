@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Users, Bed, User as UserIcon, BarChart as BarChartIcon, 
-  LineChart as LineChartIcon, ArrowUp, ArrowDown, Clock, 
-  X, ChevronDown, Edit, Save, Search, Filter, Calendar as CalendarIcon 
+import {
+    Users, Bed, User as UserIcon, BarChart as BarChartIcon,
+    LineChart as LineChartIcon, ArrowUp, ArrowDown, Clock,
+    X, ChevronDown, Edit, Save, Search, Filter, Calendar as CalendarIcon
 } from 'lucide-react';
-import { 
-  Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
-  Legend, Line, LineChart, BarChart, Area, AreaChart 
+import {
+    Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+    Legend, Line, LineChart, BarChart, Area, AreaChart
 } from 'recharts';
 import { Calendar as BigCalendar, momentLocalizer } from 'react-big-calendar';
 import moment from 'moment';
@@ -15,6 +15,7 @@ import Layout from '../Layout';
 import { staffSidebar } from '@/constants/sidebarItems/staffSidebar';
 import AppointmentSlipModal from '@/components/appointments/AppointmentSlipModal';
 import { format, subDays, parseISO, subMonths, subYears, isSameDay } from 'date-fns';
+import { FaMoneyBill, FaUser } from 'react-icons/fa';
 
 const localizer = momentLocalizer(moment);
 
@@ -35,25 +36,50 @@ const calendarStyles = `
 
 // --- Reusable UI Components --- //
 
-const StatCard = ({ title, value, icon, color, trend }) => (
-    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between h-full transition-all hover:shadow-md hover:border-slate-200">
-        <div className="flex justify-between items-start mb-4">
-            <div className={`p-3 rounded-xl ${color.bg} ${color.text}`}>
-                {React.cloneElement(icon, { size: 24 })}
+const StatCard = ({ title, value, icon, color }) => (
+    <div
+        className="
+      relative bg-white
+      p-4 rounded-xl
+      border border-slate-100
+      shadow-sm
+      transition-all duration-300
+      hover:shadow-lg hover:-translate-y-0.5
+      cursor-pointer group
+    "
+    >
+        {/* Top gradient accent */}
+        <div className={`absolute inset-x-0 top-0 h-1 rounded-t-xl ${color.bg}`} />
+
+        <div className="flex items-center justify-between">
+            {/* Title */}
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                {title}
+            </p>
+
+            {/* Icon */}
+            <div
+                className={`
+          flex items-center justify-center
+          w-9 h-9 rounded-lg
+          ${color.bg} ${color.text}
+          transition-transform duration-300
+          group-hover:scale-110
+        `}
+            >
+                {React.cloneElement(icon, { size: 18 })}
             </div>
-            {trend !== undefined && (
-                <span className={`flex items-center text-xs font-medium px-2 py-1 rounded-full ${trend > 0 ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
-                    {trend > 0 ? <ArrowUp size={12} className="mr-1" /> : <ArrowDown size={12} className="mr-1" />}
-                    {Math.abs(trend)}%
-                </span>
-            )}
         </div>
-        <div>
-            <h3 className="text-3xl font-bold text-slate-800 mb-1">{value}</h3>
-            <p className="text-sm font-medium text-slate-500">{title}</p>
+
+        {/* Value */}
+        <div className="mt-3 flex items-end justify-between">
+            <h3 className="text-2xl font-bold text-slate-800 leading-none">
+                {value}
+            </h3>
         </div>
     </div>
 );
+
 
 // --- Chart Components --- //
 
@@ -80,7 +106,7 @@ const StaffDistributionChart = ({ staff, departments }) => {
                         <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#f1f5f9" />
                         <XAxis type="number" hide />
                         <YAxis dataKey="name" type="category" width={100} tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} />
-                        <Tooltip 
+                        <Tooltip
                             cursor={{ fill: '#f8fafc' }}
                             contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                         />
@@ -160,23 +186,22 @@ const PatientRegistrationChart = ({ patients }) => {
                         <button
                             key={range}
                             onClick={() => setTimeRange(range)}
-                            className={`px-2 py-1.5 text-xs font-semibold rounded-md capitalize transition-all ${
-                                timeRange === range ? 'bg-white text-teal-700 shadow-sm border border-slate-100' : 'text-slate-500 hover:text-slate-700'
-                            }`}
+                            className={`px-2 py-1.5 text-xs font-semibold rounded-md capitalize transition-all ${timeRange === range ? 'bg-white text-teal-700 shadow-sm border border-slate-100' : 'text-slate-500 hover:text-slate-700'
+                                }`}
                         >
                             {range}
                         </button>
                     ))}
                 </div>
             </div>
-            
+
             <div className="h-[250px] w-full">
                 <ResponsiveContainer width="100%" height="80%">
                     <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                         <defs>
                             <linearGradient id="colorPatients" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor="#0d9488" stopOpacity={0.2}/>
-                                <stop offset="95%" stopColor="#0d9488" stopOpacity={0}/>
+                                <stop offset="5%" stopColor="#0d9488" stopOpacity={0.2} />
+                                <stop offset="95%" stopColor="#0d9488" stopOpacity={0} />
                             </linearGradient>
                         </defs>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
@@ -196,14 +221,14 @@ const PatientRegistrationChart = ({ patients }) => {
 const RecentAppointments = ({ appointments }) => {
     // Helper to extract appointment details
     const getApptDetails = (appt) => {
-        const patientName = appt.patient_id?.first_name 
-            ? `${appt.patient_id.first_name} ${appt.patient_id.last_name}` 
+        const patientName = appt.patient_id?.first_name
+            ? `${appt.patient_id.first_name} ${appt.patient_id.last_name}`
             : 'Unknown Patient';
         const doctorName = appt.doctor_id?.firstName ? `Dr. ${appt.doctor_id.firstName}` : 'Doctor';
-        const time = appt.start_time 
-            ? format(parseISO(appt.start_time), 'h:mm a') 
+        const time = appt.start_time
+            ? format(parseISO(appt.start_time), 'h:mm a')
             : (appt.time_slot || 'Time N/A');
-        
+
         return { patientName, doctorName, time, type: appt.type || 'Visit', status: appt.status || 'Scheduled' };
     };
 
@@ -225,7 +250,7 @@ const RecentAppointments = ({ appointments }) => {
                     <Clock size={20} />
                 </div>
             </div>
-            
+
             <div className="space-y-4 overflow-y-auto flex-1 max-h-[400px] pr-2 custom-scrollbar">
                 {appointments.length > 0 ? appointments.slice(0, 6).map((appt) => {
                     const { patientName, doctorName, time, type, status } = getApptDetails(appt);
@@ -259,11 +284,11 @@ const RecentAppointments = ({ appointments }) => {
 
 const PatientList = ({ patients, onPatientClick }) => {
     const [searchTerm, setSearchTerm] = useState('');
-    
-    const filteredPatients = patients.filter(p => 
-        (p.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-         p.last_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-         p.phone?.includes(searchTerm))
+
+    const filteredPatients = patients.filter(p =>
+    (p.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        p.last_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        p.phone?.includes(searchTerm))
     );
 
     return (
@@ -281,9 +306,9 @@ const PatientList = ({ patients, onPatientClick }) => {
             {/* Search Bar */}
             <div className="relative mb-4">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                <input 
-                    type="text" 
-                    placeholder="Search by name or phone..." 
+                <input
+                    type="text"
+                    placeholder="Search by name or phone..."
                     className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/50"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
@@ -337,7 +362,7 @@ const PatientDetailModal = ({ patient, onClose, onSave }) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
     };
-    
+
     const handleSave = async () => {
         setIsSaving(true);
         await onSave(formData);
@@ -429,6 +454,7 @@ const StaffDashboard = () => {
     const [staff, setStaff] = useState([]);
     const [patients, setPatients] = useState([]);
     const [departments, setDepartments] = useState([]);
+    const [doctors, setDoctors] = useState([]);
     const [appointments, setAppointments] = useState([]);
     const [selectedPatient, setSelectedPatient] = useState(null);
     const [calendarEvents, setCalendarEvents] = useState([]);
@@ -439,25 +465,63 @@ const StaffDashboard = () => {
     const [hospitalInfo, setHospitalInfo] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [invoices, setInvoices] = useState([]);
+    const [todayCollection, setTodayCollection] = useState(0);
+    const [totalCollection, setTotalCollection] = useState(0);
+
 
     // Fetch Data
     useEffect(() => {
         async function fetchData() {
             setLoading(true);
             try {
-                const [staffRes, patientRes, deptRes, apptRes, hospitalRes] = await Promise.all([
+                const [staffRes, patientRes, deptRes, apptRes, hospitalRes, doctorRes, invoiceRes] = await Promise.all([
                     fetch(`${import.meta.env.VITE_BACKEND_URL}/staff`),
                     fetch(`${import.meta.env.VITE_BACKEND_URL}/patients`),
                     fetch(`${import.meta.env.VITE_BACKEND_URL}/departments`),
                     fetch(`${import.meta.env.VITE_BACKEND_URL}/appointments`),
                     fetch(`${import.meta.env.VITE_BACKEND_URL}/hospitals`),
+                    fetch(`${import.meta.env.VITE_BACKEND_URL}/doctors`),
+                    fetch(`${import.meta.env.VITE_BACKEND_URL}/invoices`),
                 ]);
 
-                if (!staffRes.ok || !patientRes.ok || !deptRes.ok) throw new Error('API Error');
+                if (!staffRes.ok || !patientRes.ok || !deptRes.ok || !doctorRes.ok) throw new Error('API Error');
 
                 const pData = await patientRes.json();
                 const aData = await apptRes.json();
                 const hData = await hospitalRes.json();
+                const doctorsData = await doctorRes.json();
+                const invoicesData = await invoiceRes.json();
+                const invoicesArray = Array.isArray(invoicesData)
+                    ? invoicesData
+                    : invoicesData.invoices || invoicesData.data || [];
+
+                setInvoices(invoicesArray);
+
+                // ---- TODAY'S COLLECTION (Paid invoices only) ----
+                const today = new Date().toDateString();
+
+                const todayTotal = invoicesArray
+                    .filter(inv =>
+                        inv.issue_date &&
+                        new Date(inv.issue_date).toDateString() === today &&
+                        inv.status === 'Paid'
+                    )
+                    .reduce((sum, inv) => sum + Number(inv.amount_paid || 0), 0);
+
+                setTodayCollection(todayTotal);
+
+                // ---- TOTAL REGISTERED COLLECTION ----
+                const totalAmount = invoicesArray
+                    .filter(inv => inv.status === 'Paid')
+                    .reduce((sum, inv) => sum + Number(inv.amount_paid || 0), 0);
+
+                setTotalCollection(totalAmount);
+
+
+
+                setDoctors(doctorsData || []);
+
 
                 setStaff(await staffRes.json());
                 setPatients(pData.patients || []);
@@ -469,8 +533,8 @@ const StaffDashboard = () => {
                 const events = aData.map(appt => {
                     const start = appt.start_time ? new Date(appt.start_time) : new Date(appt.appointment_date);
                     // Default duration 30 mins if not specified
-                    const end = appt.end_time ? new Date(appt.end_time) : new Date(start.getTime() + 30*60000);
-                    
+                    const end = appt.end_time ? new Date(appt.end_time) : new Date(start.getTime() + 30 * 60000);
+
                     return {
                         title: `${appt.patient_id?.first_name || 'Patient'} (${appt.type})`,
                         start,
@@ -533,10 +597,10 @@ const StaffDashboard = () => {
         <Layout sidebarItems={staffSidebar} section="Staff">
             <style>{calendarStyles}</style>
             <PatientDetailModal patient={selectedPatient} onClose={() => setSelectedPatient(null)} onSave={handleSavePatient} />
-            
+
             <div className="bg-slate-50/50 min-h-screen p-2 font-sans">
                 <div className="max-w-[1600px] mx-auto space-y-6">
-                    
+
                     {/* Header */}
                     <div className="flex flex-col md:flex-row md:items-center justify-between">
                         <div>
@@ -550,43 +614,47 @@ const StaffDashboard = () => {
                     </div>
 
                     {/* Stats Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <StatCard 
-                            title="Total Staff" 
-                            value={staff.length} 
-                            icon={<Users />} 
-                            color={{ bg: 'bg-blue-50', text: 'text-blue-600' }}
-                            trend={2.5}
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                        <StatCard
+                            title="Registered Patients"
+                            value={patients.length}
+                            icon={<UserIcon />}
+                            color={{ bg: 'bg-teal-50', text: 'text-teal-600' }}
+
                         />
-                        <StatCard 
-                            title="Registered Patients" 
-                            value={patients.length} 
-                            icon={<UserIcon />} 
-                            color={{ bg: 'bg-teal-50', text: 'text-teal-600' }} 
-                            trend={12}
-                        />
-                        <StatCard 
-                            title="Active Departments" 
-                            value={departments.length} 
-                            icon={<Bed />} 
+                        <StatCard
+                            title="Active Doctors"
+                            value={doctors.length}
+                            icon={<FaUser />}
                             color={{ bg: 'bg-indigo-50', text: 'text-indigo-600' }}
-                            trend={0}
+                        />
+                        <StatCard
+                            title="Today's Registration Collection"
+                            value={`₹${todayCollection}`}
+                            icon={<FaMoneyBill />}
+                            color={{ bg: 'bg-blue-50', text: 'text-blue-600' }}
+                        />
+                        <StatCard
+                            title="Total Registration Collection"
+                            value={`₹${totalCollection}`}
+                            icon={<FaMoneyBill />}
+                            color={{ bg: 'bg-emerald-50', text: 'text-emerald-600' }}
                         />
                     </div>
 
                     {/* Main Content Grid */}
                     <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-                        
+
                         {/* Left Column (Charts & Calendar) */}
                         <div className="xl:col-span-2 space-y-6">
                             {/* Charts Row */}
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <div className="grid grid-cols-1 gap-6">
                                 <div className="h-[350px]">
                                     <PatientRegistrationChart patients={patients} />
                                 </div>
-                                <div className="h-[350px]">
+                                {/* <div className="h-[350px]">
                                     <StaffDistributionChart staff={staff} departments={departments} />
-                                </div>
+                                </div> */}
                             </div>
 
                             {/* Calendar Section - NOW RESTORED */}
@@ -594,7 +662,7 @@ const StaffDashboard = () => {
                                 <div className="flex justify-between items-center mb-6">
                                     <h3 className="font-bold text-lg text-slate-800">Professional Calendar</h3>
                                     <div className="flex gap-2">
-                                        
+
                                     </div>
                                 </div>
                                 <div className="h-[500px]">

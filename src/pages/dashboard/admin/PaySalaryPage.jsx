@@ -47,7 +47,7 @@ const PaySalaryPage = () => {
       const params = { ...filters };
       if (params.doctorId === 'all') delete params.doctorId;
 
-      const response = await apiClient.get('/api/salaries/pending', { params });
+      const response = await apiClient.get('/salaries/pending', { params });
       setSalaries(response.data.salaries);
       setTotals(response.data.totals);
       setSelectedSalaries([]); // Clear selection on new data load
@@ -63,10 +63,11 @@ const PaySalaryPage = () => {
   const fetchDoctors = async () => {
     try {
       // Assuming there's an API endpoint to get a list of doctors
-      const response = await apiClient.get('/api/doctors');
-      setDoctors(response.data.doctors);
+      const response = await apiClient.get('/doctors');
+      setDoctors(response.data.doctors || []);
     } catch (err) {
       console.error('Error fetching doctors:', err);
+      setDoctors([]); // Ensure doctors is always an array
     }
   };
 
@@ -102,7 +103,7 @@ const PaySalaryPage = () => {
 
     setIsPaying(true);
     try {
-      const response = await apiClient.post('/api/salaries/bulk-pay', {
+      const response = await apiClient.post('/salaries/bulk-pay', {
         salaryIds: selectedSalaries,
         payment_method: paymentDetails.paymentMethod,
         notes: paymentDetails.notes

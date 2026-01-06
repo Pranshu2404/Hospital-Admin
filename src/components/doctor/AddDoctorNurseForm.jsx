@@ -123,6 +123,17 @@ const AddDoctorNurseForm = () => {
     e.preventDefault();
     setIsLoading(true);
     try {
+      // Validate phone number (Indian 10-digit mobile starting with 6-9)
+      if (formData.phone && !/^[6-9]\d{9}$/.test(formData.phone)) {
+        alert('Please enter a valid 10-digit Indian mobile number for Phone (starts with 6-9).');
+        setIsLoading(false);
+        return;
+      }
+      if (formData.emergencyPhone && !/^[6-9]\d{9}$/.test(formData.emergencyPhone)) {
+        alert('Please enter a valid 10-digit Indian mobile number for Emergency Phone (starts with 6-9).');
+        setIsLoading(false);
+        return;
+      }
       const submissionData = {
         ...formData,
         workingDaysPerWeek: formData.isFullTime ? [] : formData.workingDaysPerWeek,
@@ -198,7 +209,7 @@ const AddDoctorNurseForm = () => {
             <div className="flex justify-between items-end mb-8">
                 <div>
                     <h2 className="text-3xl font-bold text-slate-900 tracking-tight">Register New Doctor</h2>
-                    <p className="text-slate-500 text-sm mt-1">Complete the wizard to onboard a new medical professional.</p>
+                    <p className="text-slate-500 text-sm mt-1">Complete the details to onboard a new medical professional.</p>
                 </div>
             </div>
             <StepIndicator />
@@ -220,7 +231,7 @@ const AddDoctorNurseForm = () => {
                             <FormInput label="Password" type="password" value={formData.password} onChange={(e) => handleInputChange('password', e.target.value)} required placeholder="••••••••" />
                             <FormInput label="Date of Birth" type="date" value={formData.dateOfBirth} onChange={(e) => handleInputChange('dateOfBirth', e.target.value)} required />
                             
-                            <FormSelect label="Gender" value={formData.gender} onChange={(e) => handleInputChange('gender', e.target.value)} options={[{value:'male',label:'Male'},{value:'female',label:'Female'},{value:'other',label:'Other'}]} required />
+                            <FormSelect label="Gender" value={formData.gender} onChange={(e) => handleInputChange('gender', e.target.value)} options={[{value:'male',label:'Male'},{value:'female',label:'Female'},{value:'other',label:'Other'}]} />
                             <FormInput label="Aadhar Number" value={formData.aadharNumber} onChange={(e) => handleInputChange('aadharNumber', e.target.value.replace(/[^0-9]/g, '').slice(0,12))} maxLength={12} placeholder="12-digit UID" />
                         </div>
 

@@ -40,7 +40,7 @@ const RevenueStats = () => {
       const baseUrl = import.meta.env.VITE_BACKEND_URL;
       
       // Fetch overview data
-      const overviewResponse = await axios.get(`${baseUrl}/api/revenue`, {
+      const overviewResponse = await axios.get(`${baseUrl}/revenue`, {
         params: {
           startDate: filters.startDate,
           endDate: filters.endDate
@@ -49,14 +49,14 @@ const RevenueStats = () => {
       setRevenueData(overviewResponse.data);
 
       // Fetch daily report
-      const dailyResponse = await axios.get(`${baseUrl}/api/revenue/daily`, {
+      const dailyResponse = await axios.get(`${baseUrl}/revenue/daily`, {
         params: { date: filters.startDate }
       });
       setDailyRevenue(dailyResponse.data);
       console.log(dailyResponse.data)
 
       // Fetch monthly report
-      const monthlyResponse = await axios.get(`${baseUrl}/api/revenue/monthly`, {
+      const monthlyResponse = await axios.get(`${baseUrl}/revenue/monthly`, {
         params: { 
           year: filters.year,
           month: filters.month

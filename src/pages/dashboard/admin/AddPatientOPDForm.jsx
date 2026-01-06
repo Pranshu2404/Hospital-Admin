@@ -76,6 +76,11 @@ const AddPatientOPDForm = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    // Validate phone number (Indian 10-digit mobile starting with 6-9)
+    if (!/^[6-9]\d{9}$/.test(formData.phone)) {
+      alert('Please enter a valid 10-digit Indian mobile number for Phone (starts with 6-9).');
+      return;
+    }
     try {
       const patientPayload = {
         first_name: formData.firstName,
@@ -172,8 +177,18 @@ console.log('Sending this data to the backend:', appointmentPayload);
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormInput label="First Name" value={formData.firstName} onChange={(e) => handleInputChange('firstName', e.target.value)} required />
               <FormInput label="Last Name" value={formData.lastName} onChange={(e) => handleInputChange('lastName', e.target.value)} required />
-              <FormInput label="Email" type="email" value={formData.email} onChange={(e) => handleInputChange('email', e.target.value)} required />
-              <FormInput label="Phone Number" type="tel" value={formData.phone} onChange={(e) => handleInputChange('phone', e.target.value)} required />
+              <FormInput label="Email" type="email" value={formData.email} onChange={(e) => handleInputChange('email', e.target.value)} />
+              <FormInput
+                label="Phone Number"
+                type="tel"
+                value={formData.phone}
+                onChange={(e) => handleInputChange('phone', e.target.value.replace(/\D/g, '').slice(0, 10))}
+                required
+                maxLength={10}
+                inputMode="numeric"
+                pattern="^[6-9]\d{9}$"
+                title="10 digit Indian mobile number starting with 6-9"
+              />
               <FormInput label="Age" type="number" value={formData.age} onChange={(e) => handleInputChange('age', e.target.value)} required />
               <FormSelect label="Gender" value={formData.gender} onChange={(e) => handleInputChange('gender', e.target.value)} options={genderOptions} required />
               <FormSelect label="Blood Group" value={formData.bloodGroup} onChange={(e) => handleInputChange('bloodGroup', e.target.value)} options={bloodGroupOptions} />

@@ -352,15 +352,18 @@ const AddRegistrarForm = () => {
   }, []);
 
   useEffect(() => {
-    if (selectedStaffId) {
-      const selectedStaff = staffOptions.find(s => s._id === selectedStaffId);
-      if (selectedStaff) {
-        setEmail(selectedStaff.email || '');
-      }
-    } else {
-      setEmail('');
+  if (selectedStaffId) {
+    const selectedStaff = staffOptions.find(s => s._id === selectedStaffId);
+
+    if (selectedStaff) {
+      setEmail(selectedStaff.email || '');
+      setDepartment(selectedStaff.department || '');
     }
-  }, [selectedStaffId, staffOptions]);
+  } else {
+    setEmail('');
+    setDepartment('');
+  }
+}, [selectedStaffId, staffOptions]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -440,7 +443,7 @@ const AddRegistrarForm = () => {
           <input
             type="password"
             className="form-input border rounded px-3 py-2 md:col-span-2"
-            placeholder="Enter password (optional)"
+            placeholder="Enter password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />

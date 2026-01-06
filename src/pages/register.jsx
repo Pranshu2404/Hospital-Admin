@@ -17,7 +17,7 @@ const BackIcon = () => (
   </svg>
 );
 
-const FormInput = ({ label, name, type = "text", placeholder, required = false, pattern, title, value, onChange, autoFocus }) => (
+const FormInput = ({ label, name, type = "text", placeholder, required = false, pattern, title, value, onChange, autoFocus, maxLength, inputMode, ...rest }) => (
   <div className="space-y-1">
     <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide ml-1">
       {label} {required && <span className="text-red-500">*</span>}
@@ -32,6 +32,9 @@ const FormInput = ({ label, name, type = "text", placeholder, required = false, 
       pattern={pattern}
       title={title}
       autoFocus={autoFocus}
+      maxLength={maxLength}
+      inputMode={inputMode}
+      {...rest}
       className="block w-full px-4 py-3 bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all duration-200 placeholder-gray-400"
     />
   </div>
@@ -107,6 +110,12 @@ export default function Register() {
 
     setIsLoading(true);
     setError('');
+    // Validate Indian mobile number (10 digits, starts with 6-9)
+    if (!/^[6-9]\d{9}$/.test(form.contact)) {
+      setError("Please enter a valid 10-digit Indian mobile number (starts with 6-9).");
+      setIsLoading(false);
+      return;
+    }
     console.log(import.meta.env.VITE_BACKEND_URL)
     try {
       const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/auth/register`, {
@@ -231,7 +240,26 @@ export default function Register() {
               <div className="space-y-6 animate-fade-in-right">
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <FormInput label="Admin Name" name="name" placeholder="Dr. John Doe" value={form.name} onChange={handleChange} required autoFocus />
-                  <FormInput label="Contact Number" name="contact" type="tel" placeholder="+91 9876543210" value={form.contact} onChange={handleChange} required />
+                  <div className="space-y-1">
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide ml-1">Contact Number <span className="text-red-500">*</span></label>
+                    <input
+                      type="tel"
+                      name="contact"
+                      placeholder="9876543210"
+                      value={form.contact}
+                      onChange={(e) => {
+                        let val = e.target.value.replace(/\D/g, '');
+                        if (val.length > 10) val = val.slice(0, 10);
+                        setForm({ ...form, contact: val });
+                      }}
+                      required
+                      maxLength={10}
+                      inputMode="numeric"
+                      pattern="^[6-9]\d{9}$"
+                      title="10 digit Indian mobile number starting with 6-9"
+                      className="block w-full px-4 py-3 bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all duration-200 placeholder-gray-400"
+                    />
+                  </div>
                   <div className="md:col-span-2">
                     <FormInput label="Email Address" name="email" type="email" placeholder="admin@hospital.com" value={form.email} onChange={handleChange} required />
                   </div>
