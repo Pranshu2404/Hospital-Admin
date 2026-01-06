@@ -20,6 +20,11 @@ const ResetIcon = () => (
     <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
   </svg>
 );
+const MenuIconSVG = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+  </svg>
+);
 
 const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message }) => {
   if (!isOpen) return null;
@@ -55,15 +60,24 @@ const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message }) => {
   );
 };
 
-const Header = ({ currentPage, section = 'Hospital', sidebarItems = [], user = { name: '', role: '', image: null } }) => {
+const Header = ({ 
+  currentPage, 
+  section = 'Hospital', 
+  sidebarItems = [], 
+  user = { name: '', role: '', image: null },
+  onToggleSidebar 
+}) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
   const dropdownRef = useRef(null);
   const [displayName, setDisplayName] = useState(user.name);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showSearch, setShowSearch] = useState(false);
   
   const { resetProgress } = useSetupTracker();
+  
   useEffect(() => {
     function handleClickOutside(event) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -100,6 +114,17 @@ const Header = ({ currentPage, section = 'Hospital', sidebarItems = [], user = {
     setDisplayName(roleSegment.charAt(0).toUpperCase() + roleSegment.slice(1));
   }, [location.pathname, user.name]);
 
+  // Close search on escape key
+  useEffect(() => {
+    const handleEscape = (e) => {
+      if (e.key === 'Escape' && showSearch) {
+        setShowSearch(false);
+      }
+    };
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [showSearch]);
+
   const handleProfileNavigation = () => {
     const pathSegments = location.pathname.split('/');
     if (pathSegments.length > 2 && pathSegments[1] === 'dashboard') {
@@ -112,7 +137,7 @@ const Header = ({ currentPage, section = 'Hospital', sidebarItems = [], user = {
   };
 
   const handleResetTutorial = () => {
-    resetProgress(); // Use the resetProgress from the hook
+    resetProgress();
     setShowResetModal(false);
     setIsProfileOpen(false);
   };
@@ -144,57 +169,147 @@ const Header = ({ currentPage, section = 'Hospital', sidebarItems = [], user = {
 
   return (
     <>
-      <header className="bg-white/80 backdrop-blur-md border-b border-gray-200 px-6 py-3 sticky top-0 z-40 shadow-sm transition-all duration-300">
+      <header className="bg-white/80 backdrop-blur-md border-b border-gray-200 px-4 sm:px-6 py-3 sticky top-0 z-40 shadow-sm transition-all duration-300">
         <div className="flex items-center justify-between">
           
-          {/* --- Left: Title & Breadcrumbs --- */}
-          <div className="flex flex-col">
-             <div className="flex items-center text-sm text-gray-500 font-medium space-x-2 mb-0.5">
-                <span>{section}</span>
+          {/* --- Left: Menu Button & Title --- */}
+          <div className="flex items-center space-x-3 sm:space-x-4">
+            {/* Mobile Menu Button */}
+<button
+  onClick={(e) => {
+    e.stopPropagation(); // Prevent event bubbling
+    console.log('Menu button clicked, calling onToggleSidebar');
+    onToggleSidebar();
+  }}
+  className="lg:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors flex-shrink-0"
+  aria-label="Toggle menu"
+>
+  <MenuIconSVG />
+</button>
+
+            {/* Title & Breadcrumbs */}
+            <div className="flex flex-col">
+              <div className="hidden sm:flex items-center text-xs sm:text-sm text-gray-500 font-medium space-x-2 mb-0.5">
+                <span className="truncate">{section}</span>
                 <span className="text-gray-300">/</span>
-                <span className="text-teal-600">{getPageTitle()}</span>
-             </div>
-             <h2 className="text-xl font-bold text-gray-800 tracking-tight">{getPageTitle()}</h2>
+                <span className="text-teal-600 truncate">{getPageTitle()}</span>
+              </div>
+              <h2 className="text-lg sm:text-xl font-bold text-gray-800 tracking-tight truncate">
+                {getPageTitle()}
+              </h2>
+            </div>
           </div>
           
           {/* --- Right: Actions --- */}
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2 sm:space-x-4">
             
+            {/* Mobile Search Button */}
+            <button
+              onClick={() => setShowSearch(!showSearch)}
+              className="lg:hidden p-2 text-gray-400 hover:text-teal-600 hover:bg-gray-100 rounded-lg transition-colors"
+              aria-label="Search"
+            >
+              <SearchIcon className="w-5 h-5" />
+            </button>
+
+            {/* Search Bar (Desktop) */}
+            <div className="hidden lg:flex items-center relative w-64">
+              <div className="absolute left-3 text-gray-400">
+                <SearchIcon className="w-4 h-4" />
+              </div>
+              <input
+                type="text"
+                placeholder="Search..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
+              />
+            </div>
+
+            {/* Search Overlay (Mobile) */}
+            {showSearch && (
+              <div className="lg:hidden fixed inset-0 bg-white z-50 flex items-start pt-20 px-4">
+                <div className="w-full">
+                  <div className="flex items-center mb-4">
+                    <div className="relative flex-1">
+                      <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                        <SearchIcon className="w-5 h-5" />
+                      </div>
+                      <input
+                        type="text"
+                        placeholder="Search..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        autoFocus
+                        className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-base"
+                      />
+                    </div>
+                    <button
+                      onClick={() => setShowSearch(false)}
+                      className="ml-3 px-4 py-3 text-gray-600 hover:text-gray-800"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Reset Tutorial Button */}
             <button 
               onClick={() => setShowResetModal(true)}
-              className="relative p-2.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-xl transition-all duration-200 group flex items-center gap-2"
+              className="relative p-2 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-xl transition-all duration-200 group flex items-center gap-2"
               title="Reset Tutorial Progress"
             >
               <RefreshCwIcon className="w-5 h-5" />
               <span className="hidden sm:inline text-sm font-medium">Reset Tutorial</span>
             </button>
 
+            {/* Notifications (Desktop only) */}
+            <button className="hidden lg:flex relative p-2 text-gray-400 hover:text-teal-600 hover:bg-gray-100 rounded-xl transition-colors">
+              <BellIcon className="w-5 h-5" />
+              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+            </button>
+
             {/* Professional Profile Dropdown */}
             <div className="relative" ref={dropdownRef}>
               <button 
                 onClick={() => setIsProfileOpen(!isProfileOpen)}
-                className={`flex items-center gap-3 pl-1 pr-2 py-1 rounded-full border transition-all duration-200 ${isProfileOpen ? 'bg-teal-50 border-teal-200 ring-2 ring-teal-100' : 'bg-white border-gray-100 hover:border-gray-300 hover:shadow-md'}`}
+                className={`
+                  flex items-center gap-2 sm:gap-3 pl-1 pr-2 py-1 rounded-full border transition-all duration-200 
+                  ${isProfileOpen ? 'bg-teal-50 border-teal-200 ring-2 ring-teal-100' : 'bg-white border-gray-100 hover:border-gray-300 hover:shadow-md'}
+                `}
               >
                 <div className="relative">
                   {/* Avatar Image or Gradient Initials */}
                   {user.image ? (
-                     <img src={user.image} alt="Profile" className="w-9 h-9 rounded-full object-cover border-2 border-white shadow-sm" />
+                     <img 
+                       src={user.image} 
+                       alt="Profile" 
+                       className="w-8 h-8 sm:w-9 sm:h-9 rounded-full object-cover border-2 border-white shadow-sm" 
+                     />
                   ) : (
-                     <div className="w-9 h-9 rounded-full bg-gradient-to-br from-teal-300 to-emerald-700 flex items-center justify-center text-white text-sm font-bold shadow-sm border-2 border-white">
+                     <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gradient-to-br from-teal-300 to-emerald-700 flex items-center justify-center text-white text-sm font-bold shadow-sm border-2 border-white">
                        {user.name ? user.name.substring(0, 2).toUpperCase() : 'U'}
                      </div>
                   )}
                   {/* Online Status Dot */}
-                  <span className="absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-white"></span>
+                  <span className="absolute bottom-0 right-0 block h-2 w-2 sm:h-2.5 sm:w-2.5 rounded-full bg-emerald-500 ring-2 ring-white"></span>
                 </div>
                 
                 <div className="hidden md:block text-left mr-1">
-                  <p className="text-sm font-bold text-gray-700 leading-none">{displayName}</p>
-                  <p className="text-[10px] font-medium text-teal-600 uppercase tracking-wide mt-0.5">{getUserRole()}</p>
+                  <p className="text-sm font-bold text-gray-700 leading-none truncate max-w-[120px]">
+                    {displayName}
+                  </p>
+                  <p className="text-[10px] font-medium text-teal-600 uppercase tracking-wide mt-0.5">
+                    {getUserRole()}
+                  </p>
                 </div>
                 
-                <ChevronDownIcon className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${isProfileOpen ? 'rotate-180' : ''}`} />
+                <ChevronDownIcon className={`
+                  w-4 h-4 text-gray-400 transition-transform duration-200 
+                  ${isProfileOpen ? 'rotate-180' : ''}
+                `} />
               </button>
 
               {/* Dropdown Menu */}
@@ -223,7 +338,7 @@ const Header = ({ currentPage, section = 'Hospital', sidebarItems = [], user = {
                   
                   <div className="p-2 border-t border-gray-50">
                     <button 
-                      onClick={() => navigate('/')} // Update with your actual logout logic
+                      onClick={() => navigate('/')}
                       className="flex w-full items-center px-3 py-2 text-sm text-red-600 rounded-lg hover:bg-red-50 transition-colors"
                     >
                       <LogoutIcon /> Sign Out
