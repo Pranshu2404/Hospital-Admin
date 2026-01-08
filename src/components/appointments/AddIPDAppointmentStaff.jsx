@@ -59,7 +59,7 @@ const bloodGroupOptions = [
   { value: 'O-', label: 'O-' }
 ];
 
-const AddIPDAppointment = ({ type = "ipd", fixedDoctorId, embedded = false, onClose = () => { } }) => {
+const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false, onClose = () => { } }) => {
   const navigate = useNavigate();
   // Helper to get local YYYY-MM-DD date string (avoids timezone-shift issues)
   const getLocalDateString = () => {
@@ -1384,4 +1384,4 @@ const AddIPDAppointment = ({ type = "ipd", fixedDoctorId, embedded = false, onCl
   );
 };
 
-export default AddIPDAppointment;
+export default AddIPDAppointmentStaff;

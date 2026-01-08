@@ -25,6 +25,37 @@ const PatientProfile = ({ selectedPatient, setCurrentPage }) => {
     );
   }
 
+  // Helper functions for patient display
+  const getPatientName = (patient) => {
+    return `${patient.salutation || ''} ${patient.first_name || ''} ${patient.last_name || ''}`.trim();
+  };
+
+  const getPatientInitials = (patient) => {
+    const first = patient.first_name ? patient.first_name[0] : '';
+    const last = patient.last_name ? patient.last_name[0] : '';
+    return `${first}${last}`.toUpperCase();
+  };
+
+  const calculateAge = (dob) => {
+    if (!dob) return 'N/A';
+    const birthDate = new Date(dob);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return `${age} years`;
+  };
+
+  const getPatientTypeDisplay = (type) => {
+    const types = {
+      'opd': 'OPD',
+      'ipd': 'IPD'
+    };
+    return types[type] || type || 'N/A';
+  };
+
   const tabs = [
     { 
       id: 'personal', 
@@ -69,19 +100,25 @@ const PatientProfile = ({ selectedPatient, setCurrentPage }) => {
             <div className="flex items-center space-x-4">
               <div className="w-16 h-16 bg-teal-100 rounded-full flex items-center justify-center">
                 <span className="text-teal-600 font-bold text-xl">
-                  {selectedPatient.name.split(' ').map(n => n[0]).join('')}
+                  {getPatientInitials(selectedPatient)}
                 </span>
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">{selectedPatient.name}</h1>
+                <h1 className="text-2xl font-bold text-gray-900">{getPatientName(selectedPatient)}</h1>
                 <div className="flex items-center space-x-4 text-sm text-gray-500 mt-1">
-                  <span>ID: #{selectedPatient.id}</span>
+                  <span>ID: {selectedPatient.patientId || 'N/A'}</span>
                   <span>•</span>
-                  <span>{selectedPatient.age} years old</span>
+                  <span>{calculateAge(selectedPatient.dob)}</span>
                   <span>•</span>
-                  <span>{selectedPatient.gender}</span>
+                  <span>{selectedPatient.gender?.charAt(0).toUpperCase() + selectedPatient.gender?.slice(1) || 'N/A'}</span>
                   <span>•</span>
-                  <span>{selectedPatient.type}</span>
+                  <span className={`px-2 py-1 text-xs rounded-full ${
+                    selectedPatient.patient_type === 'ipd' 
+                      ? 'bg-red-100 text-red-800'
+                      : 'bg-blue-100 text-blue-800'
+                  }`}>
+                    {getPatientTypeDisplay(selectedPatient.patient_type)}
+                  </span>
                 </div>
               </div>
             </div>

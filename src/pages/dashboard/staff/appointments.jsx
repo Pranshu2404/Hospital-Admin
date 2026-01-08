@@ -1,12 +1,11 @@
+import AppointmentListStaff from '@/components/appointments/AppointmentListStaff';
 import Layout from '../../../components/Layout';
-import AppointmentList from '../../../components/appointments/AppointmentList';
-import { adminSidebar } from '../../../constants/sidebarItems/adminSidebar';
 import { staffSidebar } from '@/constants/sidebarItems/staffSidebar'
 
 const AppointmentsPage1 = () => {
   return (
     <Layout sidebarItems={staffSidebar} section={'Staff'}>
-      <AppointmentList />
+      <AppointmentListStaff />
     </Layout>
   );
 };

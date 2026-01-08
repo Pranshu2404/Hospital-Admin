@@ -9,6 +9,7 @@ const Icons = {
   Clock: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
   Shield: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>,
   Check: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>,
+  Building: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>,
 };
 
 // --- Reusable Modern Input Component ---
@@ -69,8 +70,9 @@ const AddDoctorNurseForm = () => {
   const getTodayDate = () => new Date().toISOString().split('T')[0];
 
   const [step, setStep] = useState(1);
-  const totalSteps = 3; // Increased to 3 to accommodate all fields comfortably
+  const totalSteps = 3;
   const [departmentOptions, setDepartmentOptions] = useState([]);
+  const [hospitalInfo, setHospitalInfo] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
@@ -80,17 +82,32 @@ const AddDoctorNurseForm = () => {
     department: '', specialization: '', licenseNumber: '', experience: '', education: '',
     startDate: getTodayDate(), isFullTime: true, paymentType: 'Salary', amount: '',
     contractStartDate: '', contractEndDate: '', visitsPerWeek: '', workingDaysPerWeek: [],
-    shift: '', timeSlots: [{ start: '', end: '' }], notes: '', emergencyContact: '', emergencyPhone: ''
+    shift: '', timeSlots: [{ start: '', end: '' }], notes: '', emergencyContact: '', emergencyPhone: '',
+    // hospitalId will be added from localStorage during submission
   });
 
   useEffect(() => {
-    const fetchDepartments = async () => {
+    const fetchData = async () => {
       try {
-        const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/departments`);
-        setDepartmentOptions(res.data?.map(d => ({ value: d._id, label: d.name })) || []);
-      } catch (err) { console.error(err); }
+        // Fetch departments
+        const deptRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/departments`);
+        setDepartmentOptions(deptRes.data?.map(d => ({ value: d._id, label: d.name })) || []);
+
+        // Get hospital ID from localStorage and fetch hospital info
+        const hospitalId = localStorage.getItem('hospitalId');
+        if (hospitalId) {
+          try {
+            const hospitalRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/hospitals/${hospitalId}`);
+            setHospitalInfo(hospitalRes.data);
+          } catch (err) {
+            console.error('Error fetching hospital info:', err);
+          }
+        }
+      } catch (err) { 
+        console.error('Error fetching data:', err);
+      }
     };
-    fetchDepartments();
+    fetchData();
   }, []);
 
   const handleInputChange = (field, value) => setFormData(prev => ({ ...prev, [field]: value }));
@@ -123,7 +140,7 @@ const AddDoctorNurseForm = () => {
     e.preventDefault();
     setIsLoading(true);
     try {
-      // Validate phone number (Indian 10-digit mobile starting with 6-9)
+      // Validate phone numbers (Indian 10-digit mobile starting with 6-9)
       if (formData.phone && !/^[6-9]\d{9}$/.test(formData.phone)) {
         alert('Please enter a valid 10-digit Indian mobile number for Phone (starts with 6-9).');
         setIsLoading(false);
@@ -134,17 +151,31 @@ const AddDoctorNurseForm = () => {
         setIsLoading(false);
         return;
       }
+
+      // Get hospital ID from localStorage
+      const hospitalId = localStorage.getItem('hospitalId');
+      if (!hospitalId) {
+        alert('Hospital ID not found. Please log in again.');
+        setIsLoading(false);
+        return;
+      }
+
+      // Prepare submission data with hospitalId
       const submissionData = {
         ...formData,
         workingDaysPerWeek: formData.isFullTime ? [] : formData.workingDaysPerWeek,
-        shift: formData.isFullTime ? formData.shift : ''
+        shift: formData.isFullTime ? formData.shift : '',
+        hospitalId: hospitalId // Add hospitalId from localStorage
       };
+
+      console.log('Submitting doctor data:', submissionData);
+
       await axios.post(`${import.meta.env.VITE_BACKEND_URL}/doctors`, submissionData);
       alert('Doctor added successfully!');
       navigate('/dashboard/admin/doctor-list');
-      alert('Doctor added successfully.');
     } catch (err) {
-      alert(err.response?.data?.error || 'Failed to add doctor.');
+      console.error('Error adding doctor:', err);
+      alert(err.response?.data?.error || 'Failed to add doctor. Please check the console for details.');
     } finally {
       setIsLoading(false);
     }
@@ -175,7 +206,7 @@ const AddDoctorNurseForm = () => {
                   const isCurrent = step === stepNum;
                   const isFirst = index === 0;
                   const isLast = index === steps.length - 1;
-  
+
                   // Alignment logic to prevent cut-off
                   let labelClass = "left-1/2 -translate-x-1/2 text-center"; // Default Center
                   if (isFirst) labelClass = "left-0 translate-x-0 text-left"; // Left align first
@@ -210,6 +241,14 @@ const AddDoctorNurseForm = () => {
                 <div>
                     <h2 className="text-3xl font-bold text-slate-900 tracking-tight">Register New Doctor</h2>
                     <p className="text-slate-500 text-sm mt-1">Complete the details to onboard a new medical professional.</p>
+                    
+                    {/* Hospital Info Badge */}
+                    {hospitalInfo && (
+                      <div className="mt-3 inline-flex items-center px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium border border-blue-200">
+                        <Icons.Building className="w-4 h-4 mr-2" />
+                        {hospitalInfo.name}
+                      </div>
+                    )}
                 </div>
             </div>
             <StepIndicator />
@@ -370,6 +409,20 @@ const AddDoctorNurseForm = () => {
                                     </div>
                                 </div>
                             </div>
+                        )}
+
+                        {/* Hospital Info Display */}
+                        {hospitalInfo && (
+                          <div className="mt-8 p-4 bg-slate-50 rounded-xl border border-slate-200">
+                            <div className="flex items-center gap-3 mb-2">
+                              <Icons.Building className="w-5 h-5 text-slate-600" />
+                              <h4 className="text-sm font-bold text-slate-900">Doctor will be registered under:</h4>
+                            </div>
+                            <p className="text-slate-700 text-sm ml-8">{hospitalInfo.name}</p>
+                            {hospitalInfo.address && (
+                              <p className="text-slate-500 text-xs ml-8 mt-1">{hospitalInfo.address}</p>
+                            )}
+                          </div>
                         )}
                     </div>
                 )}

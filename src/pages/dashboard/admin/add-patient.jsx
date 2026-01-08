@@ -26,8 +26,8 @@ const AddPatientPage = () => {
   const navigate = useNavigate();
   return (
     <Layout sidebarItems={adminSidebar}>
-      <ChoosePatientTypeModal isOpen={open} onClose={()=>navigate('/dashboard/admin')} />
-      {/* <AddPatientIPDForm/> */}
+      {/* <ChoosePatientTypeModal isOpen={open} onClose={()=>navigate('/dashboard/admin')} /> */}
+      <AddPatientIPDForm/>
     </Layout>
   );
 };

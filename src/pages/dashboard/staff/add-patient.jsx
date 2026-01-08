@@ -28,8 +28,8 @@ const AddPatientPage1 = () => {
   const navigate = useNavigate();
   return (
     <Layout sidebarItems={staffSidebar} section={'Staff'}>
-      <ChoosePatientTypeModal isOpen={open} onClose={()=>navigate('/dashboard/staff')} />
-      {/* <AddPatientIPDForm/> */}
+      {/* <ChoosePatientTypeModal isOpen={open} onClose={()=>navigate('/dashboard/staff')} /> */}
+      <AddPatientIPDForm/>
     </Layout>
   );
 };
