@@ -159,7 +159,7 @@ const AddStaffForm = () => {
     department: '',
     specialization: '',
     joiningDate: getTodayDate(),
-    gender: '',
+    gender: 'male',
     status: 'Active',
     aadharNumber: '',
     panNumber: '',
