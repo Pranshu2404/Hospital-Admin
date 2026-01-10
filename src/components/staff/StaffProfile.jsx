@@ -202,7 +202,7 @@ const StaffProfile = ({ selectedStaff, setCurrentPage }) => {
                   >
                     <FaEdit /> {isEditing ? 'View' : 'Edit'}
                   </button>
-                  <Button onClick={() => setCurrentPage && setCurrentPage('StaffList')}>Back</Button>
+                  {setCurrentPage && <Button onClick={() => setCurrentPage('StaffList')}>Back</Button>}
                 </div>
               </div>
             </div>

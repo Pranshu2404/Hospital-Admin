@@ -6,7 +6,7 @@ import {
   FaCheckCircle, FaPlus, FaTimes, FaMoneyBillWave,
   FaArrowLeft, FaFilePrescription, FaCloudUploadAlt, FaTrash,
   FaHistory, FaCalendarCheck, FaPrescriptionBottleAlt,
-  FaFlask, FaFileAlt, FaChevronDown, FaChevronUp, FaCapsules
+  FaFlask, FaFileAlt, FaChevronDown, FaChevronUp, FaCapsules, FaHeartbeat
 } from 'react-icons/fa';
 import Layout from '@/components/Layout';
 import { doctorSidebar } from '@/constants/sidebarItems/doctorSidebar';
@@ -26,7 +26,7 @@ const AppointmentDetails = () => {
   const [calculatingSalary, setCalculatingSalary] = useState(false);
   const [message, setMessage] = useState('');
   const [salaryInfo, setSalaryInfo] = useState(null);
-  const [pastPrescriptions, setPastPrescriptions] = useState([]);
+  const [pastPrescriptions, setPastPrescriptions] = useState(+[]);
   const [pastAppointments, setPastAppointments] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [activeTab, setActiveTab] = useState('current'); // 'current', 'prescriptions', 'appointments'
@@ -105,11 +105,15 @@ const AppointmentDetails = () => {
   });
 
   useEffect(() => {
-    if (!state?.appointment && id) {
-      fetchAppointment();
+    // Check if appointment is missing OR if the appointment exists but Vitals are missing
+    if (!state?.appointment || (state?.appointment && !state.appointment.vitals)) {
+      if (id) {
+        console.log("Fetching full appointment details (including vitals)...");
+        fetchAppointment();
+      }
     }
   }, [id, state]);
-
+  
   useEffect(() => {
     if (appointment?.patient_id?._id || appointment?.patient_id) {
       fetchPatientHistory();
@@ -182,7 +186,14 @@ const AppointmentDetails = () => {
     try {
       setLoading(true);
       const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/appointments/${id}`);
-      setAppointment(response.data);
+      const data = response.data;
+      console.log("[DEBUG] Appointment Data Received:", data); // Check if 'vitals' key exists and has data
+      if (data.vitals) {
+        console.log("[DEBUG] Vitals in Appointment:", data.vitals);
+      } else {
+        console.log("[DEBUG] Vitals MISSING in Appointment object");
+      }
+      setAppointment(data);
     } catch (err) {
       console.error('Error fetching appointment:', err);
       setMessage('Failed to load appointment details');
@@ -628,157 +639,157 @@ const AppointmentDetails = () => {
                 </div>
               )}
 
-{/* Appointments Tab */}
-{activeTab === 'appointments' && (
-  <div className="space-y-4">
-    {pastAppointments.length > 0 ? (
-      pastAppointments.map((apt, idx) => (
-        <div key={apt._id} className="bg-gradient-to-br from-slate-50 to-white border border-slate-200 rounded-xl overflow-hidden hover:shadow-md transition-all duration-200">
-          
-          {/* Header */}
-          <div className="bg-gradient-to-r from-teal-600 to-teal-700 px-6 py-4 text-white">
-            <div className="flex justify-between items-start">
-              <div>
-                <div className="flex items-center gap-3">
-                  <FaCalendarCheck className="text-lg opacity-80" />
-                  <span className="text-lg font-bold capitalize">
-                    {apt.appointment_type || 'Consultation'}
-                  </span>
-                  <span className={`px-3 py-1 text-xs font-semibold rounded-full ${
-                    apt.status === 'Completed' ? 'bg-green-400 text-green-900' :
-                    apt.status === 'Cancelled' ? 'bg-red-400 text-red-900' :
-                    'bg-slate-400 text-slate-900'
-                  }`}>
-                    {apt.status}
-                  </span>
-                </div>
-                <p className="text-sm text-indigo-100 mt-1">
-                  {new Date(apt.appointment_date).toLocaleDateString('en-IN', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}
-                </p>
-              </div>
-            </div>
-          </div>
+              {/* Appointments Tab */}
+              {activeTab === 'appointments' && (
+                <div className="space-y-4">
+                  {pastAppointments.length > 0 ? (
+                    pastAppointments.map((apt, idx) => (
+                      <div key={apt._id} className="bg-gradient-to-br from-slate-50 to-white border border-slate-200 rounded-xl overflow-hidden hover:shadow-md transition-all duration-200">
 
-          {/* Content */}
-          <div className="px-6 py-5 space-y-4">
-            
-            {/* Doctor & Priority Row */}
-            <div className="flex justify-between items-start">
-              <div>
-                {apt.doctor_id && (
-                  <p className="text-sm">
-                    <span className="text-slate-600">Consulted with</span><br />
-                    <span className="font-bold text-slate-900">Dr. {apt.doctor_id.firstName} {apt.doctor_id.lastName}</span>
-                  </p>
-                )}
-              </div>
-              <div className="text-right">
-                <span className="text-xs text-slate-500 font-semibold block">Priority</span>
-                <span className={`inline-block px-3 py-1.5 text-sm font-bold rounded-full mt-1 ${
-                  apt.priority === 'High' || apt.priority === 'Urgent' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
-                }`}>
-                  {apt.priority || 'Normal'}
-                </span>
-              </div>
-            </div>
+                        {/* Header */}
+                        <div className="bg-gradient-to-r from-teal-600 to-teal-700 px-6 py-4 text-white">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <div className="flex items-center gap-3">
+                                <FaCalendarCheck className="text-lg opacity-80" />
+                                <span className="text-lg font-bold capitalize">
+                                  {apt.appointment_type || 'Consultation'}
+                                </span>
+                                <span className={`px-3 py-1 text-xs font-semibold rounded-full ${apt.status === 'Completed' ? 'bg-green-400 text-green-900' :
+                                  apt.status === 'Cancelled' ? 'bg-red-400 text-red-900' :
+                                    'bg-slate-400 text-slate-900'
+                                  }`}>
+                                  {apt.status}
+                                </span>
+                              </div>
+                              <p className="text-sm text-indigo-100 mt-1">
+                                {new Date(apt.appointment_date).toLocaleDateString('en-IN', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
 
-            {/* --- REPLACED TYPE SECTION WITH DETAILED HISTORY SECTION --- */}
-            <div className="bg-slate-50 rounded-lg border border-slate-200 overflow-hidden">
-              <div className="px-4 py-2 bg-slate-100 border-b border-slate-200 flex items-center gap-2">
-                 <FaHistory className="text-slate-500" />
-                 <h6 className="font-bold text-slate-700 text-sm">Appointment History Details</h6>
-              </div>
-              
-              <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-6 text-sm">
-                
-                {/* ID */}
-                {/* <div className="col-span-2 md:col-span-2">
+                        {/* Content */}
+                        <div className="px-6 py-5 space-y-4">
+
+                          {/* Doctor & Priority Row */}
+                          <div className="flex justify-between items-start">
+                            <div>
+                              {apt.doctor_id && (
+                                <p className="text-sm">
+                                  <span className="text-slate-600">Consulted with</span><br />
+                                  <span className="font-bold text-slate-900">Dr. {apt.doctor_id.firstName} {apt.doctor_id.lastName}</span>
+                                </p>
+                              )}
+                            </div>
+                            <div className="text-right">
+                              <span className="text-xs text-slate-500 font-semibold block">Priority</span>
+                              <span className={`inline-block px-3 py-1.5 text-sm font-bold rounded-full mt-1 ${apt.priority === 'High' || apt.priority === 'Urgent' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
+                                }`}>
+                                {apt.priority || 'Normal'}
+                              </span>
+                            </div>
+                          </div>
+
+
+
+                          {/* --- REPLACED TYPE SECTION WITH DETAILED HISTORY SECTION --- */}
+                          <div className="bg-slate-50 rounded-lg border border-slate-200 overflow-hidden">
+                            <div className="px-4 py-2 bg-slate-100 border-b border-slate-200 flex items-center gap-2">
+                              <FaHistory className="text-slate-500" />
+                              <h6 className="font-bold text-slate-700 text-sm">Appointment History Details</h6>
+                            </div>
+
+                            <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-6 text-sm">
+
+                              {/* ID */}
+                              {/* <div className="col-span-2 md:col-span-2">
                   <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold block">Appointment ID</span>
                   <span className="font-mono text-xs text-slate-600 bg-white border border-slate-200 px-2 py-1 rounded inline-block mt-1">
                     {apt._id}
                   </span>
                 </div> */}
 
-                {/* Timing */}
-                <div>
-                   <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold block">Scheduled Time</span>
-                   <div className="font-medium text-slate-700 mt-0.5">
-                     {apt.start_time ? new Date(apt.start_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '--'} 
-                     {' - '} 
-                     {apt.end_time ? new Date(apt.end_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '--'}
-                   </div>
-                </div>
+                              {/* Timing */}
+                              <div>
+                                <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold block">Scheduled Time</span>
+                                <div className="font-medium text-slate-700 mt-0.5">
+                                  {apt.start_time ? new Date(apt.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--'}
+                                  {' - '}
+                                  {apt.end_time ? new Date(apt.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--'}
+                                </div>
+                              </div>
 
-                {/* Actual End Time */}
-                <div>
-                   <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold block">Actual Completion</span>
-                   <div className="font-medium text-slate-700 mt-0.5">
-                     {apt.actual_end_time 
-                       ? new Date(apt.actual_end_time).toLocaleString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'}) 
-                       : <span className="text-slate-400 italic">Not recorded</span>}
-                   </div>
-                </div>
+                              {/* Actual End Time */}
+                              <div>
+                                <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold block">Actual Completion</span>
+                                <div className="font-medium text-slate-700 mt-0.5">
+                                  {apt.actual_end_time
+                                    ? new Date(apt.actual_end_time).toLocaleString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+                                    : <span className="text-slate-400 italic">Not recorded</span>}
+                                </div>
+                              </div>
 
-                {/* Duration & Type */}
-                <div>
-                   <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold block">Duration</span>
-                   <div className="font-medium text-slate-700 mt-0.5 flex items-center gap-1">
-                     <FaClock className="text-slate-400 text-xs" /> {apt.duration || 0} mins
-                   </div>
-                </div>
+                              {/* Duration & Type */}
+                              <div>
+                                <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold block">Duration</span>
+                                <div className="font-medium text-slate-700 mt-0.5 flex items-center gap-1">
+                                  <FaClock className="text-slate-400 text-xs" /> {apt.duration || 0} mins
+                                </div>
+                              </div>
 
-                <div>
-                   <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold block">Category</span>
-                   <div className="font-medium text-slate-700 mt-0.5 capitalize">
-                     {apt.type || 'N/A'} <span className="text-slate-400">({apt.appointment_type || 'General'})</span>
-                   </div>
-                </div>
+                              <div>
+                                <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold block">Category</span>
+                                <div className="font-medium text-slate-700 mt-0.5 capitalize">
+                                  {apt.type || 'N/A'} <span className="text-slate-400">({apt.appointment_type || 'General'})</span>
+                                </div>
+                              </div>
 
-                {/* Created At
+                              {/* Created At
                 <div className="col-span-2 border-t border-slate-100 pt-3 mt-1">
                    <span className="text-xs text-slate-400">Record Created: {new Date(apt.created_at).toLocaleString()}</span>
                 </div> */}
 
-              </div>
-            </div>
-            {/* --- END HISTORY SECTION --- */}
+                            </div>
+                          </div>
+                          {/* --- END HISTORY SECTION --- */}
 
-            {/* Notes Section */}
-            {apt.notes && (
-              <div className="bg-amber-50 rounded-lg p-4 border border-amber-200">
-                <div className="flex items-start gap-3">
-                  <FaFileAlt className="text-amber-600 text-lg mt-1 flex-shrink-0" />
-                  <div className="flex-1">
-                    <h6 className="font-bold text-slate-800 mb-1">Notes</h6>
-                    <p className="text-slate-700 text-sm">{apt.notes}</p>
-                  </div>
+                          {/* Notes Section */}
+                          {apt.notes && (
+                            <div className="bg-amber-50 rounded-lg p-4 border border-amber-200">
+                              <div className="flex items-start gap-3">
+                                <FaFileAlt className="text-amber-600 text-lg mt-1 flex-shrink-0" />
+                                <div className="flex-1">
+                                  <h6 className="font-bold text-slate-800 mb-1">Notes</h6>
+                                  <p className="text-slate-700 text-sm">{apt.notes}</p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* View Prescription Button */}
+                          <div className="pt-2">
+                            <button
+                              type="button"
+                              onClick={() => fetchPrescriptionsByAppointment(apt._id)}
+                              className="w-full bg-white border border-teal-600 text-teal-600 hover:bg-teal-50 font-semibold py-2.5 px-4 rounded-lg transition-all duration-200 flex items-center justify-center gap-2 shadow-sm"
+                            >
+                              <FaPrescriptionBottleAlt className="text-sm" />
+                              View Associated Prescription
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-12 text-slate-500">
+                      <FaHistory className="mx-auto text-5xl text-slate-300 mb-3 opacity-50" />
+                      <p className="text-lg font-medium">No past appointments found</p>
+                      <p className="text-sm mt-1">Your appointment history will appear here</p>
+                    </div>
+                  )}
                 </div>
-              </div>
-            )}
-
-            {/* View Prescription Button */}
-            <div className="pt-2">
-              <button
-                type="button"
-                onClick={() => fetchPrescriptionsByAppointment(apt._id)}
-                className="w-full bg-white border border-teal-600 text-teal-600 hover:bg-teal-50 font-semibold py-2.5 px-4 rounded-lg transition-all duration-200 flex items-center justify-center gap-2 shadow-sm"
-              >
-                <FaPrescriptionBottleAlt className="text-sm" />
-                View Associated Prescription
-              </button>
-            </div>
-          </div>
-        </div>
-      ))
-    ) : (
-      <div className="text-center py-12 text-slate-500">
-        <FaHistory className="mx-auto text-5xl text-slate-300 mb-3 opacity-50" />
-        <p className="text-lg font-medium">No past appointments found</p>
-        <p className="text-sm mt-1">Your appointment history will appear here</p>
-      </div>
-    )}
-  </div>
-)}
+              )}
             </>
           )}
         </div>
@@ -925,6 +936,8 @@ const AppointmentDetails = () => {
                     <span className="text-slate-500 text-sm">Type</span>
                     <span className="font-medium text-slate-700 text-xs capitalize">{appointment.type}</span>
                   </div>
+
+                  {/* Vitals Card (Moved Here) */}
                   <div className="flex justify-between">
                     <span className="text-slate-500 text-sm">Priority</span>
                     <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${appointment.priority === 'High' ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'
@@ -932,6 +945,45 @@ const AppointmentDetails = () => {
                       {appointment.priority}
                     </span>
                   </div>
+                </div>
+              </div>
+
+              {/* Vitals Card */}
+              <div className="bg-white rounded-xl shadow-sm border border-teal-100 overflow-hidden">
+                <div className="bg-teal-50 px-4 py-3 border-b border-teal-100 flex items-center">
+                  <div className="h-8 w-8 rounded-full bg-teal-100 flex items-center justify-center text-teal-600 mr-2 text-sm">
+                    <FaHeartbeat />
+                  </div>
+                  <h3 className="font-semibold text-slate-800 text-md">Vitals</h3>
+                  <span className="text-xs text-slate-500 ml-auto font-normal">
+                    {appointment.vitals?.recorded_at
+                      ? new Date(appointment.vitals.recorded_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                      : ''}
+                  </span>
+                </div>
+                <div className="p-4 grid grid-cols-2 gap-3">
+                  <div className="text-center p-2 bg-slate-50 rounded border border-slate-100">
+                    <span className="block text-xs text-slate-500 uppercase font-bold mb-1">BP</span>
+                    <span className="text-md font-bold text-slate-800">{appointment.vitals?.bp || '--'}</span>
+                  </div>
+                  <div className="text-center p-2 bg-slate-50 rounded border border-slate-100">
+                    <span className="block text-xs text-slate-500 uppercase font-bold mb-1">Pulse</span>
+                    <span className="text-md font-bold text-slate-800">{appointment.vitals?.pulse || '--'} <span className="text-[10px] text-slate-400">bpm</span></span>
+                  </div>
+                  <div className="text-center p-2 bg-slate-50 rounded border border-slate-100">
+                    <span className="block text-xs text-slate-500 uppercase font-bold mb-1">Weight</span>
+                    <span className="text-md font-bold text-slate-800">{appointment.vitals?.weight || '--'} <span className="text-[10px] text-slate-400">kg</span></span>
+                  </div>
+                  <div className="text-center p-2 bg-slate-50 rounded border border-slate-100">
+                    <span className="block text-xs text-slate-500 uppercase font-bold mb-1">SPO2</span>
+                    <span className="text-md font-bold text-slate-800">{appointment.vitals?.spo2 || '--'} <span className="text-[10px] text-slate-400">%</span></span>
+                  </div>
+                  {appointment.vitals?.temperature && (
+                    <div className="text-center p-2 bg-slate-50 rounded border border-slate-100 col-span-2">
+                      <span className="block text-xs text-slate-500 uppercase font-bold mb-1">Temp</span>
+                      <span className="text-md font-bold text-slate-800">{appointment.vitals.temperature} <span className="text-[10px] text-slate-400">°F</span></span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

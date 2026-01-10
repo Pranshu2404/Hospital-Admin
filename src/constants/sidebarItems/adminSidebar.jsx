@@ -25,7 +25,7 @@
 //     icon: HomeIcon,
 //     path: '/dashboard/admin',
 //   },
-  
+
 //  {
 //     label: 'Guide',
 //     icon: FaBook,
@@ -87,8 +87,8 @@
 //   },
 
 
-  
- 
+
+
 //   {
 //     label: 'Pharmacy',
 //     icon: FaClinicMedical,
@@ -200,6 +200,15 @@ export const adminSidebar = [
     submenu: [
       { label: 'Add Registrar', path: '/dashboard/admin/add-registrar' },
       { label: 'Registrar List', path: '/dashboard/admin/registrar-list' },
+    ],
+  },
+  {
+    label: 'Nurses',
+    icon: StaffIcon, // Reusing StaffIcon or similar if available
+    path: '/dashboard/admin/nurse-list',
+    submenu: [
+      { label: 'Add Nurse', path: '/dashboard/admin/add-nurse' },
+      { label: 'Nurse List', path: '/dashboard/admin/nurse-list' },
     ],
   },
   {

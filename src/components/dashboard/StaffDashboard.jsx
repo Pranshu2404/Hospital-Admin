@@ -636,7 +636,7 @@ const StaffDashboard = () => {
                         />
                         <StatCard
                             title="Total Registration Collection"
-                            value={`₹${totalCollection}`}
+                            value={`₹${Number(totalCollection).toFixed(2)}`}
                             icon={<FaMoneyBill />}
                             color={{ bg: 'bg-emerald-50', text: 'text-emerald-600' }}
                         />
