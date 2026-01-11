@@ -59,7 +59,7 @@ const bloodGroupOptions = [
   { value: 'O-', label: 'O-' }
 ];
 
-const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false, onClose = () => { } }) => {
+const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false, onClose = () => { }, onSuccess }) => {
   const navigate = useNavigate();
   // Helper to get local YYYY-MM-DD date string (avoids timezone-shift issues)
   const getLocalDateString = () => {
@@ -598,7 +598,7 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
     try {
       // If creating new patient, we need to get the patient ID first
       let patientIdForPayment = formData.patientId;
-      
+
       if (showFields) {
         // Validate required fields for new patient
         if (!formData2.salutation || !formData2.firstName || !formData2.phone) {
@@ -606,7 +606,7 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
           setIsLoading(false);
           return;
         }
-        
+
         // We'll need to create the patient first to get an ID
         // For now, use a placeholder
         patientIdForPayment = "new-patient-temp";
@@ -666,7 +666,7 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
     if (e) e.preventDefault(); // Prevent default form submission if triggered by button
     setIsLoading(true);
     let patientId;
-    
+
     // If payment was made via QR, use the details passed from the polling logic
     const finalPaymentMethod = paymentInfo ? paymentInfo.method : formData.paymentMethod;
     const finalBillStatus = paymentInfo ? 'Paid' : status;
@@ -761,7 +761,7 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
       const appointmentDetails = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/appointments/${appointmentId}`);
       console.log("Appointment Details for Slip:", appointmentDetails.data);
       const appt = appointmentDetails.data;
-      
+
       // Get patient name from appropriate source
       let patientName;
       if (showFields) {
@@ -769,7 +769,7 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
       } else {
         patientName = `${appt.patient_id?.first_name || ''} ${appt.patient_id?.last_name || ''}`.trim();
       }
-      
+
       const enriched = {
         ...appt,
         patientName: patientName,
@@ -782,7 +782,11 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
       };
       setSubmitDetails(enriched);
 
-      setSlipModal(true);
+      if (onSuccess) {
+        onSuccess(enriched);
+      } else {
+        setSlipModal(true);
+      }
       onClose(); // Close the form if embedded
 
       // Reset form data
@@ -885,60 +889,60 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
                   <div className='border-b border-gray-400 py-4'>
                     <h3 className="text-lg font-semibold text-gray-900 mb-4">Patient Information</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <FormSelect 
-                        label="Salutation" 
-                        value={formData2.salutation} 
-                        onChange={(e) => handlePatientInputChange('salutation', e.target.value)} 
-                        options={salutationOptions} 
+                      <FormSelect
+                        label="Salutation"
+                        value={formData2.salutation}
+                        onChange={(e) => handlePatientInputChange('salutation', e.target.value)}
+                        options={salutationOptions}
                       />
-                      <FormInput 
-                        label="First Name" 
-                        value={formData2.firstName} 
-                        onChange={(e) => handlePatientInputChange('firstName', e.target.value)} 
-                        required 
+                      <FormInput
+                        label="First Name"
+                        value={formData2.firstName}
+                        onChange={(e) => handlePatientInputChange('firstName', e.target.value)}
+                        required
                       />
-                      <FormInput 
-                        label="Last Name" 
-                        value={formData2.lastName} 
-                        onChange={(e) => handlePatientInputChange('lastName', e.target.value)} 
+                      <FormInput
+                        label="Last Name"
+                        value={formData2.lastName}
+                        onChange={(e) => handlePatientInputChange('lastName', e.target.value)}
                       />
-                      <FormInput 
-                        label="Email" 
-                        type="email" 
-                        value={formData2.email} 
-                        onChange={(e) => handlePatientInputChange('email', e.target.value)} 
+                      <FormInput
+                        label="Email"
+                        type="email"
+                        value={formData2.email}
+                        onChange={(e) => handlePatientInputChange('email', e.target.value)}
                       />
-                      <FormInput 
-                        label="Phone Number" 
-                        type="tel" 
-                        value={formData2.phone} 
-                        onChange={(e) => handlePatientInputChange('phone', e.target.value.replace(/\D/g, '').slice(0, 10))} 
-                        required 
+                      <FormInput
+                        label="Phone Number"
+                        type="tel"
+                        value={formData2.phone}
+                        onChange={(e) => handlePatientInputChange('phone', e.target.value.replace(/\D/g, '').slice(0, 10))}
+                        required
                         maxLength={10}
                         inputMode="numeric"
                         pattern="^[6-9]\d{9}$"
                         title="10 digit Indian mobile number starting with 6-9"
                       />
-                      <FormInput 
-                        label="Age" 
-                        type="number" 
-                        min="0" 
+                      <FormInput
+                        label="Age"
+                        type="number"
+                        min="0"
                         max="120"
-                        value={formData2.age} 
-                        onChange={(e) => handlePatientInputChange('age', e.target.value)} 
-                        required 
+                        value={formData2.age}
+                        onChange={(e) => handlePatientInputChange('age', e.target.value)}
+                        required
                       />
-                      <FormSelect 
-                        label="Gender" 
-                        value={formData2.gender} 
-                        onChange={(e) => handlePatientInputChange('gender', e.target.value)} 
-                        options={genderOptions} 
+                      <FormSelect
+                        label="Gender"
+                        value={formData2.gender}
+                        onChange={(e) => handlePatientInputChange('gender', e.target.value)}
+                        options={genderOptions}
                       />
-                      <FormSelect 
-                        label="Blood Group" 
-                        value={formData2.bloodGroup} 
-                        onChange={(e) => handlePatientInputChange('bloodGroup', e.target.value)} 
-                        options={bloodGroupOptions} 
+                      <FormSelect
+                        label="Blood Group"
+                        value={formData2.bloodGroup}
+                        onChange={(e) => handlePatientInputChange('bloodGroup', e.target.value)}
+                        options={bloodGroupOptions}
                       />
                     </div>
 
@@ -954,20 +958,20 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
                           placeholder="Enter full address"
                         />
                       </div>
-                      <FormInput 
-                        label="City" 
-                        value={formData2.city} 
-                        onChange={(e) => handlePatientInputChange('city', e.target.value)} 
+                      <FormInput
+                        label="City"
+                        value={formData2.city}
+                        onChange={(e) => handlePatientInputChange('city', e.target.value)}
                       />
-                      <FormInput 
-                        label="State" 
-                        value={formData2.state} 
-                        onChange={(e) => handlePatientInputChange('state', e.target.value)} 
+                      <FormInput
+                        label="State"
+                        value={formData2.state}
+                        onChange={(e) => handlePatientInputChange('state', e.target.value)}
                       />
-                      <FormInput 
-                        label="ZIP Code" 
-                        value={formData2.zipCode} 
-                        onChange={(e) => handlePatientInputChange('zipCode', e.target.value)} 
+                      <FormInput
+                        label="ZIP Code"
+                        value={formData2.zipCode}
+                        onChange={(e) => handlePatientInputChange('zipCode', e.target.value)}
                       />
                     </div>
                   </div>
@@ -1186,21 +1190,21 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
                 <h4 className="font-bold text-sm text-slate-800 mb-2">Appointment Preview</h4>
                 <div className="text-sm text-slate-700 space-y-1">
                   <div>
-                    <span className="font-medium">Patient:</span> 
-                    {showFields 
+                    <span className="font-medium">Patient:</span>
+                    {showFields
                       ? `${formData2.salutation ? formData2.salutation + ' ' : ''}${formData2.firstName} ${formData2.lastName}`.trim()
-                      : (filteredPatients.find(p => p._id === formData.patientId) 
+                      : (filteredPatients.find(p => p._id === formData.patientId)
                         ? `${filteredPatients.find(p => p._id === formData.patientId).salutation || ''} ${filteredPatients.find(p => p._id === formData.patientId).first_name} ${filteredPatients.find(p => p._id === formData.patientId).last_name}`.trim()
                         : '—'
                       )
                     }
                   </div>
                   <div>
-                    <span className="font-medium">Doctor:</span> 
-                    {doctors.find(d => d._id === formData.doctorId) 
+                    <span className="font-medium">Doctor:</span>
+                    {doctors.find(d => d._id === formData.doctorId)
                       ? `Dr. ${doctors.find(d => d._id === formData.doctorId).firstName} ${doctors.find(d => d._id === formData.doctorId).lastName}`
-                      : (doctorDetails 
-                        ? `Dr. ${doctorDetails.firstName} ${doctorDetails.lastName}` 
+                      : (doctorDetails
+                        ? `Dr. ${doctorDetails.firstName} ${doctorDetails.lastName}`
                         : '—'
                       )
                     }

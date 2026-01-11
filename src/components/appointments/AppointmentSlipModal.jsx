@@ -452,21 +452,21 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
       `}</style>
 
       <div className="printable-slip-container">
-        <div className="printable-slip mt-32">
+        <div className="printable-slip">
           {/* Header */}
           <div className="text-center slip-header">
             <h2 className="text-2xl font-bold text-gray-900 mb-2">APPOINTMENT SLIP</h2>
             <h3 className="text-xl font-semibold text-blue-800">{hospitalInfo?.hospitalName || 'MEDICAL CENTER'}</h3>
             <p className="text-sm text-gray-600 mt-1">{hospitalInfo?.address || 'Hospital Address'}</p>
             <p className="text-sm text-gray-600">
-              {hospitalInfo?.contact ? `Tel: ${hospitalInfo.contact} • ` : ''}
+              {hospitalInfo?.contact ? `Phone: ${hospitalInfo.contact} • ` : ''}
               {hospitalInfo?.email || ''}
             </p>
           </div>
 
           {/* Appointment Details */}
 <div className="slip-section">
-  <h4 className="text-lg font-semibold text-gray-800 mb-3 border-b pb-1">APPOINTMENT DETAILS</h4>
+  <h4 className="text-lg font-semibold text-gray-800 mb-2 mt-5">APPOINTMENT DETAILS</h4>
   <div className="grid grid-cols-2 gap-3 text-sm">
     <div>
       <span className="text-gray-600 font-medium">Slip No:</span>{' '}
@@ -533,7 +533,7 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
           </div>
 
           {/* Billing Details */}
-          {billingDetails && billingDetails.details && billingDetails.details.length > 0 && (
+          {/* {billingDetails && billingDetails.details && billingDetails.details.length > 0 && (
             <div className="slip-section">
               <h4 className="text-lg font-semibold text-gray-800 mb-2 border-b pb-1">BILLING DETAILS</h4>
               <div className="space-y-2 text-sm">
@@ -568,10 +568,10 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
                 </div>
               </div>
             </div>
-          )}
+          )} */}
 
           {/* Prescription Section */}
-          <div className="slip-section mt-4">
+          {/* <div className="slip-section mt-4">
             <h4 className="text-lg font-semibold text-gray-800 mb-2 border-b pb-1">PRESCRIPTION</h4>
 
             {prescription ? (
@@ -600,9 +600,9 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
               </div>
             ) : (
               <div className="text-sm text-gray-600">
-                <p>No prescription uploaded for this appointment.</p>
+                <p>No prescription uploaded for this appointment.</p> */}
                 {/* if we found prescriptions for the same patient, offer to attach one */}
-                {candidatePrescriptions && candidatePrescriptions.length > 0 && (
+                {/* {candidatePrescriptions && candidatePrescriptions.length > 0 && (
                   <div className="mt-3">
                     <p className="text-sm text-gray-700">Found {candidatePrescriptions.length} prescription(s) for this patient. Attach one to this appointment:</p>
                     <div className="mt-2 space-y-2">
@@ -673,10 +673,10 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
                 )}
               </div>
             )}
-          </div>
+          </div> */}
 
           {/* Instructions */}
-          <div className="slip-section mt-4 important-instructions">
+          <div className="slip-section mt-6 important-instructions">
             <h4 className="text-md font-semibold text-gray-800 mb-2">IMPORTANT INSTRUCTIONS</h4>
             <ul className="text-xs text-gray-600 space-y-1 list-disc pl-4">
               <li>Please arrive 15 minutes before your appointment time</li>
@@ -689,18 +689,18 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
 
           {/* Footer */}
           <div className="slip-footer text-center">
-            <p className="text-xs text-gray-500 mb-2">** This is computer generated slip - no signature required **</p>
-            <p className="text-xs text-gray-400">
+            {/* <p className="text-xs text-gray-500 mb-2">** This is computer generated slip - no signature required **</p> */}
+            <p className="text-xs text-gray-400 mt-4">
               {hospitalInfo?.website ? `Website: ${hospitalInfo.website} • ` : ''}
-              Emergency: {hospitalInfo?.emergency_phone || 'XXXX-XXXXXX'}
+              Emergency: {hospitalInfo?.contact || 'XXXX-XXXXXX'}
             </p>
             <p className="text-xs text-gray-400 mt-1">
-              Thank you for choosing {hospitalInfo?.name || 'our hospital'}. We wish you good health!
+              Thank you for choosing {hospitalInfo?.hospitalName || 'our hospital'}. We wish you good health!
             </p>
           </div>
 
           {/* Action Buttons */}
-          <div className="p-4 border-t flex justify-end space-x-3 no-print mt-4">
+          <div className="p-4 flex justify-end space-x-3 no-print mt-4">
             <button 
               onClick={onClose} 
               className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 transition"
@@ -709,7 +709,7 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
             </button>
             <button 
               onClick={handlePrint} 
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+              className="px-4 py-2 bg-teal-600 text-white rounded hover:bg-teal-700 transition"
             >
               Print Slip
             </button>

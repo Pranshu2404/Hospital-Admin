@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { 
-  Search, Plus, Calendar, Clock, Filter, 
-  Eye, Edit2, Trash2, User, Stethoscope, 
-  CheckCircle, AlertCircle, X, ChevronDown, 
-  Activity, Building 
+import {
+  Search, Plus, Calendar, Clock, Filter,
+  Eye, Edit2, Trash2, User, Stethoscope,
+  CheckCircle, AlertCircle, X, ChevronDown,
+  Activity, Building
 } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import AddIPDAppointment from './AddIPDAppointment';
@@ -21,13 +21,13 @@ const AppointmentListStaff = () => {
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterDate, setFilterDate] = useState('');
   const [appointmentType, setAppointmentType] = useState(null);
-  
+
   // Modal States
   const [chooserOpen, setChooserOpen] = useState(false);
   const [selectedType, setSelectedType] = useState(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
-  
+
   const [loading, setLoading] = useState(true);
   const [hospitalInfo, setHospitalInfo] = useState(null);
 
@@ -57,18 +57,18 @@ const AppointmentListStaff = () => {
           time: appt.start_time
             ? new Date(appt.start_time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
             : (typeof appt.time_slot === 'string'
-                ? appt.time_slot.split(' - ')[0]
-                : (appt.time_slot && appt.time_slot.start_time
-                    ? new Date(appt.time_slot.start_time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
-                    : (appt.time || 'N/A'))),
+              ? appt.time_slot.split(' - ')[0]
+              : (appt.time_slot && appt.time_slot.start_time
+                ? new Date(appt.time_slot.start_time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+                : (appt.time || 'N/A'))),
           patientId: appt.patient_id?.patientId,
           // Fallback type if not present
-          type: appt.type || 'Consultation' 
+          type: appt.type || 'Consultation'
         }));
-        
+
         // Sort by date descending
         enriched.sort((a, b) => new Date(b.rawDate) - new Date(a.rawDate));
-        
+
         setAppointments(enriched);
         setHospitalInfo(hospitalRes.data[0]);
 
@@ -119,17 +119,27 @@ const AppointmentListStaff = () => {
     setIsViewModalOpen(true);
   };
 
+  const handleAppointmentSuccess = (newAppointment) => {
+    // Add to list immediately
+    setAppointments([newAppointment, ...appointments]);
+    // Close creation modal
+    setChooserOpen(false);
+    // Show slip
+    setSelectedAppointment(newAppointment);
+    setIsViewModalOpen(true);
+  };
+
   return (
     <div className="p-2 bg-slate-50 min-h-screen font-sans">
       <div className="max-w-[1600px] mx-auto space-y-6">
-        
+
         {/* Header & Stats */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Appointment Management</h1>
             <p className="text-slate-500 mt-1">Track and manage patient visits efficiently.</p>
           </div>
-          
+
           <div className="flex gap-3">
             <div className="bg-white px-4 py-2 rounded-lg shadow-sm border border-slate-200 flex items-center gap-3">
               <div className="p-1.5 bg-blue-50 text-blue-600 rounded-md"><Calendar size={16} /></div>
@@ -150,25 +160,25 @@ const AppointmentListStaff = () => {
 
         {/* Main Content Card */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-          
+
           {/* Toolbar */}
           <div className="p-5 border-b border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4 bg-white">
             <div className="flex flex-1 gap-3 w-full md:w-auto">
               <div className="relative flex-1 md:max-w-sm">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                <input 
-                  type="text" 
-                  value={searchTerm} 
-                  onChange={(e) => setSearchTerm(e.target.value)} 
-                  placeholder="Search patient or doctor..." 
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Search patient or doctor..."
                   className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all"
                 />
               </div>
-              
+
               <div className="relative">
-                <select 
-                  value={filterStatus} 
-                  onChange={(e) => setFilterStatus(e.target.value)} 
+                <select
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value)}
                   className="appearance-none pl-4 pr-10 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-500/20 cursor-pointer hover:bg-slate-50 transition-colors"
                 >
                   <option value="all">All Status</option>
@@ -181,15 +191,15 @@ const AppointmentListStaff = () => {
                 <Filter className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={14} />
               </div>
 
-              <input 
-                type="date" 
-                value={filterDate} 
-                onChange={(e) => setFilterDate(e.target.value)} 
+              <input
+                type="date"
+                value={filterDate}
+                onChange={(e) => setFilterDate(e.target.value)}
                 className="px-3 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-500/20 cursor-pointer"
               />
             </div>
 
-            <button 
+            <button
               onClick={() => { setChooserOpen(true); setSelectedType(null); }}
               className="flex items-center gap-2 bg-teal-600 hover:bg-teal-700 text-white px-5 py-2.5 rounded-lg font-medium transition-all shadow-sm hover:shadow-md active:scale-95"
             >
@@ -252,9 +262,9 @@ const AppointmentListStaff = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
-                          <button 
-                            onClick={() => handleViewClick(appointment)} 
-                            className="p-2 text-slate-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-colors" 
+                          <button
+                            onClick={() => handleViewClick(appointment)}
+                            className="p-2 text-slate-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-colors"
                             title="View Slip"
                           >
                             <Eye size={20} />
@@ -287,7 +297,7 @@ const AppointmentListStaff = () => {
               </tbody>
             </table>
           </div>
-          
+
           {/* Pagination Footer (Static for now) */}
           <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between bg-slate-50/50">
             <p className="text-xs text-slate-500">Showing <span className="font-bold text-slate-700">{filteredAppointments.length}</span> results</p>
@@ -303,16 +313,16 @@ const AppointmentListStaff = () => {
       {chooserOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl overflow-hidden transform transition-all">
-            
+
             {!selectedType ? (
               <div className="p-8">
                 <div className="text-center mb-8">
                   <h3 className="text-2xl font-bold text-slate-800">New Appointment</h3>
                   <p className="text-slate-500 mt-1">Select the type of appointment you want to schedule</p>
                 </div>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <button 
+                  <button
                     onClick={() => setSelectedType('opd')}
                     className="group relative p-6 rounded-xl border-2 border-slate-100 hover:border-blue-500 bg-white hover:bg-blue-50/30 transition-all duration-300 text-left"
                   >
@@ -323,7 +333,7 @@ const AppointmentListStaff = () => {
                     <p className="text-sm text-slate-500 leading-relaxed">Outpatient Department consultation for general checkups and visits.</p>
                   </button>
 
-                  <button 
+                  <button
                     onClick={() => setSelectedType('ipd')}
                     className="group relative p-6 rounded-xl border-2 border-slate-100 hover:border-teal-500 bg-white hover:bg-teal-50/30 transition-all duration-300 text-left"
                   >
@@ -335,7 +345,7 @@ const AppointmentListStaff = () => {
                   </button>
                 </div>
 
-                <button 
+                <button
                   onClick={() => setChooserOpen(false)}
                   className="mt-8 mx-auto block text-sm font-medium text-slate-400 hover:text-slate-600 transition-colors"
                 >
@@ -358,16 +368,21 @@ const AppointmentListStaff = () => {
                     <X size={20} />
                   </button>
                 </div>
-                
+
                 <div className="flex-1 overflow-y-auto p-6 bg-white">
-                  <AddIPDAppointmentStaff embedded={true} type={selectedType} onClose={() => setChooserOpen(false)} />
+                  <AddIPDAppointmentStaff
+                    embedded={true}
+                    type={selectedType}
+                    onClose={() => setChooserOpen(false)}
+                    onSuccess={handleAppointmentSuccess}
+                  />
                 </div>
               </div>
             )}
           </div>
         </div>
       )}
-      
+
       {/* Appointment Slip Modal */}
       <AppointmentSlipModal
         isOpen={isViewModalOpen}

@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  FaBox, 
-  FaExclamationTriangle, 
-  FaCalendarTimes, 
+import {
+  FaBox,
+  FaExclamationTriangle,
+  FaCalendarTimes,
   FaChartLine,
   FaArrowUp,
   FaArrowDown,
@@ -60,15 +60,13 @@ const StockOverview = () => {
           lowStockRes,
           expiringRes,
           expiredRes,
-          activityRes,
-          categoriesRes
+          activityRes
         ] = await Promise.all([
           apiClient.get('/medicines?limit=1000'),
           apiClient.get('/medicines/low-stock'),
           apiClient.get('/batches/expiring-soon'),
           apiClient.get('/medicines/expired'),
-          apiClient.get('/stock-adjustments?limit=10'),
-          apiClient.get('/medicines/categories')
+          apiClient.get('/stock-adjustments?limit=10')
         ]);
 
         const medicines = medicinesRes.data.medicines || medicinesRes.data;
@@ -76,12 +74,12 @@ const StockOverview = () => {
         const lowStockCount = lowStockRes.data.length;
         const expiringSoonCount = expiringRes.data.length;
         const expiredCount = expiredRes.data.length;
-        
+
         // Calculate out of stock
         const outOfStockCount = medicines.filter(m => (m.stock_quantity || 0) <= 0).length;
 
         // Calculate total inventory value
-        const totalValue = medicines.reduce((sum, med) => 
+        const totalValue = medicines.reduce((sum, med) =>
           sum + ((med.price_per_unit || 0) * (med.stock_quantity || 0)), 0);
 
         // Calculate category distribution
@@ -154,7 +152,7 @@ const StockOverview = () => {
   return (
     <Layout sidebarItems={pharmacySidebar}>
       <div className="min-h-screen bg-slate-50/50 p-6 font-sans">
-        
+
         {/* Header */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-8">
           <div>
@@ -308,7 +306,7 @@ const StockOverview = () => {
                 <p className="text-slate-500 text-sm">Latest inventory adjustments and movements</p>
               </div>
               <div className="flex items-center gap-2">
-                <select 
+                <select
                   value={timeFilter}
                   onChange={(e) => setTimeFilter(e.target.value)}
                   className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
@@ -327,16 +325,15 @@ const StockOverview = () => {
               {recentActivity.length > 0 ? recentActivity.map((activity) => (
                 <div key={activity._id} className="flex items-center justify-between p-4 rounded-xl bg-slate-50/50 border border-slate-100 hover:bg-slate-50 transition-colors group">
                   <div className="flex items-center gap-4">
-                    <div className={`p-2 rounded-lg ${
-                      activity.adjustment_type === 'Addition' ? 'bg-emerald-100 text-emerald-600' :
-                      activity.adjustment_type === 'Deduction' ? 'bg-rose-100 text-rose-600' :
-                      'bg-blue-100 text-blue-600'
-                    }`}>
-                      {activity.adjustment_type === 'Addition' ? 
-                        <TrendingUp className="w-4 h-4" /> : 
-                        activity.adjustment_type === 'Deduction' ? 
-                        <TrendingDown className="w-4 h-4" /> :
-                        <RefreshCw className="w-4 h-4" />
+                    <div className={`p-2 rounded-lg ${activity.adjustment_type === 'Addition' ? 'bg-emerald-100 text-emerald-600' :
+                        activity.adjustment_type === 'Deduction' ? 'bg-rose-100 text-rose-600' :
+                          'bg-blue-100 text-blue-600'
+                      }`}>
+                      {activity.adjustment_type === 'Addition' ?
+                        <TrendingUp className="w-4 h-4" /> :
+                        activity.adjustment_type === 'Deduction' ?
+                          <TrendingDown className="w-4 h-4" /> :
+                          <RefreshCw className="w-4 h-4" />
                       }
                     </div>
                     <div>
