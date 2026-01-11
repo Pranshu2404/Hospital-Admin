@@ -1,10 +1,9 @@
 import axios from 'axios';
 
 // Ideally, this should be in an environment variable like import.meta.env.VITE_GEMINI_API_KEY
-// But for now, we will use the provided key.
-const GEMINI_API_KEY = 'AIzaSyATSBk4uBGpOIa7InraajTHsmF70zg88JQ';
-const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
-
+const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+// Using the 001 stable version usually resolves 404 errors
+const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
 /**
  * Summarizes the patient's prescription history using Gemini.
  * @param {Array} prescriptions - List of prescription objects.
