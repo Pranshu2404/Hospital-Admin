@@ -6,8 +6,9 @@ import {
   FaCheckCircle, FaPlus, FaTimes, FaMoneyBillWave,
   FaArrowLeft, FaFilePrescription, FaCloudUploadAlt, FaTrash,
   FaHistory, FaCalendarCheck, FaPrescriptionBottleAlt,
-  FaFlask, FaFileAlt, FaChevronDown, FaChevronUp, FaCapsules, FaHeartbeat
+  FaFlask, FaFileAlt, FaChevronDown, FaChevronUp, FaCapsules, FaHeartbeat, FaMagic, FaTimesCircle
 } from 'react-icons/fa';
+import { summarizePatientHistory } from '@/utils/geminiService';
 import Layout from '@/components/Layout';
 import { doctorSidebar } from '@/constants/sidebarItems/doctorSidebar';
 import { POPULAR_MEDICINES } from '@/constants/medicines';
@@ -104,6 +105,23 @@ const AppointmentDetails = () => {
     prescriptionImage: null
   });
 
+  // Gemini Summary State
+  const [summary, setSummary] = useState('');
+  const [summarizing, setSummarizing] = useState(false);
+  const [showSummary, setShowSummary] = useState(false);
+
+  // Import locally to avoid top-level import issues if file doesn't exist yet in some environments
+  // In a real app, import at top. For this snippet, I will assume I can't easily change top imports without reading all lines again (which I did, but let's be safe and consistent with the file structure)
+  // Actually, I'll just add the functions here since I can't easily insert the import at step 0 without a multi-replace or reading line 1.
+  // Wait, I can't use dynamic imports for named exports easily without async/await or handling promises.
+  // I will assume the file is created and I will use a helper function here that calls it, or likely the user wants me to add the import at the top.
+  // Since I am already replacing a huge chunk, I should probably do a multi-replace to add the import.
+  // BUT, to keep it simple and less error prone with the replace_file_content tool on a large file, I might just add the logic.
+  // HOWEVER, I created a util file. So I should use it.
+
+  // To import, I need to add the import statement. I'll use multi_replace.
+
+
   useEffect(() => {
     // Check if appointment is missing OR if the appointment exists but Vitals are missing
     if (!state?.appointment || (state?.appointment && !state.appointment.vitals)) {
@@ -113,7 +131,7 @@ const AppointmentDetails = () => {
       }
     }
   }, [id, state]);
-  
+
   useEffect(() => {
     if (appointment?.patient_id?._id || appointment?.patient_id) {
       fetchPatientHistory();
@@ -424,6 +442,35 @@ const AppointmentDetails = () => {
     }
   };
 
+  const handleSummarizeHistory = async () => {
+    if (!pastPrescriptions || pastPrescriptions.length === 0) {
+      setMessage('No past prescriptions to summarize.');
+      return;
+    }
+
+    setSummarizing(true);
+    setShowSummary(true);
+    setSummary('');
+
+    try {
+      const patientDetails = {
+        name: appointment.patient_id?.first_name
+          ? `${appointment.patient_id.first_name} ${appointment.patient_id.last_name || ''}`
+          : 'Patient',
+        age: calculateAge(appointment.patient_id?.dob),
+        gender: appointment.patient_id?.gender || 'Unknown'
+      };
+
+      const result = await summarizePatientHistory(pastPrescriptions, patientDetails);
+      setSummary(result);
+    } catch (error) {
+      console.error('Summarization failed:', error);
+      setSummary('Failed to generate summary. Please try again.');
+    } finally {
+      setSummarizing(false);
+    }
+  };
+
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('en-IN', {
       day: '2-digit',
@@ -482,6 +529,46 @@ const AppointmentDetails = () => {
               {/* Prescriptions Tab */}
               {activeTab === 'prescriptions' && (
                 <div className="space-y-4">
+                  {/* Gemini Summary Button & Section */}
+                  {pastPrescriptions.length > 0 && (
+                    <div className="mb-6">
+                      {!showSummary ? (
+                        <button
+                          onClick={handleSummarizeHistory}
+                          className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-semibold py-3 px-6 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 group"
+                        >
+                          <FaMagic className="group-hover:animate-pulse" /> Summarize Patient History with Gemini AI
+                        </button>
+                      ) : (
+                        <div className="bg-violet-50 rounded-xl border border-violet-200 overflow-hidden shadow-sm animate-fade-in">
+                          <div className="bg-gradient-to-r from-violet-600 to-indigo-600 px-4 py-3 flex justify-between items-center text-white">
+                            <div className="flex items-center gap-2 font-bold">
+                              <FaMagic /> AI Patient Summary
+                            </div>
+                            <button
+                              onClick={() => setShowSummary(false)}
+                              className="text-white/80 hover:text-white hover:bg-white/20 p-1 rounded-full transition-colors"
+                            >
+                              <FaTimesCircle size={18} />
+                            </button>
+                          </div>
+                          <div className="p-5">
+                            {summarizing ? (
+                              <div className="flex flex-col items-center justify-center py-6">
+                                <div className="animate-spin rounded-full h-8 w-8 border-4 border-violet-200 border-t-violet-600 mb-3"></div>
+                                <p className="text-violet-700 font-medium animate-pulse">Analyzing patient records...</p>
+                              </div>
+                            ) : (
+                              <div className="prose prose-sm prose-violet max-w-none text-slate-700 leading-relaxed whitespace-pre-wrap">
+                                {summary}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {pastPrescriptions.length > 0 ? (
                     pastPrescriptions.map((rx, idx) => (
                       <div key={rx._id} className="bg-gradient-to-br from-slate-50 to-white border border-slate-200 rounded-xl overflow-hidden hover:shadow-md transition-all duration-200">
@@ -906,7 +993,7 @@ const AppointmentDetails = () => {
                   </div>
                 </div>
               </div>
-                            {/* Vitals Card */}
+              {/* Vitals Card */}
               <div className="bg-white rounded-xl shadow-sm border border-teal-100 overflow-hidden">
                 <div className="bg-teal-50 px-4 py-3 border-b border-teal-100 flex items-center">
                   <div className="h-8 w-8 rounded-full bg-teal-100 flex items-center justify-center text-teal-600 mr-2 text-sm">
@@ -985,7 +1072,7 @@ const AppointmentDetails = () => {
                   </div>
                 </div>
               </div>
-             </div>
+            </div>
 
 
             {/* Right Column: Main Content */}
