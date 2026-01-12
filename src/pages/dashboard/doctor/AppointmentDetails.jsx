@@ -550,7 +550,7 @@ const AppointmentDetails = () => {
                           onClick={handleSummarizeHistory}
                           className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-semibold py-3 px-6 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 group"
                         >
-                          <FaMagic className="group-hover:animate-pulse" /> Summarize Patient History with Gemini AI
+                          <FaMagic className="group-hover:animate-pulse" /> Summarize Patient History
                         </button>
                       ) : (
                         <div className="bg-white rounded-xl border border-violet-100 overflow-hidden shadow-lg animate-fade-in ring-1 ring-violet-50">
@@ -560,8 +560,8 @@ const AppointmentDetails = () => {
                                 <FaMagic className="text-white" />
                               </div>
                               <div>
-                                <h3 className="font-bold text-lg leading-tight">AI Clinical Summary</h3>
-                                <p className="text-violet-100 text-xs font-medium opacity-90">Powered by Gemini Intelligent insights</p>
+                                <h3 className="font-bold text-lg leading-tight">Clinical Summary</h3>
+                                
                               </div>
                             </div>
                             <button
@@ -581,13 +581,77 @@ const AppointmentDetails = () => {
                                 <p className="text-violet-800 font-semibold text-sm tracking-wide animate-pulse">GENERATING CLINICAL INSIGHTS...</p>
                               </div>
                             ) : (
-                              <div className="prose prose-sm prose-slate max-w-none text-slate-700 leading-relaxed whitespace-pre-line font-medium">
-                                {summary}
+                              <div className="space-y-3">
+                                {summary.split('\n').map((line, idx) => {
+                                  if (!line.trim()) return null;
+
+                                  // Regex to parse: Date -> Doctor -> Diagnosis -> Notes -> Investigation -> Medicines -> Status
+                                  const parts = line.split(' -> ');
+
+                                  if (parts.length >= 6) {
+                                    const [dateStr, doctorStr, diagnosisStr, notesStr, investStr, medsStr, statusStr] = parts;
+                                    const isFollowUp = statusStr && statusStr.toLowerCase().includes('follow-up');
+
+                                    return (
+                                      <div key={idx} className="bg-white p-3 rounded-lg border border-slate-100 shadow-sm flex flex-col md:flex-row gap-3 text-sm">
+                                        {/* Date & Doctor */}
+                                        <div className="min-w-[140px]">
+                                          <div className="font-bold text-slate-800">{dateStr}</div>
+                                          <div className="text-xs text-slate-500 mt-1 truncate" title={doctorStr}>{doctorStr}</div>
+                                        </div>
+
+                                        {/* Clinical Details */}
+                                        <div className="flex-1 space-y-2">
+                                          <div>
+                                            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Diagnosis</span>
+                                            <div className="font-medium text-teal-700">{diagnosisStr}</div>
+                                          </div>
+
+                                          {/* Notes & Investigation */}
+                                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
+                                            {notesStr && notesStr !== 'None' && (
+                                              <div className="bg-yellow-50 p-2 rounded border border-yellow-100">
+                                                <span className="font-semibold text-yellow-700 block mb-0.5">Clinical Notes:</span>
+                                                <span className="text-slate-700">{notesStr}</span>
+                                              </div>
+                                            )}
+                                            {investStr && investStr !== 'None' && (
+                                              <div className="bg-blue-50 p-2 rounded border border-blue-100">
+                                                <span className="font-semibold text-blue-700 block mb-0.5">Investigation:</span>
+                                                <span className="text-slate-700">{investStr}</span>
+                                              </div>
+                                            )}
+                                          </div>
+
+                                          <div>
+                                            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Medicines</span>
+                                            <div className="text-slate-600 text-xs leading-relaxed whitespace-pre-wrap">{medsStr}</div>
+                                          </div>
+                                        </div>
+
+                                        {/* Status Badge */}
+                                        {statusStr && (
+                                          <div className="min-w-[100px] flex items-start justify-end">
+                                            <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${isFollowUp
+                                                ? 'bg-blue-100 text-blue-700 border border-blue-200'
+                                                : 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                                              }`}>
+                                              {statusStr.replace('Status:', '').trim()}
+                                            </span>
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  } else {
+                                    // Fallback for lines that don't match strict format
+                                    return <div key={idx} className="text-slate-600 text-sm py-1 border-b border-dashed border-slate-100 last:border-0">{line}</div>;
+                                  }
+                                })}
                               </div>
                             )}
                           </div>
                           <div className="px-6 py-2 bg-violet-50/50 border-t border-violet-100 flex justify-between items-center text-xs text-violet-400">
-                            <span>Generated by AI based on visible records</span>
+                            <span>Generated summary based on visible records</span>
                           </div>
                         </div>
                       )}

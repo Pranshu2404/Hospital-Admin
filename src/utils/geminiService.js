@@ -21,32 +21,38 @@ export const summarizePatientHistory = async (prescriptions, patientDetails) => 
       `- ${m.medicine_name} (${m.dosage}, ${m.frequency}) - ${m.duration}`
     ).join('\n    ');
 
+    const time = rx.appointment_id?.time || '';
+
     return `
     Record #${index + 1}:
-    Date: ${new Date(rx.issue_date || rx.createdAt).toLocaleDateString()}
-    Diagnosis: ${rx.diagnosis || 'N/A'}
+    Date: ${new Date(rx.issue_date || rx.createdAt).toLocaleDateString()} ${time ? 'at ' + time : ''}
     Doctor: ${rx.doctor_id?.firstName ? `Dr. ${rx.doctor_id.firstName} ${rx.doctor_id.lastName}` : 'N/A'}
+    Diagnosis: ${rx.diagnosis || 'N/A'}
     Notes: ${rx.notes || 'None'}
+    Investigation: ${rx.investigation || 'None'}
     Medicines:
     ${medicines || '    None'}
     `;
   }).join('\n');
 
   const prompt = `
-    You are a helpful medical assistant AI. Please summarize the following patient medical history for a doctor.
-    
+    You are a medical data formatter. 
+    Strictly list the patient's prescription history based ONLY on the provided data. 
+    Do NOT provide any medical advice, analysis, suggestions, or summaries of your own.
+    Do NOT use markdown bolding (double asterisks) or headings.
+
     Patient: ${patientDetails.name} (${patientDetails.gender}, ${patientDetails.age} yrs)
     
-    Past Prescriptions:
+    Data:
     ${historyText}
     
-    Please provide a concise summary that highlights:
-    1. Recurring diagnoses or chronic conditions.
-    2. Major treatments or medicines prescribed repeatedly.
-    3. Any significant notes or patterns in the history.
-    4. A brief overview of the patient's recent health trajectory.
-
-    Keep it professional, clinical, and concise.
+    Instructions:
+    1. For each record, determine if it seems "Related/Follow-up" to the previous one (based on similar diagnosis/medicines) or "Independent".
+    2. Format each entry strictly as follows:
+       [Date] -> [Doctor Name] -> [Diagnosis] -> [Notes] -> [Investigation] -> [Medicines List] -> [Status: Follow-up | Independent]
+    3. Use " -> " as the separator.
+    4. List them in chronological order (oldest to newest).
+    5. Do not add any introductory or concluding text. Just the list.
   `;
 
   try {
