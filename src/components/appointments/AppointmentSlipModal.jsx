@@ -455,7 +455,7 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
         <div className="printable-slip">
           {/* Header */}
           <div className="text-center slip-header">
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">APPOINTMENT SLIP</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Appointment Cum Registration Slip</h2>
             <h3 className="text-xl font-semibold text-blue-800">{hospitalInfo?.hospitalName || 'MEDICAL CENTER'}</h3>
             <p className="text-sm text-gray-600 mt-1">{hospitalInfo?.address || 'Hospital Address'}</p>
             <p className="text-sm text-gray-600">
@@ -533,9 +533,9 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
           </div>
 
           {/* Billing Details */}
-          {/* {billingDetails && billingDetails.details && billingDetails.details.length > 0 && (
+          {billingDetails && billingDetails.details && billingDetails.details.length > 0 && (
             <div className="slip-section">
-              <h4 className="text-lg font-semibold text-gray-800 mb-2 border-b pb-1">BILLING DETAILS</h4>
+              <h4 className="text-lg font-semibold text-gray-800 mb-2 border-b pb-1 mt-5">BILLING DETAILS</h4>
               <div className="space-y-2 text-sm">
                 <div className="grid grid-cols-5 gap-2 font-medium text-gray-700">
                   <div className="col-span-3">Description</div>
@@ -549,7 +549,7 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
                     <div>₹{item.amount?.toFixed(2) || '0.00'}</div>
                   </div>
                 ))}
-                <div className="grid grid-cols-5 gap-2 font-bold border-t pt-2 mt-2">
+                <div className="grid grid-cols-5 gap-2 font-bold pt-2 mt-2">
                   <div className="col-span-4 text-right">Total Amount:</div>
                   <div>₹{billingDetails.total_amount?.toFixed(2) || '0.00'}</div>
                 </div>
@@ -568,7 +568,7 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
                 </div>
               </div>
             </div>
-          )} */}
+          )}
 
           {/* Prescription Section */}
           {/* <div className="slip-section mt-4">
@@ -689,7 +689,6 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
 
           {/* Footer */}
           <div className="slip-footer text-center">
-            {/* <p className="text-xs text-gray-500 mb-2">** This is computer generated slip - no signature required **</p> */}
             <p className="text-xs text-gray-400 mt-4">
               {hospitalInfo?.website ? `Website: ${hospitalInfo.website} • ` : ''}
               Emergency: {hospitalInfo?.contact || 'XXXX-XXXXXX'}
@@ -697,6 +696,7 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
             <p className="text-xs text-gray-400 mt-1">
               Thank you for choosing {hospitalInfo?.hospitalName || 'our hospital'}. We wish you good health!
             </p>
+            <p className="text-xs text-gray-500 mt-2">** This is computer generated slip - no signature required **</p>
           </div>
 
           {/* Action Buttons */}

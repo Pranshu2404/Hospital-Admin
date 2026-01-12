@@ -9,6 +9,7 @@ import {
 import { useLocation } from 'react-router-dom';
 import AddIPDAppointment from './AddIPDAppointment';
 import AppointmentSlipModal from './AppointmentSlipModal';
+import AppointmentCompletionSlipModal from './AppointmentCompletionSlipModal';
 import AddIPDAppointmentStaff from './AddIPDAppointmentStaff';
 
 const AppointmentListStaff = () => {
@@ -27,6 +28,7 @@ const AppointmentListStaff = () => {
   const [selectedType, setSelectedType] = useState(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
+  const [isCompletionModalOpen, setIsCompletionModalOpen] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [hospitalInfo, setHospitalInfo] = useState(null);
@@ -127,6 +129,31 @@ const AppointmentListStaff = () => {
     // Show slip
     setSelectedAppointment(newAppointment);
     setIsViewModalOpen(true);
+  };
+
+  const handleCompleteClick = async (appointment, e) => {
+    e.stopPropagation();
+    if (appointment.status !== 'Completed') {
+      if (window.confirm('Mark this appointment as Completed and generate Completion Slip?')) {
+        try {
+          await axios.patch(`${import.meta.env.VITE_BACKEND_URL}/appointments/${appointment._id}`, { status: 'Completed' });
+
+          // Update local state
+          setAppointments(prev => prev.map(a => a._id === appointment._id ? { ...a, status: 'Completed' } : a));
+
+          // Open completion slip
+          setSelectedAppointment({ ...appointment, status: 'Completed' });
+          setIsCompletionModalOpen(true);
+        } catch (error) {
+          console.error('Error completing appointment:', error);
+          alert('Failed to update status. Please try again.');
+        }
+      }
+    } else {
+      // Already completed, just show slip
+      setSelectedAppointment(appointment);
+      setIsCompletionModalOpen(true);
+    }
   };
 
   return (
@@ -269,6 +296,16 @@ const AppointmentListStaff = () => {
                           >
                             <Eye size={20} />
                           </button>
+                          <button
+                            onClick={(e) => handleCompleteClick(appointment, e)}
+                            className={`p-2 rounded-lg transition-colors ${appointment.status === 'Completed'
+                                ? 'text-green-600 bg-green-50 hover:bg-green-100'
+                                : 'text-slate-400 hover:text-green-600 hover:bg-green-50'
+                              }`}
+                            title={appointment.status === 'Completed' ? "View Completion Slip" : "Complete Appointment"}
+                          >
+                            <CheckCircle size={20} />
+                          </button>
                           {/* <button className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Edit">
                             <Edit2 size={16} />
                           </button>
@@ -387,6 +424,14 @@ const AppointmentListStaff = () => {
       <AppointmentSlipModal
         isOpen={isViewModalOpen}
         onClose={() => { setIsViewModalOpen(false); setSelectedAppointment(null); }}
+        appointmentData={selectedAppointment}
+        hospitalInfo={hospitalInfo}
+      />
+
+      {/* Completion Slip Modal */}
+      <AppointmentCompletionSlipModal
+        isOpen={isCompletionModalOpen}
+        onClose={() => { setIsCompletionModalOpen(false); setSelectedAppointment(null); }}
         appointmentData={selectedAppointment}
         hospitalInfo={hospitalInfo}
       />
