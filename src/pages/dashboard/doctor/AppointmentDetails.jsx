@@ -35,10 +35,10 @@ const AppointmentDetails = () => {
 
   // Frequency options with common medical abbreviations
   const frequencyOptions = [
-  { value: 'OD', label: 'Once daily (OD)' },
-  { value: 'BD', label: 'Twice daily (BD)' },
-  { value: 'TDS', label: 'Three times daily (TDS)' },
-  { value: 'QDS', label: 'Four times daily (QDS)' },
+  { value: 'OD', label: 'Once daily' },
+  { value: 'BD', label: 'Twice daily' },
+  { value: 'TDS', label: 'Three times daily' },
+  { value: 'QDS', label: 'Four times daily' },
   { value: 'q4h', label: 'Every 4 hours' },
   { value: 'q6h', label: 'Every 6 hours' },
   { value: 'q8h', label: 'Every 8 hours' },
@@ -52,10 +52,7 @@ const AppointmentDetails = () => {
   { value: 'PRN', label: 'As needed' },
   { value: 'SOS', label: 'When required' },
   { value: 'Stat', label: 'Immediately' },
-  { value: 'q.o.d.', label: 'Every other day' },
-  { value: '1-0-0', label: 'Once daily (1-0-0)' },
-  { value: '1-0-1', label: 'Twice daily (1-0-1)' },
-  { value: '1-1-1', label: 'Three times daily (1-1-1)' }
+  { value: 'q.o.d.', label: 'Every other day' }
   ];
 
   // { value: 'OD', label: 'Once daily (OD)' },
@@ -107,18 +104,6 @@ const AppointmentDetails = () => {
   const [summary, setSummary] = useState('');
   const [summarizing, setSummarizing] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
-
-  // Import locally to avoid top-level import issues if file doesn't exist yet in some environments
-  // In a real app, import at top. For this snippet, I will assume I can't easily change top imports without reading all lines again (which I did, but let's be safe and consistent with the file structure)
-  // Actually, I'll just add the functions here since I can't easily insert the import at step 0 without a multi-replace or reading line 1.
-  // Wait, I can't use dynamic imports for named exports easily without async/await or handling promises.
-  // I will assume the file is created and I will use a helper function here that calls it, or likely the user wants me to add the import at the top.
-  // Since I am already replacing a huge chunk, I should probably do a multi-replace to add the import.
-  // BUT, to keep it simple and less error prone with the replace_file_content tool on a large file, I might just add the logic.
-  // HOWEVER, I created a util file. So I should use it.
-
-  // To import, I need to add the import statement. I'll use multi_replace.
-
 
   useEffect(() => {
     // Check if appointment is missing OR if the appointment exists but Vitals are missing
@@ -1333,24 +1318,35 @@ const AppointmentDetails = () => {
                                         </div>
 
                                         {/* Route of Administration Dropdown */}
-                                        <div className="md:col-span-2">
+                                        <div className="md:col-span-3">
                                           <select
                                             name="route_of_administration"
-                                            value={item.route_of_administration || ''}
+                                            value={item.route_of_administration || ""}
                                             onChange={(e) => handleMedicineChange(index, e)}
                                             className="w-full border border-slate-300 rounded px-2 py-2 text-sm focus:ring-1 focus:ring-teal-500 outline-none bg-white"
                                           >
-                                            <option value="">Route</option>
-                                            <option value="Tablet">Tablet</option>
-                                            <option value="Capsule">Capsule</option>
-                                            <option value="Syrup">Syrup</option>
-                                            <option value="Injection">Injection</option>
-                                            <option value="Ointment">Ointment</option>
-                                            <option value="Drops">Drops</option>
-                                            <option value="Inhaler">Inhaler</option>
-                                            <option value="Other">Other</option>
+                                            <option value="">Medicine Route</option>
+                                            {[
+                                              "Oral",
+                                              "Sublingual",
+                                              "Intramuscular Injection",
+                                              "Intravenous Injection",
+                                              "Subcutaneous Injection",
+                                              "Topical Application",
+                                              "Inhalation",
+                                              "Nasal",
+                                              "Eye Drops",
+                                              "Ear Drops",
+                                              "Rectal",
+                                              "Other"
+                                            ].map((route) => (
+                                              <option key={route} value={route}>
+                                                {route}
+                                              </option>
+                                            ))}
                                           </select>
                                         </div>
+
 
                                         {/* Frequency Dropdown */}
                                         <div className="md:col-span-3">
