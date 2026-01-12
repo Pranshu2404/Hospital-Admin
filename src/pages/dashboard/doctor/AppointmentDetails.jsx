@@ -35,29 +35,27 @@ const AppointmentDetails = () => {
 
   // Frequency options with common medical abbreviations
   const frequencyOptions = [
-    // Daily frequencies
-    { value: 'OD', label: 'Once daily (OD)' },
-    { value: 'BD', label: 'Twice daily (BD)' },
-    { value: 'TDS', label: 'Three times daily (TDS)' },
-    { value: 'QDS', label: 'Four times daily (QDS)' },
-
-    // Time-interval based (keep only what adds value)
-    { value: 'q4h', label: 'Every 4 hours' },
-
-    // Time-of-day
-    { value: 'Mane', label: 'Morning (Mane)' },
-    { value: 'Nocte', label: 'Night (Nocte)' },
-
-    // Meal-based
-    { value: 'AC', label: 'Before meals (AC)' },
-    { value: 'PC', label: 'After meals (PC)' },
-
-    // Conditional
-    { value: 'PRN', label: 'As needed (PRN)' },
-
-    // Special
-    { value: 'Stat', label: 'Immediately (Stat)' },
-    { value: 'q.o.d.', label: 'Every other day' }
+  { value: 'OD', label: 'Once daily (OD)' },
+  { value: 'BD', label: 'Twice daily (BD)' },
+  { value: 'TDS', label: 'Three times daily (TDS)' },
+  { value: 'QDS', label: 'Four times daily (QDS)' },
+  { value: 'q4h', label: 'Every 4 hours' },
+  { value: 'q6h', label: 'Every 6 hours' },
+  { value: 'q8h', label: 'Every 8 hours' },
+  { value: 'q12h', label: 'Every 12 hours' },
+  { value: 'Mane', label: 'In the morning' },
+  { value: 'Nocte', label: 'At night' },
+  { value: 'q.a.m.', label: 'Every morning' },
+  { value: 'q.p.m.', label: 'Every evening' },
+  { value: 'AC', label: 'Before meals' },
+  { value: 'PC', label: 'After meals' },
+  { value: 'PRN', label: 'As needed' },
+  { value: 'SOS', label: 'When required' },
+  { value: 'Stat', label: 'Immediately' },
+  { value: 'q.o.d.', label: 'Every other day' },
+  { value: '1-0-0', label: 'Once daily (1-0-0)' },
+  { value: '1-0-1', label: 'Twice daily (1-0-1)' },
+  { value: '1-1-1', label: 'Three times daily (1-1-1)' }
   ];
 
   // { value: 'OD', label: 'Once daily (OD)' },

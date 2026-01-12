@@ -5,9 +5,9 @@ import dayjs from 'dayjs';
 import { Calendar as BigCalendar, momentLocalizer } from 'react-big-calendar';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import moment from 'moment';
-import { 
-  PieChart, Pie, Cell, Tooltip, ResponsiveContainer, 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend 
+import {
+  PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend
 } from 'recharts';
 import AppointmentSlipModal from '@/components/appointments/AppointmentSlipModal';
 import {
@@ -106,7 +106,7 @@ const DoctorDashboard = () => {
         const today = dayjs();
         const patientsData = patientsRes.data.patients || [];
         const apptsData = appointmentsRes.data || [];
-        
+
         setAppointments(apptsData);
         setPatients(patientsData);
         setDoctors(doctorsRes.data);
@@ -123,19 +123,39 @@ const DoctorDashboard = () => {
         });
 
         if (todayAppointments.length > 0) {
-          const appt = todayAppointments.find(a => dayjs(a.start_time || a.appointment_date).isAfter(dayjs())) || todayAppointments[todayAppointments.length - 1];
-          const patient = appt.patient_id || {};
-          setNextPatient({
-            first_name: patient.first_name || patient.firstName || '',
-            last_name: patient.last_name || patient.lastName || '',
-            phone: patient.phone || '',
-            gender: patient.gender || '',
-            age: calculateAge(patient.dob),
-            treatment: appt.type,
-            date: appt.appointment_date,
-            time: formatApptTime(appt),
-            status: appt.status
-          });
+          // Filter for Next Patient Display: Only show 'Scheduled' appointments
+          // This avoids showing Completed or Cancelled ones as "Next"
+          const scheduledForToday = todayAppointments.filter(a => a.status === 'Scheduled');
+
+          // Find the next scheduled appointment (closest to now, or just the first remaining one)
+          // Since todayAppointments is already sorted by time, scheduledForToday is also sorted.
+          // We ideally want the first one that hasn't passed, or if all passed (but still scheduled/late), the first one.
+
+          let appt = scheduledForToday.find(a => dayjs(a.start_time || a.appointment_date).isAfter(dayjs()));
+
+          // If no future scheduled appts, but there are still scheduled ones (e.g. late), pick the first one.
+          if (!appt && scheduledForToday.length > 0) {
+            appt = scheduledForToday[0];
+          }
+
+          if (appt) {
+            const patient = appt.patient_id || {};
+            setNextPatient({
+              first_name: patient.first_name || patient.firstName || '',
+              last_name: patient.last_name || patient.lastName || '',
+              phone: patient.phone || '',
+              gender: patient.gender || '',
+              age: calculateAge(patient.dob),
+              treatment: appt.type,
+              date: appt.appointment_date,
+              time: formatApptTime(appt),
+              status: appt.status
+            });
+          } else {
+            setNextPatient(null);
+          }
+        } else {
+          setNextPatient(null);
         }
 
         // Calendar Events
@@ -143,7 +163,7 @@ const DoctorDashboard = () => {
         apptsData.forEach(appt => {
           const start = appt.start_time ? new Date(appt.start_time) : new Date(appt.appointment_date);
           const end = appt.end_time ? new Date(appt.end_time) : new Date(new Date(start).setMinutes(start.getMinutes() + 30));
-          
+
           if (appt.status !== 'Cancelled') {
             events.push({
               title: `${appt.patient_id?.first_name || 'Patient'} - ${appt.type}`,
@@ -248,7 +268,7 @@ const DoctorDashboard = () => {
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 mb-8">
-        
+
         {/* Left Column: Calendar (2/3 width on large screens) */}
         <div className="xl:col-span-2 space-y-8">
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
@@ -281,15 +301,15 @@ const DoctorDashboard = () => {
 
         {/* Right Column: Next Patient & Lists (1/3 width) */}
         <div className="space-y-8">
-          
+
           {/* Next Patient Card */}
           <div className="bg-gradient-to-br from-teal-600 to-teal-800 rounded-2xl shadow-lg p-6 text-white relative overflow-hidden">
             <div className="absolute top-0 right-0 p-3 opacity-10">
               <FaUserInjured size={120} />
             </div>
-            
+
             <h2 className="text-teal-100 font-semibold text-sm uppercase tracking-wider mb-6">Next Appointment</h2>
-            
+
             {nextPatient ? (
               <>
                 <div className="flex items-start gap-4 mb-6 relative z-10">
@@ -315,7 +335,7 @@ const DoctorDashboard = () => {
                   </div>
                 </div>
 
-                <button 
+                <button
                   className="w-full py-3 bg-white text-teal-700 font-bold rounded-xl shadow-md hover:bg-teal-50 transition-colors flex items-center justify-center gap-2"
                   onClick={() => navigate('/dashboard/doctor/appointments')}
                 >
@@ -335,7 +355,7 @@ const DoctorDashboard = () => {
               <h2 className="text-lg font-bold text-slate-800">Pending Actions</h2>
               <span className="bg-amber-100 text-amber-700 text-xs px-2 py-1 rounded-full font-bold">{approvalRequests.length}</span>
             </div>
-            
+
             <div className="space-y-4">
               {approvalRequests.length > 0 ? approvalRequests.map((req, i) => (
                 <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-100 hover:border-teal-200 transition-colors group">
@@ -363,7 +383,7 @@ const DoctorDashboard = () => {
 
       {/* Analytics Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        
+
         {/* Pie Chart */}
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
           <h2 className="text-lg font-bold text-slate-800 mb-6">Appointment Status Overview</h2>
@@ -384,8 +404,8 @@ const DoctorDashboard = () => {
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} stroke="none" />
                   ))}
                 </Pie>
-                <Tooltip 
-                  contentStyle={{ backgroundColor: '#fff', borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} 
+                <Tooltip
+                  contentStyle={{ backgroundColor: '#fff', borderRadius: '8px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                   itemStyle={{ color: '#334155', fontWeight: 600 }}
                 />
                 <Legend verticalAlign="bottom" height={36} iconType="circle" />
@@ -401,18 +421,18 @@ const DoctorDashboard = () => {
             <ResponsiveContainer>
               <BarChart data={departmentData}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis 
-                  dataKey="name" 
-                  tick={{ fill: '#64748b', fontSize: 12 }} 
-                  axisLine={false} 
+                <XAxis
+                  dataKey="name"
+                  tick={{ fill: '#64748b', fontSize: 12 }}
+                  axisLine={false}
                   tickLine={false}
                 />
-                <YAxis 
-                  tick={{ fill: '#64748b', fontSize: 12 }} 
-                  axisLine={false} 
+                <YAxis
+                  tick={{ fill: '#64748b', fontSize: 12 }}
+                  axisLine={false}
                   tickLine={false}
                 />
-                <Tooltip 
+                <Tooltip
                   cursor={{ fill: '#f8fafc' }}
                   contentStyle={{ backgroundColor: '#fff', borderRadius: '8px', border: '1px solid #e2e8f0' }}
                 />
