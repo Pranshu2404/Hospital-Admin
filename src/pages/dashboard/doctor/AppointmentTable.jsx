@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { 
-  FaClock, 
-  FaUser, 
-  FaSearch, 
-  FaFilter, 
-  FaChevronLeft, 
-  FaChevronRight, 
-  FaPlay, 
+import {
+  FaClock,
+  FaUser,
+  FaSearch,
+  FaFilter,
+  FaChevronLeft,
+  FaChevronRight,
+  FaPlay,
   FaEye,
   FaCalendarAlt
 } from 'react-icons/fa';
@@ -29,8 +29,17 @@ const DoctorAppointments = () => {
 
   const fetchAppointments = async () => {
     try {
-      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/appointments/doctor/${doctorId}`);
-      setAppointments(response.data || []);
+      // Use the generic endpoint to ensure we get full details including vitals
+      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/appointments`);
+      const allAppointments = response.data.appointments || response.data || [];
+
+      // Filter by current doctor
+      const myAppointments = allAppointments.filter(appt => {
+        const dId = appt.doctor_id?._id || appt.doctor_id;
+        return dId === doctorId;
+      });
+
+      setAppointments(myAppointments);
       setLoading(false);
     } catch (err) {
       console.error('Error fetching appointments:', err);
@@ -42,10 +51,16 @@ const DoctorAppointments = () => {
     const matchesSearch = `${appt.patient_id?.first_name || ''} ${appt.patient_id?.last_name || ''}`
       .toLowerCase()
       .includes(searchTerm.toLowerCase());
-    
+
     const matchesStatus = filterStatus === 'all' || appt.status === filterStatus;
-    
-    return matchesSearch && matchesStatus;
+
+    // Only show appointments where vitals have been recorded
+    // Checks if vitals object exists and has at least one property (e.g. bp, weight)
+    const hasVitals = appt.vitals &&
+      (appt.vitals.bp || appt.vitals.weight || appt.vitals.pulse ||
+        appt.vitals.response || Object.keys(appt.vitals).length > 0);
+
+    return matchesSearch && matchesStatus && hasVitals;
   });
 
   const paginatedAppointments = filteredAppointments.slice(
@@ -56,8 +71,8 @@ const DoctorAppointments = () => {
   const totalPages = Math.ceil(filteredAppointments.length / itemsPerPage);
 
   const handleViewDetails = (appointment) => {
-    navigate(`/doctor/appointments/${appointment._id}`, { 
-      state: { appointment } 
+    navigate(`/doctor/appointments/${appointment._id}`, {
+      state: { appointment }
     });
   };
 
@@ -68,8 +83,8 @@ const DoctorAppointments = () => {
         status: 'In Progress'
       });
       const updatedAppointment = { ...appointment, status: 'In Progress' };
-      navigate(`/doctor/appointments/${appointmentId}`, { 
-        state: { appointment: updatedAppointment } 
+      navigate(`/doctor/appointments/${appointmentId}`, {
+        state: { appointment: updatedAppointment }
       });
     } catch (err) {
       console.error('Error starting appointment:', err);
@@ -86,7 +101,7 @@ const DoctorAppointments = () => {
       'Completed': 'bg-emerald-50 text-emerald-700 border-emerald-200',
       'Cancelled': 'bg-red-50 text-red-700 border-red-200',
     };
-    
+
     return (
       <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${styles[status] || 'bg-gray-50 text-gray-700 border-gray-200'}`}>
         {status}
@@ -97,11 +112,10 @@ const DoctorAppointments = () => {
   const TabButton = ({ label, value, current, onClick }) => (
     <button
       onClick={() => onClick(value)}
-      className={`pb-3 px-4 text-sm font-medium transition-colors relative ${
-        current === value 
-          ? 'text-teal-600' 
-          : 'text-gray-500 hover:text-gray-700'
-      }`}
+      className={`pb-3 px-4 text-sm font-medium transition-colors relative ${current === value
+        ? 'text-teal-600'
+        : 'text-gray-500 hover:text-gray-700'
+        }`}
     >
       {label}
       {current === value && (
@@ -122,7 +136,7 @@ const DoctorAppointments = () => {
   return (
     <div className="min-h-screen bg-gray-50/50 p-6 md:p-2 font-sans">
       <div className="max-w-7xl mx-auto">
-        
+
         {/* Page Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-8">
           <div>
@@ -139,10 +153,10 @@ const DoctorAppointments = () => {
 
         {/* Main Content Card */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          
+
           {/* Controls Toolbar */}
           <div className="p-5 border-b border-gray-100 space-y-4">
-            
+
             {/* Tabs Row */}
             <div className="flex items-center space-x-1 border-b border-gray-100 overflow-x-auto no-scrollbar">
               <TabButton label="All" value="all" current={filterStatus} onClick={setFilterStatus} />
@@ -200,7 +214,7 @@ const DoctorAppointments = () => {
                   paginatedAppointments.map((appt) => {
                     const patientName = `${appt.patient_id?.first_name || 'Unknown'} ${appt.patient_id?.last_name || ''}`;
                     const apptDate = new Date(appt.appointment_date);
-                    
+
                     return (
                       <tr key={appt._id} className="hover:bg-gray-50/80 transition-colors group">
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -211,7 +225,7 @@ const DoctorAppointments = () => {
                             <div className="ml-4">
                               <div className="text-sm font-medium text-gray-900">{patientName}</div>
                               <div className="text-xs text-gray-500">
-                                {appt.patient_id?.gender || 'N/A'}, {appt.patient_id?.dob ? 
+                                {appt.patient_id?.gender || 'N/A'}, {appt.patient_id?.dob ?
                                   `${new Date().getFullYear() - new Date(appt.patient_id.dob).getFullYear()} yrs` : 'Age N/A'}
                               </div>
                             </div>
@@ -288,11 +302,10 @@ const DoctorAppointments = () => {
                 {Array.from({ length: totalPages }, (_, i) => (
                   <button
                     key={i + 1}
-                    className={`w-8 h-8 flex items-center justify-center rounded-md text-sm transition-all ${
-                      currentPage === i + 1
-                        ? 'bg-teal-600 text-white shadow-sm font-medium'
-                        : 'text-gray-600 hover:bg-gray-100'
-                    }`}
+                    className={`w-8 h-8 flex items-center justify-center rounded-md text-sm transition-all ${currentPage === i + 1
+                      ? 'bg-teal-600 text-white shadow-sm font-medium'
+                      : 'text-gray-600 hover:bg-gray-100'
+                      }`}
                     onClick={() => setCurrentPage(i + 1)}
                   >
                     {i + 1}
