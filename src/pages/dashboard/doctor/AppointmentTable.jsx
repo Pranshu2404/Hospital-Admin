@@ -20,8 +20,28 @@ const DoctorAppointments = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [vitalsEnabled, setVitalsEnabled] = useState(() => {
+    const stored = localStorage.getItem('vitalsEnabled');
+    return stored === null ? true : stored === 'true';
+  });
   const navigate = useNavigate();
   const doctorId = localStorage.getItem("doctorId");
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/hospitals`);
+        if (res.data && res.data.length > 0) {
+          const v = res.data[0].vitalsEnabled !== undefined ? res.data[0].vitalsEnabled : true;
+          setVitalsEnabled(v);
+          localStorage.setItem('vitalsEnabled', v);
+        }
+      } catch (err) {
+        console.error("Error fetching hospital settings:", err);
+      }
+    };
+    fetchSettings();
+  }, []);
 
   useEffect(() => {
     fetchAppointments();
@@ -54,13 +74,15 @@ const DoctorAppointments = () => {
 
     const matchesStatus = filterStatus === 'all' || appt.status === filterStatus;
 
-    // Only show appointments where vitals have been recorded
-    // Checks if vitals object exists and has at least one property (e.g. bp, weight)
+    // If vitals functionality is enabled, only show appointments where vitals have been recorded
+    // If disabled, show all matching appointments regardless of vitals
     const hasVitals = appt.vitals &&
       (appt.vitals.bp || appt.vitals.weight || appt.vitals.pulse ||
         appt.vitals.response || Object.keys(appt.vitals).length > 0);
 
-    return matchesSearch && matchesStatus && hasVitals;
+    const meetsVitalsRequirement = !vitalsEnabled || hasVitals;
+
+    return matchesSearch && matchesStatus && meetsVitalsRequirement;
   });
 
   const paginatedAppointments = filteredAppointments.slice(

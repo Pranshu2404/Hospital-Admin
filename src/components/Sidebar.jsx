@@ -3,21 +3,32 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { SidebarItem } from './common/SidebarItem';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faHospital, faBars, faTimes } from "@fortawesome/free-solid-svg-icons";
-import axios from 'axios'; 
+import axios from 'axios';
 
 const Sidebar = ({ sidebarItems, onCloseMobile }) => {
   const [openMenu, setOpenMenu] = useState(null);
-  const [hospitalName, setHospitalName] = useState('Mediqliq'); 
+  const [hospitalName, setHospitalName] = useState('Mediqliq');
   const [isCollapsed, setIsCollapsed] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+
+  // Initialize from localStorage to avoid flicker
+  const [vitalsEnabled, setVitalsEnabled] = useState(() => {
+    const stored = localStorage.getItem('vitalsEnabled');
+    return stored === null ? true : stored === 'true';
+  });
 
   useEffect(() => {
     const fetchHospitalData = async () => {
       try {
         const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/hospitals`);
         if (res.data && res.data.length > 0) {
-          setHospitalName(res.data[0].hospitalName); 
+          setHospitalName(res.data[0].hospitalName);
+
+          // Handle Vitals Enabled Setting
+          const v = res.data[0].vitalsEnabled !== undefined ? res.data[0].vitalsEnabled : true;
+          setVitalsEnabled(v);
+          localStorage.setItem('vitalsEnabled', v);
         }
       } catch (err) {
         console.error('Failed to fetch hospital data:', err);
@@ -25,6 +36,14 @@ const Sidebar = ({ sidebarItems, onCloseMobile }) => {
     };
     fetchHospitalData();
   }, []);
+
+  // Filter sidebar items based on vitalsEnabled
+  const filteredSidebarItems = sidebarItems.filter(item => {
+    if ((item.label === 'Nurses' || item.text === 'Nurses') && !vitalsEnabled) {
+      return false;
+    }
+    return true;
+  });
 
   // Close sidebar on mobile when route changes
   useEffect(() => {
@@ -54,6 +73,17 @@ const Sidebar = ({ sidebarItems, onCloseMobile }) => {
     }
   };
 
+  // Listen for vitals updates
+  useEffect(() => {
+    const handleVitalsUpdate = () => {
+      const stored = localStorage.getItem('vitalsEnabled');
+      setVitalsEnabled(stored === null ? true : stored === 'true');
+    };
+
+    window.addEventListener('vitals-updated', handleVitalsUpdate);
+    return () => window.removeEventListener('vitals-updated', handleVitalsUpdate);
+  }, []);
+
   const isActive = (path) => location.pathname === path;
 
   return (
@@ -62,24 +92,24 @@ const Sidebar = ({ sidebarItems, onCloseMobile }) => {
       <div className="flex items-center justify-between p-4 lg:p-5 border-b border-gray-100">
         <div className="flex items-center">
           <div className="p-2 lg:p-3 rounded-full border-2 border-teal-600 flex-shrink-0">
-            <FontAwesomeIcon 
-              icon={faHospital} 
-              className="text-teal-600 w-5 h-5 lg:w-6 lg:h-6" 
+            <FontAwesomeIcon
+              icon={faHospital}
+              className="text-teal-600 w-5 h-5 lg:w-6 lg:h-6"
             />
           </div>
           <h1 className="text-lg lg:text-xl font-bold ml-3 text-gray-800 truncate">
             {hospitalName}
           </h1>
         </div>
-        
+
         {/* Close Button (Mobile) */}
         <button
           onClick={onCloseMobile}
           className="lg:hidden flex items-center justify-center w-8 h-8 rounded-lg hover:bg-gray-100 transition-colors"
           aria-label="Close sidebar"
         >
-          <FontAwesomeIcon 
-            icon={faTimes} 
+          <FontAwesomeIcon
+            icon={faTimes}
             className="text-gray-500 w-5 h-5"
           />
         </button>
@@ -87,7 +117,7 @@ const Sidebar = ({ sidebarItems, onCloseMobile }) => {
 
       {/* Navigation */}
       <nav className="flex-1 p-3 lg:p-4 overflow-y-auto space-y-1 lg:space-y-2">
-        {sidebarItems.map((item, idx) => (
+        {filteredSidebarItems.map((item, idx) => (
           <div key={item.label || item.text || idx}>
             <SidebarItem
               icon={item.icon}
