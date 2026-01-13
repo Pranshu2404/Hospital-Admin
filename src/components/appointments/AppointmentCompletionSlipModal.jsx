@@ -180,7 +180,7 @@ const AppointmentCompletionSlipModal = ({ isOpen, onClose, appointmentData, hosp
                     </div>
 
                     {/* 3. Vitals Details */}
-                    {vitals && (
+                    {vitals && (vitals.bp || vitals.pulse || vitals.weight || vitals.temperature || vitals.spo2) && (
                         <div className="mb-6 pb-4 border-b border-dashed border-slate-300">
                             <h4 className="section-title mt-0">PATIENT VITALS</h4>
                             <div className="grid grid-cols-3 md:grid-cols-5 gap-4 bg-slate-50 p-4 rounded-lg border border-slate-100">

@@ -35,24 +35,24 @@ const AppointmentDetails = () => {
 
   // Frequency options with common medical abbreviations
   const frequencyOptions = [
-  { value: 'OD', label: 'Once daily' },
-  { value: 'BD', label: 'Twice daily' },
-  { value: 'TDS', label: 'Three times daily' },
-  { value: 'QDS', label: 'Four times daily' },
-  { value: 'q4h', label: 'Every 4 hours' },
-  { value: 'q6h', label: 'Every 6 hours' },
-  { value: 'q8h', label: 'Every 8 hours' },
-  { value: 'q12h', label: 'Every 12 hours' },
-  { value: 'Mane', label: 'In the morning' },
-  { value: 'Nocte', label: 'At night' },
-  { value: 'q.a.m.', label: 'Every morning' },
-  { value: 'q.p.m.', label: 'Every evening' },
-  { value: 'AC', label: 'Before meals' },
-  { value: 'PC', label: 'After meals' },
-  { value: 'PRN', label: 'As needed' },
-  { value: 'SOS', label: 'When required' },
-  { value: 'Stat', label: 'Immediately' },
-  { value: 'q.o.d.', label: 'Every other day' }
+    { value: 'OD', label: 'Once daily' },
+    { value: 'BD', label: 'Twice daily' },
+    { value: 'TDS', label: 'Three times daily' },
+    { value: 'QDS', label: 'Four times daily' },
+    { value: 'q4h', label: 'Every 4 hours' },
+    { value: 'q6h', label: 'Every 6 hours' },
+    { value: 'q8h', label: 'Every 8 hours' },
+    { value: 'q12h', label: 'Every 12 hours' },
+    { value: 'Mane', label: 'In the morning' },
+    { value: 'Nocte', label: 'At night' },
+    { value: 'q.a.m.', label: 'Every morning' },
+    { value: 'q.p.m.', label: 'Every evening' },
+    { value: 'AC', label: 'Before meals' },
+    { value: 'PC', label: 'After meals' },
+    { value: 'PRN', label: 'As needed' },
+    { value: 'SOS', label: 'When required' },
+    { value: 'Stat', label: 'Immediately' },
+    { value: 'q.o.d.', label: 'Every other day' }
   ];
 
   // { value: 'OD', label: 'Once daily (OD)' },
@@ -544,7 +544,7 @@ const AppointmentDetails = () => {
                               </div>
                               <div>
                                 <h3 className="font-bold text-lg leading-tight">Clinical Summary</h3>
-                                
+
                               </div>
                             </div>
                             <button
@@ -616,8 +616,8 @@ const AppointmentDetails = () => {
                                         {statusStr && (
                                           <div className="min-w-[100px] flex items-start justify-end">
                                             <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${isFollowUp
-                                                ? 'bg-blue-100 text-blue-700 border border-blue-200'
-                                                : 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                                              ? 'bg-blue-100 text-blue-700 border border-blue-200'
+                                              : 'bg-emerald-100 text-emerald-700 border border-emerald-200'
                                               }`}>
                                               {statusStr.replace('Status:', '').trim()}
                                             </span>
@@ -1066,43 +1066,45 @@ const AppointmentDetails = () => {
                 </div>
               </div>
               {/* Vitals Card */}
-              <div className="bg-white rounded-xl shadow-sm border border-teal-100 overflow-hidden">
-                <div className="bg-teal-50 px-4 py-3 border-b border-teal-100 flex items-center">
-                  <div className="h-8 w-8 rounded-full bg-teal-100 flex items-center justify-center text-teal-600 mr-2 text-sm">
-                    <FaHeartbeat />
-                  </div>
-                  <h3 className="font-semibold text-slate-800 text-md">Vitals</h3>
-                  <span className="text-xs text-slate-500 ml-auto font-normal">
-                    {appointment.vitals?.recorded_at
-                      ? new Date(appointment.vitals.recorded_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                      : ''}
-                  </span>
-                </div>
-                <div className="p-4 grid grid-cols-2 gap-3">
-                  <div className="text-center p-2 bg-slate-50 rounded border border-slate-100">
-                    <span className="block text-xs text-slate-500 uppercase font-bold mb-1">BP</span>
-                    <span className="text-md font-bold text-slate-800">{appointment.vitals?.bp || '--'}</span>
-                  </div>
-                  <div className="text-center p-2 bg-slate-50 rounded border border-slate-100">
-                    <span className="block text-xs text-slate-500 uppercase font-bold mb-1">Pulse</span>
-                    <span className="text-md font-bold text-slate-800">{appointment.vitals?.pulse || '--'} <span className="text-[10px] text-slate-400">bpm</span></span>
-                  </div>
-                  <div className="text-center p-2 bg-slate-50 rounded border border-slate-100">
-                    <span className="block text-xs text-slate-500 uppercase font-bold mb-1">Weight</span>
-                    <span className="text-md font-bold text-slate-800">{appointment.vitals?.weight || '--'} <span className="text-[10px] text-slate-400">kg</span></span>
-                  </div>
-                  <div className="text-center p-2 bg-slate-50 rounded border border-slate-100">
-                    <span className="block text-xs text-slate-500 uppercase font-bold mb-1">SPO2</span>
-                    <span className="text-md font-bold text-slate-800">{appointment.vitals?.spo2 || '--'} <span className="text-[10px] text-slate-400">%</span></span>
-                  </div>
-                  {appointment.vitals?.temperature && (
-                    <div className="text-center p-2 bg-slate-50 rounded border border-slate-100 col-span-2">
-                      <span className="block text-xs text-slate-500 uppercase font-bold mb-1">Temp</span>
-                      <span className="text-md font-bold text-slate-800">{appointment.vitals.temperature} <span className="text-[10px] text-slate-400">°F</span></span>
+              {appointment.vitals && (appointment.vitals.bp || appointment.vitals.pulse || appointment.vitals.weight || appointment.vitals.spo2 || appointment.vitals.temperature) && (
+                <div className="bg-white rounded-xl shadow-sm border border-teal-100 overflow-hidden">
+                  <div className="bg-teal-50 px-4 py-3 border-b border-teal-100 flex items-center">
+                    <div className="h-8 w-8 rounded-full bg-teal-100 flex items-center justify-center text-teal-600 mr-2 text-sm">
+                      <FaHeartbeat />
                     </div>
-                  )}
+                    <h3 className="font-semibold text-slate-800 text-md">Vitals</h3>
+                    <span className="text-xs text-slate-500 ml-auto font-normal">
+                      {appointment.vitals?.recorded_at
+                        ? new Date(appointment.vitals.recorded_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                        : ''}
+                    </span>
+                  </div>
+                  <div className="p-4 grid grid-cols-2 gap-3">
+                    <div className="text-center p-2 bg-slate-50 rounded border border-slate-100">
+                      <span className="block text-xs text-slate-500 uppercase font-bold mb-1">BP</span>
+                      <span className="text-md font-bold text-slate-800">{appointment.vitals?.bp || '--'}</span>
+                    </div>
+                    <div className="text-center p-2 bg-slate-50 rounded border border-slate-100">
+                      <span className="block text-xs text-slate-500 uppercase font-bold mb-1">Pulse</span>
+                      <span className="text-md font-bold text-slate-800">{appointment.vitals?.pulse || '--'} <span className="text-[10px] text-slate-400">bpm</span></span>
+                    </div>
+                    <div className="text-center p-2 bg-slate-50 rounded border border-slate-100">
+                      <span className="block text-xs text-slate-500 uppercase font-bold mb-1">Weight</span>
+                      <span className="text-md font-bold text-slate-800">{appointment.vitals?.weight || '--'} <span className="text-[10px] text-slate-400">kg</span></span>
+                    </div>
+                    <div className="text-center p-2 bg-slate-50 rounded border border-slate-100">
+                      <span className="block text-xs text-slate-500 uppercase font-bold mb-1">SPO2</span>
+                      <span className="text-md font-bold text-slate-800">{appointment.vitals?.spo2 || '--'} <span className="text-[10px] text-slate-400">%</span></span>
+                    </div>
+                    {appointment.vitals?.temperature && (
+                      <div className="text-center p-2 bg-slate-50 rounded border border-slate-100 col-span-2">
+                        <span className="block text-xs text-slate-500 uppercase font-bold mb-1">Temp</span>
+                        <span className="text-md font-bold text-slate-800">{appointment.vitals.temperature} <span className="text-[10px] text-slate-400">°F</span></span>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Appointment Context Card */}
               <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
