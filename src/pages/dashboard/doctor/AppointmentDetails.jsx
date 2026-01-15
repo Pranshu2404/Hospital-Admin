@@ -32,6 +32,24 @@ const AppointmentDetails = () => {
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [activeTab, setActiveTab] = useState('current'); // 'current', 'prescriptions', 'appointments'
   const [expandedPrescription, setExpandedPrescription] = useState(null);
+  const [currentDoctorDept, setCurrentDoctorDept] = useState(null);
+
+  useEffect(() => {
+    const fetchCurrentDoctor = async () => {
+      const dId = localStorage.getItem('doctorId');
+      if (dId) {
+        try {
+          const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/doctors/${dId}`);
+          // Handle department as object (populated) or string (ID)
+          const dept = res.data.department?._id || res.data.department;
+          setCurrentDoctorDept(dept);
+        } catch (e) {
+          console.error('Error fetching current doctor:', e);
+        }
+      }
+    };
+    fetchCurrentDoctor();
+  }, []);
 
   // Frequency options with common medical abbreviations
   const frequencyOptions = [
@@ -54,28 +72,6 @@ const AppointmentDetails = () => {
     { value: 'Stat', label: 'Immediately' },
     { value: 'q.o.d.', label: 'Every other day' }
   ];
-
-  // { value: 'OD', label: 'Once daily (OD)' },
-  // { value: 'BD', label: 'Twice daily (BD)' },
-  // { value: 'TDS', label: 'Three times daily (TDS)' },
-  // { value: 'QDS', label: 'Four times daily (QDS)' },
-  // { value: 'q4h', label: 'Every 4 hours' },
-  // { value: 'q6h', label: 'Every 6 hours' },
-  // { value: 'q8h', label: 'Every 8 hours' },
-  // { value: 'q12h', label: 'Every 12 hours' },
-  // { value: 'Mane', label: 'In the morning' },
-  // { value: 'Nocte', label: 'At night' },
-  // { value: 'q.a.m.', label: 'Every morning' },
-  // { value: 'q.p.m.', label: 'Every evening' },
-  // { value: 'AC', label: 'Before meals' },
-  // { value: 'PC', label: 'After meals' },
-  // { value: 'PRN', label: 'As needed' },
-  // { value: 'SOS', label: 'When required' },
-  // { value: 'Stat', label: 'Immediately' },
-  // { value: 'q.o.d.', label: 'Every other day' },
-  // { value: '1-0-0', label: 'Once daily (1-0-0)' },
-  // { value: '1-0-1', label: 'Twice daily (1-0-1)' },
-  // { value: '1-1-1', label: 'Three times daily (1-1-1)' }
 
   // Duration options (1-30 days)
   const durationOptions = Array.from({ length: 30 }, (_, i) => ({
@@ -116,28 +112,62 @@ const AppointmentDetails = () => {
   }, [id, state]);
 
   useEffect(() => {
-    if (appointment?.patient_id?._id || appointment?.patient_id) {
+    if ((appointment?.patient_id?._id || appointment?.patient_id) && currentDoctorDept) {
       fetchPatientHistory();
     }
-  }, [appointment]);
+  }, [appointment, currentDoctorDept]);
 
   const fetchPatientHistory = async () => {
     const patientId = appointment.patient_id?._id || appointment.patient_id;
-    if (!patientId) return;
+    if (!patientId || !currentDoctorDept) return;
 
     setLoadingHistory(true);
     try {
+      // Fetch all doctors to resolve departments (since history items might not have dept populated)
+      const doctorsRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/doctors`);
+      const doctorsMap = {};
+      if (doctorsRes.data) {
+        doctorsRes.data.forEach(doc => {
+          // Store department ID for each doctor
+          const dDept = doc.department?._id || doc.department;
+          doctorsMap[doc._id] = dDept;
+        });
+      }
+
+      // 1. Fetch Prescriptions
       // FIX 1: Removed "?status=Completed" so it fetches Active prescriptions too
       const prescriptionsRes = await axios.get(
         `${import.meta.env.VITE_BACKEND_URL}/prescriptions/patient/${patientId}?limit=10`
       );
-      setPastPrescriptions(prescriptionsRes.data.prescriptions || prescriptionsRes.data || []);
+      let rxs = prescriptionsRes.data.prescriptions || prescriptionsRes.data || [];
 
-      // Fetch past appointments
+      // Filter Prescriptions by Department
+      if (currentDoctorDept) {
+        rxs = rxs.filter(rx => {
+          // rx.doctor_id might be an object or string
+          const dId = rx.doctor_id?._id || rx.doctor_id;
+          // Look up this doctor's department
+          const docDept = doctorsMap[dId];
+          return docDept === currentDoctorDept;
+        });
+      }
+      setPastPrescriptions(rxs);
+
+      // 2. Fetch Appointments
       const appointmentsRes = await axios.get(
         `${import.meta.env.VITE_BACKEND_URL}/appointments/patient/${patientId}?status=Completed&limit=5`
       );
-      setPastAppointments(appointmentsRes.data.appointments || appointmentsRes.data || []);
+      let appts = appointmentsRes.data.appointments || appointmentsRes.data || [];
+
+      // Filter Appointments by Department
+      if (currentDoctorDept) {
+        appts = appts.filter(appt => {
+          const dId = appt.doctor_id?._id || appt.doctor_id;
+          const docDept = doctorsMap[dId];
+          return docDept === currentDoctorDept;
+        });
+      }
+      setPastAppointments(appts);
     } catch (err) {
       console.error('Error fetching patient history:', err);
     } finally {
@@ -510,6 +540,15 @@ const AppointmentDetails = () => {
             >
               <FaPrescriptionBottleAlt /> Past Prescriptions ({pastPrescriptions.length})
             </button>
+            <button
+              onClick={() => setActiveTab('summary')}
+              className={`px-4 py-2.5 text-sm font-medium rounded-t-lg transition-colors flex items-center gap-2 ${activeTab === 'summary'
+                ? 'bg-violet-50 text-violet-700 border-b-2 border-violet-600'
+                : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+                }`}
+            >
+              <FaMagic /> Patient History
+            </button>
           </nav>
         </div>
 
@@ -522,125 +561,150 @@ const AppointmentDetails = () => {
             </div>
           ) : (
             <>
-              {/* Prescriptions Tab */}
-              {activeTab === 'prescriptions' && (
+              {/* AI Summary Tab */}
+              {activeTab === 'summary' && (
                 <div className="space-y-4">
-                  {/* Gemini Summary Button & Section */}
-                  {pastPrescriptions.length > 0 && (
-                    <div className="mb-6">
-                      {!showSummary ? (
+                  <div className="mb-6">
+                    {!showSummary ? (
+                      <div className="text-center py-8">
+                        <FaMagic className="mx-auto text-4xl text-violet-200 mb-4" />
+                        <h3 className="text-lg font-bold text-slate-700 mb-2">Generate Clinical Summary</h3>
+                        <p className="text-slate-500 mb-6 max-w-md mx-auto">
+                          Analyze past prescriptions and generate a concise clinical summary for this patient.
+                        </p>
                         <button
                           onClick={handleSummarizeHistory}
-                          className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-semibold py-3 px-6 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 group"
+                          className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-semibold py-3 px-8 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 group mx-auto"
                         >
                           <FaMagic className="group-hover:animate-pulse" /> Summarize Patient History
                         </button>
-                      ) : (
-                        <div className="bg-white rounded-xl border border-violet-100 overflow-hidden shadow-lg animate-fade-in ring-1 ring-violet-50">
-                          <div className="bg-gradient-to-r from-violet-600 to-indigo-600 px-6 py-4 flex justify-between items-center text-white">
-                            <div className="flex items-center gap-2">
-                              <div className="p-1.5 bg-white/20 rounded-lg">
-                                <FaMagic className="text-white" />
-                              </div>
-                              <div>
-                                <h3 className="font-bold text-lg leading-tight">Clinical Summary</h3>
-
-                              </div>
+                      </div>
+                    ) : (
+                      <div className="bg-white rounded-xl border border-violet-100 overflow-hidden shadow-lg animate-fade-in ring-1 ring-violet-50">
+                        <div className="bg-gradient-to-r from-violet-600 to-indigo-600 px-6 py-4 flex justify-between items-center text-white">
+                          <div className="flex items-center gap-2">
+                            <div className="p-1.5 bg-white/20 rounded-lg">
+                              <FaMagic className="text-white" />
                             </div>
-                            <button
-                              onClick={() => setShowSummary(false)}
-                              className="text-white/70 hover:text-white hover:bg-white/10 p-2 rounded-full transition-all"
-                            >
-                              <FaTimesCircle size={20} />
-                            </button>
+                            <div>
+                              <h3 className="font-bold text-lg leading-tight">Clinical Summary</h3>
+                            </div>
                           </div>
-                          <div className="p-6 bg-gradient-to-b from-violet-50/50 to-white">
-                            {summarizing ? (
-                              <div className="flex flex-col items-center justify-center py-8">
-                                <div className="relative">
-                                  <div className="animate-spin rounded-full h-10 w-10 border-4 border-violet-100 border-t-violet-600 mb-4"></div>
-                                  <div className="absolute top-0 left-0 h-10 w-10 bg-violet-400 rounded-full animate-ping opacity-20"></div>
-                                </div>
-                                <p className="text-violet-800 font-semibold text-sm tracking-wide animate-pulse">GENERATING CLINICAL INSIGHTS...</p>
-                              </div>
-                            ) : (
-                              <div className="space-y-3">
-                                {summary.split('\n').map((line, idx) => {
-                                  if (!line.trim()) return null;
-
-                                  // Regex to parse: Date -> Doctor -> Diagnosis -> Notes -> Investigation -> Medicines -> Status
-                                  const parts = line.split(' -> ');
-
-                                  if (parts.length >= 6) {
-                                    const [dateStr, doctorStr, diagnosisStr, notesStr, investStr, medsStr, statusStr] = parts;
-                                    const isFollowUp = statusStr && statusStr.toLowerCase().includes('follow-up');
-
-                                    return (
-                                      <div key={idx} className="bg-white p-3 rounded-lg border border-slate-100 shadow-sm flex flex-col md:flex-row gap-3 text-sm">
-                                        {/* Date & Doctor */}
-                                        <div className="min-w-[140px]">
-                                          <div className="font-bold text-slate-800">{dateStr}</div>
-                                          <div className="text-xs text-slate-500 mt-1 truncate" title={doctorStr}>{doctorStr}</div>
-                                        </div>
-
-                                        {/* Clinical Details */}
-                                        <div className="flex-1 space-y-2">
-                                          <div>
-                                            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Diagnosis</span>
-                                            <div className="font-medium text-teal-700">{diagnosisStr}</div>
-                                          </div>
-
-                                          {/* Notes & Investigation */}
-                                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
-                                            {notesStr && notesStr !== 'None' && (
-                                              <div className="bg-yellow-50 p-2 rounded border border-yellow-100">
-                                                <span className="font-semibold text-yellow-700 block mb-0.5">Clinical Notes:</span>
-                                                <span className="text-slate-700">{notesStr}</span>
-                                              </div>
-                                            )}
-                                            {investStr && investStr !== 'None' && (
-                                              <div className="bg-blue-50 p-2 rounded border border-blue-100">
-                                                <span className="font-semibold text-blue-700 block mb-0.5">Investigation:</span>
-                                                <span className="text-slate-700">{investStr}</span>
-                                              </div>
-                                            )}
-                                          </div>
-
-                                          <div>
-                                            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Medicines</span>
-                                            <div className="text-slate-600 text-xs leading-relaxed whitespace-pre-wrap">{medsStr}</div>
-                                          </div>
-                                        </div>
-
-                                        {/* Status Badge */}
-                                        {statusStr && (
-                                          <div className="min-w-[100px] flex items-start justify-end">
-                                            <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${isFollowUp
-                                              ? 'bg-blue-100 text-blue-700 border border-blue-200'
-                                              : 'bg-emerald-100 text-emerald-700 border border-emerald-200'
-                                              }`}>
-                                              {statusStr.replace('Status:', '').trim()}
-                                            </span>
-                                          </div>
-                                        )}
-                                      </div>
-                                    );
-                                  } else {
-                                    // Fallback for lines that don't match strict format
-                                    return <div key={idx} className="text-slate-600 text-sm py-1 border-b border-dashed border-slate-100 last:border-0">{line}</div>;
-                                  }
-                                })}
-                              </div>
-                            )}
-                          </div>
-                          <div className="px-6 py-2 bg-violet-50/50 border-t border-violet-100 flex justify-between items-center text-xs text-violet-400">
-                            <span>Generated summary based on visible records</span>
-                          </div>
+                          <button
+                            onClick={() => setShowSummary(false)}
+                            className="text-white/70 hover:text-white hover:bg-white/10 p-2 rounded-full transition-all"
+                          >
+                            <FaTimesCircle size={20} />
+                          </button>
                         </div>
-                      )}
-                    </div>
-                  )}
+                        <div className="p-6 bg-gradient-to-b from-violet-50/50 to-white">
+                          {summarizing ? (
+                            <div className="flex flex-col items-center justify-center py-8">
+                              <div className="relative">
+                                <div className="animate-spin rounded-full h-10 w-10 border-4 border-violet-100 border-t-violet-600 mb-4"></div>
+                                <div className="absolute top-0 left-0 h-10 w-10 bg-violet-400 rounded-full animate-ping opacity-20"></div>
+                              </div>
+                              <p className="text-violet-800 font-semibold text-sm tracking-wide animate-pulse">GENERATING CLINICAL INSIGHTS...</p>
+                            </div>
+                          ) : (
+                            <div className="space-y-3">
+                              {summary.split('\n').map((line, idx) => {
+                                if (!line.trim()) return null;
 
+                                // Check for Overview Line
+                                if (line.startsWith('OVERVIEW:')) {
+                                  return (
+                                    <div key={idx} className="bg-gradient-to-r from-teal-50 to-emerald-50 border border-teal-200 rounded-lg p-4 mb-4 shadow-sm flex items-start gap-3">
+                                      <div className="p-2 bg-white rounded-full text-teal-600 shadow-sm mt-0.5">
+                                        <FaHeartbeat />
+                                      </div>
+                                      <div>
+                                        <h4 className="text-xs font-bold text-teal-800 uppercase tracking-wider mb-1">Patient History Overview</h4>
+                                        <p className="text-slate-800 font-medium text-base leading-relaxed">
+                                          {line.replace('OVERVIEW:', '').trim()}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  );
+                                }
+
+                                // Regex to parse: Date -> Doctor -> Diagnosis -> Notes -> Investigation -> Medicines -> Status
+                                const parts = line.split(' -> ');
+
+                                if (parts.length >= 6) {
+                                  const [dateStr, doctorStr, diagnosisStr, notesStr, investStr, medsStr, statusStr] = parts;
+                                  const isFollowUp = statusStr && statusStr.toLowerCase().includes('follow-up');
+
+                                  return (
+                                    <div key={idx} className="bg-white p-3 rounded-lg border border-slate-100 shadow-sm flex flex-col md:flex-row gap-3 text-sm">
+                                      {/* Date & Doctor */}
+                                      <div className="min-w-[140px]">
+                                        <div className="font-bold text-slate-800">{dateStr}</div>
+                                        <div className="text-xs text-slate-500 mt-1 truncate" title={doctorStr}>{doctorStr}</div>
+                                      </div>
+
+                                      {/* Clinical Details */}
+                                      <div className="flex-1 space-y-2">
+                                        <div>
+                                          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Diagnosis</span>
+                                          <div className="font-medium text-teal-700">{diagnosisStr}</div>
+                                        </div>
+
+                                        {/* Notes & Investigation */}
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
+                                          {notesStr && notesStr !== 'None' && (
+                                            <div className="bg-yellow-50 p-2 rounded border border-yellow-100">
+                                              <span className="font-semibold text-yellow-700 block mb-0.5">Clinical Notes:</span>
+                                              <span className="text-slate-700">{notesStr}</span>
+                                            </div>
+                                          )}
+                                          {investStr && investStr !== 'None' && (
+                                            <div className="bg-blue-50 p-2 rounded border border-blue-100">
+                                              <span className="font-semibold text-blue-700 block mb-0.5">Investigation:</span>
+                                              <span className="text-slate-700">{investStr}</span>
+                                            </div>
+                                          )}
+                                        </div>
+
+                                        <div>
+                                          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Medicines</span>
+                                          <div className="text-slate-600 text-xs leading-relaxed whitespace-pre-wrap">{medsStr}</div>
+                                        </div>
+                                      </div>
+
+                                      {/* Status Badge */}
+                                      {statusStr && (
+                                        <div className="min-w-[100px] flex items-start justify-end">
+                                          <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${isFollowUp
+                                            ? 'bg-blue-100 text-blue-700 border border-blue-200'
+                                            : 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                                            }`}>
+                                            {statusStr.replace('Status:', '').trim()}
+                                          </span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                } else {
+                                  // Fallback for lines that don't match strict format
+                                  return <div key={idx} className="text-slate-600 text-sm py-1 border-b border-dashed border-slate-100 last:border-0">{line}</div>;
+                                }
+                              })}
+                            </div>
+                          )}
+                        </div>
+                        <div className="px-6 py-2 bg-violet-50/50 border-t border-violet-100 flex justify-between items-center text-xs text-violet-400">
+                          <span>Generated summary based on visible records</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Prescriptions Tab */}
+              {activeTab === 'prescriptions' && (
+                <div className="space-y-4">
                   {pastPrescriptions.length > 0 ? (
                     pastPrescriptions.map((rx, idx) => (
                       <div key={rx._id} className="bg-gradient-to-br from-slate-50 to-white border border-slate-200 rounded-xl overflow-hidden hover:shadow-md transition-all duration-200">
@@ -751,27 +815,27 @@ const AppointmentDetails = () => {
                                         </div>
                                       </div>
 
-                                      <div className="ml-4 flex flex-col items-end space-y-2">
-                                        <div className="flex gap-2 flex-wrap justify-end">
-                                          <span className="text-xs bg-teal-600 text-white px-3 py-1.5 rounded-full font-semibold">{item.dosage || '-'} mg</span>
-                                          <span className="text-xs bg-cyan-600 text-white px-3 py-1.5 rounded-full font-semibold">{item.frequency || '-'}</span>
+                                      
+                                        <div className="flex gap-2 flex-wrap justify-end mt-2">
+                                          <span className="text-xs bg-teal-600 text-white px-2 py-1.5 rounded-full font-semibold">{item.dosage || '-'}</span>
+                                          <span className="text-xs bg-cyan-600 text-white px-2 py-1.5 rounded-full font-semibold">{item.frequency || '-'}</span>
                                         </div>
-                                        <div className="flex gap-2 flex-wrap justify-end">
-                                          <span className="text-xs bg-slate-500 text-white px-3 py-1.5 rounded-full font-semibold">{item.duration || '-'}</span>
-                                          <span className="text-xs bg-slate-600 text-white px-3 py-1.5 rounded-full font-semibold">Qty: {item.quantity || '-'}</span>
+                                        <div className="flex gap-2 flex-wrap justify-end ml-2 mt-2">
+                                          <span className="text-xs bg-slate-500 text-white px-2 py-1.5 rounded-full font-semibold">{item.duration || '-'}</span>
+                                          <span className="text-xs bg-slate-600 text-white px-2 py-1.5 rounded-full font-semibold">Qty: {item.quantity || '-'}</span>
                                         </div>
                                         {(item.medicine_type || item.route_of_administration) && (
-                                          <div className="flex gap-2 flex-wrap justify-end pt-1 border-t border-teal-200">
+                                          <div className="flex gap-2 flex-wrap justify-end ml-2 mt-2">
                                             {item.medicine_type && (
-                                              <span className="text-xs bg-indigo-500 text-white px-3 py-1.5 rounded-full font-semibold">Type: {item.medicine_type}</span>
+                                              <span className="text-xs bg-indigo-500 text-white px-2 py-1.5 rounded-full font-semibold">Type: {item.medicine_type}</span>
                                             )}
                                             {item.route_of_administration && (
-                                              <span className="text-xs bg-rose-500 text-white px-3 py-1.5 rounded-full font-semibold">Route: {item.route_of_administration}</span>
+                                              <span className="text-xs bg-rose-500 text-white px-2 py-1.5 rounded-full font-semibold">Route: {item.route_of_administration}</span>
                                             )}
                                           </div>
                                         )}
                                       </div>
-                                    </div>
+                                   
                                   ))}
                                 </div>
                               </div>

@@ -47,12 +47,13 @@ export const summarizePatientHistory = async (prescriptions, patientDetails) => 
     ${historyText}
     
     Instructions:
-    1. For each record, determine if it seems "Related/Follow-up" to the previous one (based on similar diagnosis/medicines) or "Independent".
-    2. Format each entry strictly as follows:
-       [Date] -> [Doctor Name] -> [Diagnosis] -> [Notes] -> [Investigation] -> [Medicines List] -> [Status: Follow-up | Independent]
-    3. Use " -> " as the separator.
-    4. List them in chronological order (oldest to newest).
-    5. Do not add any introductory or concluding text. Just the list.
+    1. START with a single line "OVERVIEW: [Detailed Clinical Summary: Identify the primary disease/conditions, their progression (improving/worsening), key treatments administered, and current status. Keep this entire overview as a single paragraph on one line. The length MUST be between 60 and 120 words. Consolidate repetitive conditions; do not list every instance of the same condition, but rather summarize the trend.]".
+    2. Then, for each record, determine if it seems "Related/Follow-up" to the previous one (based on similar diagnosis/medicines) or "Independent" or "First Visit".
+    3. Format each entry strictly as follows:
+       [Date] -> [Doctor Name] -> [Diagnosis] -> [Notes] -> [Investigation] -> [Medicines List] -> [Status: Follow-up | Independent | First Visit]
+    4. Use " -> " as the separator.
+    5. List them in chronological order (oldest to newest).
+    6. Do not add any other introductory text.
   `;
 
   try {
