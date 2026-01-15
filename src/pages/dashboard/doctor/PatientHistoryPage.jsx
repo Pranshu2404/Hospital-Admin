@@ -44,7 +44,15 @@ const PatientHistoryPage = () => {
 
                 // 2. Fetch Appointments
                 const apptsRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/appointments/patient/${id}`);
-                const appts = apptsRes.data.appointments || apptsRes.data || [];
+                let appts = apptsRes.data.appointments || apptsRes.data || [];
+
+                const currentDoctorId = localStorage.getItem('doctorId');
+                if (currentDoctorId) {
+                    appts = appts.filter(appt => {
+                        const dId = appt.doctor_id?._id || appt.doctor_id;
+                        return dId === currentDoctorId;
+                    });
+                }
                 setAppointments(appts);
 
                 // Fallback for patient data
@@ -55,7 +63,15 @@ const PatientHistoryPage = () => {
 
                 // 3. Fetch Prescriptions
                 const rxRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/prescriptions/patient/${id}`);
-                setPrescriptions(rxRes.data.prescriptions || rxRes.data || []);
+                let rxs = rxRes.data.prescriptions || rxRes.data || [];
+
+                if (currentDoctorId) {
+                    rxs = rxs.filter(rx => {
+                        const dId = rx.doctor_id?._id || rx.doctor_id;
+                        return dId === currentDoctorId;
+                    });
+                }
+                setPrescriptions(rxs);
 
             } catch (err) {
                 console.error("Error fetching patient history:", err);
@@ -290,8 +306,8 @@ const PatientHistoryPage = () => {
                                     <button
                                         onClick={() => { setActiveTab('appointments'); setSelectedAppointmentId(null); }}
                                         className={`flex-1 py-2.5 rounded-lg transition-all flex items-center justify-center gap-2 ${activeTab === 'appointments'
-                                                ? 'bg-white text-teal-700 shadow-sm ring-1 ring-slate-200/50 font-bold'
-                                                : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'
+                                            ? 'bg-white text-teal-700 shadow-sm ring-1 ring-slate-200/50 font-bold'
+                                            : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'
                                             }`}
                                     >
                                         <FaHistory className={activeTab === 'appointments' ? 'text-teal-600' : 'opacity-70'} />
@@ -303,8 +319,8 @@ const PatientHistoryPage = () => {
                                     <button
                                         onClick={() => setActiveTab('prescriptions')}
                                         className={`flex-1 py-2.5 rounded-lg transition-all flex items-center justify-center gap-2 ${activeTab === 'prescriptions'
-                                                ? 'bg-white text-violet-700 shadow-sm ring-1 ring-slate-200/50 font-bold'
-                                                : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'
+                                            ? 'bg-white text-violet-700 shadow-sm ring-1 ring-slate-200/50 font-bold'
+                                            : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'
                                             }`}
                                     >
                                         <FaPrescriptionBottleAlt className={activeTab === 'prescriptions' ? 'text-violet-600' : 'opacity-70'} />

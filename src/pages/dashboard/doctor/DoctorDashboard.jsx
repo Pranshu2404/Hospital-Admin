@@ -109,8 +109,17 @@ const DoctorDashboard = () => {
         const patientsData = patientsRes.data.patients || [];
         const apptsData = appointmentsRes.data || [];
 
+
+        const uniquePatientsMap = new Map();
+        apptsData.forEach(appt => {
+          if (appt.patient_id && appt.patient_id._id) {
+            uniquePatientsMap.set(appt.patient_id._id, appt.patient_id);
+          }
+        });
+        const myPatients = Array.from(uniquePatientsMap.values());
+
         setAppointments(apptsData);
-        setPatients(patientsData);
+        setPatients(myPatients);
         setDoctors(doctorsRes.data);
 
         const todayAppointments = apptsData.filter(appt =>
@@ -118,7 +127,7 @@ const DoctorDashboard = () => {
         ).sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
 
         setStats({
-          patients: patientsData.length,
+          patients: myPatients.length,
           consultations: apptsData.filter(a => a.type === 'Consultation').length,
           procedures: apptsData.filter(a => a.type === 'Procedure').length,
           todayAppointments: todayAppointments.length,
@@ -262,7 +271,7 @@ const DoctorDashboard = () => {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <StatCard title="Total Patients" value={stats.patients} icon={FaUsers} color="indigo" />
+        <StatCard title="My Patients" value={stats.patients} icon={FaUsers} color="indigo" />
         <StatCard title="Consultations" value={stats.consultations} icon={FaUserInjured} color="blue" />
         <StatCard title="Procedures" value={stats.procedures} icon={FaTooth} color="rose" />
         <StatCard title="Today's Visits" value={stats.todayAppointments} icon={FaClock} color="teal" />
