@@ -51,6 +51,7 @@ import DoctorAllList from './pages/dashboard/doctor/DoctorAllList.jsx';
 import Reports from './pages/dashboard/doctor/Reports.jsx';
 import Schedule from './pages/dashboard/doctor/Schedule.jsx'
 import PatientList from './pages/dashboard/doctor/PatientList.jsx'
+import PatientHistoryPage from './pages/dashboard/doctor/PatientHistoryPage.jsx'
 import DoctorProfilePage1 from './pages/dashboard/doctor/DoctorProfilePage.jsx'
 
 // Staff pages
@@ -701,6 +702,16 @@ export default function App() {
               <ProtectedRoute role="doctor">
                 <DoctorLayout>
                   <PatientList />
+                </DoctorLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/doctor/patients/:id"
+            element={
+              <ProtectedRoute role="doctor">
+                <DoctorLayout>
+                  <PatientHistoryPage />
                 </DoctorLayout>
               </ProtectedRoute>
             }

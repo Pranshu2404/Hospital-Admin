@@ -91,6 +91,8 @@ const DoctorDashboard = () => {
       return null;
     };
 
+    if (!doctorId) return;
+
     const fetchDashboardStats = async () => {
       try {
         const [patientsRes, appointmentsRes, doctorsRes, calendarRes] = await Promise.all([
