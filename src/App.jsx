@@ -616,7 +616,7 @@ export default function App() {
             }
           />
           <Route
-            path="/doctor/appointments/:id"
+            path="/dashboard/doctor/appointments/:id"
             element={
               <ProtectedRoute role="doctor">
                 <DoctorLayout>

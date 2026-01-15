@@ -93,7 +93,7 @@ const DoctorAppointments = () => {
   const totalPages = Math.ceil(filteredAppointments.length / itemsPerPage);
 
   const handleViewDetails = (appointment) => {
-    navigate(`/doctor/appointments/${appointment._id}`, {
+    navigate(`/dashboard/doctor/appointments/${appointment._id}`, {
       state: { appointment }
     });
   };
@@ -105,7 +105,7 @@ const DoctorAppointments = () => {
         status: 'In Progress'
       });
       const updatedAppointment = { ...appointment, status: 'In Progress' };
-      navigate(`/doctor/appointments/${appointmentId}`, {
+      navigate(`/dashboard/doctor/appointments/${appointmentId}`, {
         state: { appointment: updatedAppointment }
       });
     } catch (err) {
