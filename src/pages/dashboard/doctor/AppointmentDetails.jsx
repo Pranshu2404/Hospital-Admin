@@ -815,27 +815,27 @@ const AppointmentDetails = () => {
                                         </div>
                                       </div>
 
-                                      
-                                        <div className="flex gap-2 flex-wrap justify-end mt-2">
-                                          <span className="text-xs bg-teal-600 text-white px-2 py-1.5 rounded-full font-semibold">{item.dosage || '-'}</span>
-                                          <span className="text-xs bg-cyan-600 text-white px-2 py-1.5 rounded-full font-semibold">{item.frequency || '-'}</span>
-                                        </div>
-                                        <div className="flex gap-2 flex-wrap justify-end ml-2 mt-2">
-                                          <span className="text-xs bg-slate-500 text-white px-2 py-1.5 rounded-full font-semibold">{item.duration || '-'}</span>
-                                          <span className="text-xs bg-slate-600 text-white px-2 py-1.5 rounded-full font-semibold">Qty: {item.quantity || '-'}</span>
-                                        </div>
-                                        {(item.medicine_type || item.route_of_administration) && (
-                                          <div className="flex gap-2 flex-wrap justify-end ml-2 mt-2">
-                                            {item.medicine_type && (
-                                              <span className="text-xs bg-indigo-500 text-white px-2 py-1.5 rounded-full font-semibold">Type: {item.medicine_type}</span>
-                                            )}
-                                            {item.route_of_administration && (
-                                              <span className="text-xs bg-rose-500 text-white px-2 py-1.5 rounded-full font-semibold">Route: {item.route_of_administration}</span>
-                                            )}
-                                          </div>
-                                        )}
+
+                                      <div className="flex gap-2 flex-wrap justify-end mt-2">
+                                        <span className="text-xs bg-teal-600 text-white px-2 py-1.5 rounded-full font-semibold">{item.dosage || '-'}</span>
+                                        <span className="text-xs bg-cyan-600 text-white px-2 py-1.5 rounded-full font-semibold">{item.frequency || '-'}</span>
                                       </div>
-                                   
+                                      <div className="flex gap-2 flex-wrap justify-end ml-2 mt-2">
+                                        <span className="text-xs bg-slate-500 text-white px-2 py-1.5 rounded-full font-semibold">{item.duration || '-'}</span>
+                                        <span className="text-xs bg-slate-600 text-white px-2 py-1.5 rounded-full font-semibold">Qty: {item.quantity || '-'}</span>
+                                      </div>
+                                      {(item.medicine_type || item.route_of_administration) && (
+                                        <div className="flex gap-2 flex-wrap justify-end ml-2 mt-2">
+                                          {item.medicine_type && (
+                                            <span className="text-xs bg-indigo-500 text-white px-2 py-1.5 rounded-full font-semibold">Type: {item.medicine_type}</span>
+                                          )}
+                                          {item.route_of_administration && (
+                                            <span className="text-xs bg-rose-500 text-white px-2 py-1.5 rounded-full font-semibold">Route: {item.route_of_administration}</span>
+                                          )}
+                                        </div>
+                                      )}
+                                    </div>
+
                                   ))}
                                 </div>
                               </div>
@@ -1130,7 +1130,7 @@ const AppointmentDetails = () => {
                 </div>
               </div>
               {/* Vitals Card */}
-              {appointment.vitals && (appointment.vitals.bp || appointment.vitals.pulse || appointment.vitals.weight || appointment.vitals.spo2 || appointment.vitals.temperature) && (
+              {appointment.vitals && (appointment.vitals.bp || appointment.vitals.pulse || appointment.vitals.weight || appointment.vitals.spo2 || appointment.vitals.temperature || appointment.vitals.respiratory_rate || appointment.vitals.random_blood_sugar || appointment.vitals.height) && (
                 <div className="bg-white rounded-xl shadow-sm border border-teal-100 overflow-hidden">
                   <div className="bg-teal-50 px-4 py-3 border-b border-teal-100 flex items-center">
                     <div className="h-8 w-8 rounded-full bg-teal-100 flex items-center justify-center text-teal-600 mr-2 text-sm">
@@ -1145,6 +1145,14 @@ const AppointmentDetails = () => {
                   </div>
                   <div className="p-4 grid grid-cols-2 gap-3">
                     <div className="text-center p-2 bg-slate-50 rounded border border-slate-100">
+                      <span className="block text-xs text-slate-500 uppercase font-bold mb-1">Height</span>
+                      <span className="text-md font-bold text-slate-800">{appointment.vitals?.height || '--'} <span className="text-[10px] text-slate-400">cm</span></span>
+                    </div>
+                    <div className="text-center p-2 bg-slate-50 rounded border border-slate-100">
+                      <span className="block text-xs text-slate-500 uppercase font-bold mb-1">Weight</span>
+                      <span className="text-md font-bold text-slate-800">{appointment.vitals?.weight || '--'} <span className="text-[10px] text-slate-400">kg</span></span>
+                    </div>
+                    <div className="text-center p-2 bg-slate-50 rounded border border-slate-100">
                       <span className="block text-xs text-slate-500 uppercase font-bold mb-1">BP</span>
                       <span className="text-md font-bold text-slate-800">{appointment.vitals?.bp || '--'}</span>
                     </div>
@@ -1152,16 +1160,22 @@ const AppointmentDetails = () => {
                       <span className="block text-xs text-slate-500 uppercase font-bold mb-1">Pulse</span>
                       <span className="text-md font-bold text-slate-800">{appointment.vitals?.pulse || '--'} <span className="text-[10px] text-slate-400">bpm</span></span>
                     </div>
-                    <div className="text-center p-2 bg-slate-50 rounded border border-slate-100">
-                      <span className="block text-xs text-slate-500 uppercase font-bold mb-1">Weight</span>
-                      <span className="text-md font-bold text-slate-800">{appointment.vitals?.weight || '--'} <span className="text-[10px] text-slate-400">kg</span></span>
-                    </div>
+                    
                     <div className="text-center p-2 bg-slate-50 rounded border border-slate-100">
                       <span className="block text-xs text-slate-500 uppercase font-bold mb-1">SPO2</span>
                       <span className="text-md font-bold text-slate-800">{appointment.vitals?.spo2 || '--'} <span className="text-[10px] text-slate-400">%</span></span>
                     </div>
+                    <div className="text-center p-2 bg-slate-50 rounded border border-slate-100">
+                      <span className="block text-xs text-slate-500 uppercase font-bold mb-1">RR</span>
+                      <span className="text-md font-bold text-slate-800">{appointment.vitals?.respiratory_rate || '--'} <span className="text-[10px] text-slate-400">/min</span></span>
+                    </div>
+                    <div className="text-center p-2 bg-slate-50 rounded border border-slate-100">
+                      <span className="block text-xs text-slate-500 uppercase font-bold mb-1">RBS</span>
+                      <span className="text-md font-bold text-slate-800">{appointment.vitals?.random_blood_sugar || '--'} <span className="text-[10px] text-slate-400">mg/dL</span></span>
+                    </div>
+                    
                     {appointment.vitals?.temperature && (
-                      <div className="text-center p-2 bg-slate-50 rounded border border-slate-100 col-span-2">
+                      <div className="text-center p-2 bg-slate-50 rounded border border-slate-100">
                         <span className="block text-xs text-slate-500 uppercase font-bold mb-1">Temp</span>
                         <span className="text-md font-bold text-slate-800">{appointment.vitals.temperature} <span className="text-[10px] text-slate-400">°F</span></span>
                       </div>

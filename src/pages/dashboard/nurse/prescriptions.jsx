@@ -16,7 +16,12 @@ const NurseAppointments = () => {
         weight: '',
         pulse: '',
         spo2: '',
-        temperature: ''
+        pulse: '',
+        spo2: '',
+        temperature: '',
+        respiratory_rate: '',
+        random_blood_sugar: '',
+        height: ''
     });
 
     useEffect(() => {
@@ -68,7 +73,11 @@ const NurseAppointments = () => {
             weight: appointment.vitals?.weight || '',
             pulse: appointment.vitals?.pulse || '',
             spo2: appointment.vitals?.spo2 || '',
-            temperature: appointment.vitals?.temperature || ''
+            spo2: appointment.vitals?.spo2 || '',
+            temperature: appointment.vitals?.temperature || '',
+            respiratory_rate: appointment.vitals?.respiratory_rate || '',
+            random_blood_sugar: appointment.vitals?.random_blood_sugar || '',
+            height: appointment.vitals?.height || ''
         });
     };
 
@@ -182,11 +191,12 @@ const NurseAppointments = () => {
 
                         <form onSubmit={submitVitals} className="space-y-4">
                             <div className="grid grid-cols-2 gap-4">
+                                
                                 <div>
-                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Blood Pressure</label>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Height (cm)</label>
                                     <input
-                                        type="text" name="bp" value={vitals.bp} onChange={handleVitalsChange}
-                                        placeholder="e.g. 120/80"
+                                        type="text" name="height" value={vitals.height} onChange={handleVitalsChange}
+                                        placeholder="e.g. 170"
                                         className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500"
                                     />
                                 </div>
@@ -195,6 +205,14 @@ const NurseAppointments = () => {
                                     <input
                                         type="text" name="weight" value={vitals.weight} onChange={handleVitalsChange}
                                         placeholder="e.g. 70"
+                                        className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Blood Pressure</label>
+                                    <input
+                                        type="text" name="bp" value={vitals.bp} onChange={handleVitalsChange}
+                                        placeholder="e.g. 120/80"
                                         className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500"
                                     />
                                 </div>
@@ -215,13 +233,30 @@ const NurseAppointments = () => {
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Tempurature (°F)</label>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Temperature (°F)</label>
                                     <input
                                         type="text" name="temperature" value={vitals.temperature} onChange={handleVitalsChange}
                                         placeholder="e.g. 98.6"
                                         className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500"
                                     />
                                 </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">RR (breaths/min)</label>
+                                    <input
+                                        type="text" name="respiratory_rate" value={vitals.respiratory_rate} onChange={handleVitalsChange}
+                                        placeholder="e.g. 16"
+                                        className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">RBS (mg/dL)</label>
+                                    <input
+                                        type="text" name="random_blood_sugar" value={vitals.random_blood_sugar} onChange={handleVitalsChange}
+                                        placeholder="e.g. 100"
+                                        className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500"
+                                    />
+                                </div>
+                                
                             </div>
 
                             <div className="flex justify-end gap-3 mt-6">
