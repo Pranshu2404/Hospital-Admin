@@ -124,7 +124,8 @@
 
 
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { FormInput, FormSelect, FormTextarea, Button } from '../../../components/common/FormElements';
 import axios from 'axios';
 
@@ -135,7 +136,7 @@ const AddPatientIPDForm = () => {
     email: '',
     phone: '',
     dateOfBirth: '',
-    gender: '',
+    gender: 'Male',
     address: '',
     city: '',
     state: '',
@@ -148,14 +149,61 @@ const AddPatientIPDForm = () => {
     medicalHistory: '',
     allergies: '',
     medications: '',
-    bloodGroup: '',
+    bloodGroup: 'A+',
   });
+
+  const [states, setStates] = useState([]);
+  const [cities, setCities] = useState([]);
+
+  const config = {
+    headers: {
+      "X-CSCAPI-KEY": import.meta.env.VITE_CSC_API_KEY,
+    },
+  };
+
+  // Fetch States on component mount
+  useEffect(() => {
+    const fetchStates = async () => {
+      try {
+        const response = await axios.get(
+          `${import.meta.env.VITE_BASE_URL}/countries/${import.meta.env.VITE_COUNTRY_CODE}/states`,
+          config
+        );
+        setStates(response.data);
+      } catch (error) {
+        console.error("Error fetching states:", error);
+      }
+    };
+
+    fetchStates();
+  }, []);
+
+  // Fetch Cities when state changes
+  const fetchCities = async (stateIso) => {
+    try {
+      const response = await axios.get(
+        `${import.meta.env.VITE_BASE_URL}/countries/${import.meta.env.VITE_COUNTRY_CODE}/states/${stateIso}/cities`,
+        config
+      );
+      setCities(response.data);
+    } catch (error) {
+      console.error("Error fetching cities:", error);
+      setCities([]);
+    }
+  };
+
+  const navigate = useNavigate();
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
     }));
+
+    if (field === 'state') {
+      fetchCities(value);
+      setFormData(prev => ({ ...prev, city: '' })); // Reset city when state changes
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -189,9 +237,9 @@ const AddPatientIPDForm = () => {
         payload
       );
 
-      console.log('✅ IPD Patient added:', response.data);
+      console.log('✅Patient added:', response.data);
       alert('IPD Patient added successfully!');
-      navigate('/dashboard/staff/appointments?type=ipd')
+      navigate('/dashboard/staff/patient-list');
     } catch (err) {
       console.error('❌ Error adding IPD patient:', err.response?.data || err.message);
       alert(err.response?.data?.error || 'Failed to add patient.');
@@ -215,6 +263,21 @@ const AddPatientIPDForm = () => {
     { value: 'O-', label: 'O-' }
   ];
 
+  const stateOptions = states.map(state => ({
+    value: state.iso2,
+    label: state.name
+  }));
+
+  const cityOptions = cities.map(city => ({
+    value: city.name, // Storing name as value for city as per typical requirement, or create logic to store ID if needed. 
+    // Usually DB expects City Name unless normalized. 
+    // State is stored as ISO usually? Or Name? 
+    // If we want to store Name for State too, we need to find the name from the ISO code before submitting.
+    // For now, using ISO for state value to allow city fetching. 
+    label: city.name
+  }));
+
+
   return (
     <div className="p-6">
       <div className="bg-white rounded-xl shadow-sm border border-gray-100">
@@ -232,10 +295,8 @@ const AddPatientIPDForm = () => {
               <FormInput label="Last Name" value={formData.lastName} onChange={(e) => handleInputChange('lastName', e.target.value)} required />
               <FormInput label="Email" type="email" value={formData.email} onChange={(e) => handleInputChange('email', e.target.value)} />
               <FormInput label="Phone Number" type="tel" value={formData.phone} onChange={(e) => handleInputChange('phone', e.target.value)} required />
-              {/* <FormInput label="Date of Birth" type="date" value={formData.dateOfBirth} onChange={(e) => handleInputChange('dateOfBirth', e.target.value)} required /> */}
-              <FormInput label="Age" type="number" value={formData.age || ''} onChange={(e) => handleInputChange('age', e.target.value)} required />
-
-              <FormSelect label="Gender" value={formData.gender} onChange={(e) => handleInputChange('gender', e.target.value)} options={genderOptions} required />
+              <FormInput label="Date of Birth" type="date" value={formData.dateOfBirth} onChange={(e) => handleInputChange('dateOfBirth', e.target.value)} required />
+              <FormSelect label="Gender" value={formData.gender} onChange={(e) => handleInputChange('gender', e.target.value)} options={genderOptions} />
             </div>
           </div>
 
@@ -244,8 +305,9 @@ const AddPatientIPDForm = () => {
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Address Information</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormTextarea label="Address" value={formData.address} onChange={(e) => handleInputChange('address', e.target.value)} rows={3} className="md:col-span-2" />
-              <FormInput label="City" value={formData.city} onChange={(e) => handleInputChange('city', e.target.value)} />
-              <FormInput label="State" value={formData.state} onChange={(e) => handleInputChange('state', e.target.value)} />
+              {/* Modified City and State inputs to Select */}
+              <FormSelect label="State" value={formData.state} onChange={(e) => handleInputChange('state', e.target.value)} options={stateOptions} />
+              <FormSelect label="City" value={formData.city} onChange={(e) => handleInputChange('city', e.target.value)} options={cityOptions} disabled={!formData.state} />
               <FormInput label="ZIP Code" value={formData.zipCode} onChange={(e) => handleInputChange('zipCode', e.target.value)} />
             </div>
           </div>
@@ -263,8 +325,8 @@ const AddPatientIPDForm = () => {
           <div className="mb-8">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Admission Information</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormInput label="Ward" value={formData.ward} onChange={(e) => handleInputChange('ward', e.target.value)} required />
-              <FormInput label="Bed Number" value={formData.bed} onChange={(e) => handleInputChange('bed', e.target.value)} required />
+              <FormInput label="Ward" value={formData.ward} onChange={(e) => handleInputChange('ward', e.target.value)} />
+              <FormInput label="Bed Number" value={formData.bed} onChange={(e) => handleInputChange('bed', e.target.value)} />
               <FormInput label="Admission Date" type="date" value={formData.admissionDate} onChange={(e) => handleInputChange('admissionDate', e.target.value)} required />
             </div>
           </div>

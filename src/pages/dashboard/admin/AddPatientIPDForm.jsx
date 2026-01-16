@@ -18,7 +18,7 @@ const AddPatientIPDForm = () => {
     email: '',
     phone: '',
     dateOfBirth: '',
-    gender: '',
+    gender: 'Male',
     address: '',
     city: '',
     state: '',
@@ -29,17 +29,42 @@ const AddPatientIPDForm = () => {
     medicalHistory: '',
     allergies: '',
     medications: '',
-    bloodGroup: '',
+    bloodGroup: 'A+',
     department: '',
   });
 
   const [departments, setDepartments] = useState([]);
+  const [states, setStates] = useState([]);
+  const [cities, setCities] = useState([]);
+
+  const config = {
+    headers: {
+      "X-CSCAPI-KEY": import.meta.env.VITE_CSC_API_KEY,
+    },
+  };
 
   // Set default admissionDate to IST date on mount
   useEffect(() => {
     if (!formData.admissionDate) {
       setFormData(prev => ({ ...prev, admissionDate: getCurrentISTDate() }));
     }
+  }, []);
+
+  // Fetch States on component mount
+  useEffect(() => {
+    const fetchStates = async () => {
+      try {
+        const response = await axios.get(
+          `${import.meta.env.VITE_BASE_URL}/countries/${import.meta.env.VITE_COUNTRY_CODE}/states`,
+          config
+        );
+        setStates(response.data);
+      } catch (error) {
+        console.error("Error fetching states:", error);
+      }
+    };
+
+    fetchStates();
   }, []);
 
   useEffect(() => {
@@ -54,11 +79,30 @@ const AddPatientIPDForm = () => {
     fetchDepartments();
   }, []);
 
+  // Fetch Cities when state changes
+  const fetchCities = async (stateIso) => {
+    try {
+      const response = await axios.get(
+        `${import.meta.env.VITE_BASE_URL}/countries/${import.meta.env.VITE_COUNTRY_CODE}/states/${stateIso}/cities`,
+        config
+      );
+      setCities(response.data);
+    } catch (error) {
+      console.error("Error fetching cities:", error);
+      setCities([]);
+    }
+  };
+
   const handleInputChange = (field, value) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
     }));
+
+    if (field === 'state') {
+      fetchCities(value);
+      setFormData(prev => ({ ...prev, city: '' })); // Reset city when state changes
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -125,6 +169,16 @@ const AddPatientIPDForm = () => {
     { value: 'O+', label: 'O+' }, { value: 'O-', label: 'O-' }
   ];
 
+  const stateOptions = states.map(state => ({
+    value: state.iso2,
+    label: state.name
+  }));
+
+  const cityOptions = cities.map(city => ({
+    value: city.name,
+    label: city.name
+  }));
+
   return (
     <div className="p-6">
       <div className="bg-white rounded-xl shadow-sm border border-gray-100">
@@ -138,11 +192,11 @@ const AddPatientIPDForm = () => {
           <div className="mb-8">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Personal Information</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormSelect 
-                label="Salutation" 
-                value={formData.salutation} 
-                onChange={(e) => handleInputChange('salutation', e.target.value)} 
-                options={salutationOptions} 
+              <FormSelect
+                label="Salutation"
+                value={formData.salutation}
+                onChange={(e) => handleInputChange('salutation', e.target.value)}
+                options={salutationOptions}
               />
               <FormInput label="First Name" value={formData.firstName} onChange={(e) => handleInputChange('firstName', e.target.value)} required />
               <FormInput label="Last Name" value={formData.lastName} onChange={(e) => handleInputChange('lastName', e.target.value)} required />
@@ -160,8 +214,9 @@ const AddPatientIPDForm = () => {
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Address Information</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormTextarea label="Address" value={formData.address} onChange={(e) => handleInputChange('address', e.target.value)} rows={3} className="md:col-span-2" />
-              <FormInput label="City" value={formData.city} onChange={(e) => handleInputChange('city', e.target.value)} />
-              <FormInput label="State" value={formData.state} onChange={(e) => handleInputChange('state', e.target.value)} />
+              {/* Modified City and State inputs to Select */}
+              <FormSelect label="State" value={formData.state} onChange={(e) => handleInputChange('state', e.target.value)} options={stateOptions} />
+              <FormSelect label="City" value={formData.city} onChange={(e) => handleInputChange('city', e.target.value)} options={cityOptions} disabled={!formData.state} />
               <FormInput label="ZIP Code" value={formData.zipCode} onChange={(e) => handleInputChange('zipCode', e.target.value)} />
             </div>
           </div>
