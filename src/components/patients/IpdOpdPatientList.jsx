@@ -3,10 +3,17 @@ import axios from 'axios';
 import Papa from 'papaparse';
 import { SearchInput, Button } from '../common/FormElements';
 import { EditIcon, DeleteIcon, FilterIcon, UploadIcon, XIcon, PlusIcon } from '../common/Icons';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient, updatePatientBasePath = '/dashboard/admin/update-patient' }) => {
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Determine base path for adding patient based on current role
+  const addPatientPath = location.pathname.includes('/dashboard/staff')
+    ? '/dashboard/staff/add-patient'
+    : '/dashboard/admin/add-patient';
+
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
   const [patients, setPatients] = useState([]);
@@ -197,7 +204,7 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient, updatePatientBa
 
               <Button
                 variant="primary"
-                onClick={() => navigate('/dashboard/admin/add-patient')}
+                onClick={() => navigate(addPatientPath)}
               >
                 <PlusIcon />
                 Add New Patient
