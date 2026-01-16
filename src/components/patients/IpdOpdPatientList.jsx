@@ -22,32 +22,33 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient, updatePatientBa
 
   // Fetch patient data from API
   const fetchPatients = async () => {
-  try {
-    const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/patients`);
-    const data = response.data;
-    const patientArray = data.patients || []; // You correctly get the array here
+    try {
+      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/patients?limit=1000`);
+      const data = response.data;
+      const patientArray = data.patients || []; // You correctly get the array here
 
-    // 💡 FIX: Use patientArray, which is the array, for mapping.
-    const formatted = patientArray.map(p => ({
-      id: p._id,
-      name: `${p.first_name} ${p.last_name}`,
-      age: calculateAge(p.dob),
-      gender: p.gender,
-      phone: p.phone,
-      email: p.email,
-      type: p.patient_type.toUpperCase() || 'OPD',
-      bloodGroup: p.blood_group || 'N/A',
-      lastVisit: new Date(p.registered_at).toISOString().split('T')[0],
-      status: 'Active', 
-    }));
+      // 💡 FIX: Use patientArray, which is the array, for mapping.
+      const formatted = patientArray.map(p => ({
+        id: p._id,
+        name: `${p.first_name} ${p.last_name}`,
+        age: calculateAge(p.dob),
+        gender: p.gender,
+        phone: p.phone,
+        email: p.email,
+        type: p.patient_type.toUpperCase() || 'OPD',
+        bloodGroup: p.blood_group || 'N/A',
+        lastVisit: new Date(p.registered_at).toISOString().split('T')[0],
+        status: 'Active',
+        image: p.patient_image,
+      }));
 
-    setPatients(formatted);
-  } catch (error) {
-    console.error('❌ Error fetching patients:', error);
-    // It's good practice to handle the error state for the UI
-    setPatients([]); 
-  }
-};
+      setPatients(formatted);
+    } catch (error) {
+      console.error('❌ Error fetching patients:', error);
+      // It's good practice to handle the error state for the UI
+      setPatients([]);
+    }
+  };
 
   useEffect(() => {
     fetchPatients();
@@ -114,7 +115,7 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient, updatePatientBa
   const getDateRangeFromFilter = () => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     if (dateFilter === 'today') {
       return { start: new Date(today), end: new Date(today) };
     } else if (dateFilter === 'week') {
@@ -140,18 +141,18 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient, updatePatientBa
       patient.phone.includes(searchTerm) ||
       patient.type.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesFilter = filterType === 'all' || patient.type === filterType;
-    
+
     // Date filter logic
     let matchesDateFilter = true;
     if (dateFilter !== 'all') {
       const { start, end } = getDateRangeFromFilter();
       const patientDate = new Date(patient.lastVisit);
       patientDate.setHours(0, 0, 0, 0);
-      
+
       if (start && patientDate < start) matchesDateFilter = false;
       if (end && patientDate > end) matchesDateFilter = false;
     }
-    
+
     return matchesSearch && matchesFilter && matchesDateFilter;
   });
 
@@ -193,7 +194,7 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient, updatePatientBa
                 <UploadIcon /> {/* It's good practice to have an icon */}
                 Bulk Upload
               </Button>
-              
+
               <Button
                 variant="primary"
                 onClick={() => navigate('/dashboard/admin/add-patient')}
@@ -236,7 +237,7 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient, updatePatientBa
                 <option value="custom">Custom Range</option>
               </select>
             </div>
-            
+
             {/* Custom Date Range - Only show when custom is selected */}
             {dateFilter === 'custom' && (
               <div className="flex flex-col sm:flex-row gap-3">
@@ -296,11 +297,19 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient, updatePatientBa
                 <tr key={patient.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
-                      <div className="w-10 h-10 bg-teal-100 rounded-full flex items-center justify-center">
-                        <span className="text-teal-600 font-medium text-sm">
-                          {patient.name.split(' ').map(n => n[0]).join('')}
-                        </span>
-                      </div>
+                      {patient.image ? (
+                        <img
+                          src={patient.image}
+                          alt={patient.name}
+                          className="w-10 h-10 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 bg-teal-100 rounded-full flex items-center justify-center">
+                          <span className="text-teal-600 font-medium text-sm">
+                            {patient.name.split(' ').map(n => n[0]).join('')}
+                          </span>
+                        </div>
+                      )}
                       <div className="ml-4">
                         <div className="text-sm font-medium text-gray-900">{patient.name}</div>
                         <div className="text-sm text-gray-500">{patient.age} years, {patient.gender}</div>
@@ -368,64 +377,64 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient, updatePatientBa
             </div>
           </div>
         )}
-{/* --- BULK UPLOAD MODAL --- */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-2xl">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-semibold">Bulk Upload Patients</h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-gray-500 hover:text-gray-800">
-                <XIcon />
-              </button>
-            </div>
+        {/* --- BULK UPLOAD MODAL --- */}
+        {isModalOpen && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-2xl">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-semibold">Bulk Upload Patients</h3>
+                <button onClick={() => setIsModalOpen(false)} className="text-gray-500 hover:text-gray-800">
+                  <XIcon />
+                </button>
+              </div>
 
-            <p className="text-gray-600 mb-4">
-              Upload patients using a CSV file. The headers must match the format below.
-            </p>
+              <p className="text-gray-600 mb-4">
+                Upload patients using a CSV file. The headers must match the format below.
+              </p>
 
-            <div className="bg-gray-50 p-3 rounded-md border overflow-x-auto mb-4">
-              <table className="text-xs">
-                <thead className="bg-gray-200">
-                  <tr>
-                    {/* MODIFIED: Added all header columns */}
-                    {['first_name', 'last_name', 'email', 'phone', 'gender', 'dob', 'patient_type', 'blood_group', 'address', 'city', 'state', 'zipCode'].map((header) => (
-                      <th key={header} className="px-3 py-2 text-left font-medium text-gray-600 whitespace-nowrap">
-                        {header}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr className="bg-white">
-                    {/* MODIFIED: Added all data columns */}
-                    {['Amit', 'Sharma', 'amit@example.com', '9876543210', 'male', '1990-05-15', 'opd', 'O+', '123 Shastri Nagar', 'Kanpur', 'Uttar Pradesh', '208001'].map((value, index) => (
-                      <td key={index} className="px-3 py-2 text-gray-700 border-t whitespace-nowrap">
-                        {value}
-                      </td>
-                    ))}
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-            
-            <div className="flex gap-4 mb-4">
-              <Button variant="outline" onClick={downloadDemoCSV}>Download Demo CSV</Button>
-              <Button variant="primary" onClick={() => fileInputRef.current?.click()}>Choose & Upload CSV</Button>
-            </div>
+              <div className="bg-gray-50 p-3 rounded-md border overflow-x-auto mb-4">
+                <table className="text-xs">
+                  <thead className="bg-gray-200">
+                    <tr>
+                      {/* MODIFIED: Added all header columns */}
+                      {['first_name', 'last_name', 'email', 'phone', 'gender', 'dob', 'patient_type', 'blood_group', 'address', 'city', 'state', 'zipCode'].map((header) => (
+                        <th key={header} className="px-3 py-2 text-left font-medium text-gray-600 whitespace-nowrap">
+                          {header}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="bg-white">
+                      {/* MODIFIED: Added all data columns */}
+                      {['Amit', 'Sharma', 'amit@example.com', '9876543210', 'male', '1990-05-15', 'opd', 'O+', '123 Shastri Nagar', 'Kanpur', 'Uttar Pradesh', '208001'].map((value, index) => (
+                        <td key={index} className="px-3 py-2 text-gray-700 border-t whitespace-nowrap">
+                          {value}
+                        </td>
+                      ))}
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
 
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleFileUpload}
-              className="hidden"
-              accept=".csv"
-            />
-            {uploadSuccess && <div className="mt-4 p-3 text-sm text-green-800 bg-green-100 rounded-md">{uploadSuccess}</div>}
-            {uploadError && <div className="mt-4 p-3 text-sm text-red-800 bg-red-100 rounded-md">{uploadError}</div>}
+              <div className="flex gap-4 mb-4">
+                <Button variant="outline" onClick={downloadDemoCSV}>Download Demo CSV</Button>
+                <Button variant="primary" onClick={() => fileInputRef.current?.click()}>Choose & Upload CSV</Button>
+              </div>
+
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileUpload}
+                className="hidden"
+                accept=".csv"
+              />
+              {uploadSuccess && <div className="mt-4 p-3 text-sm text-green-800 bg-green-100 rounded-md">{uploadSuccess}</div>}
+              {uploadError && <div className="mt-4 p-3 text-sm text-red-800 bg-red-100 rounded-md">{uploadError}</div>}
+            </div>
           </div>
-        </div>
-      )}
-      {/* --------------------------- */}
+        )}
+        {/* --------------------------- */}
       </div>
     </div>
   );

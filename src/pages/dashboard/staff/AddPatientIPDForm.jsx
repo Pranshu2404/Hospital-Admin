@@ -128,12 +128,14 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FormInput, FormSelect, FormTextarea, Button } from '../../../components/common/FormElements';
 import axios from 'axios';
+import { FaUser, FaCloudUploadAlt, FaTimes } from 'react-icons/fa';
 
 const AddPatientIPDForm = () => {
   const [formData, setFormData] = useState({
     firstName: '',
     middleName: '',
     lastName: '',
+    patient_image: '',
     email: '',
     phone: '',
     dateOfBirth: '',
@@ -158,11 +160,42 @@ const AddPatientIPDForm = () => {
 
   const [states, setStates] = useState([]);
   const [cities, setCities] = useState([]);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   const config = {
     headers: {
       "X-CSCAPI-KEY": import.meta.env.VITE_CSC_API_KEY,
     },
+  };
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file');
+      return;
+    }
+
+    setUploadingImage(true);
+    const formDataUpload = new FormData();
+    formDataUpload.append('image', file);
+
+    try {
+      const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/patients/upload`, formDataUpload, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      setFormData(prev => ({ ...prev, patient_image: response.data.imageUrl }));
+    } catch (err) {
+      console.error('Error uploading image:', err);
+      alert('Failed to upload image. Please try again.');
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const removeImage = () => {
+    setFormData(prev => ({ ...prev, patient_image: '' }));
   };
 
   // Fetch States on component mount
@@ -229,6 +262,7 @@ const AddPatientIPDForm = () => {
         first_name: formData.firstName,
         middle_name: formData.middleName,
         last_name: formData.lastName,
+        patient_image: formData.patient_image,
         email: formData.email,
         phone: formData.phone,
         gender: formData.gender,
@@ -289,11 +323,7 @@ const AddPatientIPDForm = () => {
   }));
 
   const cityOptions = cities.map(city => ({
-    value: city.name, // Storing name as value for city as per typical requirement, or create logic to store ID if needed. 
-    // Usually DB expects City Name unless normalized. 
-    // State is stored as ISO usually? Or Name? 
-    // If we want to store Name for State too, we need to find the name from the ISO code before submitting.
-    // For now, using ISO for state value to allow city fetching. 
+    value: city.name,
     label: city.name
   }));
 
@@ -310,6 +340,57 @@ const AddPatientIPDForm = () => {
           {/* Personal Information */}
           <div className="mb-8">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Personal Information</h3>
+
+            {/* Image Upload Section */}
+            <div className="mb-6 flex justify-center">
+              <div className="text-center">
+                <div className="relative inline-block">
+                  <div className="w-32 h-32 rounded-full border-4 border-white shadow-lg overflow-hidden bg-slate-200 flex items-center justify-center">
+                    {formData.patient_image ? (
+                      <img
+                        src={formData.patient_image}
+                        alt="Patient"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <FaUser className="text-4xl text-slate-400" />
+                    )}
+                    {uploadingImage && (
+                      <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-2 border-white border-t-transparent"></div>
+                      </div>
+                    )}
+                  </div>
+
+                  {formData.patient_image ? (
+                    <button
+                      type="button"
+                      onClick={removeImage}
+                      className="absolute bottom-0 right-0 bg-red-500 text-white p-2 rounded-full shadow-md hover:bg-red-600 transition-colors"
+                      title="Remove Photo"
+                    >
+                      <FaTimes size={12} />
+                    </button>
+                  ) : (
+                    <label
+                      className="absolute bottom-0 right-0 bg-teal-600 text-white p-2 rounded-full shadow-md hover:bg-teal-700 transition-colors cursor-pointer"
+                      title="Upload Photo"
+                    >
+                      <FaCloudUploadAlt size={14} />
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageUpload}
+                        className="hidden"
+                        disabled={uploadingImage}
+                      />
+                    </label>
+                  )}
+                </div>
+                <p className="text-xs text-slate-500 mt-2">Allowed: JPG, PNG</p>
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <FormInput label="First Name" value={formData.firstName} onChange={(e) => handleInputChange('firstName', e.target.value)} required />
               <FormInput label="Middle Name" value={formData.middleName} onChange={(e) => handleInputChange('middleName', e.target.value)} />
