@@ -263,7 +263,7 @@ const DoctorAppointments = () => {
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="text-sm text-gray-700 capitalize bg-gray-100 px-2 py-1 rounded text-xs">
+                          <span className="text-sm text-gray-700 capitalize bg-gray-100 px-2 py-1 rounded">
                             {appt.type}
                           </span>
                         </td>

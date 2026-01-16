@@ -109,9 +109,15 @@ const Sidebar = ({ sidebarItems, onCloseMobile }) => {
             )}
           </div>
 
-          <h1 className="text-lg lg:text-xl font-bold ml-3 text-gray-800 truncate">
-            {hospitalName}
-          </h1>
+          <div className="ml-3 flex flex-col leading-tight">
+            <h1 className="text-lg lg:text-xl font-bold text-gray-800 truncate">
+              {hospitalName}
+            </h1>
+            <span className="text-[11px] lg:text-xs text-gray-400 font-medium ml-1">
+              Powered by <span className="text-emerald-600 font-semibold">MediQliq</span>
+            </span>
+          </div>
+
         </div>
 
         {/* Close Button (Mobile) */}
