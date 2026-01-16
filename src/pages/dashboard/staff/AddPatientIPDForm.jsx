@@ -132,15 +132,19 @@ import axios from 'axios';
 const AddPatientIPDForm = () => {
   const [formData, setFormData] = useState({
     firstName: '',
+    middleName: '',
     lastName: '',
     email: '',
     phone: '',
     dateOfBirth: '',
-    gender: 'Male',
+    gender: 'male',
     address: '',
     city: '',
     state: '',
     zipCode: '',
+    village: '',
+    district: '',
+    tehsil: '',
     emergencyContact: '',
     emergencyPhone: '',
     ward: '',
@@ -183,7 +187,7 @@ const AddPatientIPDForm = () => {
     const month = String(today.getMonth() + 1).padStart(2, '0');
     const day = String(today.getDate()).padStart(2, '0');
     const todayDate = `${year}-${month}-${day}`;
-    
+
     setFormData(prev => ({
       ...prev,
       admissionDate: todayDate
@@ -223,6 +227,7 @@ const AddPatientIPDForm = () => {
     try {
       const payload = {
         first_name: formData.firstName,
+        middle_name: formData.middleName,
         last_name: formData.lastName,
         email: formData.email,
         phone: formData.phone,
@@ -232,6 +237,9 @@ const AddPatientIPDForm = () => {
         city: formData.city,
         state: formData.state,
         zipCode: formData.zipCode,
+        village: formData.village,
+        district: formData.district,
+        tehsil: formData.tehsil,
         emergency_contact: formData.emergencyContact,
         emergency_phone: formData.emergencyPhone,
         ward: formData.ward,
@@ -250,10 +258,10 @@ const AddPatientIPDForm = () => {
       );
 
       console.log('✅Patient added:', response.data);
-      alert('IPD Patient added successfully!');
+      alert('Patient added successfully!');
       navigate('/dashboard/staff/patient-list');
     } catch (err) {
-      console.error('❌ Error adding IPD patient:', err.response?.data || err.message);
+      console.error('❌ Error adding patient:', err.response?.data || err.message);
       alert(err.response?.data?.error || 'Failed to add patient.');
     }
   };
@@ -302,8 +310,9 @@ const AddPatientIPDForm = () => {
           {/* Personal Information */}
           <div className="mb-8">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Personal Information</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <FormInput label="First Name" value={formData.firstName} onChange={(e) => handleInputChange('firstName', e.target.value)} required />
+              <FormInput label="Middle Name" value={formData.middleName} onChange={(e) => handleInputChange('middleName', e.target.value)} />
               <FormInput label="Last Name" value={formData.lastName} onChange={(e) => handleInputChange('lastName', e.target.value)} required />
               <FormInput label="Email" type="email" value={formData.email} onChange={(e) => handleInputChange('email', e.target.value)} />
               <FormInput label="Phone Number" type="tel" value={formData.phone} onChange={(e) => handleInputChange('phone', e.target.value)} required />
@@ -320,6 +329,9 @@ const AddPatientIPDForm = () => {
               {/* Modified City and State inputs to Select */}
               <FormSelect label="State" value={formData.state} onChange={(e) => handleInputChange('state', e.target.value)} options={stateOptions} />
               <FormSelect label="City" value={formData.city} onChange={(e) => handleInputChange('city', e.target.value)} options={cityOptions} disabled={!formData.state} />
+              <FormInput label="District" value={formData.district} onChange={(e) => handleInputChange('district', e.target.value)} />
+              <FormInput label="Tehsil" value={formData.tehsil} onChange={(e) => handleInputChange('tehsil', e.target.value)} />
+              <FormInput label="Village" value={formData.village} onChange={(e) => handleInputChange('village', e.target.value)} />
               <FormInput label="ZIP Code" value={formData.zipCode} onChange={(e) => handleInputChange('zipCode', e.target.value)} />
             </div>
           </div>
