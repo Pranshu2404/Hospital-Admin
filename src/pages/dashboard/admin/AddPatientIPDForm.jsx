@@ -257,7 +257,7 @@ const AddPatientIPDForm = () => {
 
           <div className="flex justify-end space-x-4">
             <Button variant="secondary" type="button">Cancel</Button>
-            <Button variant="primary" type="submit">Add IPD Patient</Button>
+            <Button variant="primary" type="submit">Add Patient</Button>
           </div>
         </form>
       </div>

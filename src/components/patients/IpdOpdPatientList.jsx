@@ -10,6 +10,9 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient, updatePatientBa
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
   const [patients, setPatients] = useState([]);
+  const [dateFilter, setDateFilter] = useState('all'); // 'all', 'today', 'week', 'month', 'custom'
+  const [customStartDate, setCustomStartDate] = useState('');
+  const [customEndDate, setCustomEndDate] = useState('');
 
   // NEW: State for upload messages and a ref for the file input
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -108,6 +111,28 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient, updatePatientBa
     return Math.abs(ageDate.getUTCFullYear() - 1970);
   };
 
+  const getDateRangeFromFilter = () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    if (dateFilter === 'today') {
+      return { start: new Date(today), end: new Date(today) };
+    } else if (dateFilter === 'week') {
+      const weekStart = new Date(today);
+      weekStart.setDate(today.getDate() - today.getDay());
+      return { start: weekStart, end: new Date(today) };
+    } else if (dateFilter === 'month') {
+      const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+      return { start: monthStart, end: new Date(today) };
+    } else if (dateFilter === 'custom') {
+      return {
+        start: customStartDate ? new Date(customStartDate) : null,
+        end: customEndDate ? new Date(customEndDate) : null,
+      };
+    }
+    return { start: null, end: null };
+  };
+
   const filteredPatients = patients.filter((patient) => {
     const matchesSearch =
       patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -115,7 +140,19 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient, updatePatientBa
       patient.phone.includes(searchTerm) ||
       patient.type.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesFilter = filterType === 'all' || patient.type === filterType;
-    return matchesSearch && matchesFilter;
+    
+    // Date filter logic
+    let matchesDateFilter = true;
+    if (dateFilter !== 'all') {
+      const { start, end } = getDateRangeFromFilter();
+      const patientDate = new Date(patient.lastVisit);
+      patientDate.setHours(0, 0, 0, 0);
+      
+      if (start && patientDate < start) matchesDateFilter = false;
+      if (end && patientDate > end) matchesDateFilter = false;
+    }
+    
+    return matchesSearch && matchesFilter && matchesDateFilter;
   });
 
   const handleViewPatient = (patient) => {
@@ -179,27 +216,50 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient, updatePatientBa
           {uploadError && <div className="mt-2 p-3 text-sm text-red-800 bg-red-100 rounded-md">{uploadError}</div>}
 
           {/* Search and Filter */}
-          <div className="flex flex-col sm:flex-row gap-4">
-            <SearchInput
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search patients by name, email, or phone..."
-              className="flex-1"
-            />
-            <div className="flex gap-2">
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col sm:flex-row gap-3">
+              <SearchInput
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search patients by name, email, or phone..."
+                className="flex-1"
+              />
               <select
-                value={filterType}
-                onChange={(e) => setFilterType(e.target.value)}
+                value={dateFilter}
+                onChange={(e) => setDateFilter(e.target.value)}
                 className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
               >
-                <option value="all">All Patients</option>
-                <option value="OPD">OPD Only</option>
-                <option value="IPD">IPD Only</option>
+                <option value="all">All Dates</option>
+                <option value="today">Today</option>
+                <option value="week">This Week</option>
+                <option value="month">This Month</option>
+                <option value="custom">Custom Range</option>
               </select>
-              <Button variant="outline" size="sm">
-                <FilterIcon />
-              </Button>
             </div>
+            
+            {/* Custom Date Range - Only show when custom is selected */}
+            {dateFilter === 'custom' && (
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="flex-1">
+                  <input
+                    type="date"
+                    value={customStartDate}
+                    onChange={(e) => setCustomStartDate(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-sm"
+                    placeholder="Start Date"
+                  />
+                </div>
+                <div className="flex-1">
+                  <input
+                    type="date"
+                    value={customEndDate}
+                    onChange={(e) => setCustomEndDate(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-sm"
+                    placeholder="End Date"
+                  />
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -214,9 +274,9 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient, updatePatientBa
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Contact
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Type
-                </th>
+                </th> */}
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Blood Group
                 </th>
@@ -251,11 +311,11 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient, updatePatientBa
                     <div className="text-sm text-gray-900">{patient.phone}</div>
                     <div className="text-sm text-gray-500">{patient.email}</div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  {/* <td className="px-6 py-4 whitespace-nowrap">
                     <span className={getTypeBadge(patient.type)}>
                       {patient.type}
                     </span>
-                  </td>
+                  </td> */}
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {patient.bloodGroup}
                   </td>

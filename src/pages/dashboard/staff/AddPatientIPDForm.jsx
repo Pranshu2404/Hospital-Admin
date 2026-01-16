@@ -176,6 +176,18 @@ const AddPatientIPDForm = () => {
     };
 
     fetchStates();
+
+    // Set admission date to today
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    const todayDate = `${year}-${month}-${day}`;
+    
+    setFormData(prev => ({
+      ...prev,
+      admissionDate: todayDate
+    }));
   }, []);
 
   // Fetch Cities when state changes
@@ -345,7 +357,7 @@ const AddPatientIPDForm = () => {
           {/* Submit Buttons */}
           <div className="flex justify-end space-x-4">
             <Button variant="secondary" type="button">Cancel</Button>
-            <Button variant="primary" type="submit">Add IPD Patient</Button>
+            <Button variant="primary" type="submit">Add Patient</Button>
           </div>
         </form>
       </div>

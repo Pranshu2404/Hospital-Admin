@@ -162,6 +162,9 @@ const Header = ({
     const pathSegments = location.pathname.split('/');
     if (pathSegments.length > 2 && pathSegments[1] === 'dashboard') {
       const role = pathSegments[2];
+      if (role === 'staff') {
+        return 'Registrar';
+      }
       return role.charAt(0).toUpperCase() + role.slice(1);
     }
     return user.role || 'Admin';
@@ -204,16 +207,16 @@ const Header = ({
           <div className="flex items-center space-x-2 sm:space-x-4">
             
             {/* Mobile Search Button */}
-            <button
+            {/* <button
               onClick={() => setShowSearch(!showSearch)}
               className="lg:hidden p-2 text-gray-400 hover:text-teal-600 hover:bg-gray-100 rounded-lg transition-colors"
               aria-label="Search"
             >
               <SearchIcon className="w-5 h-5" />
-            </button>
+            </button> */}
 
             {/* Search Bar (Desktop) */}
-            <div className="hidden lg:flex items-center relative w-64">
+            {/* <div className="hidden lg:flex items-center relative w-64">
               <div className="absolute left-3 text-gray-400">
                 <SearchIcon className="w-4 h-4" />
               </div>
@@ -224,10 +227,10 @@ const Header = ({
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-sm"
               />
-            </div>
+            </div> */}
 
             {/* Search Overlay (Mobile) */}
-            {showSearch && (
+            {/* {showSearch && (
               <div className="lg:hidden fixed inset-0 bg-white z-50 flex items-start pt-20 px-4">
                 <div className="w-full">
                   <div className="flex items-center mb-4">
@@ -253,7 +256,7 @@ const Header = ({
                   </div>
                 </div>
               </div>
-            )}
+            )} */}
 
             {/* Reset Tutorial Button */}
             <button 
@@ -266,10 +269,10 @@ const Header = ({
             </button>
 
             {/* Notifications (Desktop only) */}
-            <button className="hidden lg:flex relative p-2 text-gray-400 hover:text-teal-600 hover:bg-gray-100 rounded-xl transition-colors">
+            {/* <button className="hidden lg:flex relative p-2 text-gray-400 hover:text-teal-600 hover:bg-gray-100 rounded-xl transition-colors">
               <BellIcon className="w-5 h-5" />
               <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-            </button>
+            </button> */}
 
             {/* Professional Profile Dropdown */}
             <div className="relative" ref={dropdownRef}>
@@ -318,6 +321,9 @@ const Header = ({
                   <div className="p-4 border-b border-gray-50">
                     <p className="text-xs font-semibold text-gray-400 uppercase">Signed in as</p>
                     <p className="text-sm font-bold text-gray-800 truncate">{displayName}</p>
+                    <p className="text-[10px] font-medium text-teal-600 uppercase tracking-wide mt-0.5">
+                      {getUserRole()}
+                    </p>
                   </div>
                   
                   <div className="p-2 space-y-1">
