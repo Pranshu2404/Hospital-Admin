@@ -24,32 +24,63 @@ const PersonalProfileTab = ({ hospitalData }) => {
     companyNumber: hospitalData?.companyNumber || '',
     fireNOC: hospitalData?.fireNOC || '',
     healthBima: hospitalData?.healthBima || '',
-    additionalInfo: hospitalData?.additionalInfo || ''
+    additionalInfo: hospitalData?.additionalInfo || '',
+    logo: hospitalData?.logo || null,
+    newLogo: null // For handling file upload
   });
 
   const handleSave = async () => {
     try {
       setLoading(true);
       setMessage({ type: '', text: '' });
-      await axios.patch(
+
+      const formData = new FormData();
+      formData.append('hospitalName', profileData.hospitalName);
+      formData.append('name', profileData.adminName);
+      formData.append('email', profileData.email);
+      formData.append('contact', profileData.phone);
+      formData.append('address', profileData.address);
+      formData.append('registryNo', profileData.registryNo);
+      formData.append('companyName', profileData.companyName);
+      formData.append('companyNumber', profileData.companyNumber);
+      formData.append('fireNOC', profileData.fireNOC);
+      formData.append('healthBima', profileData.healthBima);
+      formData.append('additionalInfo', profileData.additionalInfo);
+
+      if (profileData.newLogo) {
+        formData.append('logo', profileData.newLogo);
+      }
+
+      const response = await axios.patch(
         `${import.meta.env.VITE_BACKEND_URL}/hospitals/${hospitalData._id}/details`,
+        formData,
         {
-          hospitalName: profileData.hospitalName,
-          name: profileData.adminName,
-          email: profileData.email,
-          contact: profileData.phone,
-          address: profileData.address,
-          registryNo: profileData.registryNo,
-          companyName: profileData.companyName,
-          companyNumber: profileData.companyNumber,
-          fireNOC: profileData.fireNOC,
-          healthBima: profileData.healthBima,
-          additionalInfo: profileData.additionalInfo
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
         }
       );
+
+      // Update local state with returned data (especially new logo URL if changed)
+      if (response.data.hospital) {
+        const updated = response.data.hospital;
+        setProfileData(prev => ({
+          ...prev,
+          logo: updated.logo,
+          newLogo: null
+        }));
+        // Emit event to update Sidebar
+        window.dispatchEvent(new Event('vitals-updated')); // Reusing existing event or create new one? Sidebar listens to 'vitals-updated' but maybe we should reload or use a specific one. 
+        // Actually Sidebar fetches on mount. To force update we might need a page reload or context.
+        // For now let's just show success. Ideally, use a context for hospital data.
+      }
+
       setMessage({ type: 'success', text: 'Hospital details updated successfully!' });
       setIsEditing(false);
       setTimeout(() => setMessage({ type: '', text: '' }), 3000);
+
+      // Optional: Refresh page to show new logo in Sidebar if state not shared
+      // window.location.reload(); 
     } catch (err) {
       console.error('Error updating hospital details:', err);
       setMessage({ type: 'error', text: err.response?.data?.message || 'Failed to update details' });
@@ -107,10 +138,42 @@ const PersonalProfileTab = ({ hospitalData }) => {
         <div className="px-6 pb-6">
           <div className="flex flex-col md:flex-row items-start md:items-end -mt-12 mb-6">
             <div className="relative">
-              <div className="w-32 h-32 rounded-2xl bg-white p-1 shadow-lg">
-                <div className="w-full h-full rounded-xl bg-gradient-to-br from-teal-500 to-cyan-600 flex items-center justify-center">
-                  <FaHospital className="text-4xl text-white" />
-                </div>
+              <div className="w-32 h-32 rounded-2xl bg-white p-1 shadow-lg relative group">
+                {profileData.newLogo ? (
+                  <img
+                    src={URL.createObjectURL(profileData.newLogo)}
+                    alt="New Logo"
+                    className="w-full h-full object-contain rounded-xl"
+                  />
+                ) : profileData.logo ? (
+                  <img
+                    src={profileData.logo}
+                    alt="Hospital Logo"
+                    className="w-full h-full object-contain rounded-xl"
+                  />
+                ) : (
+                  <div className="w-full h-full rounded-xl bg-gradient-to-br from-teal-500 to-cyan-600 flex items-center justify-center">
+                    <FaHospital className="text-4xl text-white" />
+                  </div>
+                )}
+
+                {isEditing && (
+                  <label className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer rounded-xl">
+                    <span className="text-white text-xs font-bold bg-black/50 px-2 py-1 rounded flex items-center gap-1">
+                      <FaEdit /> Change
+                    </span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        if (e.target.files[0]) {
+                          setProfileData(prev => ({ ...prev, newLogo: e.target.files[0] }));
+                        }
+                      }}
+                    />
+                  </label>
+                )}
               </div>
               <div className="absolute bottom-2 -right-2 bg-green-500 border-4 border-white w-6 h-6 rounded-full"></div>
             </div>
@@ -182,11 +245,10 @@ const PersonalProfileTab = ({ hospitalData }) => {
 
       {/* Flash Message */}
       {message.text && (
-        <div className={`max-w-5xl mx-auto mb-4 p-4 rounded-lg border flex items-center gap-3 ${
-          message.type === 'success'
+        <div className={`max-w-5xl mx-auto mb-4 p-4 rounded-lg border flex items-center gap-3 ${message.type === 'success'
             ? 'bg-green-50 border-green-200 text-green-700'
             : 'bg-red-50 border-red-200 text-red-700'
-        }`}>
+          }`}>
           {message.type === 'success' ? <FaCheckCircle /> : <FaExclamationCircle />}
           <span className="font-medium">{message.text}</span>
         </div>
@@ -194,10 +256,10 @@ const PersonalProfileTab = ({ hospitalData }) => {
 
       {/* Main Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
-        
+
         {/* Left Column */}
         <div className="space-y-6">
-          
+
           {/* Hospital Details Card */}
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
             <SectionTitle title="Hospital Details" icon={FaBuilding} />

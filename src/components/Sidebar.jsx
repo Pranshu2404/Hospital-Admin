@@ -8,6 +8,7 @@ import axios from 'axios';
 const Sidebar = ({ sidebarItems, onCloseMobile }) => {
   const [openMenu, setOpenMenu] = useState(null);
   const [hospitalName, setHospitalName] = useState('Mediqliq');
+  const [hospitalLogo, setHospitalLogo] = useState(null);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
@@ -24,6 +25,7 @@ const Sidebar = ({ sidebarItems, onCloseMobile }) => {
         const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/hospitals`);
         if (res.data && res.data.length > 0) {
           setHospitalName(res.data[0].hospitalName);
+          setHospitalLogo(res.data[0].logo);
 
           // Handle Vitals Enabled Setting
           const v = res.data[0].vitalsEnabled !== undefined ? res.data[0].vitalsEnabled : true;
@@ -91,12 +93,22 @@ const Sidebar = ({ sidebarItems, onCloseMobile }) => {
       {/* Header */}
       <div className="flex items-center justify-between p-4 lg:p-5 border-b border-gray-100">
         <div className="flex items-center">
-          <div className="p-2 lg:p-3 rounded-full border-2 border-teal-600 flex-shrink-0">
-            <FontAwesomeIcon
-              icon={faHospital}
-              className="text-teal-600 w-5 h-5 lg:w-6 lg:h-6"
-            />
+          <div className="rounded-full border-2 border-teal-600 flex-shrink-0
+                  w-12 h-12 lg:w-14 lg:h-14 flex items-center justify-center">
+            {hospitalLogo ? (
+              <img
+                src={hospitalLogo}
+                alt="Logo"
+                className="w-full h-full object-cover rounded-full"
+              />
+            ) : (
+              <FontAwesomeIcon
+                icon={faHospital}
+                className="text-teal-600 w-6 h-6 lg:w-7 lg:h-7"
+              />
+            )}
           </div>
+
           <h1 className="text-lg lg:text-xl font-bold ml-3 text-gray-800 truncate">
             {hospitalName}
           </h1>

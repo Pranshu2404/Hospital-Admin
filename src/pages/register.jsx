@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate, Link } from 'react-router-dom';
-import hospitalImg from '../assets/registererp.png'; 
+import hospitalImg from '../assets/registererp.png';
 
 // --- Icons ---
 const CheckIcon = () => (
@@ -43,7 +43,7 @@ const FormInput = ({ label, name, type = "text", placeholder, required = false, 
 // --- Progress Bar Component ---
 const ProgressBar = ({ currentStep, totalSteps }) => {
   const progressPercentage = ((currentStep) / (totalSteps)) * 100;
-  
+
   return (
     <div className="mb-8">
       <div className="flex justify-between items-end mb-2">
@@ -59,7 +59,7 @@ const ProgressBar = ({ currentStep, totalSteps }) => {
       {/* Track */}
       <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
         {/* Fill */}
-        <div 
+        <div
           className="bg-gradient-to-r from-emerald-500 to-teal-500 h-full rounded-full transition-all duration-500 ease-out"
           style={{ width: `${progressPercentage}%` }}
         ></div>
@@ -71,7 +71,7 @@ const ProgressBar = ({ currentStep, totalSteps }) => {
 // --- Main Register Component ---
 export default function Register() {
   const navigate = useNavigate();
-  
+
   // -- State --
   const [step, setStep] = useState(1);
   const [hospitalId, setHospitalId] = useState(null); // Stores ID after Step 2
@@ -80,7 +80,7 @@ export default function Register() {
 
   const [form, setForm] = useState({
     // Step 1
-    hospitalName: '', hospitalID: '', registryNo: '', address: '', companyName: '', companyNumber: '',
+    hospitalName: '', hospitalID: '', registryNo: '', address: '', companyName: '', companyNumber: '', logo: null,
     // Step 2
     name: '', email: '', password: '', contact: '', role: 'admin',
     // Step 3
@@ -88,7 +88,13 @@ export default function Register() {
   });
 
   // -- Handlers --
-  const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+  const handleChange = (e) => {
+    if (e.target.name === 'logo') {
+      setForm({ ...form, logo: e.target.files[0] });
+    } else {
+      setForm({ ...form, [e.target.name]: e.target.value });
+    }
+  };
 
   // Validate Step 1 before moving to Step 2
   const validateStep1 = () => {
@@ -118,18 +124,26 @@ export default function Register() {
     }
     console.log(import.meta.env.VITE_BACKEND_URL)
     try {
-      const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/auth/register`, {
-        hospitalName: form.hospitalName,
-        hospitalID: form.hospitalID,
-        registryNo: form.registryNo,
-        address: form.address,
-        companyName: form.companyName,
-        companyNumber: form.companyNumber,
-        name: form.name,
-        email: form.email,
-        password: form.password,
-        contact: form.contact,
-        role: form.role
+      const formData = new FormData();
+      formData.append('hospitalName', form.hospitalName);
+      formData.append('hospitalID', form.hospitalID);
+      formData.append('registryNo', form.registryNo);
+      formData.append('address', form.address);
+      formData.append('companyName', form.companyName);
+      formData.append('companyNumber', form.companyNumber);
+      if (form.logo) {
+        formData.append('logo', form.logo);
+      }
+      formData.append('name', form.name);
+      formData.append('email', form.email);
+      formData.append('password', form.password);
+      formData.append('contact', form.contact);
+      formData.append('role', form.role);
+
+      const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/auth/register`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
       });
 
       console.log(response)
@@ -158,7 +172,7 @@ export default function Register() {
     } catch (err) {
       console.error("Failed to save details", err);
       // Even if this fails, registration (Step 2) was successful, so we can likely redirect
-      navigate('/'); 
+      navigate('/');
     } finally {
       setIsLoading(false);
     }
@@ -166,24 +180,24 @@ export default function Register() {
 
   return (
     <div className="flex min-h-screen w-full font-sans bg-white overflow-hidden">
-      
+
       {/* --- LEFT SIDE (Sticky Panel) --- */}
       <div className="hidden lg:flex w-[45%] bg-gradient-to-br from-emerald-50 to-teal-100 sticky top-0 h-screen flex-col items-center justify-center p-12 text-center border-r border-emerald-100/50">
         <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-emerald-200/30 rounded-full blur-[100px] pointer-events-none"></div>
         <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-teal-200/30 rounded-full blur-[100px] pointer-events-none"></div>
 
         <div className="relative z-10 max-w-md">
-         <div className="bg-white/40 backdrop-blur-md rounded-[2rem] shadow-xl ring-1 ring-white/60 mb-8 w-[380px] h-[280px] overflow-hidden mx-auto">
+          <div className="bg-white/40 backdrop-blur-md rounded-[2rem] shadow-xl ring-1 ring-white/60 mb-8 w-[380px] h-[280px] overflow-hidden mx-auto">
 
-        <img
-           src={hospitalImg}
-           alt="Hospital Illustration"
-           className="w-full h-full object-cover"
-         />
+            <img
+              src={hospitalImg}
+              alt="Hospital Illustration"
+              className="w-full h-full object-cover"
+            />
           </div>
 
           <h1 className="text-4xl font-extrabold text-gray-800 tracking-tight mb-4">
-            Setup your <br/><span className="text-emerald-600">Digital Hospital</span>
+            Setup your <br /><span className="text-emerald-600">Digital Hospital</span>
           </h1>
           <p className="text-gray-600 text-lg leading-relaxed">
             Follow the steps to configure your facility and administrator access.
@@ -195,19 +209,19 @@ export default function Register() {
       {/* --- RIGHT SIDE (Wizard Form) --- */}
       <div className="w-full lg:w-[55%] flex flex-col justify-center p-6 md:p-12 lg:p-20 bg-white">
         <div className="w-full max-w-xl mx-auto">
-          
+
           {/* Progress Bar Header */}
           <ProgressBar currentStep={step} totalSteps={3} />
 
           {error && (
             <div className="p-4 mb-6 text-sm text-red-700 bg-red-50 rounded-xl border border-red-100 flex items-center gap-3 animate-fade-in">
-              <span className="bg-red-200 p-1 rounded-full"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg></span>
+              <span className="bg-red-200 p-1 rounded-full"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></span>
               {error}
             </div>
           )}
 
           <form onSubmit={step === 2 ? handleRegister : (e) => e.preventDefault()}>
-            
+
             {/* --- STEP 1: ORGANIZATION DETAILS --- */}
             {step === 1 && (
               <div className="space-y-6 animate-fade-in-right">
@@ -217,8 +231,67 @@ export default function Register() {
                   <FormInput label="Hospital ID" name="hospitalID" placeholder="AB1234" pattern="^[A-Za-z]{2}\d{4}$" title="2 letters + 4 numbers" value={form.hospitalID} onChange={handleChange} required />
                   <FormInput label="Company Name" name="companyName" placeholder="LLC Name" value={form.companyName} onChange={handleChange} />
                   <FormInput label="License No." name="companyNumber" placeholder="LIC-9988" value={form.companyNumber} onChange={handleChange} />
+
+                  {/* Logo Upload */}
+                  <div className="space-y-1">
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide ml-1">
+                      Hospital Logo
+                    </label>
+
+                    <div className="flex items-center justify-center w-full">
+                      <label
+                        htmlFor="dropzone-file"
+                        className={`flex flex-col items-center justify-center w-full h-24 border-2 border-dashed rounded-xl cursor-pointer bg-gray-50 hover:bg-gray-100 transition-all duration-200 ${form.logo ? 'border-emerald-500 bg-emerald-50/10' : 'border-gray-300 hover:border-emerald-400'
+                          }`}
+                      >
+                        {form.logo ? (
+                          <div className="relative w-full h-full flex items-center justify-center p-2 group">
+                            <img
+                              src={URL.createObjectURL(form.logo)}
+                              alt="Logo Preview"
+                              className="h-full object-contain"
+                            />
+                            {/* Remove Button */}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setForm({ ...form, logo: null });
+                              }}
+                              className="absolute top-0 right-0 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors shadow-sm transform translate-x-1/3 -translate-y-1/3"
+                              title="Remove Logo"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg">
+                              <span className="text-white text-xs font-bold bg-black/50 px-2 py-1 rounded">Change</span>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center justify-center py-3 text-gray-500">
+                            <svg className="w-6 h-6 mb-1 text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 16">
+                              <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2" />
+                            </svg>
+                            <p className="text-xs font-medium"><span className="font-bold text-emerald-600">Click</span> or drag file</p>
+                          </div>
+                        )}
+                        <input
+                          id="dropzone-file"
+                          type="file"
+                          name="logo"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={handleChange}
+                        />
+                      </label>
+                    </div>
+                  </div>
+
                   <div className="md:col-span-1"></div>
-                  
+
                   <div className="md:col-span-2 space-y-1">
                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide ml-1">Full Address <span className="text-red-500">*</span></label>
                     <textarea
@@ -238,7 +311,7 @@ export default function Register() {
             {/* --- STEP 2: ADMIN DETAILS --- */}
             {step === 2 && (
               <div className="space-y-6 animate-fade-in-right">
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <FormInput label="Admin Name" name="name" placeholder="Dr. John Doe" value={form.name} onChange={handleChange} required autoFocus />
                   <div className="space-y-1">
                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide ml-1">Contact Number <span className="text-red-500">*</span></label>
@@ -281,7 +354,7 @@ export default function Register() {
                     <CheckIcon />
                   </div>
                   <h3 className="text-lg font-bold text-green-800">Account Created Successfully!</h3>
-                  <p className="text-sm text-green-600">Hospital ID: <strong>{hospitalId}</strong></p>
+                  {/* <p className="text-sm text-green-600">Hospital ID: <strong>{hospitalId}</strong></p> */}
                 </div>
 
                 <div className="space-y-4">
@@ -314,7 +387,7 @@ export default function Register() {
                 </button>
               )}
               {step === 3 && (
-                 <button
+                <button
                   type="button"
                   onClick={() => navigate('/')}
                   className="flex-1 px-6 py-4 rounded-xl text-gray-600 bg-gray-100 hover:bg-gray-200 font-bold text-sm transition-all"
@@ -328,7 +401,7 @@ export default function Register() {
                 type={step === 1 ? 'button' : step === 3 ? 'button' : 'submit'}
                 onClick={() => {
                   if (step === 1) {
-                    if(validateStep1()) setStep(2);
+                    if (validateStep1()) setStep(2);
                   } else if (step === 3) {
                     handleFinalSubmit();
                   }
@@ -337,13 +410,13 @@ export default function Register() {
                 className="flex-1 flex justify-center py-4 px-6 rounded-xl text-white font-bold text-sm uppercase tracking-wide bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-lg shadow-emerald-500/30 transform transition-all active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed hover:-translate-y-1"
               >
                 {isLoading ? (
-                   <span className="flex items-center gap-2">
-                     <svg className="animate-spin h-5 w-5 text-white" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                     Processing...
-                   </span>
+                  <span className="flex items-center gap-2">
+                    <svg className="animate-spin h-5 w-5 text-white" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    Processing...
+                  </span>
                 ) : (
-                  step === 1 ? 'Next Step' : 
-                  step === 2 ? 'Register Hospital' : 'Save & Finish'
+                  step === 1 ? 'Next Step' :
+                    step === 2 ? 'Register Hospital' : 'Save & Finish'
                 )}
               </button>
             </div>
