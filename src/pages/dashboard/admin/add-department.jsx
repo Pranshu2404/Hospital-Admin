@@ -76,7 +76,12 @@ const DepartmentPopup = ({ department, onClose, onUpdate, onDelete, onAssignHod 
   const fetchDoctors = async () => {
     try {
       setLoadingDoctors(true);
-      const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/doctors/department/${department._id}`);
+      let res;
+      if (department.name === 'Emergency Department (ED/ER)' || department.name.toLowerCase().includes('emergency')) {
+        res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/doctors`);
+      } else {
+        res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/doctors/department/${department._id}`);
+      }
       setDoctors(res.data);
     } catch (err) {
       console.error('Failed to fetch doctors:', err);
@@ -89,7 +94,7 @@ const DepartmentPopup = ({ department, onClose, onUpdate, onDelete, onAssignHod 
   const handleUpdate = async () => {
     const trimmed = editedName.trim();
     if (!trimmed || trimmed === department.name) return;
-    
+
     try {
       await onUpdate(department._id, trimmed);
       setSuccessMessage('Department name updated successfully!');
@@ -121,7 +126,7 @@ const DepartmentPopup = ({ department, onClose, onUpdate, onDelete, onAssignHod 
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-fade-in">
-      <div 
+      <div
         className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden animate-slide-up"
         onClick={(e) => e.stopPropagation()}
       >
@@ -218,7 +223,7 @@ const DepartmentPopup = ({ department, onClose, onUpdate, onDelete, onAssignHod 
                 Full HOD Management <Icons.ArrowRight className="h-3 w-3" />
               </button>
             </div>
-            
+
             {loadingDoctors ? (
               <div className="text-center py-8">
                 <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
@@ -253,11 +258,10 @@ const DepartmentPopup = ({ department, onClose, onUpdate, onDelete, onAssignHod 
                     <button
                       onClick={() => handleAssignHod(doctor._id)}
                       disabled={department.head_doctor_id?._id === doctor._id}
-                      className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
-                        department.head_doctor_id?._id === doctor._id
+                      className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${department.head_doctor_id?._id === doctor._id
                           ? 'bg-emerald-100 text-emerald-700 border border-emerald-200 cursor-default'
                           : 'bg-white text-emerald-600 border border-emerald-300 hover:bg-emerald-50 hover:border-emerald-400'
-                      }`}
+                        }`}
                     >
                       {department.head_doctor_id?._id === doctor._id ? 'Current HOD' : 'Assign as HOD'}
                     </button>
@@ -309,28 +313,28 @@ const AssignHODPromptModal = ({ isOpen, onClose, onConfirm, departmentName }) =>
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-fade-in">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all scale-100">
         <div className="bg-gradient-to-r from-emerald-50 to-teal-50 p-6 border-b border-emerald-100 text-center">
-            <div className="mx-auto w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center mb-3">
-                 <Icons.Building className="text-emerald-600 h-6 w-6"/>
-            </div>
+          <div className="mx-auto w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center mb-3">
+            <Icons.Building className="text-emerald-600 h-6 w-6" />
+          </div>
           <h3 className="text-xl font-bold text-gray-800">Department Added!</h3>
         </div>
-        
+
         <div className="p-6 text-center">
           <p className="text-gray-600 mb-6">
             Would you like to assign a Head of Department (HOD) for <span className="font-bold text-gray-800">"{departmentName}"</span> now?
           </p>
           <div className="flex justify-center space-x-3">
-            <button 
-                onClick={onClose}
-                className="px-5 py-2.5 rounded-xl text-gray-600 bg-gray-100 hover:bg-gray-200 font-semibold text-sm transition-colors"
+            <button
+              onClick={onClose}
+              className="px-5 py-2.5 rounded-xl text-gray-600 bg-gray-100 hover:bg-gray-200 font-semibold text-sm transition-colors"
             >
-                No, Later
+              No, Later
             </button>
-            <button 
-                onClick={onConfirm}
-                className="px-5 py-2.5 rounded-xl text-white bg-emerald-600 hover:bg-emerald-700 font-semibold text-sm shadow-lg shadow-emerald-500/30 transition-all"
+            <button
+              onClick={onConfirm}
+              className="px-5 py-2.5 rounded-xl text-white bg-emerald-600 hover:bg-emerald-700 font-semibold text-sm shadow-lg shadow-emerald-500/30 transition-all"
             >
-                Yes, Assign HOD
+              Yes, Assign HOD
             </button>
           </div>
         </div>
@@ -398,7 +402,7 @@ const SelectDepartment = () => {
     setNewDeptName(name);
     setSuggestions([]);
   };
-  
+
   const handleAddDepartment = async (e) => {
     e.preventDefault();
     const trimmed = newDeptName.trim();
@@ -467,11 +471,11 @@ const SelectDepartment = () => {
     navigate(`/dashboard/admin/add-hod/${newlyAddedDept._id}?departmentName=${encodeURIComponent(newlyAddedDept.name)}`);
     setShowAssignPrompt(false);
   };
-  
+
   return (
     <Layout sidebarItems={adminSidebar}>
       <div className="p-8 min-h-screen bg-slate-50/50 font-sans text-slate-800">
-        
+
         {/* Header Section */}
         <div className="mb-10">
           <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Manage Departments</h1>
@@ -481,116 +485,116 @@ const SelectDepartment = () => {
         {/* Add Department Section */}
         <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-8 mb-10">
           <div className="flex items-center gap-3 mb-6">
-             <div className="p-2 bg-emerald-100 rounded-lg text-emerald-600">
-                <Icons.Plus />
-             </div>
-             <h2 className="text-xl font-bold text-slate-900">Add New Department</h2>
+            <div className="p-2 bg-emerald-100 rounded-lg text-emerald-600">
+              <Icons.Plus />
+            </div>
+            <h2 className="text-xl font-bold text-slate-900">Add New Department</h2>
           </div>
-          
+
           <form onSubmit={handleAddDepartment} className="relative">
             <div className="flex flex-col sm:flex-row gap-4 items-start">
-                <div className="relative w-full flex-1 group">
-                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 group-focus-within:text-emerald-500 transition-colors">
-                        <Icons.Search />
-                    </div>
-                    <input
-                        type="text"
-                        placeholder="E.g. Cardiology, Neurology..."
-                        value={newDeptName}
-                        onChange={handleInputChange}
-                        className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 text-slate-900 text-sm rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all duration-200 placeholder-slate-400"
-                        autoComplete="off"
-                    />
-                    
-                    {/* Suggestions Dropdown */}
-                    {suggestions.length > 0 && (
-                        <ul className="absolute z-40 w-full bg-white border border-slate-200 rounded-xl shadow-xl mt-2 max-h-60 overflow-y-auto overflow-x-hidden animate-fade-in-down">
-                        {suggestions.map((name, index) => (
-                            <li
-                            key={`${name}-${index}`}
-                            className="px-4 py-3 cursor-pointer hover:bg-emerald-50 hover:text-emerald-700 text-sm font-medium text-slate-600 transition-colors border-b border-slate-50 last:border-b-0"
-                            onClick={() => handleSuggestionClick(name)}
-                            >
-                            {name}
-                            </li>
-                        ))}
-                        </ul>
-                    )}
+              <div className="relative w-full flex-1 group">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 group-focus-within:text-emerald-500 transition-colors">
+                  <Icons.Search />
                 </div>
-                
-                <button 
-                    type="submit" 
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl text-sm font-bold shadow-lg shadow-emerald-600/20 transition-all flex items-center gap-2 transform active:scale-95 whitespace-nowrap"
-                >
-                    <Icons.Plus />
-                    Add Department
-                </button>
+                <input
+                  type="text"
+                  placeholder="E.g. Cardiology, Neurology..."
+                  value={newDeptName}
+                  onChange={handleInputChange}
+                  className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 text-slate-900 text-sm rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all duration-200 placeholder-slate-400"
+                  autoComplete="off"
+                />
+
+                {/* Suggestions Dropdown */}
+                {suggestions.length > 0 && (
+                  <ul className="absolute z-40 w-full bg-white border border-slate-200 rounded-xl shadow-xl mt-2 max-h-60 overflow-y-auto overflow-x-hidden animate-fade-in-down">
+                    {suggestions.map((name, index) => (
+                      <li
+                        key={`${name}-${index}`}
+                        className="px-4 py-3 cursor-pointer hover:bg-emerald-50 hover:text-emerald-700 text-sm font-medium text-slate-600 transition-colors border-b border-slate-50 last:border-b-0"
+                        onClick={() => handleSuggestionClick(name)}
+                      >
+                        {name}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              <button
+                type="submit"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl text-sm font-bold shadow-lg shadow-emerald-600/20 transition-all flex items-center gap-2 transform active:scale-95 whitespace-nowrap"
+              >
+                <Icons.Plus />
+                Add Department
+              </button>
             </div>
           </form>
         </div>
 
         {/* Departments Grid */}
         <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-8">
-            <div className="flex items-center justify-between mb-8">
-                <h2 className="text-xl font-bold text-slate-900">Existing Departments</h2>
-                <span className="bg-slate-100 text-slate-600 text-sm font-bold px-3 py-1 rounded-full">
-                    Total: {departments.length}
-                </span>
-            </div>
-          
+          <div className="flex items-center justify-between mb-8">
+            <h2 className="text-xl font-bold text-slate-900">Existing Departments</h2>
+            <span className="bg-slate-100 text-slate-600 text-sm font-bold px-3 py-1 rounded-full">
+              Total: {departments.length}
+            </span>
+          </div>
+
           {departments.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {departments.map((dept) => (
-                <div 
-                  key={dept._id} 
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {departments.map((dept) => (
+                <div
+                  key={dept._id}
                   className="group relative bg-white border border-slate-200 rounded-2xl p-5 cursor-pointer hover:shadow-lg hover:border-emerald-200 transition-all duration-300 transform hover:-translate-y-1"
                   onClick={() => handleDepartmentClick(dept)}
                 >
-                    <div className="flex items-center gap-3 mb-3">
-                        <div className="w-10 h-10 rounded-full bg-slate-50 text-emerald-600 flex items-center justify-center group-hover:bg-emerald-50 transition-colors">
-                            <Icons.Building />
-                        </div>
-                        <div className="flex-grow">
-                          <h3 className="text-sm text-wrap font-bold text-slate-700 group-hover:text-slate-900 truncate" title={dept.name}>
-                            {dept.name}
-                          </h3>
-                          <p className="text-xs text-slate-400 mt-1">
-                            {dept.head_doctor_id 
-                              ? `HOD: Dr. ${dept.head_doctor_id.firstName?.charAt(0)}. ${dept.head_doctor_id.lastName}`
-                              : 'Click to manage'
-                            }
-                          </p>
-                        </div>
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-10 h-10 rounded-full bg-slate-50 text-emerald-600 flex items-center justify-center group-hover:bg-emerald-50 transition-colors">
+                      <Icons.Building />
                     </div>
+                    <div className="flex-grow">
+                      <h3 className="text-sm text-wrap font-bold text-slate-700 group-hover:text-slate-900 truncate" title={dept.name}>
+                        {dept.name}
+                      </h3>
+                      <p className="text-xs text-slate-400 mt-1">
+                        {dept.head_doctor_id
+                          ? `HOD: Dr. ${dept.head_doctor_id.firstName?.charAt(0)}. ${dept.head_doctor_id.lastName}`
+                          : 'Click to manage'
+                        }
+                      </p>
+                    </div>
+                  </div>
 
-                    {/* Action Buttons (Visible on Hover) */}
-                    <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-white pl-2 rounded-lg shadow-sm">
-                        <button 
-                            onClick={(e) => { 
-                              e.stopPropagation(); 
-                              handleDepartmentClick(dept);
-                            }} 
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors" 
-                            title="Manage Department"
-                        >
-                            <Icons.Edit />
-                        </button>
-                    </div>
+                  {/* Action Buttons (Visible on Hover) */}
+                  <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-white pl-2 rounded-lg shadow-sm">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDepartmentClick(dept);
+                      }}
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors"
+                      title="Manage Department"
+                    >
+                      <Icons.Edit />
+                    </button>
+                  </div>
                 </div>
-                ))}
+              ))}
             </div>
           ) : (
-              <div className="text-center py-12">
-                  <div className="inline-block p-4 rounded-full bg-slate-50 mb-4">
-                      <Icons.Building className="w-8 h-8 text-slate-400" />
-                  </div>
-                  <p className="text-slate-500 font-medium">No departments added yet.</p>
-                  <p className="text-slate-400 text-sm mt-1">Start by adding a department above.</p>
+            <div className="text-center py-12">
+              <div className="inline-block p-4 rounded-full bg-slate-50 mb-4">
+                <Icons.Building className="w-8 h-8 text-slate-400" />
               </div>
+              <p className="text-slate-500 font-medium">No departments added yet.</p>
+              <p className="text-slate-400 text-sm mt-1">Start by adding a department above.</p>
+            </div>
           )}
         </div>
       </div>
-      
+
       {/* Department Popup Modal */}
       {showPopup && selectedDepartment && (
         <DepartmentPopup
