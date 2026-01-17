@@ -677,6 +677,13 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
     const finalPaymentMethod = paymentInfo ? paymentInfo.method : formData.paymentMethod;
     const finalBillStatus = paymentInfo ? 'Paid' : status;
 
+    // Check if bill status is Pending and block execution
+    if (finalBillStatus === 'Pending') {
+      alert("Payment not processed! Please collect cash or payment to proceed.");
+      setIsLoading(false);
+      return;
+    }
+
     try {
       // Create new patient if showFields is true
       if (showFields) {
