@@ -85,8 +85,14 @@ const AddAppointmentModal = ({ isOpen, onClose, type = "ipd", hospitalId, fixedD
         setDepartments(departmentRes.data);
 
         if (formData.department) {
-          const doctorRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/doctors/department/${formData.department}`);
-          setDoctors(doctorRes.data);
+          const selectedDep = departmentRes.data.find(d => d._id === formData.department);
+          if (selectedDep && (selectedDep.name.startsWith('Emergency') || selectedDep.name === 'Emergency Department (ED/ER)')) {
+            const doctorRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/doctors`);
+            setDoctors(doctorRes.data);
+          } else {
+            const doctorRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/doctors/department/${formData.department}`);
+            setDoctors(doctorRes.data);
+          }
         } else {
           setDoctors([]);
         }
@@ -128,7 +134,7 @@ const AddAppointmentModal = ({ isOpen, onClose, type = "ipd", hospitalId, fixedD
     }
   }, [isOpen, type]);
 
-   const [doctorWorkingHours, setDoctorWorkingHours] = useState([]); // Now an array of time ranges
+  const [doctorWorkingHours, setDoctorWorkingHours] = useState([]); // Now an array of time ranges
 
   useEffect(() => {
     if (formData.doctorId && hospitalId) {
@@ -152,7 +158,7 @@ const AddAppointmentModal = ({ isOpen, onClose, type = "ipd", hospitalId, fixedD
                 start: appt.startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                 end: appt.endTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
               }));
-            
+
             workingHours = shifts;
           } else if (doctorRes.data.timeSlots) {
             // For part-time doctors without shifts, use their timeSlots
@@ -201,13 +207,13 @@ const AddAppointmentModal = ({ isOpen, onClose, type = "ipd", hospitalId, fixedD
   const isWithinWorkingHours = (time) => {
     const [hours, minutes] = time.split(':').map(Number);
     const timeInMinutes = hours * 60 + minutes;
-    
+
     return doctorWorkingHours.some(range => {
       const [startH, startM] = range.start.split(':').map(Number);
       const [endH, endM] = range.end.split(':').map(Number);
       const startInMinutes = startH * 60 + startM;
       const endInMinutes = endH * 60 + endM;
-      
+
       // Handle overnight shifts (end time is next day)
       if (endInMinutes <= startInMinutes) {
         return timeInMinutes >= startInMinutes || timeInMinutes <= endInMinutes;
@@ -219,16 +225,16 @@ const AddAppointmentModal = ({ isOpen, onClose, type = "ipd", hospitalId, fixedD
   // Helper to get min/max time for time input
   const getTimeConstraints = () => {
     if (doctorWorkingHours.length === 0) return {};
-    
+
     // Find earliest start and latest end time
     let minTime = '23:59';
     let maxTime = '00:00';
-    
+
     doctorWorkingHours.forEach(range => {
       if (range.start < minTime) minTime = range.start;
       if (range.end > maxTime) maxTime = range.end;
     });
-    
+
     return { minTime, maxTime };
   };
 
@@ -253,7 +259,7 @@ const AddAppointmentModal = ({ isOpen, onClose, type = "ipd", hospitalId, fixedD
     for (const appt of existingAppointments) {
       const apptStart = new Date(appt.start_time);
       const apptEnd = new Date(appt.end_time);
-      
+
       const apptStartMin = apptStart.getHours() * 60 + apptStart.getMinutes();
       const apptEndMin = apptEnd.getHours() * 60 + apptEnd.getMinutes();
 
@@ -266,20 +272,20 @@ const AddAppointmentModal = ({ isOpen, onClose, type = "ipd", hospitalId, fixedD
         return false; // Slot is not available
       }
     }
-    
+
     return true; // Slot is available
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
-    
+
     try {
       // For time-based appointments, validate the selected time slot
       if (formData.type === 'time-based') {
         const proposedEnd = calculateEndTime(formData.start_time, formData.duration);
         const isAvailable = checkTimeSlotAvailability(formData.start_time, proposedEnd);
-        
+
         if (!isAvailable) {
           alert('The selected time slot is not available. Please choose another time.');
           return;
@@ -308,7 +314,7 @@ const AddAppointmentModal = ({ isOpen, onClose, type = "ipd", hospitalId, fixedD
         appointmentData.end_time = `${formData.date}T${calculateEndTime(formData.start_time, formData.duration)}:00`;
       } else {
         // For number-based, calculate serial number
-        const lastSerial = existingPatients.length > 0 
+        const lastSerial = existingPatients.length > 0
           ? Math.max(...existingPatients.map(p => p.serial_number))
           : 0;
         appointmentData.serial_number = lastSerial + 1;
@@ -382,305 +388,305 @@ const AddAppointmentModal = ({ isOpen, onClose, type = "ipd", hospitalId, fixedD
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
-  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-    <div className="lg:col-span-2 space-y-4">
-      {/* Patient Selection */}
-      <FormSelect
-        label="Select Patient"
-        value={formData.patientId}
-        onChange={(e) => handleInputChange('patientId', e.target.value)}
-        options={filteredPatients.map(p => ({
-          value: p._id,
-          label: `${p.first_name} ${p.last_name} - ${p.phone || ''} (${p.patientId || ''})`
-        }))}
-        required
-      />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-4">
+            {/* Patient Selection */}
+            <FormSelect
+              label="Select Patient"
+              value={formData.patientId}
+              onChange={(e) => handleInputChange('patientId', e.target.value)}
+              options={filteredPatients.map(p => ({
+                value: p._id,
+                label: `${p.first_name} ${p.last_name} - ${p.phone || ''} (${p.patientId || ''})`
+              }))}
+              required
+            />
 
-      {/* Department and Doctor Selection */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <FormSelect
-          label="Select Department"
-          value={formData.department}
-          onChange={(e) => handleInputChange('department', e.target.value)}
-          options={departments.map(dep => ({ value: dep._id, label: dep.name }))}
-          required
-        />
-        
-        {!fixedDoctorId && (
-          <FormSelect
-            label="Select Doctor"
-            value={formData.doctorId}
-            onChange={(e) => handleInputChange('doctorId', e.target.value)}
-            options={(doctors || []).map(d => ({
-              value: d._id,
-              label: (d.isFullTime) ? `Dr. ${d.firstName} ${d.lastName} (Full Time)` : `Dr. ${d.firstName} ${d.lastName} (Part Time)`
-            }))}
-            required
-          />
-        )}
-      </div>
+            {/* Department and Doctor Selection */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormSelect
+                label="Select Department"
+                value={formData.department}
+                onChange={(e) => handleInputChange('department', e.target.value)}
+                options={departments.map(dep => ({ value: dep._id, label: dep.name }))}
+                required
+              />
 
-      {/* Date, Type and Duration */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <FormInput
-          label="Date"
-          type="date"
-          value={formData.date}
-          onChange={(e) => handleInputChange('date', e.target.value)}
-          required
-          min={new Date().toISOString().split('T')[0]}
-        />
-        
-        <FormSelect
-          label="Scheduling Type"
-          value={formData.type}
-          onChange={(e) => handleInputChange('type', e.target.value)}
-          options={schedulingTypeOptions}
-          required
-        />
-        
-        <FormSelect
-          label="Duration (minutes)"
-          value={formData.duration}
-          onChange={(e) => handleInputChange('duration', e.target.value)}
-          options={[
-            { value: '15', label: '15 minutes' },
-            { value: '30', label: '30 minutes' },
-            { value: '45', label: '45 minutes' },
-            { value: '60', label: '1 hour' },
-            { value: '90', label: '1.5 hours' },
-            { value: '120', label: '2 hours' }
-          ]}
-          required
-        />
-      </div>
-
-      {/* Appointment Type and Priority */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <FormSelect
-          label="Appointment Type"
-          value={formData.appointment_type}
-          onChange={(e) => handleInputChange('appointment_type', e.target.value)}
-          options={appointmentTypeOptions}
-          required
-        />
-        
-        <FormSelect
-          label="Priority"
-          value={formData.priority}
-          onChange={(e) => handleInputChange('priority', e.target.value)}
-          options={priorityOptions}
-        />
-      </div>
-
-      {/* Time Selection (for time-based appointments) */}
-      {formData.type === 'time-based' && (
-        <div className="space-y-2">
-          <FormInput
-            label="Start Time (HH:MM)"
-            type="time"
-            value={formData.start_time}
-            onChange={(e) => handleInputChange('start_time', e.target.value)}
-            required
-            min={minTime}
-            max={maxTime}
-            step="300" // 5 minute increments
-          />
-          <div className="text-sm text-gray-500">
-            <p>Doctor's available hours:</p>
-            <ul className="list-disc pl-5">
-              {doctorWorkingHours.map((range, i) => (
-                <li key={i}>
-                  {range.start} to {range.end}
-                  {doctorDetails?.isFullTime && ` (${doctorDetails.shift} shift)`}
-                </li>
-              ))}
-            </ul>
-          </div>
-          {formData.start_time && !isWithinWorkingHours(formData.start_time) && (
-            <p className="text-sm text-red-500">
-              Selected time is outside doctor's working hours
-            </p>
-          )}
-        </div>
-      )}
-
-      {/* Room Selection (for IPD) */}
-      {type === 'ipd' && (
-        <FormSelect
-          label="Select Room"
-          value={formData.roomId}
-          onChange={(e) => handleInputChange('roomId', e.target.value)}
-          options={rooms.map(r => ({
-            value: r._id,
-            label: `Room ${r.room_number} - ${r.type} (${r.ward || 'No Ward'})`
-          }))}
-          required
-        />
-      )}
-
-      {/* Payment Method */}
-      <FormSelect
-        label="Payment Method"
-        value={formData.paymentMethod}
-        onChange={(e) => handleInputChange('paymentMethod', e.target.value)}
-        options={[
-          { value: 'Cash', label: 'Cash' },
-          { value: 'Card', label: 'Card' },
-          { value: 'UPI', label: 'UPI' },
-          { value: 'Net Banking', label: 'Net Banking' },
-          { value: 'Insurance', label: 'Insurance' },
-          { value: 'Government Funded Scheme', label: 'Government Funded Scheme' },
-        ]}
-        required
-      />
-
-      <FormSelect
-          label="Bill Status"
-          value={status}
-          onChange={(e) => setStatus(e.target.value)}
-          options={[
-            { value: 'Pending', label: 'Pending' },
-            { value: 'Paid', label: 'Paid' },
-            { value: 'Refunded', label: 'Refunded' }
-          ]}
-          required
-        />
-
-      {/* Registration Fee Checkbox */}
-      <div className="flex items-center space-x-2 mb-4">
-        <input
-          type="checkbox"
-          id="includeRegFee"
-          checked={includeRegistrationFee}
-          onChange={(e) => setIncludeRegistrationFee(e.target.checked)}
-          className="w-4 h-4"
-        />
-        <label htmlFor="includeRegFee" className="text-sm text-gray-700">
-          Include Registration Fee
-        </label>
-      </div>
-
-      {/* Notes */}
-      <FormTextarea
-        label="Notes"
-        value={formData.notes}
-        onChange={(e) => handleInputChange('notes', e.target.value)}
-        rows={3}
-        placeholder="Enter any special instructions or notes for this appointment"
-      />
-
-      {/* Charges Summary */}
-      {chargesSummary.length > 0 && (
-        <div className="border-t pt-4">
-          <h4 className="text-md font-semibold text-gray-800 mb-2">Charges Summary</h4>
-          {chargesSummary.map((item, index) => (
-            <div key={index} className="flex justify-between text-sm mb-1">
-              <span>{item.description}</span>
-              <span>₹{item.amount.toFixed(2)}</span>
+              {!fixedDoctorId && (
+                <FormSelect
+                  label="Select Doctor"
+                  value={formData.doctorId}
+                  onChange={(e) => handleInputChange('doctorId', e.target.value)}
+                  options={(doctors || []).map(d => ({
+                    value: d._id,
+                    label: (d.isFullTime) ? `Dr. ${d.firstName} ${d.lastName} (Full Time)` : `Dr. ${d.firstName} ${d.lastName} (Part Time)`
+                  }))}
+                  required
+                />
+              )}
             </div>
-          ))}
-          <div className="flex justify-between font-bold text-gray-900 mt-2">
-            <span>Total</span>
-            <span>₹{totalAmount.toFixed(2)}</span>
-          </div>
-        </div>
-      )}
-    </div>
 
-    {/* Right Column - Doctor's Schedule */}
-    <div className="lg:col-span-1 space-y-4">
-      {formData.doctorId && (
-        <div className="bg-gray-50 p-4 rounded-lg">
-          <h4 className="font-medium text-lg mb-3">
-            {formData.type === 'time-based' ? "Today's Schedule" : "Today's Patient Queue"}
-          </h4>
-          
-          {formData.type === 'time-based' ? (
-            <div className="space-y-3">
-              <div className="text-sm font-medium">
-                <p>Available Hours:</p>
-                <ul className="list-disc pl-5 mt-1">
-                  {doctorWorkingHours.map((range, i) => (
-                    <li key={i}>
-                      {range.start} - {range.end}
-                      {doctorDetails?.isFullTime && ` (${doctorDetails.shift} shift)`}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              
-              {existingAppointments.length > 0 ? (
-                <div>
-                  <p className="text-sm font-medium mb-2">Booked Appointments:</p>
-                  <div className="space-y-2">
-                    {existingAppointments.map((appt, index) => (
-                      <div key={index} className="bg-white p-2 rounded border">
-                        <div className="flex justify-between text-sm">
-                          <span className="font-medium">
-                            {appt.start_time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                            {' - '}
-                            {appt.end_time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </span>
-                          <span className="text-gray-600">{appt.duration} mins</span>
-                        </div>
-                        <div className="text-xs text-gray-500 mt-1">
-                          {appt.patient_id?.first_name} {appt.patient_id?.last_name} - {appt.appointment_type}
-                        </div>
-                      </div>
+            {/* Date, Type and Duration */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <FormInput
+                label="Date"
+                type="date"
+                value={formData.date}
+                onChange={(e) => handleInputChange('date', e.target.value)}
+                required
+                min={new Date().toISOString().split('T')[0]}
+              />
+
+              <FormSelect
+                label="Scheduling Type"
+                value={formData.type}
+                onChange={(e) => handleInputChange('type', e.target.value)}
+                options={schedulingTypeOptions}
+                required
+              />
+
+              <FormSelect
+                label="Duration (minutes)"
+                value={formData.duration}
+                onChange={(e) => handleInputChange('duration', e.target.value)}
+                options={[
+                  { value: '15', label: '15 minutes' },
+                  { value: '30', label: '30 minutes' },
+                  { value: '45', label: '45 minutes' },
+                  { value: '60', label: '1 hour' },
+                  { value: '90', label: '1.5 hours' },
+                  { value: '120', label: '2 hours' }
+                ]}
+                required
+              />
+            </div>
+
+            {/* Appointment Type and Priority */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormSelect
+                label="Appointment Type"
+                value={formData.appointment_type}
+                onChange={(e) => handleInputChange('appointment_type', e.target.value)}
+                options={appointmentTypeOptions}
+                required
+              />
+
+              <FormSelect
+                label="Priority"
+                value={formData.priority}
+                onChange={(e) => handleInputChange('priority', e.target.value)}
+                options={priorityOptions}
+              />
+            </div>
+
+            {/* Time Selection (for time-based appointments) */}
+            {formData.type === 'time-based' && (
+              <div className="space-y-2">
+                <FormInput
+                  label="Start Time (HH:MM)"
+                  type="time"
+                  value={formData.start_time}
+                  onChange={(e) => handleInputChange('start_time', e.target.value)}
+                  required
+                  min={minTime}
+                  max={maxTime}
+                  step="300" // 5 minute increments
+                />
+                <div className="text-sm text-gray-500">
+                  <p>Doctor's available hours:</p>
+                  <ul className="list-disc pl-5">
+                    {doctorWorkingHours.map((range, i) => (
+                      <li key={i}>
+                        {range.start} to {range.end}
+                        {doctorDetails?.isFullTime && ` (${doctorDetails.shift} shift)`}
+                      </li>
                     ))}
-                  </div>
+                  </ul>
                 </div>
-              ) : (
-                <p className="text-sm text-gray-500">No appointments scheduled yet for today.</p>
-              )}
-            </div>
-          ) : (
-            <div className="space-y-3">
-              <p className="text-sm font-medium">Current Queue:</p>
-              {existingPatients.length > 0 ? (
-                <div className="space-y-2">
-                  {existingPatients.map((patient, index) => (
-                    <div key={index} className="bg-white p-2 rounded border">
-                      <div className="flex justify-between text-sm">
-                        <span className="font-medium">#{patient.serial_number}</span>
-                        <span className="text-gray-600">
-                          {patient.patient_id?.first_name} {patient.patient_id?.last_name}
-                        </span>
-                      </div>
-                      <div className="text-xs text-gray-500 mt-1">
-                        {patient.appointment_type} - {patient.priority}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-gray-500">No patients in queue yet for today.</p>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  </div>
+                {formData.start_time && !isWithinWorkingHours(formData.start_time) && (
+                  <p className="text-sm text-red-500">
+                    Selected time is outside doctor's working hours
+                  </p>
+                )}
+              </div>
+            )}
 
-  {/* Form Actions */}
-  <div className="flex justify-end space-x-3 pt-4">
-    <Button variant="secondary" type="button" onClick={onClose}>
-      Cancel
-    </Button>
-    <Button 
-      variant="primary" 
-      type="submit" 
-      disabled={isLoading || 
-        (formData.type === 'time-based' && 
-         formData.start_time && 
-         !isWithinWorkingHours(formData.start_time))}
-    >
-      {isLoading ? 'Scheduling...' : 'Schedule Appointment'}
-    </Button>
-  </div>
-</form>
+            {/* Room Selection (for IPD) */}
+            {type === 'ipd' && (
+              <FormSelect
+                label="Select Room"
+                value={formData.roomId}
+                onChange={(e) => handleInputChange('roomId', e.target.value)}
+                options={rooms.map(r => ({
+                  value: r._id,
+                  label: `Room ${r.room_number} - ${r.type} (${r.ward || 'No Ward'})`
+                }))}
+                required
+              />
+            )}
+
+            {/* Payment Method */}
+            <FormSelect
+              label="Payment Method"
+              value={formData.paymentMethod}
+              onChange={(e) => handleInputChange('paymentMethod', e.target.value)}
+              options={[
+                { value: 'Cash', label: 'Cash' },
+                { value: 'Card', label: 'Card' },
+                { value: 'UPI', label: 'UPI' },
+                { value: 'Net Banking', label: 'Net Banking' },
+                { value: 'Insurance', label: 'Insurance' },
+                { value: 'Government Funded Scheme', label: 'Government Funded Scheme' },
+              ]}
+              required
+            />
+
+            <FormSelect
+              label="Bill Status"
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+              options={[
+                { value: 'Pending', label: 'Pending' },
+                { value: 'Paid', label: 'Paid' },
+                { value: 'Refunded', label: 'Refunded' }
+              ]}
+              required
+            />
+
+            {/* Registration Fee Checkbox */}
+            <div className="flex items-center space-x-2 mb-4">
+              <input
+                type="checkbox"
+                id="includeRegFee"
+                checked={includeRegistrationFee}
+                onChange={(e) => setIncludeRegistrationFee(e.target.checked)}
+                className="w-4 h-4"
+              />
+              <label htmlFor="includeRegFee" className="text-sm text-gray-700">
+                Include Registration Fee
+              </label>
+            </div>
+
+            {/* Notes */}
+            <FormTextarea
+              label="Notes"
+              value={formData.notes}
+              onChange={(e) => handleInputChange('notes', e.target.value)}
+              rows={3}
+              placeholder="Enter any special instructions or notes for this appointment"
+            />
+
+            {/* Charges Summary */}
+            {chargesSummary.length > 0 && (
+              <div className="border-t pt-4">
+                <h4 className="text-md font-semibold text-gray-800 mb-2">Charges Summary</h4>
+                {chargesSummary.map((item, index) => (
+                  <div key={index} className="flex justify-between text-sm mb-1">
+                    <span>{item.description}</span>
+                    <span>₹{item.amount.toFixed(2)}</span>
+                  </div>
+                ))}
+                <div className="flex justify-between font-bold text-gray-900 mt-2">
+                  <span>Total</span>
+                  <span>₹{totalAmount.toFixed(2)}</span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Right Column - Doctor's Schedule */}
+          <div className="lg:col-span-1 space-y-4">
+            {formData.doctorId && (
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h4 className="font-medium text-lg mb-3">
+                  {formData.type === 'time-based' ? "Today's Schedule" : "Today's Patient Queue"}
+                </h4>
+
+                {formData.type === 'time-based' ? (
+                  <div className="space-y-3">
+                    <div className="text-sm font-medium">
+                      <p>Available Hours:</p>
+                      <ul className="list-disc pl-5 mt-1">
+                        {doctorWorkingHours.map((range, i) => (
+                          <li key={i}>
+                            {range.start} - {range.end}
+                            {doctorDetails?.isFullTime && ` (${doctorDetails.shift} shift)`}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    {existingAppointments.length > 0 ? (
+                      <div>
+                        <p className="text-sm font-medium mb-2">Booked Appointments:</p>
+                        <div className="space-y-2">
+                          {existingAppointments.map((appt, index) => (
+                            <div key={index} className="bg-white p-2 rounded border">
+                              <div className="flex justify-between text-sm">
+                                <span className="font-medium">
+                                  {appt.start_time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                  {' - '}
+                                  {appt.end_time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                                <span className="text-gray-600">{appt.duration} mins</span>
+                              </div>
+                              <div className="text-xs text-gray-500 mt-1">
+                                {appt.patient_id?.first_name} {appt.patient_id?.last_name} - {appt.appointment_type}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-500">No appointments scheduled yet for today.</p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <p className="text-sm font-medium">Current Queue:</p>
+                    {existingPatients.length > 0 ? (
+                      <div className="space-y-2">
+                        {existingPatients.map((patient, index) => (
+                          <div key={index} className="bg-white p-2 rounded border">
+                            <div className="flex justify-between text-sm">
+                              <span className="font-medium">#{patient.serial_number}</span>
+                              <span className="text-gray-600">
+                                {patient.patient_id?.first_name} {patient.patient_id?.last_name}
+                              </span>
+                            </div>
+                            <div className="text-xs text-gray-500 mt-1">
+                              {patient.appointment_type} - {patient.priority}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-500">No patients in queue yet for today.</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Form Actions */}
+        <div className="flex justify-end space-x-3 pt-4">
+          <Button variant="secondary" type="button" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            variant="primary"
+            type="submit"
+            disabled={isLoading ||
+              (formData.type === 'time-based' &&
+                formData.start_time &&
+                !isWithinWorkingHours(formData.start_time))}
+          >
+            {isLoading ? 'Scheduling...' : 'Schedule Appointment'}
+          </Button>
+        </div>
+      </form>
 
     </Modal>
   );

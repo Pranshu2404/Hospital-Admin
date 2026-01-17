@@ -551,7 +551,7 @@ const SelectDepartment = () => {
                             <Icons.Building />
                         </div>
                         <div className="flex-grow">
-                          <h3 className="text-sm font-bold text-slate-700 group-hover:text-slate-900 truncate" title={dept.name}>
+                          <h3 className="text-sm text-wrap font-bold text-slate-700 group-hover:text-slate-900 truncate" title={dept.name}>
                             {dept.name}
                           </h3>
                           <p className="text-xs text-slate-400 mt-1">

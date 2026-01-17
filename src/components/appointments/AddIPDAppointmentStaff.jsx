@@ -289,8 +289,14 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
         setHospitalInfo(hospitalRes.data[0]);
 
         if (formData.department) {
-          const doctorRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/doctors/department/${formData.department}`);
-          setDoctors(doctorRes.data);
+          const selectedDep = departmentRes.data.find(d => d._id === formData.department);
+          if (selectedDep && (selectedDep.name.startsWith('Emergency') || selectedDep.name === 'Emergency Department (ED/ER)')) {
+            const doctorRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/doctors`);
+            setDoctors(doctorRes.data);
+          } else {
+            const doctorRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/doctors/department/${formData.department}`);
+            setDoctors(doctorRes.data);
+          }
         } else {
           setDoctors([]);
         }
