@@ -86,37 +86,101 @@ const AppointmentCompletionSlipModal = ({ isOpen, onClose, appointmentData, hosp
     return (
         <>
             <style>{`
-        @media print {
-          @page { size: A4 portrait; margin: 10mm; }
-          body, html { height: 100%; margin: 0; padding: 0; -webkit-print-color-adjust: exact; }
-          body * { visibility: hidden; }
-          .printable-slip-container {
-            position: fixed; left: 0; top: 0; width: 100vw; height: 100vh;
-            display: flex; align-items: start; justify-content: center;
-            z-index: 9999; background: white;
+          @media print {
+            @page {
+              size: A4 portrait;
+              margin: 10mm;
+            }
+            body, html {
+              height: 100%;
+              margin: 0;
+              padding: 0;
+              -webkit-print-color-adjust: exact;
+            }
+            body * { 
+              visibility: hidden; 
+            }
+            .printable-slip-container {
+              position: fixed;
+              left: 0;
+              top: 0;
+              width: 100vw;
+              height: 100vh;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              z-index: 9999;
+              background: white;
+            }
+            .printable-slip, .printable-slip * { 
+              visibility: visible; 
+            }
+            .printable-slip { 
+              width: 210mm; 
+              min-height: 297mm; 
+              margin: 0 auto;
+              padding: 10mm; /* Reduced padding */
+              background: white;
+              font-size: 11pt;
+              box-sizing: border-box;
+              box-shadow: none;
+              position: relative;
+            }
+            
+            /* keep header in normal flow so content flows below it */
+            .slip-header {
+              position: static;
+              display: block;
+              background: white;
+              z-index: 10000;
+              padding: 0;
+              margin: 0 0 6mm 0;
+            }
+  
+            .header-flex {
+              display: flex !important;
+              align-items: center !important;
+              justify-content: space-between !important;
+              width: 100% !important;
+            }
+
+            .no-print { 
+              display: none !important; 
+            }
+            .slip-section {
+              margin-bottom: 12px;
+              padding-bottom: 8px;
+              border-bottom: 1px dashed #bbb;
+            }
           }
-          .printable-slip, .printable-slip * { visibility: visible; }
-          .printable-slip {
-            width: 210mm; min-height: 297mm; padding: 10mm;
-            box-sizing: border-box; font-size: 11pt;
+  
+          /* Screen styles */
+          @media screen {
+            .printable-slip-container {
+              position: absolute;
+              inset: 0;
+              z-index: 50;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              background: rgba(0, 0, 0, 0.5);
+              padding: 20px;
+              z-index: 100;
+              overflow-y: auto;
+            }
+            .printable-slip {
+              position: relative; /* Enabled for absolute close button */
+              background: white;
+              border-radius: 12px;
+              box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+              width: 100%;
+              max-width: 800px; /* Increased max-width for better preview */
+              max-height: 90vh;
+              overflow-y: auto;
+              z-index: 101;
+              padding: 24px;
+            }
           }
-          .no-print { display: none !important; }
-          .slip-section { border-bottom: 1px dashed #ccc; padding-bottom: 10px; margin-bottom: 10px; }
-          .slip-header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #333; padding-bottom: 15px; }
-        }
-        @media screen {
-          .printable-slip-container {
-            position: fixed; inset: 0; z-index: 100;
-            display: flex; align-items: center; justify-content: center;
-            background: rgba(0, 0, 0, 0.5); padding: 20px;
-          }
-          .printable-slip {
-            background: white; border-radius: 12px;
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-            width: 100%; max-width: 700px; max-height: 90vh;
-            overflow-y: auto; padding: 30px;
-          }
-        }
         .label { color: #666; font-size: 0.85em; font-weight: 600; text-transform: uppercase; }
         .value { color: #111; font-weight: 500; }
         .section-title { font-size: 1.1em; font-weight: 700; color: #333; margin-bottom: 10px; border-bottom: 2px solid #eee; padding-bottom: 5px; margin-top: 20px; }
@@ -124,22 +188,59 @@ const AppointmentCompletionSlipModal = ({ isOpen, onClose, appointmentData, hosp
 
             <div className="printable-slip-container">
                 <div className="printable-slip">
+                    {/* Close Button */}
+                    <button
+                        onClick={onClose}
+                        className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 no-print p-1 rounded-full hover:bg-gray-100 transition-colors"
+                        title="Close"
+                    >
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
 
                     {/* Header */}
-                    <div className="slip-header text-center mb-6 ">
-                        {hospitalInfo && (
-                            <>
-                                <h3 className="text-xl font-semibold text-teal-700 mt-1">{hospitalInfo.hospitalName} Hospital</h3>
-                                <p className="text-sm text-slate-600 max-w-md mx-auto">{hospitalInfo.address}</p>
-                                <div className="flex justify-center gap-4 mt-1 text-sm text-slate-500">
-                                    {hospitalInfo.contact && <span>Ph: {hospitalInfo.contact}</span>}
+                    <div className="slip-header ">
+                        <div className="header-flex flex items-center justify-between">
+                            {/* Left: Logo */}
+                            <div className="w-40 h-40 flex-shrink-0 flex items-center justify-center">
+                                {hospitalInfo?.logo ? (
+                                    <img src={hospitalInfo.logo} alt="Logo" className="max-w-full max-h-full object-contain" />
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center text-gray-400 border-2 border-dashed border-gray-300 rounded-lg p-2 w-full h-full">
+                                        <span className="text-xs font-medium">LOGO</span>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Center: Hospital Details */}
+                            <div className="flex-1 text-center px-4">
+                                <h1 className="text-3xl font-bold text-gray-900 uppercase tracking-wide leading-tight" style={{ fontFamily: '"Times New Roman", Times, serif' }}>
+                                    {hospitalInfo?.hospitalName || 'HOSPITAL NAME HERE'}
+                                </h1>
+                                <div className="mt-1 text-sm text-gray-700 font-medium">
+                                    <p>{hospitalInfo?.address || '123 Medical Lane, Health City, State, 123456'}</p>
+                                    <p className="mt-0.5">
+                                        <span className="font-bold">Phone:</span> {hospitalInfo?.contact || '9876543210'}
+                                        {hospitalInfo?.email && <span className="mx-2"></span>}
+                                        {hospitalInfo?.email && <span> <br /> Email: {hospitalInfo.email}</span>}
+                                    </p>
                                 </div>
-                            </>
-                        )}
+                            </div>
+
+                            {/* Right: Slip Title */}
+                            <div className="w-64 flex-shrink-0 text-center pl-6 border-l-2 border-gray-200 mr-2">
+                                <div className="border-2 border-gray-800 py-2 px-1 mb-2">
+                                    <h2 className="text-lg font-bold text-gray-900 leading-none uppercase">
+                                        Appointment<br /> Completion Slip
+                                    </h2>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     {/* 1. Doctor Details & Slip Date (Top Row) */}
-                    <div className="mb-6 pb-4 border-b border-dashed border-slate-300">
+                    
                         <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <p className="label">Consultant Doctor</p>
@@ -151,10 +252,10 @@ const AppointmentCompletionSlipModal = ({ isOpen, onClose, appointmentData, hosp
                                 <p className="value">{formattedDate}</p>
                             </div>
                         </div>
-                    </div>
+                   
 
                     {/* 2. Patient & Appointment Details */}
-                    <div className="mb-6 pb-4 border-b border-dashed border-slate-300">
+                   
                         <h4 className="section-title mt-0">PATIENT & APPOINTMENT DETAILS</h4>
                         <div className="grid grid-cols-2 gap-y-3 gap-x-8">
                             <div>
@@ -177,11 +278,11 @@ const AppointmentCompletionSlipModal = ({ isOpen, onClose, appointmentData, hosp
                                 </p>
                             </div>
                         </div>
-                    </div>
+                   
 
                     {/* 3. Vitals Details */}
                     {vitals && (vitals.bp || vitals.pulse || vitals.weight || vitals.temperature || vitals.spo2) && (
-                        <div className="mb-6 pb-4 border-b border-dashed border-slate-300">
+                        <div className="">
                             <h4 className="section-title mt-0">PATIENT VITALS</h4>
                             <div className="grid grid-cols-3 md:grid-cols-5 gap-4 bg-slate-50 p-4 rounded-lg border border-slate-100">
                                 <div>

@@ -35,7 +35,7 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
         appointmentEndpointAvailable = true;
         const pres = resp.data.prescription || resp.data || null;
         console.log('Loaded prescription from appointment-specific endpoint:', pres);
-        
+
         if (pres) {
           setPrescription(pres);
           return;
@@ -80,7 +80,7 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
         });
         if (byPatient.length) {
           // pick most recent by created_at or createdAt
-          byPatient.sort((a,b) => {
+          byPatient.sort((a, b) => {
             const ta = a.created_at ? new Date(a.created_at).getTime() : (a.createdAt ? new Date(a.createdAt).getTime() : 0);
             const tb = b.created_at ? new Date(b.created_at).getTime() : (b.createdAt ? new Date(b.createdAt).getTime() : 0);
             return tb - ta;
@@ -100,7 +100,7 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
       setCandidatePrescriptions([]);
     }
   };
-  
+
   useEffect(() => {
     if (isOpen && appointmentData) {
       // reset upload form visibility and form when modal opens
@@ -112,7 +112,7 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
         prescriptionImage: null
       });
       loadPrescription();
-  const fetchBillingDetails = async () => {
+      const fetchBillingDetails = async () => {
         try {
           const response = await axios.get(
             `${import.meta.env.VITE_BACKEND_URL}/billing/appointment/${appointmentData._id}`
@@ -124,8 +124,8 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
           setBillingDetails(null);
         }
       };
-      
-  fetchBillingDetails();
+
+      fetchBillingDetails();
     }
   }, [isOpen, appointmentData]);
 
@@ -368,9 +368,16 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
             display: block;
             background: white;
             z-index: 10000;
-            padding: 3mm 0;
+            padding: 0;
             margin: 0 0 6mm 0;
-            border-bottom: 2px dashed #ccc !important;
+           
+          }
+
+          .header-flex {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+            width: 100% !important;
           }
 
           /* Make the printable area A4 width and reduce overall font-size slightly */
@@ -378,48 +385,58 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
             width: 210mm; /* A4 width */
             min-height: 297mm; /* A4 height */
             margin: 0 auto;
-            padding: 18mm 12mm 12mm 12mm;
+            padding: 10mm; /* Reduced padding */
             background: white;
             font-size: 11pt;
             box-sizing: border-box;
             box-shadow: none;
           }
-
-          /* Reduce sizes of utility text classes used in the component */
-          .printable-slip .text-2xl { font-size: 18pt; }
-          .printable-slip .text-xl { font-size: 14pt; }
-          .printable-slip .text-lg { font-size: 12pt; }
-          .printable-slip .text-sm { font-size: 10pt; }
-          .printable-slip .text-xs { font-size: 8.5pt; }
-
-          /* Tables and grids: slightly smaller font and tighter spacing */
-          .printable-slip .grid { font-size: 10pt; }
-          .printable-slip .grid > div { line-height: 1.1; }
+           
+          /* Ensure backgrounds print */
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
 
           /* Limit images so they don't push content to next page (smaller for print) */
           .printable-slip img { max-height: 60mm; width: auto; max-width: 100%; object-fit: contain; display: block; }
-
-          /* hide the Important Instructions block in print */
+          
+          /* Hide instructions in print */
           .printable-slip .important-instructions { display: none !important; }
-
-          /* Avoid internal page breaks within important sections */
-          .printable-slip .slip-section { page-break-inside: avoid; }
-          .printable-slip h2, .printable-slip h3, .printable-slip h4 { page-break-after: avoid; }
 
           .no-print { 
             display: none !important; 
           }
 
           .slip-section {
-            margin-bottom: 10px;
-            padding-bottom: 6px;
-            border-bottom: 1px dashed #eee;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px dashed #bbb;
           }
           .slip-footer {
-            margin-top: 12px;
-            padding-top: 8px;
-            border-top: 2px dashed #ccc;
-            font-size: 9pt;
+            margin-top: 15px;
+            padding-top: 10px;
+            border-top: 2px dashed #999;
+            font-size: 10pt;
+          }
+          /* Custom Table Styles for Print */
+          table {
+            width: 100%;
+            border-collapse: collapse;
+          }
+          th, td {
+            text-align: left;
+            padding: 4px 6px;
+            border-bottom: 1px solid #ddd;
+          }
+          th {
+            background-color: #f3f4f6 !important;
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 10pt;
+          }
+           td {
+            font-size: 11pt;
           }
         }
 
@@ -438,11 +455,12 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
             overflow-y: auto;
           }
           .printable-slip {
+            position: relative; /* Enabled for absolute close button */
             background: white;
             border-radius: 12px;
             box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
             width: 100%;
-            max-width: 600px;
+            max-width: 800px; /* Increased max-width for better preview */
             max-height: 90vh;
             overflow-y: auto;
             z-index: 101;
@@ -453,76 +471,120 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
 
       <div className="printable-slip-container">
         <div className="printable-slip">
+          {/* Close Button */}
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 no-print p-1 rounded-full hover:bg-gray-100 transition-colors"
+            title="Close"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+
           {/* Header */}
-          <div className="text-center slip-header">
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Appointment Cum Registration Slip</h2>
-            <h3 className="text-xl font-semibold text-blue-800">{hospitalInfo?.hospitalName || 'MEDICAL CENTER'}</h3>
-            <p className="text-sm text-gray-600 mt-1">{hospitalInfo?.address || 'Hospital Address'}</p>
-            <p className="text-sm text-gray-600">
-              {hospitalInfo?.contact ? `Phone: ${hospitalInfo.contact} • ` : ''}
-              {hospitalInfo?.email || ''}
-            </p>
+          {/* Header */}
+          <div className="slip-header mb-2 border-b-4 border-double border-gray-800 ">
+            <div className="header-flex flex items-center justify-between">
+              {/* Left: Logo */}
+              <div className="w-40 h-40 flex-shrink-0 flex items-center justify-center">
+                {hospitalInfo?.logo ? (
+                  <img src={hospitalInfo.logo} alt="Logo" className="max-w-full max-h-full object-contain" />
+                ) : (
+                  <div className="flex flex-col items-center justify-center text-gray-400 border-2 border-dashed border-gray-300 rounded-lg p-2 w-full h-full">
+                    <span className="text-xs font-medium">LOGO</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Center: Hospital Details */}
+              <div className="flex-1 text-center px-4">
+                <h1 className="text-3xl font-bold text-gray-900 uppercase tracking-wide leading-tight" style={{ fontFamily: '"Times New Roman", Times, serif' }}>
+                  {hospitalInfo?.hospitalName || 'HOSPITAL NAME HERE'}
+                </h1>
+                <div className="mt-1 text-sm text-gray-700 font-medium">
+                  <p>{hospitalInfo?.address || '123 Medical Lane, Health City, State, 123456'}</p>
+                  <p className="mt-0.5">
+                    <span className="font-bold">Phone:</span> {hospitalInfo?.contact || '9876543210'}
+                    {/* {hospitalInfo?.email && <span className="mx-2"></span>} */}
+                    {hospitalInfo?.email && <span> <br/> Email: {hospitalInfo.email}</span>}
+                  </p>
+                </div>
+              </div>
+
+              {/* Right: Slip Title & Type */}
+              <div className="w-64 flex-shrink-0 text-center pl-6 border-l-2 border-gray-200 mr-2">
+                <div className="border-2 border-gray-800 py-2 px-1 mb-2">
+                  <h2 className="text-lg font-bold text-gray-900 leading-none uppercase">
+                    Appointment Cum<br /> Registration Slip
+                  </h2>
+                </div>
+                {/* <div className="text-xs font-bold text-gray-800 uppercase tracking-widest bg-gray-100 py-1 rounded">
+                  OPD / IPD / Casualty
+                </div> */}
+              </div>
+            </div>
           </div>
 
           {/* Appointment Details */}
-<div className="slip-section">
-  <h4 className="text-lg font-semibold text-gray-800 mb-2 mt-5">APPOINTMENT DETAILS</h4>
-  <div className="grid grid-cols-2 gap-3 text-sm">
-    <div>
-      <span className="text-gray-600 font-medium">Slip No:</span>{' '}
-      <span className="font-semibold">
-        #{appointmentData._id?.slice(-8).toUpperCase() || billingDetails?.bill_id?.slice(-8).toUpperCase() || 'N/A'}
-      </span>
-    </div>
-    <div>
-      <span className="text-gray-600 font-medium">Date:</span>{' '}
-      <span className="font-semibold">{new Date().toLocaleDateString()}</span>
-    </div>
+          <div className="slip-section">
+            <h4 className="text-lg font-semibold text-gray-800 mb-2 mt-5">APPOINTMENT DETAILS</h4>
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div>
+                <span className="text-gray-600 font-medium">Slip No:</span>{' '}
+                <span className="font-semibold">
+                  #{appointmentData._id?.slice(-8).toUpperCase() || billingDetails?.bill_id?.slice(-8).toUpperCase() || 'N/A'}
+                </span>
+              </div>
+              <div>
+                <span className="text-gray-600 font-medium">Date:</span>{' '}
+                <span className="font-semibold">{new Date().toLocaleDateString()}</span>
+              </div>
 
-    {/* Patient Name - Checks appointmentData first, then billingDetails */}
-    <div>
-      <span className="text-gray-600 font-medium">Patient Name:</span>{' '}
-      <strong className="text-blue-800">{patientNameDisplay}</strong>
-    </div>
+              {/* Patient Name - Checks appointmentData first, then billingDetails */}
+              <div>
+                <span className="text-gray-600 font-medium">Patient Name:</span>{' '}
+                <strong className="text-blue-800">{patientNameDisplay}</strong>
+              </div>
 
-    {/* Patient ID */}
-    <div>
-      <span className="text-gray-600 font-medium">Patient ID:</span>{' '}
-      <strong>{patientIdDisplay}</strong>
-    </div>
+              {/* Patient ID */}
+              <div>
+                <span className="text-gray-600 font-medium">Patient ID:</span>{' '}
+                <strong>{patientIdDisplay}</strong>
+              </div>
 
-    {/* Appointment Type */}
-    <div>
-      <span className="text-gray-600 font-medium">Appointment Type:</span>{' '}
-      <strong>
-        {appointmentData.type || billingDetails?.appointment_id?.appointment_type || 'Consultation'}
-      </strong>
-    </div>
+              {/* Appointment Type */}
+              <div>
+                <span className="text-gray-600 font-medium">Appointment Type:</span>{' '}
+                <strong>
+                  {appointmentData.type || billingDetails?.appointment_id?.appointment_type || 'Consultation'}
+                </strong>
+              </div>
 
-    {/* Department */}
-    <div>
-      <span className="text-gray-600 font-medium">Department:</span>{' '}
-      <strong>{departmentNameDisplay}</strong>
-    </div>
+              {/* Department */}
+              <div>
+                <span className="text-gray-600 font-medium">Department:</span>{' '}
+                <strong>{departmentNameDisplay}</strong>
+              </div>
 
-    {/* Doctor Name */}
-    <div>
-      <span className="text-gray-600 font-medium">Doctor:</span>{' '}
-      <strong className="text-green-700">{doctorNameDisplay}</strong>
-    </div>
+              {/* Doctor Name */}
+              <div>
+                <span className="text-gray-600 font-medium">Doctor:</span>{' '}
+                <strong className="text-green-700">{doctorNameDisplay}</strong>
+              </div>
 
-    <div>
-      <span className="text-gray-600 font-medium">Status:</span>{' '}
-      <span className="font-semibold">
-        {appointmentData.status || billingDetails?.status || 'Scheduled'}
-      </span>
-    </div>
+              <div>
+                <span className="text-gray-600 font-medium">Status:</span>{' '}
+                <span className="font-semibold">
+                  {appointmentData.status || billingDetails?.status || 'Scheduled'}
+                </span>
+              </div>
 
-    {/* Date & Time Logic - Falls back to formatting the ISO string from billingDetails if appointmentData is empty */}
-    <div className="col-span-2">
-      <span className="text-gray-600 font-medium">Appointment Date & Time:</span>{' '}
-      <strong className="text-red-600">{getAppointmentDateTimeDisplay()}</strong>
-    </div>
+              {/* Date & Time Logic - Falls back to formatting the ISO string from billingDetails if appointmentData is empty */}
+              <div className="col-span-2">
+                <span className="text-gray-600 font-medium">Appointment Date & Time:</span>{' '}
+                <strong className="text-red-600">{getAppointmentDateTimeDisplay()}</strong>
+              </div>
               {appointmentData.type === "number-based" && (
                 <div className="col-span-2">
                   <span className="text-gray-600 font-medium">Appointment Number:</span>{' '}
@@ -559,10 +621,9 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
                 </div>
                 <div className="grid grid-cols-5 gap-2">
                   <div className="col-span-4 text-right">Payment Status:</div>
-                  <div className={`font-medium ${
-                    billingDetails.status === 'Paid' ? 'text-green-600' : 
+                  <div className={`font-medium ${billingDetails.status === 'Paid' ? 'text-green-600' :
                     billingDetails.status === 'Pending' ? 'text-yellow-600' : 'text-red-600'
-                  }`}>
+                    }`}>
                     {billingDetails.status}
                   </div>
                 </div>
@@ -601,8 +662,8 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
             ) : (
               <div className="text-sm text-gray-600">
                 <p>No prescription uploaded for this appointment.</p> */}
-                {/* if we found prescriptions for the same patient, offer to attach one */}
-                {/* {candidatePrescriptions && candidatePrescriptions.length > 0 && (
+          {/* if we found prescriptions for the same patient, offer to attach one */}
+          {/* {candidatePrescriptions && candidatePrescriptions.length > 0 && (
                   <div className="mt-3">
                     <p className="text-sm text-gray-700">Found {candidatePrescriptions.length} prescription(s) for this patient. Attach one to this appointment:</p>
                     <div className="mt-2 space-y-2">
@@ -701,14 +762,14 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
 
           {/* Action Buttons */}
           <div className="p-4 flex justify-end space-x-3 no-print mt-4">
-            <button 
-              onClick={onClose} 
+            <button
+              onClick={onClose}
               className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 transition"
             >
               Close
             </button>
-            <button 
-              onClick={handlePrint} 
+            <button
+              onClick={handlePrint}
               className="px-4 py-2 bg-teal-600 text-white rounded hover:bg-teal-700 transition"
             >
               Print Slip
