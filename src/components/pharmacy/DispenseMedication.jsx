@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../../api/apiClient';
-import { 
-  FaPills, 
-  FaSearch, 
+import {
+  FaPills,
+  FaSearch,
   FaCheckCircle,
   FaTimesCircle,
   FaUser,
@@ -155,11 +155,11 @@ const DispenseMedication = () => {
   const handleAutoSelectPrescription = async (prescriptionData) => {
     try {
       setLoading(true);
-      
+
       // Fetch the full prescription details
       const prescriptionResponse = await apiClient.get(`/prescriptions/${prescriptionData._id}`);
       const prescription = prescriptionResponse.data.prescription || prescriptionResponse.data;
-      
+
       // Set the patient as selected customer
       const patient = prescription.patient_id;
       if (patient) {
@@ -169,7 +169,7 @@ const DispenseMedication = () => {
           displayName: `${patient.first_name} ${patient.last_name}`,
           idDisplay: `Patient ID: ${patient.patientId}`
         });
-        
+
         setSaleForm({
           payment_method: 'Cash',
           customer_name: `${patient.first_name} ${patient.last_name}`,
@@ -179,20 +179,20 @@ const DispenseMedication = () => {
           tax_rate: 0,
           notes: ''
         });
-        
+
         // Fetch patient prescriptions
         const prescriptionsResponse = await apiClient.get(`/prescriptions/patient/${patient._id}`);
         setCustomerPrescriptions(prescriptionsResponse.data.prescriptions || prescriptionsResponse.data);
-        
+
         // Auto-select the prescription
         setSelectedPrescription(prescription._id);
-        
+
         // Auto-add all pending items to sale
         const pendingItems = prescription.items.filter(item => !item.is_dispensed);
         for (const item of pendingItems) {
           await addToSale(prescription, item);
         }
-        
+
         setSuccessMessage('Prescription auto-loaded from queue');
         setTimeout(() => setSuccessMessage(''), 3000);
       }
@@ -223,24 +223,24 @@ const DispenseMedication = () => {
 
       const patientsData = patientsRes.data.patients || [];
       const customersData = customersRes.data.customers || [];
-      
+
       const combinedResults = [
-        ...patientsData.map(p => ({ 
-          ...p, 
+        ...patientsData.map(p => ({
+          ...p,
           type: 'Patient',
           displayName: `${p.first_name} ${p.last_name}`,
           idDisplay: `Patient ID: ${p.patientId}`,
           icon: User
         })),
-        ...customersData.map(c => ({ 
-          ...c, 
+        ...customersData.map(c => ({
+          ...c,
           type: 'Customer',
           displayName: c.name,
           idDisplay: `Phone: ${c.phone}`,
           icon: ShoppingCart
         }))
       ];
-      
+
       setSearchResults(combinedResults);
     } catch (err) {
       console.error('Unhandled error searching customers:', err);
@@ -253,10 +253,54 @@ const DispenseMedication = () => {
 
   const fetchCustomerStats = async () => {
     try {
-      const response = await apiClient.get(`/orders/sale/stats/${selectedCustomer.type === 'Patient' ? selectedCustomer._id : selectedCustomer.phone}`);
-      setCustomerStats(response.data);
+      // The direct stats endpoint might not exist, so we'll fetch sales and calculate locally
+      const searchQuery = selectedCustomer.type === 'Patient'
+        ? selectedCustomer.phone || selectedCustomer.first_name // Fallback to phone/name if patientId check is complex on backend
+        : selectedCustomer.phone;
+
+      const response = await apiClient.get('/orders/sale', {
+        params: {
+          search: searchQuery,
+          limit: 100 // Fetch recent sales to calculate stats
+        }
+      });
+
+      const sales = response.data.sales || [];
+
+      // Filter strictly if needed (in case search is fuzzy)
+      const customerSales = sales.filter(sale => {
+        if (selectedCustomer.type === 'Patient') {
+          return sale.patient_id && sale.patient_id._id === selectedCustomer._id;
+        } else {
+          return sale.customer_phone === selectedCustomer.phone;
+        }
+      });
+
+      if (customerSales.length > 0) {
+        const totalAmount = customerSales.reduce((sum, sale) => sum + (sale.total_amount || 0), 0);
+        const lastSale = customerSales.sort((a, b) => new Date(b.sale_date) - new Date(a.sale_date))[0];
+
+        setCustomerStats({
+          totalPurchases: customerSales.length,
+          lastPurchaseDate: lastSale.sale_date,
+          averagePurchase: totalAmount / customerSales.length
+        });
+      } else {
+        setCustomerStats({
+          totalPurchases: 0,
+          lastPurchaseDate: null,
+          averagePurchase: 0
+        });
+      }
+
     } catch (err) {
       console.error('Error fetching customer stats:', err);
+      // Fallback to empty stats on error
+      setCustomerStats({
+        totalPurchases: 0,
+        lastPurchaseDate: null,
+        averagePurchase: 0
+      });
     }
   };
 
@@ -304,7 +348,7 @@ const DispenseMedication = () => {
     });
     setSearchTerm('');
     setErrorMessage('');
-    
+
     try {
       let endpoint = '';
       if (customer.type === 'Patient') {
@@ -312,7 +356,7 @@ const DispenseMedication = () => {
       } else {
         endpoint = `/prescriptions?customerPhone=${customer.phone}`;
       }
-      
+
       const response = await apiClient.get(endpoint);
       setCustomerPrescriptions(response.data.prescriptions || response.data);
       setSuccessMessage(`Loaded ${customer.displayName}'s prescriptions`);
@@ -328,7 +372,7 @@ const DispenseMedication = () => {
     // First, search for the medicine by name to get the correct ID
     if (!medicineMatches[item.medicine_name]) {
       const matchedMedicines = await searchMedicineByName(item.medicine_name);
-      
+
       if (matchedMedicines.length === 0) {
         setErrorMessage(`No medicine found with name: ${item.medicine_name}`);
         setTimeout(() => setErrorMessage(''), 3000);
@@ -346,7 +390,7 @@ const DispenseMedication = () => {
         // For simplicity, we'll take the first match, but you could implement a selection UI
         const selectedMedicine = matchedMedicines[0];
         console.log(`Multiple matches found for ${item.medicine_name}, using:`, selectedMedicine.name);
-        
+
         // Continue with the first match
         await processMedicineAddition(prescription, item, selectedMedicine);
       } else {
@@ -371,12 +415,12 @@ const DispenseMedication = () => {
     const medicineName = matchedMedicine.name;
 
     let batches = [];
-    
+
     // Fetch batches for the matched medicine if not already in batchInfo
     if (!batchInfo[medicineId]) {
       batches = await fetchMedicineBatches(medicineId);
       console.log('Fetched batches:', batches);
-      
+
       // Update batchInfo state
       setBatchInfo(prev => ({
         ...prev,
@@ -388,12 +432,12 @@ const DispenseMedication = () => {
     }
 
     // Check if item is already in sale
-    const existingItem = saleItems.find(i => 
+    const existingItem = saleItems.find(i =>
       i.medicine_id === medicineId && i.prescription_id === prescription._id
     );
-    
+
     if (existingItem) {
-      setSaleItems(prev => prev.map(i => 
+      setSaleItems(prev => prev.map(i =>
         i.medicine_id === medicineId && i.prescription_id === prescription._id
           ? { ...i, quantity: i.quantity + 1 }
           : i
@@ -403,7 +447,7 @@ const DispenseMedication = () => {
     } else {
       // Add new item to sale with default batch selection
       const defaultBatch = batches.length > 0 ? batches[0] : null;
-      
+
       setSaleItems(prev => [...prev, {
         medicine_id: medicineId,
         medicine_name: medicineName,
@@ -425,9 +469,9 @@ const DispenseMedication = () => {
   const updateBatchSelection = (index, batchId) => {
     const batch = saleItems[index].available_batches.find(b => b._id === batchId);
     if (batch) {
-      setSaleItems(prev => prev.map((item, i) => 
-        i === index ? { 
-          ...item, 
+      setSaleItems(prev => prev.map((item, i) =>
+        i === index ? {
+          ...item,
           batch_id: batch._id,
           batch_number: batch.batch_number,
           unit_price: batch.selling_price,
@@ -448,36 +492,36 @@ const DispenseMedication = () => {
 
   const updateQuantity = (index, quantity) => {
     if (quantity < 1) return;
-    
+
     const item = saleItems[index];
     const selectedBatch = item.available_batches.find(b => b._id === item.batch_id);
     const maxQuantity = selectedBatch ? selectedBatch.quantity : 0;
-    
+
     if (quantity > maxQuantity) {
       setErrorMessage(`Only ${maxQuantity} items available in selected batch`);
       setTimeout(() => setErrorMessage(''), 3000);
       return;
     }
-    
-    setSaleItems(prev => prev.map((item, i) => 
+
+    setSaleItems(prev => prev.map((item, i) =>
       i === index ? { ...item, quantity } : item
     ));
   };
 
   const calculateTotals = () => {
     const subtotal = saleItems.reduce((sum, item) => sum + (item.unit_price * item.quantity), 0);
-    
+
     let discount = 0;
     if (saleForm.discount_type === 'percentage') {
       discount = subtotal * (saleForm.discount / 100);
     } else {
       discount = Math.min(saleForm.discount, subtotal);
     }
-    
+
     const afterDiscount = subtotal - discount;
     const tax = afterDiscount * (saleForm.tax_rate / 100);
     const total = afterDiscount + tax;
-    
+
     return {
       subtotal: subtotal.toFixed(2),
       discount: discount.toFixed(2),
@@ -491,7 +535,7 @@ const DispenseMedication = () => {
     try {
       setCreatingSale(true);
       setErrorMessage('');
-      
+
       // Validate all items have batches
       const itemsWithoutBatches = saleItems.filter(item => !item.batch_id);
       if (itemsWithoutBatches.length > 0) {
@@ -514,7 +558,7 @@ const DispenseMedication = () => {
       });
 
       if (outOfStockItems.length > 0) {
-        const message = outOfStockItems.map(item => 
+        const message = outOfStockItems.map(item =>
           `${item.medicine}: ${item.requested} requested, ${item.available} available`
         ).join('\n');
         setErrorMessage(`Insufficient stock:\n${message}`);
@@ -552,12 +596,12 @@ const DispenseMedication = () => {
       };
 
       console.log('Creating sale with data:', saleData);
-      
+
       const response = await apiClient.post('/orders/sale', saleData);
       console.log('Sale created:', response.data);
-      
+
       setCreatedSale(response.data.sale);
-      
+
       // Reset form and show success
       setSaleItems([]);
       setMedicineMatches({});
@@ -568,15 +612,15 @@ const DispenseMedication = () => {
         discount: 0,
         notes: ''
       }));
-      
+
       setSuccessMessage('Sale created successfully!');
       setShowReceiptModal(true);
-      
+
       // Refresh customer stats
       fetchCustomerStats();
-      
+
       setTimeout(() => setSuccessMessage(''), 5000);
-      
+
     } catch (err) {
       console.error('Error creating sale:', err);
       setErrorMessage(err.response?.data?.message || 'Error creating sale. Please try again.');
@@ -714,9 +758,9 @@ const DispenseMedication = () => {
       Payment: ${createdSale?.payment_method}
       
       ITEMS:
-      ${createdSale?.items?.map(item => 
-        `${item.medicine_name.padEnd(30)} ${item.quantity.toString().padStart(3)} x ₹${item.unit_price.toFixed(2).padStart(8)} = ₹${(item.unit_price * item.quantity).toFixed(2)}`
-      ).join('\n')}
+      ${createdSale?.items?.map(item =>
+      `${item.medicine_name.padEnd(30)} ${item.quantity.toString().padStart(3)} x ₹${item.unit_price.toFixed(2).padStart(8)} = ₹${(item.unit_price * item.quantity).toFixed(2)}`
+    ).join('\n')}
       
       --------------------------------
       Subtotal: ₹${createdSale?.subtotal}
@@ -727,7 +771,7 @@ const DispenseMedication = () => {
       Thank you for your purchase!
       Please keep this receipt for returns/exchanges
     `;
-    
+
     const blob = new Blob([receiptContent], { type: 'text/plain' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -836,11 +880,10 @@ const DispenseMedication = () => {
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
                           <span className="font-semibold text-gray-800">{customer.displayName}</span>
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            customer.type === 'Patient' 
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${customer.type === 'Patient'
                               ? 'bg-blue-100 text-blue-800'
                               : 'bg-purple-100 text-purple-800'
-                          }`}>
+                            }`}>
                             {customer.type}
                           </span>
                         </div>
@@ -886,11 +929,10 @@ const DispenseMedication = () => {
                 <div>
                   <h3 className="font-bold text-gray-800 text-lg">{selectedCustomer.displayName}</h3>
                   <div className="flex items-center gap-3 mt-1">
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${
-                      selectedCustomer.type === 'Patient'
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${selectedCustomer.type === 'Patient'
                         ? 'bg-blue-100 text-blue-800'
                         : 'bg-purple-100 text-purple-800'
-                    }`}>
+                      }`}>
                       {selectedCustomer.type}
                     </span>
                     <span className="text-sm text-gray-600">📞 {selectedCustomer.phone}</span>
@@ -898,7 +940,7 @@ const DispenseMedication = () => {
                   </div>
                 </div>
               </div>
-              
+
               <div className="flex items-center gap-3">
                 {/* Customer Stats */}
                 <div className="flex items-center gap-4">
@@ -908,7 +950,7 @@ const DispenseMedication = () => {
                   </div>
                   <div className="text-center">
                     <div className="text-lg font-bold text-gray-800">
-                      {customerStats.lastPurchaseDate 
+                      {customerStats.lastPurchaseDate
                         ? new Date(customerStats.lastPurchaseDate).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })
                         : 'N/A'}
                     </div>
@@ -921,7 +963,7 @@ const DispenseMedication = () => {
                     <div className="text-xs text-gray-500">Avg. Purchase</div>
                   </div>
                 </div>
-                
+
                 <button
                   onClick={clearSelection}
                   className="flex items-center gap-2 px-4 py-2.5 bg-gray-50 border border-gray-200 text-gray-700 font-semibold rounded-xl hover:bg-gray-100 transition-colors"
@@ -941,17 +983,16 @@ const DispenseMedication = () => {
                   {customerPrescriptions.length} prescription{customerPrescriptions.length !== 1 ? 's' : ''}
                 </span>
               </div>
-              
+
               {customerPrescriptions.length > 0 ? (
                 <div className="space-y-4">
                   {customerPrescriptions.map((prescription) => (
-                    <div 
-                      key={prescription._id} 
-                      className={`bg-white p-5 rounded-2xl shadow-sm border transition-all duration-300 ${
-                        expandedPrescriptions[prescription._id] 
+                    <div
+                      key={prescription._id}
+                      className={`bg-white p-5 rounded-2xl shadow-sm border transition-all duration-300 ${expandedPrescriptions[prescription._id]
                           ? 'border-teal-300 ring-1 ring-teal-100'
                           : 'border-gray-200 hover:border-teal-200'
-                      }`}
+                        }`}
                     >
                       {/* Prescription Header */}
                       <div className="flex justify-between items-start mb-4">
@@ -960,12 +1001,11 @@ const DispenseMedication = () => {
                             <h3 className="font-bold text-teal-600 text-lg">
                               #{prescription.prescription_number}
                             </h3>
-                            <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${
-                              prescription.status === 'Active' ? 'bg-green-100 text-green-800' :
-                              prescription.status === 'Completed' ? 'bg-blue-100 text-blue-800' :
-                              prescription.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
-                              'bg-gray-100 text-gray-800'
-                            }`}>
+                            <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${prescription.status === 'Active' ? 'bg-green-100 text-green-800' :
+                                prescription.status === 'Completed' ? 'bg-blue-100 text-blue-800' :
+                                  prescription.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
+                                    'bg-gray-100 text-gray-800'
+                              }`}>
                               {prescription.status}
                             </span>
                             {prescription.is_urgent && (
@@ -974,7 +1014,7 @@ const DispenseMedication = () => {
                               </span>
                             )}
                           </div>
-                          
+
                           <div className="flex flex-wrap gap-4 text-sm text-gray-600">
                             <div className="flex items-center gap-1">
                               <User className="w-4 h-4" />
@@ -990,7 +1030,7 @@ const DispenseMedication = () => {
                             </div>
                           </div>
                         </div>
-                        
+
                         <button
                           onClick={() => togglePrescriptionExpansion(prescription._id)}
                           className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-lg"
@@ -1009,7 +1049,7 @@ const DispenseMedication = () => {
                           <div className="flex items-center gap-2 text-sm text-gray-700 font-medium mb-2">
                             <FaImage /> Prescription Image
                           </div>
-                          <div 
+                          <div
                             className="relative w-full h-48 bg-gray-50 border border-gray-200 rounded-xl overflow-hidden cursor-pointer group"
                             onClick={() => window.open(prescription.prescription_image, '_blank')}
                           >
@@ -1041,15 +1081,14 @@ const DispenseMedication = () => {
                         {prescription.items.map((item, index) => {
                           const isDispensed = item.is_dispensed;
                           const isLoading = medicineSearchLoading[item.medicine_name] || batchLoading[item.medicine_id];
-                          
+
                           return (
-                            <div 
-                              key={index} 
-                              className={`p-3 rounded-lg border ${
-                                isDispensed 
-                                  ? 'bg-green-50 border-green-200' 
+                            <div
+                              key={index}
+                              className={`p-3 rounded-lg border ${isDispensed
+                                  ? 'bg-green-50 border-green-200'
                                   : 'bg-gray-50 border-gray-200 hover:border-teal-200'
-                              }`}
+                                }`}
                             >
                               <div className="flex justify-between items-start">
                                 <div className="flex-1">
@@ -1062,31 +1101,30 @@ const DispenseMedication = () => {
                                       <CheckCircle className="w-4 h-4 text-green-600" />
                                     )}
                                   </div>
-                                  
+
                                   <div className="grid grid-cols-2 gap-2 text-xs text-gray-600 ml-6">
                                     <div>💊 {item.dosage}</div>
                                     <div>⏰ {item.frequency}</div>
                                     <div>📅 {item.duration}</div>
                                     <div>📋 {item.quantity} units</div>
                                   </div>
-                                  
+
                                   {item.instructions && expandedPrescriptions[prescription._id] && (
                                     <div className="text-xs text-gray-500 mt-2 ml-6 p-2 bg-white rounded border">
                                       📝 {item.instructions}
                                     </div>
                                   )}
                                 </div>
-                                
+
                                 <button
                                   onClick={() => !isDispensed && addToSale(prescription, item)}
                                   disabled={isDispensed || isLoading}
-                                  className={`ml-3 px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1 transition-all ${
-                                    isDispensed
+                                  className={`ml-3 px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1 transition-all ${isDispensed
                                       ? 'bg-green-100 text-green-700 cursor-default'
                                       : isLoading
-                                      ? 'bg-gray-100 text-gray-500 cursor-wait'
-                                      : 'bg-teal-600 text-white hover:bg-teal-700 hover:-translate-y-0.5'
-                                  }`}
+                                        ? 'bg-gray-100 text-gray-500 cursor-wait'
+                                        : 'bg-teal-600 text-white hover:bg-teal-700 hover:-translate-y-0.5'
+                                    }`}
                                 >
                                   {isLoading ? (
                                     <>
@@ -1127,7 +1165,7 @@ const DispenseMedication = () => {
                   {saleItems.length} item{saleItems.length !== 1 ? 's' : ''}
                 </span>
               </div>
-              
+
               <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
                 {saleItems.length > 0 ? (
                   <>
@@ -1136,9 +1174,9 @@ const DispenseMedication = () => {
                       {saleItems.map((item, index) => {
                         const selectedBatch = item.available_batches.find(b => b._id === item.batch_id);
                         const maxQuantity = selectedBatch ? selectedBatch.quantity : 0;
-                        const isBatchExpiring = selectedBatch && 
+                        const isBatchExpiring = selectedBatch &&
                           new Date(selectedBatch.expiry_date) < new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-                        
+
                         return (
                           <div key={index} className="p-4 border border-gray-200 rounded-xl hover:border-teal-200 transition-all">
                             <div className="flex justify-between items-start mb-3">
@@ -1182,9 +1220,9 @@ const DispenseMedication = () => {
                                 <option value="">Select a batch</option>
                                 {item.available_batches.map(batch => (
                                   <option key={batch._id} value={batch._id}>
-                                    {batch.batch_number} • 
-                                    Qty: {batch.quantity} • 
-                                    Exp: {new Date(batch.expiry_date).toLocaleDateString()} • 
+                                    {batch.batch_number} •
+                                    Qty: {batch.quantity} •
+                                    Exp: {new Date(batch.expiry_date).toLocaleDateString()} •
                                     Price: ₹{batch.selling_price}
                                   </option>
                                 ))}
@@ -1272,14 +1310,14 @@ const DispenseMedication = () => {
                                 <input
                                   type="number"
                                   value={saleForm.discount}
-                                  onChange={(e) => setSaleForm({...saleForm, discount: parseFloat(e.target.value) || 0})}
+                                  onChange={(e) => setSaleForm({ ...saleForm, discount: parseFloat(e.target.value) || 0 })}
                                   className="flex-1 p-2 border border-gray-200 rounded-lg text-sm"
                                   placeholder="0"
                                   min="0"
                                 />
                                 <select
                                   value={saleForm.discount_type}
-                                  onChange={(e) => setSaleForm({...saleForm, discount_type: e.target.value})}
+                                  onChange={(e) => setSaleForm({ ...saleForm, discount_type: e.target.value })}
                                   className="p-2 border border-gray-200 rounded-lg text-sm"
                                 >
                                   <option value="percentage">%</option>
@@ -1297,7 +1335,7 @@ const DispenseMedication = () => {
                                 <input
                                   type="number"
                                   value={saleForm.tax_rate}
-                                  onChange={(e) => setSaleForm({...saleForm, tax_rate: parseFloat(e.target.value) || 0})}
+                                  onChange={(e) => setSaleForm({ ...saleForm, tax_rate: parseFloat(e.target.value) || 0 })}
                                   className="flex-1 p-2 border border-gray-200 rounded-lg text-sm"
                                   placeholder="0"
                                   min="0"
@@ -1317,7 +1355,7 @@ const DispenseMedication = () => {
                           </label>
                           <textarea
                             value={saleForm.notes}
-                            onChange={(e) => setSaleForm({...saleForm, notes: e.target.value})}
+                            onChange={(e) => setSaleForm({ ...saleForm, notes: e.target.value })}
                             className="w-full p-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
                             rows="2"
                             placeholder="Add any notes for this sale..."
@@ -1331,7 +1369,7 @@ const DispenseMedication = () => {
                           <span className="text-gray-600">Subtotal</span>
                           <span className="font-medium">₹{calculateTotals().subtotal}</span>
                         </div>
-                        
+
                         {saleForm.discount > 0 && (
                           <div className="flex justify-between text-sm">
                             <span className="text-gray-600">Discount</span>
@@ -1340,14 +1378,14 @@ const DispenseMedication = () => {
                             </span>
                           </div>
                         )}
-                        
+
                         {saleForm.tax_rate > 0 && (
                           <div className="flex justify-between text-sm">
                             <span className="text-gray-600">Tax ({saleForm.tax_rate}%)</span>
                             <span className="font-medium">₹{calculateTotals().tax}</span>
                           </div>
                         )}
-                        
+
                         <div className="flex justify-between text-lg font-bold pt-3 border-t">
                           <span>Total</span>
                           <span className="text-teal-600">₹{calculateTotals().total}</span>
@@ -1365,12 +1403,11 @@ const DispenseMedication = () => {
                             return (
                               <button
                                 key={method}
-                                onClick={() => setSaleForm({...saleForm, payment_method: method})}
-                                className={`p-3 border rounded-xl text-sm font-medium transition-all ${
-                                  saleForm.payment_method === method
+                                onClick={() => setSaleForm({ ...saleForm, payment_method: method })}
+                                className={`p-3 border rounded-xl text-sm font-medium transition-all ${saleForm.payment_method === method
                                     ? 'border-teal-500 bg-teal-50 text-teal-700 ring-1 ring-teal-100'
                                     : 'border-gray-200 text-gray-700 hover:border-teal-300 hover:bg-teal-50'
-                                }`}
+                                  }`}
                               >
                                 <div className="flex flex-col items-center gap-1">
                                   <Icon className="w-4 h-4" />
@@ -1438,7 +1475,7 @@ const DispenseMedication = () => {
                 <FaTimes />
               </button>
             </div>
-            
+
             <div className="p-6 space-y-6">
               {/* Success Message */}
               <div className="text-center">
