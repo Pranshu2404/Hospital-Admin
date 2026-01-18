@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { 
-  FaMoneyBillWave, 
-  FaChartLine, 
+import {
+  FaMoneyBillWave,
+  FaChartLine,
   FaCalendarAlt,
   FaDownload,
   FaFilter,
@@ -38,7 +38,7 @@ const RevenueStats = () => {
     setLoading(true);
     try {
       const baseUrl = import.meta.env.VITE_BACKEND_URL;
-      
+
       // Fetch overview data
       const overviewResponse = await axios.get(`${baseUrl}/revenue`, {
         params: {
@@ -46,7 +46,42 @@ const RevenueStats = () => {
           endDate: filters.endDate
         }
       });
-      setRevenueData(overviewResponse.data);
+      console.log("Overview Data:", overviewResponse.data);
+      let overviewData = overviewResponse.data;
+
+      // Fallback: If overview data is 0 and it's a single day, try using daily data
+      if (overviewData.revenue.gross === 0 && filters.startDate === filters.endDate) {
+        try {
+          const dailyRes = await axios.get(`${baseUrl}/revenue/daily`, {
+            params: { date: filters.startDate }
+          });
+          if (dailyRes.data && dailyRes.data.revenue.total > 0) {
+            console.log("Using Daily Data as fallback for Overview");
+            overviewData = {
+              ...overviewData,
+              revenue: {
+                ...overviewData.revenue,
+                gross: dailyRes.data.revenue.total,
+                net: dailyRes.data.net,
+                appointment: dailyRes.data.revenue.appointment,
+                pharmacy: dailyRes.data.revenue.pharmacy
+              },
+              expenses: {
+                salaries: dailyRes.data.expenses.salaries
+              },
+              counts: {
+                ...overviewData.counts,
+                appointments: dailyRes.data.counts.appointments,
+                pharmacySales: dailyRes.data.counts.pharmacySales
+              }
+            };
+          }
+        } catch (err) {
+          console.error("Fallback fetch failed", err);
+        }
+      }
+
+      setRevenueData(overviewData);
 
       // Fetch daily report
       const dailyResponse = await axios.get(`${baseUrl}/revenue/daily`, {
@@ -57,7 +92,7 @@ const RevenueStats = () => {
 
       // Fetch monthly report
       const monthlyResponse = await axios.get(`${baseUrl}/revenue/monthly`, {
-        params: { 
+        params: {
           year: filters.year,
           month: filters.month
         }
@@ -97,7 +132,7 @@ const RevenueStats = () => {
   const exportReport = () => {
     // Simple CSV export implementation
     let csvContent = 'Revenue Report\n\n';
-    
+
     if (revenueData) {
       csvContent += `Period: ${formatDate(revenueData.period.start)} - ${formatDate(revenueData.period.end)}\n`;
       csvContent += `Gross Revenue: ${formatCurrency(revenueData.revenue.gross)}\n`;
@@ -145,49 +180,110 @@ const RevenueStats = () => {
         </div>
       </div>
 
-      {/* Filters */}
+      {/* Unified Filters Section */}
       <div className="bg-white p-4 rounded-lg shadow border">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Report Type</label>
-            <select
-              value={filters.period}
-              onChange={(e) => handleFilterChange('period', e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500"
-            >
-              <option value="overview">Overview</option>
-              <option value="daily">Daily Report</option>
-              <option value="monthly">Monthly Report</option>
-            </select>
+        <div className="flex flex-col md:flex-row gap-4 items-end">
+          {/* View Mode Selector */}
+          <div className="w-full md:w-auto min-w-[200px]">
+            <label className="block text-sm font-medium text-gray-700 mb-2">View Mode</label>
+            <div className="flex bg-gray-100 p-1 rounded-lg">
+              {['overview', 'daily', 'monthly'].map((mode) => (
+                <button
+                  key={mode}
+                  onClick={() => {
+                    setActiveTab(mode);
+                    handleFilterChange('period', mode);
+                  }}
+                  className={`flex-1 py-2 px-4 rounded-md text-sm font-medium capitalize transition-all duration-200 ${activeTab === mode
+                    ? 'bg-white text-teal-600 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                >
+                  {mode}
+                </button>
+              ))}
+            </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
-            <input
-              type="date"
-              value={filters.startDate}
-              onChange={(e) => handleFilterChange('startDate', e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500"
-            />
-          </div>
+          {/* Dynamic Date Controls */}
+          <div className="flex-1 w-full grid grid-cols-1 md:grid-cols-3 gap-4">
+            {activeTab === 'overview' && (
+              <>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
+                  <input
+                    type="date"
+                    value={filters.startDate}
+                    onChange={(e) => handleFilterChange('startDate', e.target.value)}
+                    className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 hover:border-teal-400 transition-colors"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">End Date</label>
+                  <input
+                    type="date"
+                    value={filters.endDate}
+                    onChange={(e) => handleFilterChange('endDate', e.target.value)}
+                    className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 hover:border-teal-400 transition-colors"
+                  />
+                </div>
+              </>
+            )}
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">End Date</label>
-            <input
-              type="date"
-              value={filters.endDate}
-              onChange={(e) => handleFilterChange('endDate', e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500"
-            />
-          </div>
+            {activeTab === 'daily' && (
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Select Date</label>
+                <input
+                  type="date"
+                  value={filters.startDate}
+                  onChange={(e) => {
+                    handleFilterChange('startDate', e.target.value);
+                    handleFilterChange('endDate', e.target.value); // Sync end date for daily view logic
+                  }}
+                  className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 hover:border-teal-400 transition-colors"
+                />
+              </div>
+            )}
 
-          <div className="flex items-end">
-            <button
-              onClick={fetchRevenueData}
-              className="w-full bg-teal-600 text-white py-2 rounded-lg hover:bg-teal-700"
-            >
-              Apply Filters
-            </button>
+            {activeTab === 'monthly' && (
+              <>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Month</label>
+                  <select
+                    value={filters.month}
+                    onChange={(e) => handleFilterChange('month', parseInt(e.target.value))}
+                    className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 hover:border-teal-400 transition-colors"
+                  >
+                    {Array.from({ length: 12 }, (_, i) => (
+                      <option key={i + 1} value={i + 1}>
+                        {new Date(0, i).toLocaleString('default', { month: 'long' })}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Year</label>
+                  <input
+                    type="number"
+                    value={filters.year}
+                    onChange={(e) => handleFilterChange('year', parseInt(e.target.value))}
+                    className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 hover:border-teal-400 transition-colors"
+                    min="2020"
+                    max="2030"
+                  />
+                </div>
+              </>
+            )}
+
+            <div className="flex items-end">
+              <button
+                onClick={fetchRevenueData}
+                className="w-full bg-teal-600 text-white py-2 px-4 rounded-lg hover:bg-teal-700 transition-all duration-200 flex items-center justify-center gap-2 shadow-sm hover:shadow-md active:scale-95"
+              >
+                <FaFilter className="text-sm" />
+                Apply Filters
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -195,158 +291,105 @@ const RevenueStats = () => {
       {/* Overview Tab */}
       {activeTab === 'overview' && revenueData && (
         <div className="space-y-6">
-          {/* Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div className="bg-white p-6 rounded-lg shadow border">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">Gross Revenue</p>
-                  <p className="text-2xl font-bold text-green-600">
-                    {formatCurrency(revenueData.revenue.gross)}
-                  </p>
-                </div>
-                <FaMoneyBillWave className="text-3xl text-green-600" />
+          <div className="bg-white p-6 rounded-lg shadow border">
+            <h3 className="text-lg font-semibold text-gray-800 mb-6 flex items-center justify-between">
+              <span>Overview Report</span>
+              <span className="text-sm font-normal text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+                {formatDate(filters.startDate)} - {formatDate(filters.endDate)}
+              </span>
+            </h3>
+
+            {/* Key Metrics Row */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              <div className="p-4 rounded-lg bg-green-50 border border-green-100">
+                <p className="text-sm text-green-600 font-medium mb-1">Total Revenue</p>
+                <p className="text-3xl font-bold text-green-700">{formatCurrency(revenueData.revenue.gross)}</p>
+              </div>
+              <div className="p-4 rounded-lg bg-red-50 border border-red-100">
+                <p className="text-sm text-red-600 font-medium mb-1">Expenses</p>
+                <p className="text-3xl font-bold text-red-700">{formatCurrency(revenueData.expenses.salaries)}</p>
+              </div>
+              <div className="p-4 rounded-lg bg-blue-50 border border-blue-100">
+                <p className="text-sm text-blue-600 font-medium mb-1">Net Income</p>
+                <p className="text-3xl font-bold text-blue-700">{formatCurrency(revenueData.revenue.net)}</p>
               </div>
             </div>
 
-            <div className="bg-white p-6 rounded-lg shadow border">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">Net Revenue</p>
-                  <p className="text-2xl font-bold text-blue-600">
-                    {formatCurrency(revenueData.revenue.net)}
-                  </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {/* Left Column: Breakdown */}
+              <div className="border rounded-lg p-5">
+                <h4 className="font-medium text-gray-900 mb-4 border-b pb-2">Revenue Sources</h4>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-blue-100 rounded-md text-blue-600">
+                        <FaStethoscope />
+                      </div>
+                      <span className="text-gray-700">Appointments</span>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold text-gray-900">{formatCurrency(revenueData.revenue.appointment)}</p>
+                      <p className="text-xs text-gray-500">{revenueData.counts.appointments} visits</p>
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-purple-100 rounded-md text-purple-600">
+                        <FaPills />
+                      </div>
+                      <span className="text-gray-700">Pharmacy</span>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold text-gray-900">{formatCurrency(revenueData.revenue.pharmacy)}</p>
+                      <p className="text-xs text-gray-500">{revenueData.counts.pharmacySales} orders</p>
+                    </div>
+                  </div>
                 </div>
-                <FaChartLine className="text-3xl text-blue-600" />
               </div>
-            </div>
 
-            <div className="bg-white p-6 rounded-lg shadow border">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">Salary Expenses</p>
-                  <p className="text-2xl font-bold text-red-600">
-                    {formatCurrency(revenueData.expenses.salaries)}
-                  </p>
-                </div>
-                <FaUserMd className="text-3xl text-red-600" />
-              </div>
-            </div>
-
-            <div className="bg-white p-6 rounded-lg shadow border">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">Profit Margin</p>
-                  <p className="text-2xl font-bold text-teal-600">
-                    {revenueData.profitability.netMargin.toFixed(1)}%
-                  </p>
-                </div>
-                <FaRupeeSign className="text-3xl text-teal-600" />
-              </div>
-            </div>
-          </div>
-
-          {/* Revenue Breakdown */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-white p-6 rounded-lg shadow border">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">Revenue Sources</h3>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center gap-2">
-                    <FaStethoscope className="text-blue-600" />
-                    <span>Appointments</span>
+              {/* Right Column: Performance */}
+              <div className="border rounded-lg p-5">
+                <h4 className="font-medium text-gray-900 mb-4 border-b pb-2">Financial Health</h4>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center py-2 border-b border-gray-100 last:border-0">
+                    <span className="text-gray-600">Net Margin</span>
+                    <span className="font-bold text-teal-600 bg-teal-50 px-2 py-1 rounded">{revenueData.profitability.netMargin.toFixed(1)}%</span>
                   </div>
-                  <div className="text-right">
-                    <p className="font-semibold">{formatCurrency(revenueData.revenue.appointment)}</p>
-                    <p className="text-sm text-gray-600">
-                      {revenueData.counts.appointments} appointments
-                    </p>
+                  <div className="flex justify-between items-center py-2 border-b border-gray-100 last:border-0">
+                    <span className="text-gray-600">Gross Margin</span>
+                    <span className="font-semibold text-gray-900">{revenueData.profitability.grossMargin.toFixed(1)}%</span>
                   </div>
-                </div>
-
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center gap-2">
-                    <FaPills className="text-purple-600" />
-                    <span>Pharmacy Sales</span>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-semibold">{formatCurrency(revenueData.revenue.pharmacy)}</p>
-                    <p className="text-sm text-gray-600">
-                      {revenueData.counts.pharmacySales} sales
-                    </p>
-                  </div>
-                </div>
-
-                <div className="border-t pt-3">
-                  <div className="flex justify-between items-center font-semibold">
-                    <span>Total Revenue</span>
-                    <span className="text-green-600">
-                      {formatCurrency(revenueData.revenue.gross)}
+                  <div className="flex justify-between items-center py-2 border-b border-gray-100 last:border-0">
+                    <span className="text-gray-600">Salary Ratio</span>
+                    <span className="font-semibold text-gray-900">
+                      {revenueData.revenue.gross > 0
+                        ? ((revenueData.expenses.salaries / revenueData.revenue.gross) * 100).toFixed(1) + '%'
+                        : '0%'}
                     </span>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white p-6 rounded-lg shadow border">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">Financial Metrics</h3>
-              <div className="space-y-3">
-                <div className="flex justify-between">
-                  <span>Gross Margin</span>
-                  <span className="font-semibold">
-                    {revenueData.profitability.grossMargin.toFixed(1)}%
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Net Margin</span>
-                  <span className="font-semibold text-green-600">
-                    {revenueData.profitability.netMargin.toFixed(1)}%
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Revenue per Appointment</span>
-                  <span className="font-semibold">
-                    {formatCurrency(
-                      revenueData.counts.appointments > 0 
-                        ? revenueData.revenue.appointment / revenueData.counts.appointments 
-                        : 0
-                    )}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Salary to Revenue Ratio</span>
-                  <span className="font-semibold">
-                    {revenueData.revenue.gross > 0 
-                      ? ((revenueData.expenses.salaries / revenueData.revenue.gross) * 100).toFixed(1) + '%'
-                      : '0%'
-                    }
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Period Information */}
-          <div className="bg-white p-6 rounded-lg shadow border">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Period Summary</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {/* Period Stats Grid */}
+            <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4 pt-6 border-t">
               <div>
-                <p className="text-sm text-gray-600">Start Date</p>
-                <p className="font-semibold">{formatDate(revenueData.period.start)}</p>
+                <p className="text-sm text-gray-500 mb-1">Total Invoices</p>
+                <p className="text-xl font-semibold text-gray-800">{revenueData.counts.appointments + revenueData.counts.pharmacySales}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-600">End Date</p>
-                <p className="font-semibold">{formatDate(revenueData.period.end)}</p>
+                <p className="text-sm text-gray-500 mb-1">Salaries Paid</p>
+                <p className="text-xl font-semibold text-gray-800">{revenueData.counts.salariesPaid}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-600">Total Invoices</p>
-                <p className="font-semibold">
-                  {revenueData.counts.appointments + revenueData.counts.pharmacySales}
+                <p className="text-sm text-gray-500 mb-1">Avg. Rev/Visit</p>
+                <p className="text-xl font-semibold text-gray-800">
+                  {formatCurrency(
+                    revenueData.counts.appointments > 0
+                      ? revenueData.revenue.appointment / revenueData.counts.appointments
+                      : 0
+                  )}
                 </p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Salaries Paid</p>
-                <p className="font-semibold">{revenueData.counts.salariesPaid}</p>
               </div>
             </div>
           </div>
@@ -355,62 +398,79 @@ const RevenueStats = () => {
 
       {/* Daily Report Tab */}
       {activeTab === 'daily' && dailyRevenue && (
-        <div className="bg-white p-6 rounded-lg shadow border">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">
-            Daily Revenue Report - {formatDate(dailyRevenue.date)}
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <h4 className="font-medium text-gray-700 mb-3">Revenue Breakdown</h4>
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span>Appointment Revenue:</span>
-                  <span className="font-semibold">{formatCurrency(dailyRevenue.revenue.appointment)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Pharmacy Revenue:</span>
-                  <span className="font-semibold">{formatCurrency(dailyRevenue.revenue.pharmacy)}</span>
-                </div>
-                <div className="flex justify-between border-t pt-2">
-                  <span className="font-medium">Total Revenue:</span>
-                  <span className="font-bold text-green-600">
-                    {formatCurrency(dailyRevenue.revenue.total)}
-                  </span>
-                </div>
+        <div className="space-y-6">
+          <div className="bg-white p-6 rounded-lg shadow border">
+            <h3 className="text-lg font-semibold text-gray-800 mb-6 flex items-center justify-between">
+              <span>Daily Revenue Report</span>
+              <span className="text-sm font-normal text-gray-500 bg-gray-100 px-3 py-1 rounded-full">{formatDate(dailyRevenue.date)}</span>
+            </h3>
+
+            {/* Key Metrics Row */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              <div className="p-4 rounded-lg bg-green-50 border border-green-100">
+                <p className="text-sm text-green-600 font-medium mb-1">Total Revenue</p>
+                <p className="text-3xl font-bold text-green-700">{formatCurrency(dailyRevenue.revenue.total)}</p>
+              </div>
+              <div className="p-4 rounded-lg bg-red-50 border border-red-100">
+                <p className="text-sm text-red-600 font-medium mb-1">Expenses</p>
+                <p className="text-3xl font-bold text-red-700">{formatCurrency(dailyRevenue.expenses.salaries)}</p>
+              </div>
+              <div className="p-4 rounded-lg bg-blue-50 border border-blue-100">
+                <p className="text-sm text-blue-600 font-medium mb-1">Net Income</p>
+                <p className="text-3xl font-bold text-blue-700">{formatCurrency(dailyRevenue.net)}</p>
               </div>
             </div>
 
-            <div>
-              <h4 className="font-medium text-gray-700 mb-3">Expenses & Net</h4>
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span>Salary Expenses:</span>
-                  <span className="font-semibold text-red-600">
-                    {formatCurrency(dailyRevenue.expenses.salaries)}
-                  </span>
-                </div>
-                <div className="flex justify-between border-t pt-2">
-                  <span className="font-medium">Net Income:</span>
-                  <span className="font-bold text-blue-600">
-                    {formatCurrency(dailyRevenue.net)}
-                  </span>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {/* Left Column: Breakdown */}
+              <div className="border rounded-lg p-5">
+                <h4 className="font-medium text-gray-900 mb-4 border-b pb-2">Revenue Breakdown</h4>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center group">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-blue-100 rounded-md text-blue-600">
+                        <FaStethoscope />
+                      </div>
+                      <span className="text-gray-700">Appointments</span>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold text-gray-900">{formatCurrency(dailyRevenue.revenue.appointment)}</p>
+                      <p className="text-xs text-gray-500">{dailyRevenue.counts.appointments} visits</p>
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center group">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-purple-100 rounded-md text-purple-600">
+                        <FaPills />
+                      </div>
+                      <span className="text-gray-700">Pharmacy</span>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold text-gray-900">{formatCurrency(dailyRevenue.revenue.pharmacy)}</p>
+                      <p className="text-xs text-gray-500">{dailyRevenue.counts.pharmacySales} orders</p>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
 
-          <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <p className="text-sm text-gray-600">Appointments</p>
-              <p className="text-xl font-semibold">{dailyRevenue.counts.appointments}</p>
-            </div>
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <p className="text-sm text-gray-600">Pharmacy Sales</p>
-              <p className="text-xl font-semibold">{dailyRevenue.counts.pharmacySales}</p>
-            </div>
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <p className="text-sm text-gray-600">Salaries Paid</p>
-              <p className="text-xl font-semibold">{dailyRevenue.counts.salariesPaid}</p>
+              {/* Right Column: Other Stats */}
+              <div className="border rounded-lg p-5">
+                <h4 className="font-medium text-gray-900 mb-4 border-b pb-2">Activity Summary</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-gray-500 mb-1">Total Appointments</p>
+                    <p className="text-xl font-semibold text-gray-800">{dailyRevenue.counts.appointments}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500 mb-1">Pharmacy Sales</p>
+                    <p className="text-xl font-semibold text-gray-800">{dailyRevenue.counts.pharmacySales}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500 mb-1">Staff Paid</p>
+                    <p className="text-xl font-semibold text-gray-800">{dailyRevenue.counts.salariesPaid}</p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -418,141 +478,85 @@ const RevenueStats = () => {
 
       {/* Monthly Report Tab */}
       {activeTab === 'monthly' && monthlyRevenue && (
-        <div className="bg-white p-6 rounded-lg shadow border">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">
-            Monthly Revenue Report - {new Date(monthlyRevenue.year, monthlyRevenue.month - 1).toLocaleString('default', { month: 'long' })} {monthlyRevenue.year}
-          </h3>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <p className="text-sm text-blue-600">Total Revenue</p>
-              <p className="text-2xl font-bold text-blue-700">
-                {formatCurrency(monthlyRevenue.totalRevenue)}
-              </p>
-            </div>
-            <div className="bg-red-50 p-4 rounded-lg">
-              <p className="text-sm text-red-600">Salary Expenses</p>
-              <p className="text-2xl font-bold text-red-700">
-                {formatCurrency(monthlyRevenue.salaryExpenses)}
-              </p>
-            </div>
-            <div className="bg-green-50 p-4 rounded-lg">
-              <p className="text-sm text-green-600">Net Revenue</p>
-              <p className="text-2xl font-bold text-green-700">
-                                {formatCurrency(monthlyRevenue.netRevenue)}
-              </p>
-            </div>
-          </div>
+        <div className="space-y-6">
+          <div className="bg-white p-6 rounded-lg shadow border">
+            <h3 className="text-lg font-semibold text-gray-800 mb-6 flex items-center justify-between">
+              <span>Monthly Revenue Report</span>
+              <span className="text-sm font-normal text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+                {new Date(filters.year, filters.month - 1).toLocaleString('default', { month: 'long' })} {filters.year}
+              </span>
+            </h3>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <h4 className="font-medium text-gray-700 mb-3">Revenue Breakdown</h4>
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span>Appointment Revenue:</span>
-                  <span className="font-semibold">
-                    {formatCurrency(monthlyRevenue.appointmentRevenue)}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Pharmacy Revenue:</span>
-                  <span className="font-semibold">
-                    {formatCurrency(monthlyRevenue.pharmacyRevenue)}
-                  </span>
-                </div>
-                <div className="flex justify-between border-t pt-2">
-                  <span className="font-medium">Total Revenue:</span>
-                  <span className="font-bold text-green-600">
-                    {formatCurrency(monthlyRevenue.totalRevenue)}
-                  </span>
-                </div>
+            {/* Key Metrics Row */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              <div className="p-4 rounded-lg bg-green-50 border border-green-100">
+                <p className="text-sm text-green-600 font-medium mb-1">Total Revenue</p>
+                <p className="text-3xl font-bold text-green-700">{formatCurrency(monthlyRevenue.totalRevenue)}</p>
+              </div>
+              <div className="p-4 rounded-lg bg-red-50 border border-red-100">
+                <p className="text-sm text-red-600 font-medium mb-1">Expenses</p>
+                <p className="text-3xl font-bold text-red-700">{formatCurrency(monthlyRevenue.salaryExpenses)}</p>
+              </div>
+              <div className="p-4 rounded-lg bg-blue-50 border border-blue-100">
+                <p className="text-sm text-blue-600 font-medium mb-1">Net Income</p>
+                <p className="text-3xl font-bold text-blue-700">{formatCurrency(monthlyRevenue.netRevenue)}</p>
               </div>
             </div>
 
-            <div>
-              <h4 className="font-medium text-gray-700 mb-3">Financial Metrics</h4>
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span>Average Daily Revenue:</span>
-                  <span className="font-semibold">
-                    {formatCurrency(monthlyRevenue.averageDailyRevenue)}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Highest Revenue Day:</span>
-                  <span className="font-semibold">
-                    {formatCurrency(monthlyRevenue.highestRevenueDay.amount)} on {formatDate(monthlyRevenue.highestRevenueDay.date)}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Profit Margin:</span>
-                  <span className="font-semibold text-green-600">
-                    {monthlyRevenue.profitMargin.toFixed(1)}%
-                  </span>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {/* Left Column: Breakdown */}
+              <div className="border rounded-lg p-5">
+                <h4 className="font-medium text-gray-900 mb-4 border-b pb-2">Revenue Breakdown</h4>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-blue-100 rounded-md text-blue-600">
+                        <FaStethoscope />
+                      </div>
+                      <span className="text-gray-700">Appointments</span>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold text-gray-900">{formatCurrency(monthlyRevenue.appointmentRevenue)}</p>
+                      <p className="text-xs text-gray-500">{monthlyRevenue.totalAppointments} visits</p>
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-purple-100 rounded-md text-purple-600">
+                        <FaPills />
+                      </div>
+                      <span className="text-gray-700">Pharmacy</span>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold text-gray-900">{formatCurrency(monthlyRevenue.pharmacyRevenue)}</p>
+                      <p className="text-xs text-gray-500">{monthlyRevenue.totalPharmacySales} orders</p>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
 
-          <div className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <p className="text-sm text-gray-600">Total Appointments</p>
-              <p className="text-xl font-semibold">{monthlyRevenue.totalAppointments}</p>
-            </div>
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <p className="text-sm text-gray-600">Pharmacy Sales</p>
-              <p className="text-xl font-semibold">{monthlyRevenue.totalPharmacySales}</p>
-            </div>
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <p className="text-sm text-gray-600">Business Days</p>
-              <p className="text-xl font-semibold">{monthlyRevenue.businessDays}</p>
-            </div>
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <p className="text-sm text-gray-600">Salaries Paid</p>
-              <p className="text-xl font-semibold">{monthlyRevenue.totalSalariesPaid}</p>
+              {/* Right Column: Performance */}
+              <div className="border rounded-lg p-5">
+                <h4 className="font-medium text-gray-900 mb-4 border-b pb-2">Performance Metrics</h4>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center py-2 border-b border-gray-100 last:border-0">
+                    <span className="text-gray-600">Profit Margin</span>
+                    <span className="font-bold text-teal-600 bg-teal-50 px-2 py-1 rounded">{monthlyRevenue.profitMargin.toFixed(1)}%</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b border-gray-100 last:border-0">
+                    <span className="text-gray-600">Avg. Daily Revenue</span>
+                    <span className="font-semibold text-gray-900">{formatCurrency(monthlyRevenue.averageDailyRevenue)}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b border-gray-100 last:border-0">
+                    <span className="text-gray-600">Business Days</span>
+                    <span className="font-semibold text-gray-900">{monthlyRevenue.businessDays}</span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       )}
-
-      {/* Tabs Navigation */}
-      <div className="bg-white p-4 rounded-lg shadow border">
-        <div className="flex space-x-4">
-          <button
-            onClick={() => setActiveTab('overview')}
-            className={`px-4 py-2 rounded-lg font-medium ${
-              activeTab === 'overview'
-                ? 'bg-teal-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            <FaChartLine className="inline mr-2" />
-            Overview
-          </button>
-          <button
-            onClick={() => setActiveTab('daily')}
-            className={`px-4 py-2 rounded-lg font-medium ${
-              activeTab === 'daily'
-                ? 'bg-teal-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            <FaCalendarAlt className="inline mr-2" />
-            Daily Report
-          </button>
-          <button
-            onClick={() => setActiveTab('monthly')}
-            className={`px-4 py-2 rounded-lg font-medium ${
-              activeTab === 'monthly'
-                ? 'bg-teal-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            <FaCalendarAlt className="inline mr-2" />
-            Monthly Report
-          </button>
-        </div>
-      </div>
     </div>
   );
 };
