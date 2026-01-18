@@ -352,7 +352,7 @@ const AddIPDAppointment = ({ type = "ipd", fixedDoctorId, embedded = false, onCl
     const fetchOptions = async () => {
       try {
         const [patientRes, departmentRes, hospitalRes] = await Promise.all([
-          axios.get(`${import.meta.env.VITE_BACKEND_URL}/patients`),
+          axios.get(`${import.meta.env.VITE_BACKEND_URL}/patients?limit=1000`),
           axios.get(`${import.meta.env.VITE_BACKEND_URL}/departments`),
           axios.get(`${import.meta.env.VITE_BACKEND_URL}/hospitals`)
         ]);
@@ -949,11 +949,7 @@ const AddIPDAppointment = ({ type = "ipd", fixedDoctorId, embedded = false, onCl
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => {
-                  type.toLowerCase() === 'ipd'
-                    ? navigate('/dashboard/admin/patients/add-ipd')
-                    : setShowFields(true);
-                }}
+                onClick={() => setShowFields(!showFields)}
               >
                 {showFields ? '← Select Existing Patient' : '+ Add New Patient'}
               </Button>

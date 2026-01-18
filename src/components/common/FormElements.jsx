@@ -56,8 +56,15 @@ export const FormSelect = ({
   const [isOpen, setIsOpen] = useState(false);
   const ref = useRef(null);
 
+  // Sync searchTerm with value when not open
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      const selectedOption = options.find((opt) => opt.value === value);
+      setSearchTerm(selectedOption ? selectedOption.label : "");
+    }
+  }, [value, isOpen, options]);
+
+  useEffect(() => {
     const handleOutside = (e) => {
       if (ref.current && !ref.current.contains(e.target)) {
         setIsOpen(false);
@@ -65,60 +72,59 @@ export const FormSelect = ({
     };
     document.addEventListener('mousedown', handleOutside);
     return () => document.removeEventListener('mousedown', handleOutside);
-  }, [isOpen]);
+  }, []);
 
-  const filteredOptions = options.filter((option) =>
-    option.label.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredOptions = options.filter((option) => {
+    const selectedLabel = options.find((opt) => opt.value === value)?.label;
+    // Show all options if search term matches the currently selected value's label
+    if (searchTerm === selectedLabel) return true;
+    return option.label.toLowerCase().includes(searchTerm.toLowerCase());
+  });
 
   return (
-    <div className={`mb-4 relative ${className}`}>
+    <div className={`mb-4 relative ${className}`} ref={ref}>
       <label className="block text-sm font-medium text-gray-700 mb-2">
         {label}
         {required && <span className="text-red-500 ml-1">*</span>}
       </label>
 
-      {/* Selected Value (Clickable Input) */}
-      <div
-        ref={ref}
-        className="relative"
-      >
+      {/* Main Input Field (Acts as Search & Trigger) */}
+      <div className="relative">
+        <input
+          type="text"
+          value={searchTerm}
+          onChange={(e) => {
+            setSearchTerm(e.target.value);
+            setIsOpen(true);
+          }}
+          onFocus={() => setIsOpen(true)}
+          placeholder={placeholder}
+          required={required && !value} // Only required if no value selected
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors pr-10"
+        />
         <div
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white cursor-pointer focus:ring-2 focus:ring-teal-500 focus:border-teal-500 flex items-center justify-between"
+          className="absolute right-3 top-2.5 cursor-pointer text-gray-500"
           onClick={() => setIsOpen(!isOpen)}
         >
-          <span className="text-md text-gray-700">{value ? options.find((opt) => opt.value === value)?.label : placeholder}</span>
-          <svg className={`h-4 w-4 text-gray-500 transform transition-transform ${isOpen ? 'rotate-180' : ''}`} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg className={`h-4 w-4 transform transition-transform ${isOpen ? 'rotate-180' : ''}`} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
           </svg>
         </div>
+      </div>
 
-      {/* Dropdown */}
+      {/* Dropdown Options */}
       {isOpen && (
         <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-auto">
-          {/* Search Input */}
-          <div className="p-2 border-b">
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search..."
-              className="w-full px-2 py-1 border border-gray-300 rounded-md focus:ring-1 focus:ring-teal-500"
-            />
-          </div>
-
-          {/* Options */}
           {filteredOptions.length > 0 ? (
             filteredOptions.map((option) => (
               <div
                 key={option.value}
-                className={`px-3 py-2 cursor-pointer hover:bg-teal-100 ${
-                  option.value === value ? "bg-teal-50 font-semibold" : ""
-                }`}
+                className={`px-3 py-2 cursor-pointer hover:bg-teal-100 ${option.value === value ? "bg-teal-50 font-semibold" : ""
+                  }`}
                 onClick={() => {
                   onChange({ target: { value: option.value } });
                   setIsOpen(false);
-                  setSearchTerm("");
+                  // searchTerm will be updated by useEffect
                 }}
               >
                 {option.label}
@@ -129,7 +135,6 @@ export const FormSelect = ({
           )}
         </div>
       )}
-    </div>
     </div>
   );
 };
@@ -181,30 +186,30 @@ export const FormRadio = ({ label, name, value, checked, onChange, className = "
   </div>
 );
 
-export const Button = ({ 
-  children, 
-  onClick, 
-  type = "button", 
-  variant = "primary", 
-  size = "md", 
-  disabled = false, 
-  className = "" 
+export const Button = ({
+  children,
+  onClick,
+  type = "button",
+  variant = "primary",
+  size = "md",
+  disabled = false,
+  className = ""
 }) => {
   const baseClasses = "font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2";
-  
+
   const variants = {
     primary: "bg-teal-600 hover:bg-teal-700 text-white focus:ring-teal-500",
     secondary: "bg-gray-200 hover:bg-gray-300 text-gray-900 focus:ring-gray-500",
     outline: "border border-teal-600 text-teal-600 hover:bg-teal-50 focus:ring-teal-500",
     danger: "bg-red-600 hover:bg-red-700 text-white focus:ring-red-500"
   };
-  
+
   const sizes = {
     sm: "px-3 py-1.5 text-sm",
     md: "px-4 py-2 text-sm",
     lg: "px-6 py-3 text-base"
   };
-  
+
   return (
     <button
       type={type}
@@ -226,10 +231,10 @@ export const SearchInput = ({ value, onChange, placeholder = "Search...", classN
       placeholder={placeholder}
       className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
     />
-    <svg 
-      className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" 
-      fill="none" 
-      viewBox="0 0 24 24" 
+    <svg
+      className="absolute left-3 top-2.5 h-5 w-5 text-gray-400"
+      fill="none"
+      viewBox="0 0 24 24"
       stroke="currentColor"
     >
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
