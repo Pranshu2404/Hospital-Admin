@@ -91,8 +91,8 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
     lastName: '',
     email: '',
     phone: '',
-    gender: '',
-    bloodGroup: '',
+    gender: 'male',
+    bloodGroup: 'A+',
     age: '',
     address: '',
     city: '',
@@ -672,6 +672,7 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
     if (e) e.preventDefault(); // Prevent default form submission if triggered by button
     setIsLoading(true);
     let patientId;
+    let patientRes;
 
     // If payment was made via QR, use the details passed from the polling logic
     const finalPaymentMethod = paymentInfo ? paymentInfo.method : formData.paymentMethod;
@@ -703,7 +704,7 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
           patient_type: type // Use the appointment type (opd/ipd)
         };
 
-        const patientRes = await axios.post(
+        patientRes = await axios.post(
           `${import.meta.env.VITE_BACKEND_URL}/patients`,
           patientPayload
         );
@@ -824,8 +825,8 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
         lastName: '',
         email: '',
         phone: '',
-        gender: '',
-        bloodGroup: '',
+        gender: 'male',
+        bloodGroup: 'A+',
         age: '',
         address: '',
         city: '',
