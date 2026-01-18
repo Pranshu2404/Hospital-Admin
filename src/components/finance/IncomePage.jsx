@@ -130,24 +130,69 @@ const RevenueStats = () => {
   };
 
   const exportReport = () => {
-    // Simple CSV export implementation
-    let csvContent = 'Revenue Report\n\n';
+    let csvLines = [];
+    let fileName = `revenue_report_${new Date().getTime()}.csv`;
 
-    if (revenueData) {
-      csvContent += `Period: ${formatDate(revenueData.period.start)} - ${formatDate(revenueData.period.end)}\n`;
-      csvContent += `Gross Revenue: ${formatCurrency(revenueData.revenue.gross)}\n`;
-      csvContent += `Net Revenue: ${formatCurrency(revenueData.revenue.net)}\n`;
-      csvContent += `Appointment Revenue: ${formatCurrency(revenueData.revenue.appointment)}\n`;
-      csvContent += `Pharmacy Revenue: ${formatCurrency(revenueData.revenue.pharmacy)}\n`;
-      csvContent += `Salary Expenses: ${formatCurrency(revenueData.expenses.salaries)}\n`;
+    if (activeTab === 'overview' && revenueData) {
+      fileName = `revenue_overview_${filters.startDate}_to_${filters.endDate}.csv`;
+      csvLines.push(['Overview Revenue Report']);
+      csvLines.push([`Period: ${formatDate(revenueData.period.start)} - ${formatDate(revenueData.period.end)}`]);
+      csvLines.push([]);
+      csvLines.push(['Metric', 'Amount (INR)']);
+      csvLines.push(['Gross Revenue', revenueData.revenue.gross]);
+      csvLines.push(['Net Revenue', revenueData.revenue.net]);
+      csvLines.push(['Salary Expenses', revenueData.expenses.salaries]);
+      csvLines.push([]);
+      csvLines.push(['Revenue Sources', 'Amount', 'Count']);
+      csvLines.push(['Appointments', revenueData.revenue.appointment, revenueData.counts.appointments]);
+      csvLines.push(['Pharmacy', revenueData.revenue.pharmacy, revenueData.counts.pharmacySales]);
+
+    } else if (activeTab === 'daily' && dailyRevenue) {
+      const dateStr = new Date(dailyRevenue.date).toISOString().split('T')[0];
+      fileName = `revenue_daily_${dateStr}.csv`;
+      csvLines.push([`Daily Revenue Report - ${formatDate(dailyRevenue.date)}`]);
+      csvLines.push([]);
+      csvLines.push(['Metric', 'Amount (INR)']);
+      csvLines.push(['Total Revenue', dailyRevenue.revenue.total]);
+      csvLines.push(['Net Income', dailyRevenue.net]);
+      csvLines.push(['Expenses (Salaries)', dailyRevenue.expenses.salaries]);
+      csvLines.push([]);
+      csvLines.push(['Breakdown', 'Amount', 'Count']);
+      csvLines.push(['Appointment Revenue', dailyRevenue.revenue.appointment, dailyRevenue.counts.appointments]);
+      csvLines.push(['Pharmacy Revenue', dailyRevenue.revenue.pharmacy, dailyRevenue.counts.pharmacySales]);
+
+    } else if (activeTab === 'monthly' && monthlyRevenue) {
+      const monthName = new Date(filters.year, filters.month - 1).toLocaleString('default', { month: 'long' });
+      fileName = `revenue_monthly_${monthName}_${filters.year}.csv`;
+      csvLines.push([`Monthly Revenue Report - ${monthName} ${filters.year}`]);
+      csvLines.push([]);
+      csvLines.push(['Metric', 'Amount (INR)']);
+      csvLines.push(['Total Revenue', monthlyRevenue.totalRevenue]);
+      csvLines.push(['Net Revenue', monthlyRevenue.netRevenue]);
+      csvLines.push(['Salary Expenses', monthlyRevenue.salaryExpenses]);
+      csvLines.push([]);
+      csvLines.push(['Breakdown', 'Amount', 'Count']);
+      csvLines.push(['Appointments', monthlyRevenue.appointmentRevenue, monthlyRevenue.totalAppointments]);
+      csvLines.push(['Pharmacy', monthlyRevenue.pharmacyRevenue, monthlyRevenue.totalPharmacySales]);
+      csvLines.push([]);
+      csvLines.push(['Performance', 'Value']);
+      csvLines.push(['Profit Margin', monthlyRevenue.profitMargin.toFixed(2) + '%']);
+      csvLines.push(['Avg Daily Revenue', monthlyRevenue.averageDailyRevenue.toFixed(2)]);
+      csvLines.push(['Business Days', monthlyRevenue.businessDays]);
+    } else {
+      alert("No data available to export for the current view.");
+      return;
     }
 
-    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const csvContent = csvLines.map(e => e.join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `revenue_report_${new Date().getTime()}.csv`;
+    link.setAttribute('download', fileName);
+    document.body.appendChild(link);
     link.click();
+    document.body.removeChild(link); // Clean up
     window.URL.revokeObjectURL(url);
   };
 

@@ -39,10 +39,28 @@ const InvoiceListPage = ({ onViewDetails, defaultType }) => {
   });
   const [totalInvoices, setTotalInvoices] = useState(0);
 
+  const [hospitalInfo, setHospitalInfo] = useState(null);
+  const [doctors, setDoctors] = useState([]);
+  const [printableInvoice, setPrintableInvoice] = useState(null);
+
   useEffect(() => {
     fetchInvoices();
     fetchStats();
+    fetchHospitalInfo();
+    fetchDoctors();
   }, [filters.status, filters.type, filters.dateRange, filters.page, filters.startDate, filters.endDate]);
+
+  useEffect(() => {
+    if (printableInvoice) {
+      // Allow time for DOM to update
+      const timer = setTimeout(() => {
+        window.print();
+        // Optional: Reset after print dialog triggers/closes
+        // setPrintableInvoice(null); 
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [printableInvoice]);
 
   const handleMarkAsPaid = async (invoiceId, amountDue) => {
     if (!window.confirm(`Mark this invoice as PAID? \n\nAmount: ₹${amountDue}\nMethod: Cash`)) return;
@@ -102,6 +120,49 @@ const InvoiceListPage = ({ onViewDetails, defaultType }) => {
     } catch (error) {
       console.error('Error fetching stats:', error);
     }
+  };
+
+  const fetchHospitalInfo = async () => {
+    try {
+      const res = await apiClient.get('/hospitals');
+      if (res.data && res.data.length > 0) {
+        setHospitalInfo(res.data[0]);
+      }
+    } catch (err) {
+      console.error('Error fetching hospital info:', err);
+    }
+  };
+
+  const fetchDoctors = async () => {
+    try {
+      const res = await apiClient.get('/doctors');
+      setDoctors(res.data);
+    } catch (err) {
+      console.error('Error fetching doctors:', err);
+    }
+  };
+
+  const getDoctorName = () => {
+    if (!printableInvoice) return 'N/A';
+    let doc = null;
+    const inv = printableInvoice;
+
+    if (inv.doctor_id) {
+      if (typeof inv.doctor_id === 'object') doc = inv.doctor_id;
+      else doc = doctors.find(d => d._id === inv.doctor_id);
+    }
+
+    if (!doc && inv.appointment_id) {
+      if (typeof inv.appointment_id === 'object' && inv.appointment_id.doctor_id) {
+        if (typeof inv.appointment_id.doctor_id === 'object') doc = inv.appointment_id.doctor_id;
+        else doc = doctors.find(d => d._id === inv.appointment_id.doctor_id);
+      }
+    }
+
+    if (doc && (doc.firstName || doc.first_name || doc.name)) {
+      return `${doc.firstName || doc.first_name || doc.name || ''} ${doc.lastName || doc.last_name || ''}`.trim();
+    }
+    return 'N/A';
   };
 
   const fetchInvoices = async () => {
@@ -234,8 +295,14 @@ const InvoiceListPage = ({ onViewDetails, defaultType }) => {
     }
   };
 
-  const printInvoice = (invoiceId) => {
-    window.open(`/dashboard/invoices/${invoiceId}/print`, '_blank');
+  const printInvoice = async (invoiceId) => {
+    try {
+      const res = await apiClient.get(`/invoices/${invoiceId}`);
+      setPrintableInvoice(res.data);
+    } catch (err) {
+      console.error("Failed to fetch invoice for printing", err);
+      alert("Could not load invoice details for printing.");
+    }
   };
 
   if (loading && !invoices.length) {
@@ -248,6 +315,141 @@ const InvoiceListPage = ({ onViewDetails, defaultType }) => {
 
   return (
     <div className="p-6 space-y-6">
+      {/* Print Styles */}
+      <style>{`
+        @media print {
+          @page {
+            size: A4 portrait;
+            margin: 10mm;
+          }
+          body, html {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            -webkit-print-color-adjust: exact;
+          }
+          body * { 
+            visibility: hidden; 
+          }
+          .printable-invoice-container, .printable-invoice-container * {
+            visibility: visible;
+          }
+          .printable-invoice-container {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            z-index: 9999;
+            background: white;
+          }
+          .printable-invoice { 
+            width: 210mm;
+            min-height: 297mm;
+            padding: 10mm;
+            background: white;
+            font-size: 11pt;
+            box-sizing: border-box;
+          }
+          .invoice-header {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+            width: 100% !important;
+            border-bottom: 4px double #333;
+            padding-bottom: 20px;
+            margin-bottom: 20px;
+          }
+          .logo-area { width: 100px; height: 100px; }
+          .logo-area img { max-width: 100%; max-height: 100%; object-fit: contain; }
+          .hospital-details { text-align: center; flex: 1; padding: 0 20px; }
+          .hospital-name { font-family: "Times New Roman", Times, serif; font-size: 24pt; font-weight: bold; text-transform: uppercase; margin: 0; }
+          .hospital-address { font-size: 10pt; margin-top: 5px; }
+          .invoice-title-box { border: 2px solid #333; padding: 5px 10px; text-align: center; text-transform: uppercase; font-weight: bold; font-size: 14pt; }
+          .details-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; font-size: 11pt; }
+          .details-item { display: flex; }
+          .details-label { font-weight: bold; width: 120px; color: #444; }
+          .details-value { font-weight: 600; }
+          table.invoice-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+          table.invoice-table th, table.invoice-table td { border-bottom: 1px solid #ddd; padding: 8px; text-align: left; }
+          table.invoice-table th { background-color: #f3f4f6 !important; text-transform: uppercase; font-size: 9pt; -webkit-print-color-adjust: exact; }
+          .footer-section { margin-top: 40px; border-top: 1px dashed #aaa; padding-top: 10px; text-align: center; font-size: 9pt; color: #666; }
+        }
+        @media screen {
+          .printable-invoice-container { display: none; }
+        }
+        `}</style>
+
+      {/* Hidden Printable Invoice Structure */}
+      {printableInvoice && (
+        <div className="printable-invoice-container">
+          <div className="printable-invoice">
+            <div className="invoice-header">
+              <div className="logo-area">
+                {hospitalInfo?.logo ? <img src={hospitalInfo.logo} alt="Logo" /> : <div className="w-full h-full border border-dashed flex items-center justify-center text-xs">LOGO</div>}
+              </div>
+              <div className="hospital-details">
+                <h1 className="hospital-name">{hospitalInfo?.hospitalName || 'HOSPITAL NAME'}</h1>
+                <div className="hospital-address">
+                  <p>{hospitalInfo?.address || 'Address Line 1, Address Line 2'}</p>
+                  <p>Phone: {hospitalInfo?.contact || 'N/A'}</p>
+                  {hospitalInfo?.email && <p>Email: {hospitalInfo.email}</p>}
+                </div>
+              </div>
+              <div>
+                <div className="invoice-title-box">INVOICE</div>
+                <div className="text-center text-xs mt-1">
+                  {printableInvoice.status === 'Paid' ? '(PAID)' : '(PENDING)'}
+                </div>
+              </div>
+            </div>
+
+            <div className="details-grid">
+              <div className="details-item"><span className="details-label">Invoice No:</span><span className="details-value">{printableInvoice.invoice_number}</span></div>
+              <div className="details-item"><span className="details-label">Date:</span><span className="details-value">{new Date(printableInvoice.issue_date).toLocaleDateString()}</span></div>
+              <div className="details-item"><span className="details-label">Patient Name:</span><span className="details-value">{printableInvoice.patient_id ? `${printableInvoice.patient_id.first_name || ''} ${printableInvoice.patient_id.last_name || ''}`.trim() : (printableInvoice.customer_name || 'Unknown')}</span></div>
+              <div className="details-item"><span className="details-label">Patient ID:</span><span className="details-value">{printableInvoice.patient_id?.patientId || printableInvoice.customer_phone || 'N/A'}</span></div>
+              <div className="details-item"><span className="details-label">Doctor:</span><span className="details-value">{getDoctorName()}</span></div>
+            </div>
+
+            <table className="invoice-table">
+              <thead>
+                <tr><th>Description</th><th style={{ textAlign: 'right' }}>Qty</th><th style={{ textAlign: 'right' }}>Unit Price</th><th style={{ textAlign: 'right' }}>Total</th></tr>
+              </thead>
+              <tbody>
+                {printableInvoice.service_items && printableInvoice.service_items.map((item, idx) => (
+                  <tr key={`srv-${idx}`}>
+                    <td>{item.description}</td>
+                    <td style={{ textAlign: 'right' }}>{item.quantity}</td>
+                    <td style={{ textAlign: 'right' }}>{item.unit_price ? item.unit_price.toFixed(2) : (item.total_price / (item.quantity || 1)).toFixed(2)}</td>
+                    <td style={{ textAlign: 'right' }}>{item.total_price ? item.total_price.toFixed(2) : (item.amount || 0).toFixed(2)}</td>
+                  </tr>
+                ))}
+                {printableInvoice.medicine_items && printableInvoice.medicine_items.map((item, idx) => (
+                  <tr key={`med-${idx}`}>
+                    <td>{item.medicine_name} {item.batch_number ? `(${item.batch_number})` : ''}</td>
+                    <td style={{ textAlign: 'right' }}>{item.quantity}</td>
+                    <td style={{ textAlign: 'right' }}>{item.unit_price?.toFixed(2)}</td>
+                    <td style={{ textAlign: 'right' }}>{item.total_price?.toFixed(2)}</td>
+                  </tr>
+                ))}
+                <tr style={{ borderTop: '2px solid #333', fontWeight: 'bold' }}>
+                  <td colSpan={3} style={{ textAlign: 'right', paddingRight: '20px' }}>TOTAL:</td>
+                  <td style={{ textAlign: 'right' }}>₹{printableInvoice.total?.toFixed(2)}</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <div className="footer-section">
+              <p>This is a computer-generated invoice and needs no signature.</p>
+              <p>Thank you for choosing {hospitalInfo?.hospitalName || 'us'}.</p>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Header */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
         <div>
@@ -459,13 +661,13 @@ const InvoiceListPage = ({ onViewDetails, defaultType }) => {
                       >
                         <FaPrint />
                       </button>
-                      <button
+                      {/* <button
                         onClick={() => downloadInvoice(invoice._id, invoice.invoice_number)}
                         className="text-teal-600 hover:text-teal-800"
                         title="Download PDF"
                       >
                         <FaDownload />
-                      </button>
+                      </button> */}
                       {invoice.status !== 'Paid' && (
                         <button
                           onClick={() => handleMarkAsPaid(invoice._id, invoice.balance_due)}
