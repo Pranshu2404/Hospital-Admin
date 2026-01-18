@@ -319,7 +319,8 @@ const DoctorDashboard = () => {
               <FaUserInjured size={120} />
             </div>
 
-            <h2 className="text-teal-100 font-semibold text-sm uppercase tracking-wider mb-6">Next Appointment</h2>
+            <h2 className="text-teal-100 font-semibold text-sm uppercase tracking-wider mb-1">Next Upcoming Appointment</h2>
+            <p className="text-teal-100 mb-4 text-xs">Please wait for vitals to start.</p>
 
             {nextPatient ? (
               <>
@@ -363,7 +364,7 @@ const DoctorDashboard = () => {
           {/* Pending Requests List */}
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-bold text-slate-800">Pending Actions</h2>
+              <h2 className="text-lg font-bold text-slate-800">Recent Appointments</h2>
               <span className="bg-amber-100 text-amber-700 text-xs px-2 py-1 rounded-full font-bold">{approvalRequests.length}</span>
             </div>
 
@@ -375,12 +376,12 @@ const DoctorDashboard = () => {
                     <p className="text-xs text-slate-500">{req.treatment} • {req.time}</p>
                   </div>
                   <div className="flex gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
-                    <button className="p-2 bg-white text-green-600 rounded-lg shadow-sm border border-slate-100 hover:bg-green-50" title="Approve">
+                    {/* <button className="p-2 bg-white text-green-600 rounded-lg shadow-sm border border-slate-100 hover:bg-green-50" title="Approve">
                       <FaCheck size={12} />
                     </button>
                     <button className="p-2 bg-white text-red-500 rounded-lg shadow-sm border border-slate-100 hover:bg-red-50" title="Reject">
                       <FaTimes size={12} />
-                    </button>
+                    </button> */}
                   </div>
                 </div>
               )) : (
