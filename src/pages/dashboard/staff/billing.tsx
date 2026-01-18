@@ -49,7 +49,9 @@ function Billing() {
   const [stats, setStats] = useState({
     totalOutstanding: 0,
     collectedToday: 0,
-    overdueCount: 0
+    overdueCount: 0,
+    totalCollected: 0,
+    totalBilled: 0
   });
 
   // Form State for Creating Bill
@@ -61,6 +63,9 @@ function Billing() {
     payment_method: 'Cash',
     status: 'Pending'
   });
+
+  const [statusFilter, setStatusFilter] = useState('All');
+  const [dateFilter, setDateFilter] = useState({ start: '', end: '' });
 
   useEffect(() => {
     fetchBills();
@@ -76,8 +81,10 @@ function Billing() {
     try {
       setLoading(true);
       const res = await apiClient.get('/billing');
-      setInvoices(res.data);
-      calculateStats(res.data);
+      // Sort by latest date first
+      const sortedData = res.data.sort((a, b) => new Date(b.generated_at).getTime() - new Date(a.generated_at).getTime());
+      setInvoices(sortedData);
+      calculateStats(sortedData);
     } catch (err) {
       console.error('Error fetching bills:', err);
       toast.error('Failed to load bills.');
@@ -89,20 +96,38 @@ function Billing() {
   const calculateStats = (data) => {
     const today = new Date().toISOString().split('T')[0];
 
+    // Total Outstanding (Pending)
     const outstanding = data
       .filter(inv => inv.status === 'Pending')
       .reduce((sum, inv) => sum + (inv.total_amount || 0), 0);
 
-    const collected = data
+    // Collected Today (Paid & Today)
+    const collectedToday = data
       .filter(inv => inv.status === 'Paid' && inv.generated_at?.startsWith(today))
       .reduce((sum, inv) => sum + (inv.total_amount || 0), 0);
 
+    // Overdue Count
     const overdue = data.filter(inv => inv.status === 'Pending' && new Date(inv.generated_at) < new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)).length;
+
+    // Total Collected (All Paid)
+    const totalCollected = data
+      .filter(inv => inv.status === 'Paid')
+      .reduce((sum, inv) => sum + (inv.total_amount || 0), 0);
+
+    // Total Billed (Paid + Pending)
+    // Note: If you have other statuses like 'Refunded', decide if they should be included. 
+    // Usually Total Billed implies everything generated.
+    // Spec says 'Paid + Pending' specifically.
+    const totalBilled = data
+      .filter(inv => ['Paid', 'Pending'].includes(inv.status))
+      .reduce((sum, inv) => sum + (inv.total_amount || 0), 0);
 
     setStats({
       totalOutstanding: outstanding,
-      collectedToday: collected,
-      overdueCount: overdue
+      collectedToday: collectedToday,
+      overdueCount: overdue,
+      totalCollected: totalCollected,
+      totalBilled: totalBilled
     });
   };
 
@@ -154,6 +179,9 @@ function Billing() {
   };
 
   const updateBillStatus = async (id, status) => {
+    if (status === 'Paid' && !window.confirm("Are you sure you want to mark this invoice as Paid?")) {
+      return;
+    }
     try {
       await apiClient.put(`/billing/${id}`, { status });
       toast.success(`Bill marked as ${status}`);
@@ -205,14 +233,26 @@ function Billing() {
     setNewBill(prev => ({ ...prev, items: updatedItems }));
   };
 
-  // Searching
+  // Searching & Filtering
   const filteredInvoices = invoices.filter(invoice => {
     const patientName = invoice.patient_id ? `${invoice.patient_id.first_name} ${invoice.patient_id.last_name}` : 'Unknown';
     const term = searchTerm.toLowerCase();
-    return (
-      patientName.toLowerCase().includes(term) ||
-      (invoice._id && invoice._id.toLowerCase().includes(term))
-    );
+
+    // Search match
+    const matchesSearch = patientName.toLowerCase().includes(term) ||
+      (invoice._id && invoice._id.toLowerCase().includes(term));
+
+    // Status match
+    const matchesStatus = statusFilter === 'All' || invoice.status === statusFilter;
+
+    // Date match
+    let matchesDate = true;
+    if (dateFilter.start && dateFilter.end) {
+      const invoiceDate = new Date(invoice.generated_at).toISOString().split('T')[0];
+      matchesDate = invoiceDate >= dateFilter.start && invoiceDate <= dateFilter.end;
+    }
+
+    return matchesSearch && matchesStatus && matchesDate;
   });
 
   return (
@@ -223,22 +263,34 @@ function Billing() {
         <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
           <div>
             <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-              <FaFileInvoiceDollar className="text-blue-600" /> Billing Dashboard
+              <FaFileInvoiceDollar className="text-teal-500" /> Billing Dashboard
             </h1>
             <p className="text-slate-500 text-sm mt-1">Manage invoices, payments and financial records.</p>
           </div>
           <button
             onClick={() => setShowCreateModal(true)}
-            className="bg-blue-600 text-white font-semibold py-2.5 px-6 rounded-lg hover:bg-blue-700 transition-colors shadow-md flex items-center gap-2"
+            className="bg-teal-600 text-white font-semibold py-2.5 px-6 rounded-lg hover:bg-teal-700 transition-colors shadow-md flex items-center gap-2"
           >
             <FaPlus /> Create New Invoice
           </button>
         </div>
 
         {/* Stat Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
           <StatCard
-            title="Total Outstanding"
+            title="Total Billed"
+            value={`₹${stats.totalBilled.toLocaleString()}`}
+            icon={<FaFileInvoiceDollar className="text-blue-500" />}
+            colorClass="bg-blue-500 text-blue-500"
+          />
+          <StatCard
+            title="Total Collected"
+            value={`₹${stats.totalCollected.toLocaleString()}`}
+            icon={<FaCheckCircle className="text-green-600" />}
+            colorClass="bg-green-600 text-green-600"
+          />
+          <StatCard
+            title="Outstanding"
             value={`₹${stats.totalOutstanding.toLocaleString()}`}
             icon={<FaExclamationCircle className="text-amber-500" />}
             colorClass="bg-amber-500 text-amber-500"
@@ -259,17 +311,51 @@ function Billing() {
 
         {/* Invoice Table Section */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-          <div className="p-6 border-b border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4 bg-slate-50/50">
+          <div className="p-6 border-b border-slate-100 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 bg-slate-50/50">
             <h2 className="text-lg font-bold text-slate-700">Recent Invoices</h2>
-            <div className="relative w-full md:w-auto">
-              <FaSearch className="absolute left-3 top-3 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Search patient or invoice ID..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-2 border border-slate-300 rounded-lg w-full md:w-80 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-              />
+
+            <div className="flex flex-col md:flex-row gap-3 w-full xl:w-auto">
+              {/* Status Filter */}
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="p-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+              >
+                <option value="All">All Status</option>
+                <option value="Pending">Pending</option>
+                <option value="Paid">Paid</option>
+                <option value="Overdue">Overdue</option>
+                <option value="Refunded">Refunded</option>
+              </select>
+
+              {/* Date Filter */}
+              <div className="flex items-center gap-2">
+                <input
+                  type="date"
+                  value={dateFilter.start}
+                  onChange={(e) => setDateFilter({ ...dateFilter, start: e.target.value })}
+                  className="p-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                />
+                <span className="text-slate-400">-</span>
+                <input
+                  type="date"
+                  value={dateFilter.end}
+                  onChange={(e) => setDateFilter({ ...dateFilter, end: e.target.value })}
+                  className="p-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                />
+              </div>
+
+              {/* Search */}
+              <div className="relative flex-1 md:flex-none">
+                <FaSearch className="absolute left-3 top-3 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Search patient or invoice ID..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 pr-4 py-2 border border-slate-300 rounded-lg w-full md:w-64 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                />
+              </div>
             </div>
           </div>
 
@@ -373,7 +459,7 @@ function Billing() {
                   <select
                     value={newBill.appointment_id}
                     onChange={handleAppointmentSelect}
-                    className="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                   >
                     <option value="">-- Choose Appointment --</option>
                     {appointments.map(apt => (
@@ -409,7 +495,7 @@ function Billing() {
                       )}
                     </div>
                   ))}
-                  <button onClick={addItem} className="text-sm text-blue-600 font-semibold hover:underline flex items-center gap-1">
+                  <button onClick={addItem} className="text-sm text-teal-600 font-semibold hover:underline flex items-center gap-1">
                     <FaPlus className="text-xs" /> Add Item
                   </button>
                 </div>
@@ -445,7 +531,7 @@ function Billing() {
                 {/* Total */}
                 <div className="bg-slate-50 p-4 rounded-xl flex justify-between items-center">
                   <span className="font-bold text-slate-700">Total Amount:</span>
-                  <span className="text-xl font-bold text-blue-600">
+                  <span className="text-xl font-bold text-teal-600">
                     ₹{newBill.items.reduce((sum, item) => sum + Number(item.amount), 0).toLocaleString()}
                   </span>
                 </div>
@@ -461,7 +547,7 @@ function Billing() {
                 </button>
                 <button
                   onClick={handleCreateBill}
-                  className="px-6 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 shadow-md"
+                  className="px-6 py-2 bg-teal-600 text-white font-semibold rounded-lg hover:bg-teal-700 shadow-md"
                 >
                   Generate Invoice
                 </button>

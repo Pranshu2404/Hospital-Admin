@@ -475,7 +475,7 @@ const StaffDashboard = () => {
         async function fetchData() {
             setLoading(true);
             try {
-                const [staffRes, patientRes, deptRes, apptRes, hospitalRes, doctorRes, invoiceRes] = await Promise.all([
+                const [staffRes, patientRes, deptRes, apptRes, hospitalRes, doctorRes, invoiceRes, billingRes] = await Promise.all([
                     fetch(`${import.meta.env.VITE_BACKEND_URL}/staff`),
                     fetch(`${import.meta.env.VITE_BACKEND_URL}/patients`),
                     fetch(`${import.meta.env.VITE_BACKEND_URL}/departments`),
@@ -483,6 +483,7 @@ const StaffDashboard = () => {
                     fetch(`${import.meta.env.VITE_BACKEND_URL}/hospitals`),
                     fetch(`${import.meta.env.VITE_BACKEND_URL}/doctors`),
                     fetch(`${import.meta.env.VITE_BACKEND_URL}/invoices`),
+                    fetch(`${import.meta.env.VITE_BACKEND_URL}/billing`),
                 ]);
 
                 if (!staffRes.ok || !patientRes.ok || !deptRes.ok || !doctorRes.ok) throw new Error('API Error');
@@ -492,29 +493,33 @@ const StaffDashboard = () => {
                 const hData = await hospitalRes.json();
                 const doctorsData = await doctorRes.json();
                 const invoicesData = await invoiceRes.json();
+                const billsData = await billingRes.json();
+
                 const invoicesArray = Array.isArray(invoicesData)
                     ? invoicesData
                     : invoicesData.invoices || invoicesData.data || [];
 
+                const billsArray = Array.isArray(billsData) ? billsData : [];
+
                 setInvoices(invoicesArray);
 
-                // ---- TODAY'S COLLECTION (Paid invoices only) ----
+                // ---- TODAY'S COLLECTION (Paid BILLS only) ----
                 const today = new Date().toDateString();
 
-                const todayTotal = invoicesArray
-                    .filter(inv =>
-                        inv.issue_date &&
-                        new Date(inv.issue_date).toDateString() === today &&
-                        inv.status === 'Paid'
+                const todayTotal = billsArray
+                    .filter(bill =>
+                        bill.generated_at &&
+                        new Date(bill.generated_at).toDateString() === today &&
+                        bill.status === 'Paid'
                     )
-                    .reduce((sum, inv) => sum + Number(inv.amount_paid || 0), 0);
+                    .reduce((sum, bill) => sum + Number(bill.total_amount || 0), 0);
 
                 setTodayCollection(todayTotal);
 
-                // ---- TOTAL REGISTERED COLLECTION ----
-                const totalAmount = invoicesArray
-                    .filter(inv => inv.status === 'Paid')
-                    .reduce((sum, inv) => sum + Number(inv.amount_paid || 0), 0);
+                // ---- TOTAL REGISTERED COLLECTION (Paid BILLS only) ----
+                const totalAmount = billsArray
+                    .filter(bill => bill.status === 'Paid')
+                    .reduce((sum, bill) => sum + Number(bill.total_amount || 0), 0);
 
                 setTotalCollection(totalAmount);
 
@@ -636,7 +641,7 @@ const StaffDashboard = () => {
                         />
                         <StatCard
                             title="Total Registration Collection"
-                            value={`₹${Number(totalCollection).toFixed(2)}`}
+                            value={`₹${Number(totalCollection)}`}
                             icon={<FaMoneyBill />}
                             color={{ bg: 'bg-emerald-50', text: 'text-emerald-600' }}
                         />
