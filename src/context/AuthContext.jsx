@@ -40,6 +40,22 @@ export const AuthProvider = ({ children }) => {
   // Logout function
   const logout = () => {
     localStorage.removeItem('hospitalUser');
+
+    // Selective cleanup based on role
+    if (user?.role === 'doctor') {
+      localStorage.removeItem('doctorId');
+    } else if (user?.role === 'staff' || user?.role === 'nurse') {
+      localStorage.removeItem('staffId');
+    } else if (user?.role === 'pharmacy') {
+      localStorage.removeItem('pharmacyId');
+    }
+    // hospitalId is usually preserved or handled separately, user didn't ask to clear it specifically on role logout, 
+    // but often it's associated with the session. For now, I'll leave it or remove it? 
+    // The user said "not the doctor id".
+    // I will NOT remove hospitalId linearly unless required. 
+    // Actually, previously I was removing it. If I stop removing it, it persists. 
+    // I'll leave hospitalId alone for now as it wasn't the main complaint.
+
     setUser(null);
     navigate('/');
   };

@@ -37,10 +37,13 @@ export default function Login() {
       let { token, role } = res.data;
       const { staffId } = res.data;
 
-      localStorage.setItem("doctorId", res.data.doctorId || null);
-      localStorage.setItem("hospitalId", res.data.hospitalID || null);
-      localStorage.setItem("staffId", staffId || null);
-      localStorage.setItem("pharmacyId", res.data.pharmacyId || null);
+      if (res.data.doctorId) localStorage.setItem("doctorId", res.data.doctorId);
+
+      if (res.data.hospitalID) localStorage.setItem("hospitalId", res.data.hospitalID);
+
+      if (staffId) localStorage.setItem("staffId", staffId);
+
+      if (res.data.pharmacyId) localStorage.setItem("pharmacyId", res.data.pharmacyId);
 
       // Fix for incorrect role assignment in backend users collection
       if (role === 'staff' && staffId) {

@@ -37,7 +37,7 @@ const DoctorProfilePage1 = () => {
       }
     };
 
-    if (doctorId) fetchDoctorProfile();
+    if (doctorId && doctorId !== 'null' && doctorId !== 'undefined') fetchDoctorProfile();
   }, [doctorId]);
 
   // --- Helper Components ---
@@ -97,11 +97,10 @@ const DoctorProfilePage1 = () => {
   );
 
   const StatusBadge = ({ fullTime }) => (
-    <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide border ${
-      fullTime 
-        ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+    <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide border ${fullTime
+        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
         : 'bg-amber-50 text-amber-700 border-amber-200'
-    }`}>
+      }`}>
       {fullTime ? 'Full-Time' : 'Part-Time'}
     </span>
   );
@@ -115,11 +114,10 @@ const DoctorProfilePage1 = () => {
     <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 space-y-6">
       {/* Message Alert */}
       {message.text && (
-        <div className={`flex items-center gap-3 p-4 rounded-lg border ${
-          message.type === 'success' 
-            ? 'bg-green-50 border-green-200 text-green-700' 
+        <div className={`flex items-center gap-3 p-4 rounded-lg border ${message.type === 'success'
+            ? 'bg-green-50 border-green-200 text-green-700'
             : 'bg-red-50 border-red-200 text-red-700'
-        }`}>
+          }`}>
           {message.type === 'success' ? <FaCheckCircle /> : <FaExclamationCircle />}
           <span className="font-medium">{message.text}</span>
         </div>
@@ -422,22 +420,22 @@ const DoctorProfilePage1 = () => {
   return (
     <Layout sidebarItems={doctorSidebar} section="Doctor">
       <div className="min-h-screen bg-slate-50/50 p-2 font-sans">
-        
+
         {/* --- Hero Section --- */}
         <div className="relative bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6">
           {/* Banner */}
           <div className="h-40 bg-gradient-to-r from-teal-600 to-cyan-700 relative">
             <div className="absolute inset-0 opacity-10 pattern-grid-lg"></div> {/* Abstract pattern overlay */}
           </div>
-          
+
           <div className="px-8 pb-8">
             <div className="flex flex-col md:flex-row items-start md:items-end -mt-12 mb-6">
               {/* Avatar */}
               <div className="relative">
                 <div className="w-32 h-32 rounded-2xl bg-white p-1 shadow-lg">
-                  <img 
-                    src={doctor.user_id?.profile_image || `https://ui-avatars.com/api/?name=${doctor.firstName}+${doctor.lastName}&background=0d9488&color=fff&size=128`} 
-                    alt="Doctor" 
+                  <img
+                    src={doctor.user_id?.profile_image || `https://ui-avatars.com/api/?name=${doctor.firstName}+${doctor.lastName}&background=0d9488&color=fff&size=128`}
+                    alt="Doctor"
                     className="w-full h-full object-cover rounded-xl bg-slate-100"
                   />
                 </div>
@@ -462,8 +460,8 @@ const DoctorProfilePage1 = () => {
                       <StatusBadge fullTime={doctor.isFullTime} />
                     </div>
                   </div>
-                  
-                  <button 
+
+                  <button
                     onClick={() => setIsEditing(!isEditing)}
                     className="flex items-center gap-2 bg-slate-800 text-white px-5 py-2.5 rounded-lg hover:bg-slate-700 transition-all shadow-md text-sm font-semibold"
                   >
@@ -475,22 +473,22 @@ const DoctorProfilePage1 = () => {
 
             {/* Quick Stats Grid */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-6 border-t border-slate-100">
-               <div className="p-3 rounded-lg bg-slate-50 border border-slate-100">
-                 <p className="text-xs text-slate-500 font-bold uppercase">Experience</p>
-                 <p className="text-xl font-bold text-slate-800">{doctor.experience}+ Years</p>
-               </div>
-               <div className="p-3 rounded-lg bg-slate-50 border border-slate-100">
-                 <p className="text-xs text-slate-500 font-bold uppercase">Doctor ID</p>
-                 <p className="text-xl font-bold text-slate-800 font-mono tracking-tight">{doctor.doctorId}</p>
-               </div>
-               <div className="p-3 rounded-lg bg-slate-50 border border-slate-100">
-                 <p className="text-xs text-slate-500 font-bold uppercase">Joined</p>
-                 <p className="text-lg font-bold text-slate-800">{formatDate(doctor.joined_at)}</p>
-               </div>
-               <div className="p-3 rounded-lg bg-slate-50 border border-slate-100">
-                 <p className="text-xs text-slate-500 font-bold uppercase">Shift</p>
-                 <p className="text-lg font-bold text-slate-800">{doctor.shift}</p>
-               </div>
+              <div className="p-3 rounded-lg bg-slate-50 border border-slate-100">
+                <p className="text-xs text-slate-500 font-bold uppercase">Experience</p>
+                <p className="text-xl font-bold text-slate-800">{doctor.experience}+ Years</p>
+              </div>
+              <div className="p-3 rounded-lg bg-slate-50 border border-slate-100">
+                <p className="text-xs text-slate-500 font-bold uppercase">Doctor ID</p>
+                <p className="text-xl font-bold text-slate-800 font-mono tracking-tight">{doctor.doctorId}</p>
+              </div>
+              <div className="p-3 rounded-lg bg-slate-50 border border-slate-100">
+                <p className="text-xs text-slate-500 font-bold uppercase">Joined</p>
+                <p className="text-lg font-bold text-slate-800">{formatDate(doctor.joined_at)}</p>
+              </div>
+              <div className="p-3 rounded-lg bg-slate-50 border border-slate-100">
+                <p className="text-xs text-slate-500 font-bold uppercase">Shift</p>
+                <p className="text-lg font-bold text-slate-800">{doctor.shift}</p>
+              </div>
             </div>
           </div>
         </div>
@@ -501,89 +499,89 @@ const DoctorProfilePage1 = () => {
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-          {/* Left Column: Personal & Contact */}
-          <div className="space-y-6">
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-              <SectionTitle title="Personal Details" icon={FaUserMd} />
-              <div className="space-y-1">
-                <ProfileField icon={FaEnvelope} label="Email Address" value={doctor.email} />
-                <ProfileField icon={FaPhone} label="Phone Number" value={doctor.phone} />
-                <ProfileField icon={FaBirthdayCake} label="Date of Birth" value={formatDate(doctor.dateOfBirth)} />
-                <ProfileField icon={FaVenusMars} label="Gender" value={doctor.gender} />
-                <div className="my-4 border-t border-slate-100"></div>
-                <ProfileField icon={FaMapMarkerAlt} label="Address" value={`${doctor.address}, ${doctor.city}`} />
-                <ProfileField icon={FaBuilding} label="State / Zip" value={`${doctor.state} - ${doctor.zipCode}`} />
+            {/* Left Column: Personal & Contact */}
+            <div className="space-y-6">
+              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                <SectionTitle title="Personal Details" icon={FaUserMd} />
+                <div className="space-y-1">
+                  <ProfileField icon={FaEnvelope} label="Email Address" value={doctor.email} />
+                  <ProfileField icon={FaPhone} label="Phone Number" value={doctor.phone} />
+                  <ProfileField icon={FaBirthdayCake} label="Date of Birth" value={formatDate(doctor.dateOfBirth)} />
+                  <ProfileField icon={FaVenusMars} label="Gender" value={doctor.gender} />
+                  <div className="my-4 border-t border-slate-100"></div>
+                  <ProfileField icon={FaMapMarkerAlt} label="Address" value={`${doctor.address}, ${doctor.city}`} />
+                  <ProfileField icon={FaBuilding} label="State / Zip" value={`${doctor.state} - ${doctor.zipCode}`} />
+                </div>
+              </div>
+
+              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 border-l-4 border-l-red-400">
+                <SectionTitle title="Emergency Contact" icon={FaPhone} />
+                <div className="space-y-1">
+                  <ProfileField icon={FaUserMd} label="Contact Name" value={doctor.emergencyContact} colorClass="text-red-400" />
+                  <ProfileField icon={FaPhone} label="Emergency Phone" value={doctor.emergencyPhone} colorClass="text-red-400" />
+                </div>
               </div>
             </div>
 
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 border-l-4 border-l-red-400">
-              <SectionTitle title="Emergency Contact" icon={FaPhone} />
-              <div className="space-y-1">
-                <ProfileField icon={FaUserMd} label="Contact Name" value={doctor.emergencyContact} colorClass="text-red-400" />
-                <ProfileField icon={FaPhone} label="Emergency Phone" value={doctor.emergencyPhone} colorClass="text-red-400" />
-              </div>
-            </div>
-          </div>
+            {/* Middle Column: Professional */}
+            <div className="lg:col-span-2 space-y-6">
+              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                <SectionTitle title="Professional Information" icon={FaBriefcase} />
 
-          {/* Middle Column: Professional */}
-          <div className="lg:col-span-2 space-y-6">
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-              <SectionTitle title="Professional Information" icon={FaBriefcase} />
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                   <h4 className="text-sm font-bold text-slate-800 mb-3 bg-slate-50 p-2 rounded">Qualifications</h4>
-                   <div className="space-y-1">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-800 mb-3 bg-slate-50 p-2 rounded">Qualifications</h4>
+                    <div className="space-y-1">
                       <ProfileField icon={FaGraduationCap} label="Education" value={doctor.education} colorClass="text-blue-500" />
                       <ProfileField icon={FaAward} label="Specialization" value={doctor.specialization} colorClass="text-blue-500" />
                       <ProfileField icon={FaIdCard} label="License Number" value={doctor.licenseNumber} colorClass="text-blue-500" />
-                   </div>
-                </div>
-                
-                <div>
-                   <h4 className="text-sm font-bold text-slate-800 mb-3 bg-slate-50 p-2 rounded">Employment</h4>
-                   <div className="space-y-1">
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-800 mb-3 bg-slate-50 p-2 rounded">Employment</h4>
+                    <div className="space-y-1">
                       <ProfileField icon={FaBuilding} label="Department" value={doctor.department?.name} colorClass="text-purple-500" />
                       <ProfileField icon={FaCalendarAlt} label="Start Date" value={formatDate(doctor.startDate)} colorClass="text-purple-500" />
                       {doctor.contractEndDate && (
                         <ProfileField icon={FaCalendarAlt} label="Contract Ends" value={formatDate(doctor.contractEndDate)} colorClass="text-purple-500" />
                       )}
-                   </div>
+                    </div>
+                  </div>
                 </div>
+
+                {doctor.notes && (
+                  <div className="mt-6 pt-6 border-t border-slate-100">
+                    <h4 className="text-sm font-bold text-slate-700 mb-2 flex items-center gap-2">
+                      <FaFileAlt className="text-slate-400" /> Additional Notes
+                    </h4>
+                    <p className="text-sm text-slate-600 bg-amber-50 p-4 rounded-lg border border-amber-100 leading-relaxed">
+                      {doctor.notes}
+                    </p>
+                  </div>
+                )}
               </div>
 
-              {doctor.notes && (
-                <div className="mt-6 pt-6 border-t border-slate-100">
-                  <h4 className="text-sm font-bold text-slate-700 mb-2 flex items-center gap-2">
-                    <FaFileAlt className="text-slate-400" /> Additional Notes
-                  </h4>
-                  <p className="text-sm text-slate-600 bg-amber-50 p-4 rounded-lg border border-amber-100 leading-relaxed">
-                    {doctor.notes}
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* Financial Info (Collapsible style visually) */}
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-              <SectionTitle title="Financial & Legal" icon={FaMoneyBillWave} />
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                 <div className="p-4 bg-slate-50 rounded-lg border border-slate-100">
+              {/* Financial Info (Collapsible style visually) */}
+              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                <SectionTitle title="Financial & Legal" icon={FaMoneyBillWave} />
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="p-4 bg-slate-50 rounded-lg border border-slate-100">
                     <p className="text-xs text-slate-500 font-bold uppercase mb-1">Pan Number</p>
                     <p className="font-mono font-medium text-slate-800">{doctor.panNumber || 'N/A'}</p>
-                 </div>
-                 <div className="p-4 bg-slate-50 rounded-lg border border-slate-100">
+                  </div>
+                  <div className="p-4 bg-slate-50 rounded-lg border border-slate-100">
                     <p className="text-xs text-slate-500 font-bold uppercase mb-1">Aadhar Number</p>
                     <p className="font-mono font-medium text-slate-800">{doctor.aadharNumber || 'N/A'}</p>
-                 </div>
-                 <div className="p-4 bg-emerald-50 rounded-lg border border-emerald-100">
+                  </div>
+                  <div className="p-4 bg-emerald-50 rounded-lg border border-emerald-100">
                     <p className="text-xs text-emerald-600 font-bold uppercase mb-1">Current Salary</p>
                     <p className="font-bold text-emerald-800 text-lg">₹ {doctor.amount?.toLocaleString()}</p>
                     <p className="text-xs text-emerald-600 mt-1">{doctor.paymentType}</p>
-                 </div>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
 
           </div>
         )}

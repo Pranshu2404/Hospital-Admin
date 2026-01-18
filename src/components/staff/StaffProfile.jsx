@@ -22,7 +22,7 @@ const StaffProfile = ({ selectedStaff, setCurrentPage }) => {
     }
 
     const staffId = localStorage.getItem('staffId');
-    if (!staffId) {
+    if (!staffId || staffId === 'null' || staffId === 'undefined') {
       setError('No staff selected or logged in.');
       return;
     }
