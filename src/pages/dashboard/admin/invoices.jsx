@@ -1,14 +1,26 @@
-// pages/dashboard/admin/expense.jsx
+import React, { useState } from 'react';
 import Layout from '../../../components/Layout';
-import ExpensePage from '../../../components/finance/ExpensePage';
+import InvoiceListPage from '../../../components/finance/InvoiceListPage';
+import InvoiceDetailsPage from '../../../components/finance/InvoiceDetailsPage';
 import { adminSidebar } from '../../../constants/sidebarItems/adminSidebar';
 
-const Expense = () => {
+const Invoice = () => {
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState(null);
+
   return (
     <Layout sidebarItems={adminSidebar}>
-      <ExpensePage />
+      {selectedInvoiceId ? (
+        <InvoiceDetailsPage
+          invoiceId={selectedInvoiceId}
+          onBack={() => setSelectedInvoiceId(null)}
+        />
+      ) : (
+        <InvoiceListPage
+          onViewDetails={(id) => setSelectedInvoiceId(id)}
+        />
+      )}
     </Layout>
   );
 };
 
-export default Expense;
+export default Invoice;
