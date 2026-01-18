@@ -329,7 +329,7 @@ const AddPatientIPDForm = () => {
 
 
   return (
-    <div className="p-6">
+    <div className="p-1">
       <div className="bg-white rounded-xl shadow-sm border border-gray-100">
         <div className="p-6 border-b border-gray-100">
           <h2 className="text-2xl font-bold text-gray-900">Add Patient</h2>
@@ -430,8 +430,8 @@ const AddPatientIPDForm = () => {
           <div className="mb-8">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Admission Information</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormInput label="Ward" value={formData.ward} onChange={(e) => handleInputChange('ward', e.target.value)} />
-              <FormInput label="Bed Number" value={formData.bed} onChange={(e) => handleInputChange('bed', e.target.value)} />
+              {/* <FormInput label="Ward" value={formData.ward} onChange={(e) => handleInputChange('ward', e.target.value)} />
+              <FormInput label="Bed Number" value={formData.bed} onChange={(e) => handleInputChange('bed', e.target.value)} /> */}
               <FormInput label="Admission Date" type="date" value={formData.admissionDate} onChange={(e) => handleInputChange('admissionDate', e.target.value)} required />
             </div>
           </div>

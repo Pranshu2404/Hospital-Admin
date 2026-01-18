@@ -52,6 +52,7 @@ const AppointmentListStaff = () => {
         const enriched = appointmentRes.data.map((appt) => ({
           ...appt,
           patientName: `${appt.patient_id?.first_name || ''} ${appt.patient_id?.last_name || ''}`.trim(),
+          patientImage: appt.patient_id?.patient_image || null,
           doctorName: `Dr. ${appt.doctor_id?.firstName || ''} ${appt.doctor_id?.lastName || ''}`.trim(),
           departmentName: appt.department_id?.name || 'N/A',
           date: new Date(appt.appointment_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
@@ -253,8 +254,12 @@ const AppointmentListStaff = () => {
                     <tr key={appointment._id} className="hover:bg-slate-50/80 transition-colors group">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
-                          <div className="h-10 w-10 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs border border-indigo-100 mr-3">
-                            {getInitials(appointment.patientName)}
+                          <div className="h-10 w-10 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs border border-indigo-100 mr-3 overflow-hidden">
+                            {appointment.patientImage ? (
+                              <img src={appointment.patientImage} alt={appointment.patientName} className="h-full w-full object-cover" />
+                            ) : (
+                              getInitials(appointment.patientName)
+                            )}
                           </div>
                           <div>
                             <div className="text-sm font-bold text-slate-800">{appointment.patientName}</div>
@@ -299,8 +304,8 @@ const AppointmentListStaff = () => {
                           <button
                             onClick={(e) => handleCompleteClick(appointment, e)}
                             className={`p-2 rounded-lg transition-colors ${appointment.status === 'Completed'
-                                ? 'text-green-600 bg-green-50 hover:bg-green-100'
-                                : 'text-slate-400 hover:text-green-600 hover:bg-green-50'
+                              ? 'text-green-600 bg-green-50 hover:bg-green-100'
+                              : 'text-slate-400 hover:text-green-600 hover:bg-green-50'
                               }`}
                             title={appointment.status === 'Completed' ? "View Completion Slip" : "Complete Appointment"}
                           >

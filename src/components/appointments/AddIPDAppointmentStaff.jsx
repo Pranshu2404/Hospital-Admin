@@ -6,6 +6,7 @@ import Layout from '../Layout';
 import { adminSidebar } from '@/constants/sidebarItems/adminSidebar';
 import AppointmentSlipModal from './AppointmentSlipModal';
 import QRCodeModal from './QRCodeModal';
+import { FaUser, FaCloudUploadAlt, FaTimes } from 'react-icons/fa';
 
 const appointmentTypeOptions = [
   { value: 'consultation', label: 'Consultation' },
@@ -97,7 +98,11 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
     address: '',
     city: '',
     state: '',
-    zipCode: ''
+    zipCode: '',
+    village: '',
+    district: '',
+    tehsil: '',
+    patient_image: ''
   });
 
   const hospitalId = localStorage.getItem('hospitalId');
@@ -127,6 +132,77 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
   const [paymentStatus, setPaymentStatus] = useState('pending');
   const [pollingIntervalId, setPollingIntervalId] = useState(null);
   const [showFields, setShowFields] = useState(false);
+
+  // New States for CSC API and Image Upload
+  const [states, setStates] = useState([]);
+  const [cities, setCities] = useState([]);
+  const [uploadingImage, setUploadingImage] = useState(false);
+
+  const config = {
+    headers: {
+      "X-CSCAPI-KEY": import.meta.env.VITE_CSC_API_KEY,
+    },
+  };
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file');
+      return;
+    }
+
+    setUploadingImage(true);
+    const formDataUpload = new FormData();
+    formDataUpload.append('image', file);
+
+    try {
+      const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/patients/upload`, formDataUpload, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      setFormData2(prev => ({ ...prev, patient_image: response.data.imageUrl }));
+    } catch (err) {
+      console.error('Error uploading image:', err);
+      alert('Failed to upload image. Please try again.');
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const removeImage = () => {
+    setFormData2(prev => ({ ...prev, patient_image: '' }));
+  };
+
+  // Fetch Cities when state changes
+  const fetchCities = async (stateIso) => {
+    try {
+      const response = await axios.get(
+        `${import.meta.env.VITE_BASE_URL}/countries/${import.meta.env.VITE_COUNTRY_CODE}/states/${stateIso}/cities`,
+        config
+      );
+      setCities(response.data);
+    } catch (error) {
+      console.error("Error fetching cities:", error);
+      setCities([]);
+    }
+  };
+
+  // Fetch States on component mount
+  useEffect(() => {
+    const fetchStates = async () => {
+      try {
+        const response = await axios.get(
+          `${import.meta.env.VITE_BASE_URL}/countries/${import.meta.env.VITE_COUNTRY_CODE}/states`,
+          config
+        );
+        setStates(response.data);
+      } catch (error) {
+        console.error("Error fetching states:", error);
+      }
+    };
+    fetchStates();
+  }, []);
 
   // Calculate charges whenever relevant form data changes
   useEffect(() => {
@@ -265,6 +341,11 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
 
   const handlePatientInputChange = (field, value) => {
     setFormData2(prev => ({ ...prev, [field]: value }));
+
+    if (field === 'state') {
+      fetchCities(value);
+      setFormData2(prev => ({ ...prev, city: '' })); // Reset city when state changes
+    }
   };
 
   useEffect(() => {
@@ -701,7 +782,11 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
           city: formData2.city,
           state: formData2.state,
           zipCode: formData2.zipCode,
-          patient_type: type // Use the appointment type (opd/ipd)
+          patient_type: type, // Use the appointment type (opd/ipd)
+          village: formData2.village,
+          district: formData2.district,
+          tehsil: formData2.tehsil,
+          patient_image: formData2.patient_image
         };
 
         patientRes = await axios.post(
@@ -902,6 +987,57 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
                 <div>
                   <div className='border-b border-gray-400 py-4'>
                     <h3 className="text-lg font-semibold text-gray-900 mb-4">Patient Information</h3>
+
+                    {/* Image Upload Section */}
+                    <div className="mb-6 flex justify-center">
+                      <div className="text-center">
+                        <div className="relative inline-block">
+                          <div className="w-32 h-32 rounded-full border-4 border-white shadow-lg overflow-hidden bg-slate-200 flex items-center justify-center">
+                            {formData2.patient_image ? (
+                              <img
+                                src={formData2.patient_image}
+                                alt="Patient"
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <FaUser className="text-4xl text-slate-400" />
+                            )}
+                            {uploadingImage && (
+                              <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                                <div className="animate-spin rounded-full h-8 w-8 border-2 border-white border-t-transparent"></div>
+                              </div>
+                            )}
+                          </div>
+
+                          {formData2.patient_image ? (
+                            <button
+                              type="button"
+                              onClick={removeImage}
+                              className="absolute bottom-0 right-0 bg-red-500 text-white p-2 rounded-full shadow-md hover:bg-red-600 transition-colors"
+                              title="Remove Photo"
+                            >
+                              <FaTimes size={12} />
+                            </button>
+                          ) : (
+                            <label
+                              className="absolute bottom-0 right-0 bg-teal-600 text-white p-2 rounded-full shadow-md hover:bg-teal-700 transition-colors cursor-pointer"
+                              title="Upload Photo"
+                            >
+                              <FaCloudUploadAlt size={14} />
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={handleImageUpload}
+                                className="hidden"
+                                disabled={uploadingImage}
+                              />
+                            </label>
+                          )}
+                        </div>
+                        <p className="text-xs text-slate-500 mt-2">Allowed: JPG, PNG</p>
+                      </div>
+                    </div>
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <FormSelect
                         label="Salutation"
@@ -972,15 +1108,33 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
                           placeholder="Enter full address"
                         />
                       </div>
-                      <FormInput
-                        label="City"
-                        value={formData2.city}
-                        onChange={(e) => handlePatientInputChange('city', e.target.value)}
-                      />
-                      <FormInput
+                      <FormSelect
                         label="State"
                         value={formData2.state}
                         onChange={(e) => handlePatientInputChange('state', e.target.value)}
+                        options={states.map(state => ({ value: state.iso2, label: state.name }))}
+                      />
+                      <FormSelect
+                        label="City"
+                        value={formData2.city}
+                        onChange={(e) => handlePatientInputChange('city', e.target.value)}
+                        options={cities.map(city => ({ value: city.name, label: city.name }))}
+                        disabled={!formData2.state}
+                      />
+                      <FormInput
+                        label="District"
+                        value={formData2.district}
+                        onChange={(e) => handlePatientInputChange('district', e.target.value)}
+                      />
+                      <FormInput
+                        label="Tehsil"
+                        value={formData2.tehsil}
+                        onChange={(e) => handlePatientInputChange('tehsil', e.target.value)}
+                      />
+                      <FormInput
+                        label="Village"
+                        value={formData2.village}
+                        onChange={(e) => handlePatientInputChange('village', e.target.value)}
                       />
                       <FormInput
                         label="ZIP Code"
