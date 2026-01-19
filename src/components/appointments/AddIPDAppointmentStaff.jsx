@@ -6,7 +6,7 @@ import Layout from '../Layout';
 import { adminSidebar } from '@/constants/sidebarItems/adminSidebar';
 import AppointmentSlipModal from './AppointmentSlipModal';
 import QRCodeModal from './QRCodeModal';
-import { FaUser, FaCloudUploadAlt, FaTimes } from 'react-icons/fa';
+import { FaUser, FaCloudUploadAlt, FaTimes, FaIdCard } from 'react-icons/fa';
 
 const appointmentTypeOptions = [
   { value: 'consultation', label: 'Consultation' },
@@ -102,7 +102,8 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
     village: '',
     district: '',
     tehsil: '',
-    patient_image: ''
+    patient_image: '',
+    aadhaarNumber: ''  // Added Aadhaar number field
   });
 
   const hospitalId = localStorage.getItem('hospitalId');
@@ -346,6 +347,22 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
       fetchCities(value);
       setFormData2(prev => ({ ...prev, city: '' })); // Reset city when state changes
     }
+  };
+
+  // Format Aadhaar number with spaces (XXXX XXXX XXXX)
+  const formatAadhaarNumber = (value) => {
+    // Remove all non-digits
+    const digits = value.replace(/\D/g, '');
+    
+    // Format as XXXX XXXX XXXX
+    if (digits.length <= 4) return digits;
+    if (digits.length <= 8) return `${digits.slice(0, 4)} ${digits.slice(4)}`;
+    return `${digits.slice(0, 4)} ${digits.slice(4, 8)} ${digits.slice(8, 12)}`;
+  };
+
+  const handleAadhaarChange = (value) => {
+    const formatted = formatAadhaarNumber(value);
+    setFormData2(prev => ({ ...prev, aadhaarNumber: formatted }));
   };
 
   useEffect(() => {
@@ -786,7 +803,8 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
           village: formData2.village,
           district: formData2.district,
           tehsil: formData2.tehsil,
-          patient_image: formData2.patient_image
+          patient_image: formData2.patient_image,
+          aadhaar_number: formData2.aadhaarNumber.replace(/\s/g, '') // Remove spaces before saving
         };
 
         patientRes = await axios.post(
@@ -916,7 +934,12 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
         address: '',
         city: '',
         state: '',
-        zipCode: ''
+        zipCode: '',
+        village: '',
+        district: '',
+        tehsil: '',
+        patient_image: '',
+        aadhaarNumber: ''
       });
 
       setChargesSummary([]);
@@ -972,7 +995,7 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
                   onChange={(e) => handleInputChange('patientId', e.target.value)}
                   options={(filteredPatients || []).map(p => ({
                     value: p._id,
-                    label: `${p.salutation || ''} ${p.first_name || ''} ${p.last_name || ''} - ${p.phone || ''} (${p.patientId || ''})`
+                    label: `${p.salutation || ''} ${p.first_name || ''} ${p.last_name || ''} - ${p.phone || ''} (${p.patientId || ''})${p.aadhaar_number ? ` - Aadhaar: ${p.aadhaar_number}` : ''}`
                   }))}
                   required
                 />
@@ -1092,6 +1115,27 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
                         onChange={(e) => handlePatientInputChange('bloodGroup', e.target.value)}
                         options={bloodGroupOptions}
                       />
+                      <div className="md:col-span-2">
+                        <div className="relative">
+                          <FormInput
+                            label="Aadhaar Number"
+                            type="text"
+                            value={formData2.aadhaarNumber}
+                            onChange={(e) => handleAadhaarChange(e.target.value)}
+                            maxLength="14" // 12 digits + 2 spaces
+                            placeholder="XXXX XXXX XXXX"
+                            icon={<FaIdCard className="text-gray-400" />}
+                          />
+                          {formData2.aadhaarNumber && (
+                            <div className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                              <span>Aadhaar: {formData2.aadhaarNumber}</span>
+                              {formData2.aadhaarNumber.replace(/\s/g, '').length !== 12 && (
+                                <span className="text-amber-600">(Must be 12 digits)</span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
 
                     {/* Address Information */}
@@ -1378,6 +1422,9 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
                   <div><span className="font-medium">Date:</span> {formatDateDisplay(formData.date)}</div>
                   <div><span className="font-medium">Time:</span> {formData.start_time || '—'} {displayEndTime && <span className="text-slate-500">to {displayEndTime}</span>}</div>
                   <div><span className="font-medium">Duration:</span> {formData.duration} mins</div>
+                  {formData2.aadhaarNumber && (
+                    <div><span className="font-medium">Aadhaar:</span> {formData2.aadhaarNumber}</div>
+                  )}
                   <div className="pt-2 border-t mt-2 flex justify-between items-center">
                     <div>
                       <div className="text-xs text-slate-500">Estimated Total</div>

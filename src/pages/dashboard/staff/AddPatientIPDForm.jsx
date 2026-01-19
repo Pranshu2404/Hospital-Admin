@@ -1,137 +1,12 @@
-// import { useState } from 'react';
-// import { FormInput, FormSelect, FormTextarea, Button } from '../../../components/common/FormElements';
-// import axios from 'axios';
-
-// const AddPatientIPDForm = () => {
-//   const [formData, setFormData] = useState({
-//     firstName: '',
-//     lastName: '',
-//     email: '',
-//     phone: '',
-//     dateOfBirth: '',
-//     gender: '',
-//     address: '',
-//     city: '',
-//     state: '',
-//     zipCode: '',
-//     ward: '',
-//     bed: '',
-//     admissionDate: ''
-//   });
-
-//   const handleInputChange = (field, value) => {
-//     setFormData(prev => ({
-//       ...prev,
-//       [field]: value
-//     }));
-//   };
-
-//   const handleSubmit = async (e) => {
-//     e.preventDefault();
-
-//     try {
-//       const payload = {
-//         first_name: formData.firstName,
-//         last_name: formData.lastName,
-//         email: formData.email,
-//         phone: formData.phone,
-//         gender: formData.gender,
-//         dob: formData.dateOfBirth,
-//         address: formData.address,
-//         city: formData.city,
-//         state: formData.state,
-//         zipCode: formData.zipCode,
-//         ward: formData.ward,
-//         bed: formData.bed,
-//         admission_date: formData.admissionDate,
-//         patient_type: 'OPD'
-//       };
-
-//       const response = await axios.post(
-//         `${import.meta.env.VITE_BACKEND_URL}/patients`,
-//         payload
-//       );
-
-//       console.log('✅ OPD Patient added:', response.data);
-//       alert('OPD Patient added successfully!');
-//     } catch (err) {
-//       console.error('❌ Error adding patient:', err.response?.data || err.message);
-//       alert(err.response?.data?.error || 'Failed to add patient.');
-//     }
-//   };
-
-//   const genderOptions = [
-//     { value: 'male', label: 'Male' },
-//     { value: 'female', label: 'Female' },
-//     { value: 'other', label: 'Other' }
-//   ];
-
-//   return (
-//     <div className="p-6">
-//       <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-//         <div className="p-6 border-b border-gray-100">
-//           <h2 className="text-2xl font-bold text-gray-900">Add IPD Patient</h2>
-//           <p className="text-gray-600 mt-1">Enter OPD patient details below</p>
-//         </div>
-
-//         <form onSubmit={handleSubmit} className="p-6 space-y-8">
-//           {/* Personal Information */}
-//           <div>
-//             <h3 className="text-lg font-semibold text-gray-900 mb-4">Personal Information</h3>
-//             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-//               <FormInput label="First Name" value={formData.firstName} onChange={(e) => handleInputChange('firstName', e.target.value)} required />
-//               <FormInput label="Last Name" value={formData.lastName} onChange={(e) => handleInputChange('lastName', e.target.value)} required />
-//               <FormInput label="Email" type="email" value={formData.email} onChange={(e) => handleInputChange('email', e.target.value)} required />
-//               <FormInput label="Phone" value={formData.phone} onChange={(e) => handleInputChange('phone', e.target.value)} required />
-//               <FormInput label="Date of Birth" type="date" value={formData.dateOfBirth} onChange={(e) => handleInputChange('dateOfBirth', e.target.value)} required />
-//               <FormSelect label="Gender" value={formData.gender} onChange={(e) => handleInputChange('gender', e.target.value)} options={genderOptions} required />
-//             </div>
-//           </div>
-
-//           {/* Address */}
-//           <div>
-//             <h3 className="text-lg font-semibold text-gray-900 mb-4">Address</h3>
-//             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-//               <FormTextarea label="Address" value={formData.address} onChange={(e) => handleInputChange('address', e.target.value)} rows={3} className="md:col-span-2" />
-//               <FormInput label="City" value={formData.city} onChange={(e) => handleInputChange('city', e.target.value)} />
-//               <FormInput label="State" value={formData.state} onChange={(e) => handleInputChange('state', e.target.value)} />
-//               <FormInput label="ZIP Code" value={formData.zipCode} onChange={(e) => handleInputChange('zipCode', e.target.value)} />
-//             </div>
-//           </div>
-
-//           {/* OPD Specific */}
-//           <div>
-//             <h3 className="text-lg font-semibold text-gray-900 mb-4">OPD Details</h3>
-//             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-//               <FormInput label="Ward" value={formData.ward} onChange={(e) => handleInputChange('ward', e.target.value)} required />
-//               <FormInput label="Bed" value={formData.bed} onChange={(e) => handleInputChange('bed', e.target.value)} required />
-//               <FormInput label="Admission Date" type="date" value={formData.admissionDate} onChange={(e) => handleInputChange('admissionDate', e.target.value)} required />
-//             </div>
-//           </div>
-
-//           <div className="flex justify-end space-x-4">
-//             <Button variant="secondary" type="button">Cancel</Button>
-//             <Button variant="primary" type="submit">Add Patient</Button>
-//           </div>
-//         </form>
-//       </div>
-//     </div>
-//   );
-// };
-
-// export default AddPatientIPDForm;
-
-
-
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FormInput, FormSelect, FormTextarea, Button } from '../../../components/common/FormElements';
 import axios from 'axios';
-import { FaUser, FaCloudUploadAlt, FaTimes } from 'react-icons/fa';
+import { FaUser, FaCloudUploadAlt, FaTimes, FaIdCard } from 'react-icons/fa';
 
 const AddPatientIPDForm = () => {
   const [formData, setFormData] = useState({
+    salutation: '',
     firstName: '',
     middleName: '',
     lastName: '',
@@ -156,6 +31,7 @@ const AddPatientIPDForm = () => {
     allergies: '',
     medications: '',
     bloodGroup: 'A+',
+    aadhaarNumber: '' // Added Aadhaar number field
   });
 
   const [states, setStates] = useState([]);
@@ -196,6 +72,22 @@ const AddPatientIPDForm = () => {
 
   const removeImage = () => {
     setFormData(prev => ({ ...prev, patient_image: '' }));
+  };
+
+  // Format Aadhaar number with spaces (XXXX XXXX XXXX)
+  const formatAadhaarNumber = (value) => {
+    // Remove all non-digits
+    const digits = value.replace(/\D/g, '');
+    
+    // Format as XXXX XXXX XXXX
+    if (digits.length <= 4) return digits;
+    if (digits.length <= 8) return `${digits.slice(0, 4)} ${digits.slice(4)}`;
+    return `${digits.slice(0, 4)} ${digits.slice(4, 8)} ${digits.slice(8, 12)}`;
+  };
+
+  const handleAadhaarChange = (value) => {
+    const formatted = formatAadhaarNumber(value);
+    setFormData(prev => ({ ...prev, aadhaarNumber: formatted }));
   };
 
   // Fetch States on component mount
@@ -259,6 +151,7 @@ const AddPatientIPDForm = () => {
     e.preventDefault();
     try {
       const payload = {
+        salutation: formData.salutation,
         first_name: formData.firstName,
         middle_name: formData.middleName,
         last_name: formData.lastName,
@@ -283,6 +176,7 @@ const AddPatientIPDForm = () => {
         allergies: formData.allergies,
         medications: formData.medications,
         blood_group: formData.bloodGroup,
+        aadhaar_number: formData.aadhaarNumber.replace(/\s/g, ''), // Remove spaces before saving
         patient_type: "ipd"
       };
 
@@ -299,6 +193,18 @@ const AddPatientIPDForm = () => {
       alert(err.response?.data?.error || 'Failed to add patient.');
     }
   };
+
+  const salutationOptions = [
+    { value: '', label: 'Select Salutation' },
+    { value: 'Mr.', label: 'Mr.' },
+    { value: 'Mrs.', label: 'Mrs.' },
+    { value: 'Ms.', label: 'Ms.' },
+    { value: 'Miss', label: 'Miss' },
+    { value: 'Dr.', label: 'Dr.' },
+    { value: 'Prof.', label: 'Prof.' },
+    { value: 'Baby', label: 'Baby' },
+    { value: 'Master', label: 'Master' }
+  ];
 
   const genderOptions = [
     { value: 'male', label: 'Male' },
@@ -326,7 +232,6 @@ const AddPatientIPDForm = () => {
     value: city.name,
     label: city.name
   }));
-
 
   return (
     <div className="p-1">
@@ -392,13 +297,81 @@ const AddPatientIPDForm = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <FormInput label="First Name" value={formData.firstName} onChange={(e) => handleInputChange('firstName', e.target.value)} required />
-              <FormInput label="Middle Name" value={formData.middleName} onChange={(e) => handleInputChange('middleName', e.target.value)} />
-              <FormInput label="Last Name" value={formData.lastName} onChange={(e) => handleInputChange('lastName', e.target.value)} required />
-              <FormInput label="Email" type="email" value={formData.email} onChange={(e) => handleInputChange('email', e.target.value)} />
-              <FormInput label="Phone Number" type="tel" value={formData.phone} onChange={(e) => handleInputChange('phone', e.target.value)} required />
-              <FormInput label="Date of Birth" type="date" value={formData.dateOfBirth} onChange={(e) => handleInputChange('dateOfBirth', e.target.value)} required />
-              <FormSelect label="Gender" value={formData.gender} onChange={(e) => handleInputChange('gender', e.target.value)} options={genderOptions} required/>
+              <FormSelect
+                label="Salutation"
+                value={formData.salutation}
+                onChange={(e) => handleInputChange('salutation', e.target.value)}
+                options={salutationOptions}
+              />
+              <FormInput 
+                label="First Name" 
+                value={formData.firstName} 
+                onChange={(e) => handleInputChange('firstName', e.target.value)} 
+                required 
+              />
+              <FormInput 
+                label="Middle Name" 
+                value={formData.middleName} 
+                onChange={(e) => handleInputChange('middleName', e.target.value)} 
+              />
+              <FormInput 
+                label="Last Name" 
+                value={formData.lastName} 
+                onChange={(e) => handleInputChange('lastName', e.target.value)} 
+                required 
+              />
+              <FormInput 
+                label="Email" 
+                type="email" 
+                value={formData.email} 
+                onChange={(e) => handleInputChange('email', e.target.value)} 
+              />
+              <FormInput 
+                label="Phone Number" 
+                type="tel" 
+                value={formData.phone} 
+                onChange={(e) => handleInputChange('phone', e.target.value.replace(/\D/g, '').slice(0, 10))} 
+                required 
+                maxLength={10}
+                inputMode="numeric"
+                pattern="^[6-9]\d{9}$"
+                title="10 digit Indian mobile number starting with 6-9"
+              />
+              <FormInput 
+                label="Date of Birth" 
+                type="date" 
+                value={formData.dateOfBirth} 
+                onChange={(e) => handleInputChange('dateOfBirth', e.target.value)} 
+                required 
+              />
+              <FormSelect 
+                label="Gender" 
+                value={formData.gender} 
+                onChange={(e) => handleInputChange('gender', e.target.value)} 
+                options={genderOptions} 
+                required
+              />
+              <div className="md:col-span-2">
+                <div className="relative">
+                  <FormInput
+                    label="Aadhaar Number"
+                    type="text"
+                    value={formData.aadhaarNumber}
+                    onChange={(e) => handleAadhaarChange(e.target.value)}
+                    maxLength="14" // 12 digits + 2 spaces
+                    placeholder="XXXX XXXX XXXX"
+                    icon={<FaIdCard className="text-gray-400" />}
+                  />
+                  {formData.aadhaarNumber && (
+                    <div className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                      <span>Aadhaar: {formData.aadhaarNumber}</span>
+                      {formData.aadhaarNumber.replace(/\s/g, '').length !== 12 && (
+                        <span className="text-amber-600">(Must be 12 digits)</span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
 
@@ -406,14 +379,46 @@ const AddPatientIPDForm = () => {
           <div className="mb-8">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Address Information</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormTextarea label="Address" value={formData.address} onChange={(e) => handleInputChange('address', e.target.value)} rows={3} className="md:col-span-2" />
-              {/* Modified City and State inputs to Select */}
-              <FormSelect label="State" value={formData.state} onChange={(e) => handleInputChange('state', e.target.value)} options={stateOptions} />
-              <FormSelect label="City" value={formData.city} onChange={(e) => handleInputChange('city', e.target.value)} options={cityOptions} disabled={!formData.state} />
-              <FormInput label="District" value={formData.district} onChange={(e) => handleInputChange('district', e.target.value)} />
-              <FormInput label="Tehsil" value={formData.tehsil} onChange={(e) => handleInputChange('tehsil', e.target.value)} />
-              <FormInput label="Village" value={formData.village} onChange={(e) => handleInputChange('village', e.target.value)} />
-              <FormInput label="ZIP Code" value={formData.zipCode} onChange={(e) => handleInputChange('zipCode', e.target.value)} />
+              <FormTextarea 
+                label="Address" 
+                value={formData.address} 
+                onChange={(e) => handleInputChange('address', e.target.value)} 
+                rows={3} 
+                className="md:col-span-2" 
+              />
+              <FormSelect 
+                label="State" 
+                value={formData.state} 
+                onChange={(e) => handleInputChange('state', e.target.value)} 
+                options={stateOptions} 
+              />
+              <FormSelect 
+                label="City" 
+                value={formData.city} 
+                onChange={(e) => handleInputChange('city', e.target.value)} 
+                options={cityOptions} 
+                disabled={!formData.state} 
+              />
+              <FormInput 
+                label="District" 
+                value={formData.district} 
+                onChange={(e) => handleInputChange('district', e.target.value)} 
+              />
+              <FormInput 
+                label="Tehsil" 
+                value={formData.tehsil} 
+                onChange={(e) => handleInputChange('tehsil', e.target.value)} 
+              />
+              <FormInput 
+                label="Village" 
+                value={formData.village} 
+                onChange={(e) => handleInputChange('village', e.target.value)} 
+              />
+              <FormInput 
+                label="ZIP Code" 
+                value={formData.zipCode} 
+                onChange={(e) => handleInputChange('zipCode', e.target.value)} 
+              />
             </div>
           </div>
 
@@ -421,8 +426,18 @@ const AddPatientIPDForm = () => {
           <div className="mb-8">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Emergency Contact</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormInput label="Contact Name" value={formData.emergencyContact} onChange={(e) => handleInputChange('emergencyContact', e.target.value)} />
-              <FormInput label="Contact Phone" type="tel" value={formData.emergencyPhone} onChange={(e) => handleInputChange('emergencyPhone', e.target.value)} />
+              <FormInput 
+                label="Contact Name" 
+                value={formData.emergencyContact} 
+                onChange={(e) => handleInputChange('emergencyContact', e.target.value)} 
+              />
+              <FormInput 
+                label="Contact Phone" 
+                type="tel" 
+                value={formData.emergencyPhone} 
+                onChange={(e) => handleInputChange('emergencyPhone', e.target.value.replace(/\D/g, '').slice(0, 10))} 
+                maxLength={10}
+              />
             </div>
           </div>
 
@@ -430,9 +445,13 @@ const AddPatientIPDForm = () => {
           <div className="mb-8">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Admission Information</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* <FormInput label="Ward" value={formData.ward} onChange={(e) => handleInputChange('ward', e.target.value)} />
-              <FormInput label="Bed Number" value={formData.bed} onChange={(e) => handleInputChange('bed', e.target.value)} /> */}
-              <FormInput label="Admission Date" type="date" value={formData.admissionDate} onChange={(e) => handleInputChange('admissionDate', e.target.value)} required />
+              <FormInput 
+                label="Admission Date" 
+                type="date" 
+                value={formData.admissionDate} 
+                onChange={(e) => handleInputChange('admissionDate', e.target.value)} 
+                required 
+              />
             </div>
           </div>
 
@@ -440,16 +459,39 @@ const AddPatientIPDForm = () => {
           <div className="mb-8">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Medical Information</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormInput label="Medical History" value={formData.medicalHistory} onChange={(e) => handleInputChange('medicalHistory', e.target.value)} />
-              <FormInput label="Allergies" value={formData.allergies} onChange={(e) => handleInputChange('allergies', e.target.value)} />
-              <FormInput label="Medications" value={formData.medications} onChange={(e) => handleInputChange('medications', e.target.value)} />
-              <FormSelect label="Blood Group" value={formData.bloodGroup} onChange={(e) => handleInputChange('bloodGroup', e.target.value)} options={bloodGroupOptions} />
+              <FormInput 
+                label="Medical History" 
+                value={formData.medicalHistory} 
+                onChange={(e) => handleInputChange('medicalHistory', e.target.value)} 
+              />
+              <FormInput 
+                label="Allergies" 
+                value={formData.allergies} 
+                onChange={(e) => handleInputChange('allergies', e.target.value)} 
+              />
+              <FormInput 
+                label="Medications" 
+                value={formData.medications} 
+                onChange={(e) => handleInputChange('medications', e.target.value)} 
+              />
+              <FormSelect 
+                label="Blood Group" 
+                value={formData.bloodGroup} 
+                onChange={(e) => handleInputChange('bloodGroup', e.target.value)} 
+                options={bloodGroupOptions} 
+              />
             </div>
           </div>
 
           {/* Submit Buttons */}
           <div className="flex justify-end space-x-4">
-            <Button variant="secondary" type="button">Cancel</Button>
+            <Button 
+              variant="secondary" 
+              type="button"
+              onClick={() => navigate('/dashboard/staff/patient-list')}
+            >
+              Cancel
+            </Button>
             <Button variant="primary" type="submit">Add Patient</Button>
           </div>
         </form>
@@ -459,4 +501,3 @@ const AddPatientIPDForm = () => {
 };
 
 export default AddPatientIPDForm;
-
