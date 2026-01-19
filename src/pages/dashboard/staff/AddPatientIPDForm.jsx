@@ -325,6 +325,7 @@ const AddPatientIPDForm = () => {
                 type="email" 
                 value={formData.email} 
                 onChange={(e) => handleInputChange('email', e.target.value)} 
+                required
               />
               <FormInput 
                 label="Phone Number" 
