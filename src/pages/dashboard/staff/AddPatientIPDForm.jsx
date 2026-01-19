@@ -14,7 +14,7 @@ const AddPatientIPDForm = () => {
     email: '',
     phone: '',
     dateOfBirth: '',
-    gender: 'male',
+    gender: '',
     address: '',
     city: '',
     state: '',
@@ -30,7 +30,7 @@ const AddPatientIPDForm = () => {
     medicalHistory: '',
     allergies: '',
     medications: '',
-    bloodGroup: 'A+',
+    bloodGroup: '',
     aadhaarNumber: '' // Added Aadhaar number field
   });
 
