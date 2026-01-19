@@ -6,6 +6,7 @@ import Layout from '../Layout';
 import { adminSidebar } from '@/constants/sidebarItems/adminSidebar';
 import AppointmentSlipModal from './AppointmentSlipModal';
 import QRCodeModal from './QRCodeModal';
+import PaymentPendingModal from './PaymentPendingModal'; // New component
 import { FaUser, FaCloudUploadAlt, FaTimes, FaIdCard } from 'react-icons/fa';
 
 const appointmentTypeOptions = [
@@ -133,6 +134,10 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
   const [paymentStatus, setPaymentStatus] = useState('pending');
   const [pollingIntervalId, setPollingIntervalId] = useState(null);
   const [showFields, setShowFields] = useState(false);
+
+  // NEW STATES FOR PAYMENT PENDING MODAL
+  const [showPaymentPendingModal, setShowPaymentPendingModal] = useState(false);
+  const [pendingPaymentData, setPendingPaymentData] = useState(null);
 
   // New States for CSC API and Image Upload
   const [states, setStates] = useState([]);
@@ -766,8 +771,220 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
     return dob.toISOString().split('T')[0];
   };
 
+  // MODIFIED: Function to handle payment pending scenario
+  const handlePaymentPending = () => {
+    // Store all necessary data for the pending appointment
+    setPendingPaymentData({
+      formData: { ...formData },
+      formData2: { ...formData2 },
+      showFields,
+      totalAmount,
+      chargesSummary,
+      doctorDetails,
+      filteredPatients,
+      status: 'Pending',
+      paymentMethod: formData.paymentMethod
+    });
+    
+    // Show the payment pending reminder modal
+    setShowPaymentPendingModal(true);
+  };
+
+  // MODIFIED: Function to proceed with pending payment
+  const proceedWithPendingPayment = async () => {
+    setShowPaymentPendingModal(false);
+    setIsLoading(true);
+    
+    try {
+      // Use the stored data to create the appointment
+      const { formData: storedFormData, formData2: storedFormData2, showFields: storedShowFields } = pendingPaymentData;
+      
+      let patientId;
+      let patientRes;
+
+      // Create new patient if showFields was true
+      if (storedShowFields) {
+        const patientPayload = {
+          salutation: storedFormData2.salutation,
+          first_name: storedFormData2.firstName,
+          last_name: storedFormData2.lastName,
+          email: storedFormData2.email,
+          phone: storedFormData2.phone,
+          gender: storedFormData2.gender,
+          dob: calculateDOBFromAge(storedFormData2.age),
+          blood_group: storedFormData2.bloodGroup,
+          address: storedFormData2.address,
+          city: storedFormData2.city,
+          state: storedFormData2.state,
+          zipCode: storedFormData2.zipCode,
+          patient_type: type, // Use the appointment type (opd/ipd)
+          village: storedFormData2.village,
+          district: storedFormData2.district,
+          tehsil: storedFormData2.tehsil,
+          patient_image: storedFormData2.patient_image,
+          aadhaar_number: storedFormData2.aadhaarNumber?.replace(/\s/g, '') // Remove spaces before saving
+        };
+
+        patientRes = await axios.post(
+          `${import.meta.env.VITE_BACKEND_URL}/patients`,
+          patientPayload
+        );
+        console.log(patientRes);
+        patientId = patientRes.data._id;
+      }
+
+      // Check time slot availability for time-based appointments
+      if (storedFormData.type === 'time-based') {
+        const proposedEnd = calculateEndTime(storedFormData.start_time, storedFormData.duration);
+        const isAvailable = checkTimeSlotAvailability(storedFormData.start_time, proposedEnd);
+
+        if (!isAvailable) {
+          alert('The selected time slot is not available. Please choose another time.');
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      // Prepare appointment data
+      const appointmentData = {
+        patient_id: storedShowFields ? patientId : storedFormData.patientId,
+        doctor_id: fixedDoctorId || storedFormData.doctorId,
+        hospital_id: hospitalId,
+        department_id: storedFormData.department,
+        appointment_date: storedFormData.date,
+        duration: parseInt(storedFormData.duration),
+        type: storedFormData.type,
+        appointment_type: storedFormData.appointment_type,
+        priority: storedFormData.priority,
+        notes: storedFormData.notes,
+        status: 'Scheduled',
+        room_id: type === 'ipd' ? storedFormData.roomId : null
+      };
+
+      // Add time-specific data if time-based appointment
+      if (storedFormData.type === 'time-based') {
+        appointmentData.start_time = `${storedFormData.date}T${storedFormData.start_time}:00`;
+        appointmentData.end_time = `${storedFormData.date}T${calculateEndTime(storedFormData.start_time, storedFormData.duration)}:00`;
+      } else {
+        // For number-based, calculate serial number
+        const lastSerial = existingPatients.length > 0
+          ? Math.max(...existingPatients.map(p => p.serialNumber))
+          : 0;
+        appointmentData.serialNumber = lastSerial + 1;
+      }
+
+      // Create Appointment
+      const appointmentRes = await axios.post(
+        `${import.meta.env.VITE_BACKEND_URL}/appointments`,
+        appointmentData
+      );
+
+      const appointmentId = appointmentRes.data._id;
+
+      // ✅ Create billing with charges summary
+      await axios.post(`${import.meta.env.VITE_BACKEND_URL}/billing`, {
+        patient_id: storedShowFields ? patientId : storedFormData.patientId,
+        appointment_id: appointmentId,
+        total_amount: pendingPaymentData.totalAmount,
+        payment_method: pendingPaymentData.paymentMethod,
+        status: 'Pending', // Status is Pending
+        items: pendingPaymentData.chargesSummary,
+        transaction_id: null, // No transaction ID for pending payments
+      });
+
+      alert('Appointment scheduled with pending payment!');
+
+      const appointmentDetails = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/appointments/${appointmentId}`);
+      console.log("Appointment Details for Slip:", appointmentDetails.data);
+      const appt = appointmentDetails.data;
+
+      // Get patient name from appropriate source
+      let patientName;
+      if (storedShowFields) {
+        patientName = `${storedFormData2.firstName} ${storedFormData2.lastName}`.trim();
+      } else {
+        patientName = `${appt.patient_id?.first_name || ''} ${appt.patient_id?.last_name || ''}`.trim();
+      }
+
+      const enriched = {
+        ...appt,
+        patientName: patientName,
+        patientSalutation: storedShowFields ? storedFormData2.salutation : appt.patient_id?.salutation || '',
+        doctorName: `Dr. ${appt.doctor_id?.firstName || ''} ${appt.doctor_id?.lastName || ''}`.trim(),
+        departmentName: appt.department_id?.name || 'N/A',
+        date: new Date(appt.appointment_date).toLocaleDateString(),
+        time: appt.time_slot?.split(' - ')[0] || 'N/A',
+        patientId: storedShowFields ? patientRes?.data?.patientId : appt.patient_id?.patientId,
+        paymentStatus: 'Pending' // Add payment status
+      };
+      setSubmitDetails(enriched);
+
+      if (onSuccess) {
+        onSuccess(enriched);
+      } else {
+        setSlipModal(true);
+      }
+      onClose(); // Close the form if embedded
+
+      // Reset form data
+      setFormData({
+        patientId: '',
+        doctorId: '',
+        department: '',
+        date: getLocalDateString(),
+        start_time: '',
+        duration: '30',
+        type: 'time-based',
+        appointment_type: 'consultation',
+        priority: 'Normal',
+        notes: '',
+        roomId: '',
+        paymentMethod: 'Cash'
+      });
+
+      setFormData2({
+        salutation: '',
+        firstName: '',
+        lastName: '',
+        email: '',
+        phone: '',
+        gender: 'male',
+        bloodGroup: 'A+',
+        age: '',
+        address: '',
+        city: '',
+        state: '',
+        zipCode: '',
+        village: '',
+        district: '',
+        tehsil: '',
+        patient_image: '',
+        aadhaarNumber: ''
+      });
+
+      setChargesSummary([]);
+      setTotalAmount(0);
+      setShowFields(false);
+      setPendingPaymentData(null); // Clear pending data
+    } catch (err) {
+      console.error('Error scheduling appointment with pending payment:', err);
+      alert(err.response?.data?.error || 'Failed to schedule appointment.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // MODIFIED: Updated handleSubmit function
   const handleSubmit = async (e, paymentInfo = null) => {
     if (e) e.preventDefault(); // Prevent default form submission if triggered by button
+    
+    // Check if status is Pending
+    if (status === 'Pending') {
+      // Instead of blocking, show the payment pending reminder modal
+      handlePaymentPending();
+      return;
+    }
+
     setIsLoading(true);
     let patientId;
     let patientRes;
@@ -775,13 +992,6 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
     // If payment was made via QR, use the details passed from the polling logic
     const finalPaymentMethod = paymentInfo ? paymentInfo.method : formData.paymentMethod;
     const finalBillStatus = paymentInfo ? 'Paid' : status;
-
-    // Check if bill status is Pending and block execution
-    if (finalBillStatus === 'Pending') {
-      alert("Payment not processed! Please collect cash or payment to proceed.");
-      setIsLoading(false);
-      return;
-    }
 
     try {
       // Create new patient if showFields is true
@@ -867,7 +1077,7 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
         patient_id: showFields ? patientId : formData.patientId,
         appointment_id: appointmentId,
         total_amount: totalAmount,
-        payment_method: formData.paymentMethod,
+        payment_method: finalPaymentMethod,
         status: finalBillStatus,
         items: chargesSummary,
         transaction_id: paymentInfo ? paymentInfo.transactionId : null, // Store transaction ID
@@ -895,7 +1105,8 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
         departmentName: appt.department_id?.name || 'N/A',
         date: new Date(appt.appointment_date).toLocaleDateString(),
         time: appt.time_slot?.split(' - ')[0] || 'N/A',
-        patientId: showFields ? patientRes?.data?.patientId : appt.patient_id?.patientId
+        patientId: showFields ? patientRes?.data?.patientId : appt.patient_id?.patientId,
+        paymentStatus: finalBillStatus // Add payment status
       };
       setSubmitDetails(enriched);
 
@@ -1581,6 +1792,29 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
           qrImageUrl={qrData.imageUrl}
           amount={totalAmount}
           paymentStatus={paymentStatus}
+        />
+      )}
+
+      {/* NEW: Payment Pending Reminder Modal */}
+      {showPaymentPendingModal && (
+        <PaymentPendingModal
+          isOpen={showPaymentPendingModal}
+          onClose={() => setShowPaymentPendingModal(false)}
+          onProceed={proceedWithPendingPayment}
+          amount={totalAmount}
+          patientName={
+            showFields
+              ? `${formData2.salutation ? formData2.salutation + ' ' : ''}${formData2.firstName} ${formData2.lastName}`.trim()
+              : (filteredPatients.find(p => p._id === formData.patientId)
+                ? `${filteredPatients.find(p => p._id === formData.patientId).salutation || ''} ${filteredPatients.find(p => p._id === formData.patientId).first_name} ${filteredPatients.find(p => p._id === formData.patientId).last_name}`.trim()
+                : 'Unknown Patient'
+              )
+          }
+          appointmentDetails={{
+            date: formatDateDisplay(formData.date),
+            time: formData.start_time,
+            doctor: doctorDetails ? `Dr. ${doctorDetails.firstName} ${doctorDetails.lastName}` : 'Unknown Doctor'
+          }}
         />
       )}
 
