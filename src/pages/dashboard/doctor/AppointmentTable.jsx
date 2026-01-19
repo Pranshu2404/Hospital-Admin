@@ -5,12 +5,13 @@ import {
   FaClock,
   FaUser,
   FaSearch,
-  FaFilter,
   FaChevronLeft,
   FaChevronRight,
   FaPlay,
   FaEye,
-  FaCalendarAlt
+  FaCalendarAlt,
+  FaHeartbeat,
+  FaExclamationTriangle
 } from 'react-icons/fa';
 
 const DoctorAppointments = () => {
@@ -24,6 +25,7 @@ const DoctorAppointments = () => {
     const stored = localStorage.getItem('vitalsEnabled');
     return stored === null ? true : stored === 'true';
   });
+  const [showWithoutVitals, setShowWithoutVitals] = useState(false);
   const navigate = useNavigate();
   const doctorId = localStorage.getItem("doctorId");
 
@@ -49,7 +51,7 @@ const DoctorAppointments = () => {
 
   const fetchAppointments = async () => {
     try {
-      // Use the generic endpoint to ensure we get full details including vitals
+      // Use the generic endpoint to ensure we get full details
       const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/appointments`);
       const allAppointments = response.data.appointments || response.data || [];
 
@@ -59,6 +61,9 @@ const DoctorAppointments = () => {
         return dId === doctorId;
       });
 
+      // Sort appointments by date (most recent first)
+      myAppointments.sort((a, b) => new Date(b.appointment_date) - new Date(a.appointment_date));
+
       setAppointments(myAppointments);
       setLoading(false);
     } catch (err) {
@@ -67,6 +72,39 @@ const DoctorAppointments = () => {
     }
   };
 
+  // Helper function to check if appointment has vitals
+  const hasVitals = (appointment) => {
+    // Check if appointment has vitals data (populated from backend)
+    if (appointment.vitals) {
+      // Check if vitals object has any data
+      const vitalFields = ['bp', 'weight', 'pulse', 'spo2', 'temperature', 
+                          'respiratory_rate', 'random_blood_sugar', 'height'];
+      
+      return vitalFields.some(field => {
+        const value = appointment.vitals[field];
+        return value !== undefined && value !== null && value !== '' && value.trim() !== '';
+      });
+    }
+    
+    // Check if appointment has a separate vitals_id field (if populated)
+    if (appointment.vitals_id) {
+      // If vitals_id exists and has any field with data
+      const vitalFields = ['bp', 'weight', 'pulse', 'spo2', 'temperature', 
+                          'respiratory_rate', 'random_blood_sugar', 'height'];
+      
+      return vitalFields.some(field => {
+        const value = appointment.vitals_id?.[field];
+        return value !== undefined && value !== null && value !== '' && value.trim() !== '';
+      });
+    }
+    
+    return false;
+  };
+
+  // Calculate statistics
+  const appointmentsWithVitals = appointments.filter(appt => hasVitals(appt)).length;
+  const appointmentsWithoutVitals = appointments.length - appointmentsWithVitals;
+
   const filteredAppointments = appointments.filter(appt => {
     const matchesSearch = `${appt.patient_id?.first_name || ''} ${appt.patient_id?.last_name || ''}`
       .toLowerCase()
@@ -74,13 +112,20 @@ const DoctorAppointments = () => {
 
     const matchesStatus = filterStatus === 'all' || appt.status === filterStatus;
 
-    // If vitals functionality is enabled, only show appointments where vitals have been recorded
-    // If disabled, show all matching appointments regardless of vitals
-    const hasVitals = appt.vitals &&
-      (appt.vitals.bp || appt.vitals.weight || appt.vitals.pulse ||
-        appt.vitals.response || Object.keys(appt.vitals).length > 0);
-
-    const meetsVitalsRequirement = !vitalsEnabled || hasVitals;
+    // Vitals filtering logic
+    const appointmentHasVitals = hasVitals(appt);
+    
+    let meetsVitalsRequirement;
+    if (!vitalsEnabled) {
+      // If vitals are disabled, show all
+      meetsVitalsRequirement = true;
+    } else if (showWithoutVitals) {
+      // If showing without vitals is enabled, show all
+      meetsVitalsRequirement = true;
+    } else {
+      // Otherwise, only show appointments with vitals
+      meetsVitalsRequirement = appointmentHasVitals;
+    }
 
     return matchesSearch && matchesStatus && meetsVitalsRequirement;
   });
@@ -99,6 +144,13 @@ const DoctorAppointments = () => {
   };
 
   const handleStartAppointment = async (appointment) => {
+    // Check if vitals are required and not recorded
+    const appointmentHasVitals = hasVitals(appointment);
+    if (vitalsEnabled && !appointmentHasVitals) {
+      alert('Please record vitals before starting the appointment.');
+      return;
+    }
+
     const appointmentId = appointment._id || appointment;
     try {
       await axios.put(`${import.meta.env.VITE_BACKEND_URL}/appointments/${appointmentId}`, {
@@ -128,6 +180,30 @@ const DoctorAppointments = () => {
       <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${styles[status] || 'bg-gray-50 text-gray-700 border-gray-200'}`}>
         {status}
       </span>
+    );
+  };
+
+  const VitalsIndicator = ({ appointment }) => {
+    const hasVitalsData = hasVitals(appointment);
+    
+    if (!vitalsEnabled) {
+      return null;
+    }
+
+    return (
+      <div className="flex items-center mt-1">
+        {hasVitalsData ? (
+          <span className="text-xs text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full flex items-center">
+            <FaHeartbeat className="mr-1 h-2 w-2" />
+            Vitals Recorded
+          </span>
+        ) : (
+          <span className="text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full flex items-center">
+            <FaExclamationTriangle className="mr-1 h-2 w-2" />
+            Needs Vitals
+          </span>
+        )}
+      </div>
     );
   };
 
@@ -164,12 +240,40 @@ const DoctorAppointments = () => {
           <div>
             <h1 className="text-2xl font-bold text-gray-800">My Appointments</h1>
             <p className="text-gray-500 mt-1 text-sm">Manage your patient schedule and consultations</p>
+            {vitalsEnabled && (
+              <div className="flex items-center space-x-4 mt-2 text-sm">
+                <span className="text-gray-600">
+                  Total: <span className="font-semibold">{appointments.length}</span> appointments
+                </span>
+                <span className="text-emerald-600">
+                  With vitals: <span className="font-semibold">{appointmentsWithVitals}</span>
+                </span>
+                <span className="text-amber-600">
+                  Without vitals: <span className="font-semibold">{appointmentsWithoutVitals}</span>
+                </span>
+              </div>
+            )}
           </div>
-          <div className="mt-4 md:mt-0 flex items-center bg-white px-4 py-2 rounded-lg shadow-sm border border-gray-100">
-            <FaClock className="text-teal-500 mr-2" />
-            <span className="text-sm font-medium text-gray-700">
-              {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-            </span>
+          <div className="mt-4 md:mt-0 flex items-center space-x-4">
+            {vitalsEnabled && (
+              <div className="flex items-center bg-white px-4 py-2 rounded-lg shadow-sm border border-gray-100">
+                <label className="flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={showWithoutVitals}
+                    onChange={(e) => setShowWithoutVitals(e.target.checked)}
+                    className="mr-2 h-4 w-4 text-teal-600 rounded focus:ring-teal-500"
+                  />
+                  <span className="text-sm text-gray-700">Show without vitals</span>
+                </label>
+              </div>
+            )}
+            <div className="flex items-center bg-white px-4 py-2 rounded-lg shadow-sm border border-gray-100">
+              <FaClock className="text-teal-500 mr-2" />
+              <span className="text-sm font-medium text-gray-700">
+                {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+              </span>
+            </div>
           </div>
         </div>
 
@@ -225,7 +329,7 @@ const DoctorAppointments = () => {
               <thead className="bg-gray-50/50">
                 <tr>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Patient Info</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Date</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Date & Time</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Type</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
                   <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
@@ -236,9 +340,16 @@ const DoctorAppointments = () => {
                   paginatedAppointments.map((appt) => {
                     const patientName = `${appt.patient_id?.first_name || 'Unknown'} ${appt.patient_id?.last_name || ''}`;
                     const apptDate = new Date(appt.appointment_date);
+                    const hasVitalsData = hasVitals(appt);
+                    const isScheduled = appt.status === 'Scheduled';
 
                     return (
-                      <tr key={appt._id} className="hover:bg-gray-50/80 transition-colors group">
+                      <tr 
+                        key={appt._id} 
+                        className={`hover:bg-gray-50/80 transition-colors group ${
+                          vitalsEnabled && !hasVitalsData ? 'bg-amber-50/30' : ''
+                        }`}
+                      >
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
                             {appt.patient_id?.patient_image ? (
@@ -258,6 +369,7 @@ const DoctorAppointments = () => {
                                 {appt.patient_id?.gender || 'N/A'}, {appt.patient_id?.dob ?
                                   `${new Date().getFullYear() - new Date(appt.patient_id.dob).getFullYear()} yrs` : 'Age N/A'}
                               </div>
+                              <VitalsIndicator appointment={appt} />
                             </div>
                           </div>
                         </td>
@@ -267,30 +379,41 @@ const DoctorAppointments = () => {
                             {apptDate.toLocaleDateString()}
                           </div>
                           <div className="text-xs text-gray-500 mt-1 ml-5">
-                            {appt.time_slot}
+                            {appt.start_time ? new Date(appt.start_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'Time not set'}
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="text-sm text-gray-700 capitalize bg-gray-100 px-2 py-1 rounded">
-                            {appt.type}
-                          </span>
+                          <div className="flex flex-col gap-1">
+                            <span className="text-sm text-gray-700 capitalize bg-gray-100 px-2 py-1 rounded">
+                              {appt.appointment_type || appt.type}
+                            </span>
+                            <span className="text-xs text-gray-500">
+                              {appt.priority || 'Normal'}
+                            </span>
+                          </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <StatusBadge status={appt.status} />
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                           <div className="flex items-center justify-end space-x-3 opacity-80 group-hover:opacity-100 transition-opacity">
-                            {appt.status === 'Scheduled' && (
+                            {isScheduled && (
                               <button
                                 onClick={() => handleStartAppointment(appt)}
-                                className="flex items-center px-3 py-1.5 bg-teal-600 text-white rounded-md hover:bg-teal-700 transition-colors shadow-sm text-xs font-semibold tracking-wide"
+                                className={`flex items-center px-3 py-1.5 rounded-md transition-colors shadow-sm text-xs font-semibold tracking-wide ${
+                                  vitalsEnabled && !hasVitalsData
+                                    ? 'bg-amber-100 text-amber-700 hover:bg-amber-200 cursor-not-allowed'
+                                    : 'bg-teal-600 text-white hover:bg-teal-700'
+                                }`}
+                                title={vitalsEnabled && !hasVitalsData ? "Vitals required before starting" : "Start appointment"}
                               >
-                                <FaPlay className="mr-1.5 h-2.5 w-2.5" /> START
+                                <FaPlay className="mr-1.5 h-2.5 w-2.5" /> 
+                                {vitalsEnabled && !hasVitalsData ? 'NEEDS VITALS' : 'START'}
                               </button>
                             )}
                             <button
                               onClick={() => handleViewDetails(appt)}
-                              className="p-2 text-gray-400 hover:text-teal-600 hover:bg-teal-50 rounded-full transition-all tooltip"
+                              className="p-2 text-gray-400 hover:text-teal-600 hover:bg-teal-50 rounded-full transition-all"
                               title="View Details"
                             >
                               <FaEye />
@@ -306,7 +429,11 @@ const DoctorAppointments = () => {
                       <div className="flex flex-col items-center justify-center text-gray-400">
                         <FaUser className="h-12 w-12 mb-3 opacity-20" />
                         <p className="text-lg font-medium text-gray-500">No appointments found</p>
-                        <p className="text-sm">Try adjusting your search or filters</p>
+                        <p className="text-sm">
+                          {vitalsEnabled && !showWithoutVitals 
+                            ? "Try enabling 'Show without vitals' or adjust your search"
+                            : "Try adjusting your search or filters"}
+                        </p>
                       </div>
                     </td>
                   </tr>
@@ -319,6 +446,11 @@ const DoctorAppointments = () => {
           <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between bg-gray-50/30">
             <div className="text-sm text-gray-500">
               Showing <span className="font-medium">{(currentPage - 1) * itemsPerPage + 1}</span> to <span className="font-medium">{Math.min(currentPage * itemsPerPage, filteredAppointments.length)}</span> of <span className="font-medium">{filteredAppointments.length}</span> results
+              {vitalsEnabled && (
+                <span className="ml-2">
+                  • <span className="text-emerald-600">{appointmentsWithVitals} with vitals</span>
+                </span>
+              )}
             </div>
             <div className="flex items-center space-x-2">
               <button

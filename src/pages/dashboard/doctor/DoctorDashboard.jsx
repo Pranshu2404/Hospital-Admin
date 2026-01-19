@@ -19,7 +19,9 @@ import {
   FaCheck,
   FaTimes,
   FaEllipsisH,
-  FaChevronRight
+  FaChevronRight,
+  FaHeartbeat,
+  FaExclamationTriangle
 } from 'react-icons/fa';
 
 // --- Custom Styles for Calendar Override ---
@@ -54,6 +56,10 @@ const DoctorDashboard = () => {
   const [currentView, setCurrentView] = useState("month");
   const [hospital, setHospital] = useState(null);
   const [name, setName] = useState("");
+  const [vitalsEnabled, setVitalsEnabled] = useState(() => {
+    const stored = localStorage.getItem('vitalsEnabled');
+    return stored === null ? true : stored === 'true';
+  });
 
   const doctorId = localStorage.getItem("doctorId");
   const navigate = useNavigate();
@@ -64,6 +70,9 @@ const DoctorDashboard = () => {
         const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/hospitals`);
         if (res.data && res.data.length > 0) {
           setHospital(res.data[0]);
+          const v = res.data[0].vitalsEnabled !== undefined ? res.data[0].vitalsEnabled : true;
+          setVitalsEnabled(v);
+          localStorage.setItem('vitalsEnabled', v);
         }
       } catch (err) {
         console.error('Failed to fetch hospital data:', err);
@@ -71,6 +80,37 @@ const DoctorDashboard = () => {
     };
     fetchHospitalData();
   }, []);
+
+  // Helper function to check if appointment has vitals
+  const hasVitals = (appointment) => {
+    if (!vitalsEnabled) return true; // If vitals not required, return true
+    
+    // Check if appointment has vitals data (populated from backend)
+    if (appointment.vitals) {
+      // Check if vitals object has any data
+      const vitalFields = ['bp', 'weight', 'pulse', 'spo2', 'temperature', 
+                          'respiratory_rate', 'random_blood_sugar', 'height'];
+      
+      return vitalFields.some(field => {
+        const value = appointment.vitals[field];
+        return value !== undefined && value !== null && value !== '' && value.trim() !== '';
+      });
+    }
+    
+    // Check if appointment has a separate vitals_id field (if populated)
+    if (appointment.vitals_id) {
+      // If vitals_id exists and has any field with data
+      const vitalFields = ['bp', 'weight', 'pulse', 'spo2', 'temperature', 
+                          'respiratory_rate', 'random_blood_sugar', 'height'];
+      
+      return vitalFields.some(field => {
+        const value = appointment.vitals_id?.[field];
+        return value !== undefined && value !== null && value !== '' && value.trim() !== '';
+      });
+    }
+    
+    return false;
+  };
 
   useEffect(() => {
     const calculateAge = (dob) => {
@@ -109,7 +149,6 @@ const DoctorDashboard = () => {
         const patientsData = patientsRes.data.patients || [];
         const apptsData = appointmentsRes.data || [];
 
-
         const uniquePatientsMap = new Map();
         apptsData.forEach(appt => {
           if (appt.patient_id && appt.patient_id._id) {
@@ -133,36 +172,60 @@ const DoctorDashboard = () => {
           todayAppointments: todayAppointments.length,
         });
 
+        // --- UPDATED NEXT PATIENT LOGIC WITH VITALS CHECK ---
         if (todayAppointments.length > 0) {
           // Filter for Next Patient Display: Only show 'Scheduled' appointments
-          // This avoids showing Completed or Cancelled ones as "Next"
           const scheduledForToday = todayAppointments.filter(a => a.status === 'Scheduled');
 
-          // Find the next scheduled appointment (closest to now, or just the first remaining one)
-          // Since todayAppointments is already sorted by time, scheduledForToday is also sorted.
-          // We ideally want the first one that hasn't passed, or if all passed (but still scheduled/late), the first one.
+          if (scheduledForToday.length > 0) {
+            let nextAppointment = null;
+            
+            // Strategy: Find the first appointment with vitals recorded (if vitals are enabled)
+            if (vitalsEnabled) {
+              // First, try to find appointments that have vitals recorded
+              const appointmentsWithVitals = scheduledForToday.filter(appt => hasVitals(appt));
+              
+              if (appointmentsWithVitals.length > 0) {
+                // Find the next future appointment with vitals, or the first one if all are past
+                nextAppointment = appointmentsWithVitals.find(a => 
+                  dayjs(a.start_time || a.appointment_date).isAfter(dayjs())
+                ) || appointmentsWithVitals[0];
+              } else {
+                // No appointments with vitals yet
+                // We'll show the first appointment without vitals as "next", but with a warning
+                nextAppointment = scheduledForToday.find(a => 
+                  dayjs(a.start_time || a.appointment_date).isAfter(dayjs())
+                ) || scheduledForToday[0];
+              }
+            } else {
+              // Vitals not enabled, just find the next appointment
+              nextAppointment = scheduledForToday.find(a => 
+                dayjs(a.start_time || a.appointment_date).isAfter(dayjs())
+              ) || scheduledForToday[0];
+            }
 
-          let appt = scheduledForToday.find(a => dayjs(a.start_time || a.appointment_date).isAfter(dayjs()));
-
-          // If no future scheduled appts, but there are still scheduled ones (e.g. late), pick the first one.
-          if (!appt && scheduledForToday.length > 0) {
-            appt = scheduledForToday[0];
-          }
-
-          if (appt) {
-            const patient = appt.patient_id || {};
-            setNextPatient({
-              first_name: patient.first_name || patient.firstName || '',
-              last_name: patient.last_name || patient.lastName || '',
-              phone: patient.phone || '',
-              gender: patient.gender || '',
-              age: calculateAge(patient.dob),
-              patient_image: patient.patient_image || patient.patientImage || null,
-              treatment: appt.type,
-              date: appt.appointment_date,
-              time: formatApptTime(appt),
-              status: appt.status
-            });
+            if (nextAppointment) {
+              const patient = nextAppointment.patient_id || {};
+              const hasVitalsRecorded = hasVitals(nextAppointment);
+              
+              setNextPatient({
+                first_name: patient.first_name || patient.firstName || '',
+                last_name: patient.last_name || patient.lastName || '',
+                phone: patient.phone || '',
+                gender: patient.gender || '',
+                age: calculateAge(patient.dob),
+                patient_image: patient.patient_image || patient.patientImage || null,
+                treatment: nextAppointment.type,
+                date: nextAppointment.appointment_date,
+                time: formatApptTime(nextAppointment),
+                status: nextAppointment.status,
+                hasVitals: hasVitalsRecorded,
+                appointmentId: nextAppointment._id,
+                appointmentData: nextAppointment
+              });
+            } else {
+              setNextPatient(null);
+            }
           } else {
             setNextPatient(null);
           }
@@ -194,7 +257,8 @@ const DoctorDashboard = () => {
           name: `${a.patient_id?.first_name || ''} ${a.patient_id?.last_name || ''}`.trim(),
           treatment: a.type,
           time: formatApptTime(a),
-          patient_image: a.patient_id?.patient_image || a.patient_id?.patientImage || null
+          patient_image: a.patient_id?.patient_image || a.patient_id?.patientImage || null,
+          hasVitals: hasVitals(a)
         })));
 
       } catch (error) {
@@ -203,7 +267,26 @@ const DoctorDashboard = () => {
     };
 
     if (doctorId) fetchDashboardStats();
-  }, [doctorId]);
+  }, [doctorId, vitalsEnabled]);
+
+  const handleStartAppointment = (appointment) => {
+    if (vitalsEnabled && nextPatient && !nextPatient.hasVitals) {
+      alert('Vitals need to be recorded before starting this appointment. Please ensure vitals are taken first.');
+      return;
+    }
+    
+    if (nextPatient && nextPatient.appointmentId) {
+      navigate(`/dashboard/doctor/appointments/${nextPatient.appointmentId}`, {
+        state: { appointment: nextPatient.appointmentData }
+      });
+    } else {
+      navigate('/dashboard/doctor/appointments');
+    }
+  };
+
+  const handleViewAppointments = () => {
+    navigate('/dashboard/doctor/appointments');
+  };
 
   // --- UI Components ---
 
@@ -226,6 +309,26 @@ const DoctorDashboard = () => {
             <Icon size={22} />
           </div>
         </div>
+      </div>
+    );
+  };
+
+  const VitalsIndicator = ({ hasVitals }) => {
+    if (!vitalsEnabled) return null;
+    
+    return (
+      <div className="flex items-center gap-1 mt-1">
+        {hasVitals ? (
+          <span className="text-xs text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full flex items-center">
+            <FaHeartbeat className="mr-1 h-2 w-2" />
+            Vitals Ready
+          </span>
+        ) : (
+          <span className="text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full flex items-center">
+            <FaExclamationTriangle className="mr-1 h-2 w-2" />
+            Needs Vitals
+          </span>
+        )}
       </div>
     );
   };
@@ -264,6 +367,12 @@ const DoctorDashboard = () => {
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Welcome Back, Dr. {name}</h1>
           <p className="text-slate-500 text-sm mt-1">Here is your daily activity digest.</p>
+          {vitalsEnabled && (
+            <div className="flex items-center gap-2 mt-2 text-xs text-slate-600 bg-white/50 px-3 py-1 rounded-full w-fit">
+              <FaHeartbeat className="text-teal-500" />
+              <span>Vitals checking is <span className="font-semibold text-teal-600">ENABLED</span></span>
+            </div>
+          )}
         </div>
         <div className="mt-4 md:mt-0 bg-white px-4 py-2 rounded-lg shadow-sm border border-slate-200 flex items-center gap-2 text-slate-600">
           <FaCalendarCheck className="text-teal-500" />
@@ -316,13 +425,24 @@ const DoctorDashboard = () => {
         <div className="space-y-8">
 
           {/* Next Patient Card */}
-          <div className="bg-gradient-to-br from-teal-600 to-teal-800 rounded-2xl shadow-lg p-6 text-white relative overflow-hidden">
+          <div className={`rounded-2xl shadow-lg p-6 text-white relative overflow-hidden ${
+            nextPatient && vitalsEnabled && !nextPatient.hasVitals 
+              ? 'bg-gradient-to-br from-amber-500 to-amber-700' 
+              : 'bg-gradient-to-br from-teal-600 to-teal-800'
+          }`}>
             <div className="absolute top-0 right-0 p-3 opacity-10">
               <FaUserInjured size={120} />
             </div>
 
-            <h2 className="text-teal-100 font-semibold text-sm uppercase tracking-wider mb-1">Next Upcoming Appointment</h2>
-            <p className="text-teal-100 mb-4 text-xs">Please wait for vitals to start.</p>
+            <h2 className="text-white/90 font-semibold text-sm uppercase tracking-wider mb-1">Next Upcoming Appointment</h2>
+            <p className="text-white/80 mb-4 text-xs">
+              {vitalsEnabled 
+                ? nextPatient && !nextPatient.hasVitals 
+                  ? "Vitals required before consultation"
+                  : "Ready for consultation"
+                : "Please wait for vitals to start."
+              }
+            </p>
 
             {nextPatient ? (
               <>
@@ -338,44 +458,75 @@ const DoctorDashboard = () => {
                       {nextPatient.first_name.charAt(0)}
                     </div>
                   )}
-                  <div>
+                  <div className="flex-1">
                     <h3 className="text-2xl font-bold leading-tight">
                       {nextPatient.first_name} {nextPatient.last_name}
                     </h3>
-                    <p className="text-teal-100 text-sm mt-1">{nextPatient.treatment}</p>
+                    <p className="text-white/80 text-sm mt-1">{nextPatient.treatment}</p>
+                    <VitalsIndicator hasVitals={nextPatient.hasVitals} />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4 text-sm relative z-10 mb-6">
                   <div className="bg-white/10 p-2 rounded-lg backdrop-blur-sm">
-                    <p className="text-teal-200 text-xs">Time</p>
+                    <p className="text-white/80 text-xs">Time</p>
                     <p className="font-semibold">{nextPatient.time}</p>
                   </div>
                   <div className="bg-white/10 p-2 rounded-lg backdrop-blur-sm">
-                    <p className="text-teal-200 text-xs">Age / Gender</p>
+                    <p className="text-white/80 text-xs">Age / Gender</p>
                     <p className="font-semibold">{nextPatient.age || '--'} / {nextPatient.gender || '--'}</p>
                   </div>
                 </div>
 
-                <button
-                  className="w-full py-3 bg-white text-teal-700 font-bold rounded-xl shadow-md hover:bg-teal-50 transition-colors flex items-center justify-center gap-2"
-                  onClick={() => navigate('/dashboard/doctor/appointments')}
-                >
-                  View Details <FaChevronRight size={12} />
-                </button>
+                <div className="flex flex-col gap-3">
+                  <button
+                    className={`w-full py-3 font-bold rounded-xl shadow-md transition-colors flex items-center justify-center gap-2 ${
+                      vitalsEnabled && !nextPatient.hasVitals
+                        ? 'bg-amber-100 text-amber-700 hover:bg-amber-200'
+                        : 'bg-white text-teal-700 hover:bg-teal-50'
+                    }`}
+                    onClick={handleStartAppointment}
+                    title={vitalsEnabled && !nextPatient.hasVitals ? "Vitals required before starting appointment" : "Start appointment"}
+                  >
+                    {vitalsEnabled && !nextPatient.hasVitals ? (
+                      <>
+                        <FaExclamationTriangle className="mr-1" />
+                        NEEDS VITALS
+                      </>
+                    ) : (
+                      <>
+                        Start Consultation
+                        <FaChevronRight size={12} />
+                      </>
+                    )}
+                  </button>
+                  
+                  <button
+                    className="w-full py-2 bg-white/20 text-white font-medium rounded-xl hover:bg-white/30 transition-colors text-sm"
+                    onClick={handleViewAppointments}
+                  >
+                    View All Appointments
+                  </button>
+                </div>
               </>
             ) : (
               <div className="text-center py-8">
-                <p className="text-teal-100">No upcoming appointments scheduled for today.</p>
+                <p className="text-white/80">No upcoming appointments scheduled for today.</p>
+                <button
+                  className="mt-4 py-2 px-4 bg-white/20 text-white rounded-lg hover:bg-white/30 transition-colors text-sm"
+                  onClick={handleViewAppointments}
+                >
+                  View Appointments
+                </button>
               </div>
             )}
           </div>
 
-          {/* Pending Requests List */}
+          {/* Recent Appointments List */}
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-bold text-slate-800">Recent Appointments</h2>
-              <span className="bg-amber-100 text-amber-700 text-xs px-2 py-1 rounded-full font-bold">{approvalRequests.length}</span>
+              <h2 className="text-lg font-bold text-slate-800">Today's Appointments</h2>
+              <span className="bg-teal-100 text-teal-700 text-xs px-2 py-1 rounded-full font-bold">{approvalRequests.length}</span>
             </div>
 
             <div className="space-y-4">
@@ -390,13 +541,32 @@ const DoctorDashboard = () => {
                     <div>
                       <p className="font-bold text-slate-700 text-sm">{req.name}</p>
                       <p className="text-xs text-slate-500">{req.treatment} • {req.time}</p>
+                      {vitalsEnabled && (
+                        <div className="flex items-center gap-1 mt-1">
+                          {req.hasVitals ? (
+                            <span className="text-[10px] text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full">
+                              Vitals ✓
+                            </span>
+                          ) : (
+                            <span className="text-[10px] text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full">
+                              Needs Vitals
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div className="flex gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
+                    <button
+                      className="text-xs text-teal-600 hover:text-teal-800 font-medium"
+                      onClick={() => navigate(`/dashboard/doctor/appointments`)}
+                    >
+                      View
+                    </button>
                   </div>
                 </div>
               )) : (
-                <p className="text-slate-400 text-center text-sm py-4">All caught up!</p>
+                <p className="text-slate-400 text-center text-sm py-4">No appointments for today</p>
               )}
             </div>
           </div>
