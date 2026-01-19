@@ -1051,6 +1051,7 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
                         label="Last Name"
                         value={formData2.lastName}
                         onChange={(e) => handlePatientInputChange('lastName', e.target.value)}
+                        required
                       />
                       <FormInput
                         label="Email"
@@ -1083,6 +1084,7 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
                         value={formData2.gender}
                         onChange={(e) => handlePatientInputChange('gender', e.target.value)}
                         options={genderOptions}
+                        required
                       />
                       <FormSelect
                         label="Blood Group"
