@@ -157,6 +157,7 @@ const DoctorDashboard = () => {
               phone: patient.phone || '',
               gender: patient.gender || '',
               age: calculateAge(patient.dob),
+              patient_image: patient.patient_image || patient.patientImage || null,
               treatment: appt.type,
               date: appt.appointment_date,
               time: formatApptTime(appt),
@@ -190,9 +191,10 @@ const DoctorDashboard = () => {
         // Mock Approval Requests (using upcoming appointments for demo)
         setApprovalRequests(todayAppointments.slice(0, 4).map(a => ({
           id: a._id,
-          name: `${a.patient_id?.first_name} ${a.patient_id?.last_name}`,
+          name: `${a.patient_id?.first_name || ''} ${a.patient_id?.last_name || ''}`.trim(),
           treatment: a.type,
-          time: formatApptTime(a)
+          time: formatApptTime(a),
+          patient_image: a.patient_id?.patient_image || a.patient_id?.patientImage || null
         })));
 
       } catch (error) {
@@ -325,9 +327,17 @@ const DoctorDashboard = () => {
             {nextPatient ? (
               <>
                 <div className="flex items-start gap-4 mb-6 relative z-10">
-                  <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center text-2xl font-bold backdrop-blur-sm border border-white/30">
-                    {nextPatient.first_name.charAt(0)}
-                  </div>
+                  {nextPatient.patient_image ? (
+                    <img
+                      src={nextPatient.patient_image}
+                      alt={`${nextPatient.first_name} ${nextPatient.last_name}`}
+                      className="w-16 h-16 rounded-full object-cover backdrop-blur-sm border border-white/30"
+                    />
+                  ) : (
+                    <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center text-2xl font-bold backdrop-blur-sm border border-white/30">
+                      {nextPatient.first_name.charAt(0)}
+                    </div>
+                  )}
                   <div>
                     <h3 className="text-2xl font-bold leading-tight">
                       {nextPatient.first_name} {nextPatient.last_name}
@@ -371,17 +381,18 @@ const DoctorDashboard = () => {
             <div className="space-y-4">
               {approvalRequests.length > 0 ? approvalRequests.map((req, i) => (
                 <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-100 hover:border-teal-200 transition-colors group">
-                  <div>
-                    <p className="font-bold text-slate-700 text-sm">{req.name}</p>
-                    <p className="text-xs text-slate-500">{req.treatment} • {req.time}</p>
+                  <div className="flex items-center">
+                    {req.patient_image ? (
+                      <img src={req.patient_image} alt={req.name} className="h-10 w-10 rounded-full object-cover mr-3" />
+                    ) : (
+                      <div className="h-10 w-10 rounded-full bg-slate-200 flex items-center justify-center text-slate-600 font-semibold mr-3">{req.name ? req.name.charAt(0) : '?'}</div>
+                    )}
+                    <div>
+                      <p className="font-bold text-slate-700 text-sm">{req.name}</p>
+                      <p className="text-xs text-slate-500">{req.treatment} • {req.time}</p>
+                    </div>
                   </div>
                   <div className="flex gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
-                    {/* <button className="p-2 bg-white text-green-600 rounded-lg shadow-sm border border-slate-100 hover:bg-green-50" title="Approve">
-                      <FaCheck size={12} />
-                    </button>
-                    <button className="p-2 bg-white text-red-500 rounded-lg shadow-sm border border-slate-100 hover:bg-red-50" title="Reject">
-                      <FaTimes size={12} />
-                    </button> */}
                   </div>
                 </div>
               )) : (

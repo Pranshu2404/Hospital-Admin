@@ -1097,9 +1097,17 @@ const AppointmentDetails = () => {
               {/* Patient Card */}
               <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                 <div className="bg-slate-50 px-4 py-3 border-b border-slate-100 flex items-center">
-                  <div className="h-8 w-8 rounded-full bg-teal-100 flex items-center justify-center text-teal-600 mr-2 text-sm">
-                    <FaUser />
-                  </div>
+                  {appointment.patient_id?.patient_image ? (
+                    <img
+                      src={appointment.patient_id.patient_image}
+                      alt={appointment.patient_id?.first_name || 'Patient'}
+                      className="h-8 w-8 rounded-full object-cover mr-2"
+                    />
+                  ) : (
+                    <div className="h-8 w-8 rounded-full bg-teal-100 flex items-center justify-center text-teal-600 mr-2 text-sm">
+                      <FaUser />
+                    </div>
+                  )}
                   <h3 className="font-semibold text-slate-800 text-md">Patient</h3>
                 </div>
                 <div className="p-4 space-y-3">
