@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 
-export const FormInput = ({ label, type = "text", value, onChange, placeholder, required = false, className = "", maxLength, inputMode, pattern, title }) => (
+export const FormInput = ({ label, type = "text", value, onChange, placeholder, required = false, className = "", maxLength, inputMode, pattern, title, min, max, step, onBlur, icon, disabled }) => (
   <div className={`mb-4 ${className}`}>
     <label className="block text-sm font-medium text-gray-700 mb-2">
       {label}
@@ -16,6 +16,11 @@ export const FormInput = ({ label, type = "text", value, onChange, placeholder, 
       inputMode={inputMode}
       pattern={pattern}
       title={title}
+      onBlur={onBlur}
+      min={min}
+      max={max}
+      step={step}
+      disabled={disabled}
       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
     />
   </div>
@@ -241,3 +246,4 @@ export const SearchInput = ({ value, onChange, placeholder = "Search...", classN
     </svg>
   </div>
 );
+

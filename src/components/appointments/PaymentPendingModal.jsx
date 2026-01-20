@@ -65,7 +65,7 @@ const PaymentPendingModal = ({
           </div>
           
           {/* Warning Message */}
-          <div className="bg-yellow-50 border-l-4 border-yellow-500 p-4 mb-6">
+          {/* <div className="bg-yellow-50 border-l-4 border-yellow-500 p-4 mb-6">
             <div className="flex">
               <div className="flex-shrink-0">
                 <FaExclamationTriangle className="h-5 w-5 text-yellow-500" />
@@ -76,7 +76,7 @@ const PaymentPendingModal = ({
                 </p>
               </div>
             </div>
-          </div>
+          </div> */}
           
           {/* Buttons */}
           <div className="flex space-x-3">
