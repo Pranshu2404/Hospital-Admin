@@ -108,11 +108,8 @@ const ProgressBar = ({ currentStep, totalSteps }) => {
 // --- Preview Component ---
 const PreviewDetails = ({ form, isdCode, stateName, cityName, pincode }) => {
   return (
-    <div className="space-y-6 animate-fade-in-right">
-      <div className="bg-green-50 p-6 rounded-2xl border border-green-100 mb-6">
-        <h3 className="text-lg font-bold text-green-800 mb-4">Review Your Details</h3>
-        <p className="text-sm text-green-600 mb-2">Please review all information before submitting.</p>
-      </div>
+    <div className="space-y-2 animate-fade-in-right">
+        <h3 className="text-lg font-bold text-center text-green-800">Review Your Details</h3>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Hospital Details */}
@@ -167,7 +164,7 @@ const PreviewDetails = ({ form, isdCode, stateName, cityName, pincode }) => {
           <div className="space-y-2 text-sm">
             <div className="flex">
               <span className="font-medium text-gray-600 w-24">Address:</span>
-              <span className="text-gray-900 flex-1">{form.address || 'Not provided'}</span>
+              <span className="text-gray-900 flex-1 h-20 overflow-y-auto">{form.address || 'Not provided'}</span>
             </div>
             <div className="flex">
               <span className="font-medium text-gray-600 w-24">City:</span>
@@ -498,7 +495,7 @@ export default function Register() {
   };
 
   return (
-    <div className="flex min-h-screen w-full font-sans bg-white overflow-hidden">
+    <div className="flex min-h-screen w-full relative font-sans bg-white overflow-hidden">
       {/* --- LEFT SIDE (Sticky Panel) --- */}
       <div className="hidden lg:flex w-[45%] bg-gradient-to-br from-emerald-50 to-teal-100 sticky top-0 h-screen flex-col items-center justify-center p-12 text-center border-r border-emerald-100/50">
         <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-emerald-200/30 rounded-full blur-[100px] pointer-events-none"></div>
@@ -797,12 +794,6 @@ export default function Register() {
                   </div>
                 </div>
                 
-                <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 text-sm text-blue-700">
-                  <p className="font-medium mb-1">Note:</p>
-                  <p>This account will have Super Admin privileges to manage doctors, staff, and hospital settings.</p>
-                  <p className="mt-2">Contact number accepts both landline (6-8 digits with area code) and mobile (10 digits).</p>
-                </div>
-                
                 {/* Additional Details */}
                 <div className="space-y-4 mt-6">
                   <FormInput 
@@ -821,7 +812,7 @@ export default function Register() {
                       placeholder="Any other relevant details regarding policies, insurance, or special requirements..."
                       value={form.additionalInfo}
                       onChange={handleChange}
-                      rows={3}
+                      rows={2}
                       className="block w-full px-4 py-3 bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all resize-none"
                     />
                   </div>
