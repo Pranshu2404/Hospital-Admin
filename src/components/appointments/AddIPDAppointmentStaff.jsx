@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { FormInput, FormSelect, FormTextarea, Button } from '../common/FormElements';
 import { useNavigate } from 'react-router-dom';
@@ -144,6 +144,7 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
   const [states, setStates] = useState([]);
   const [cities, setCities] = useState([]);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const fileInputRef = useRef(null);
 
   const config = {
     headers: {
@@ -1398,24 +1399,26 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
                                     Remove Photo
                                   </Button>
                                 ) : (
-                                  <label className="cursor-pointer">
+                                  <div className="inline-flex">
+                                    <input
+                                      ref={fileInputRef}
+                                      type="file"
+                                      accept="image/*"
+                                      onChange={handleImageUpload}
+                                      className="hidden"
+                                      disabled={uploadingImage}
+                                    />
                                     <Button
                                       variant="outline"
                                       size="sm"
                                       className="flex items-center"
                                       disabled={uploadingImage}
+                                      onClick={() => fileInputRef.current && fileInputRef.current.click()}
                                     >
                                       <FaCloudUploadAlt className="mr-2" />
                                       Upload Photo
-                                      <input
-                                        type="file"
-                                        accept="image/*"
-                                        onChange={handleImageUpload}
-                                        className="hidden"
-                                        disabled={uploadingImage}
-                                      />
                                     </Button>
-                                  </label>
+                                  </div>
                                 )}
                               </div>
                             </div>
