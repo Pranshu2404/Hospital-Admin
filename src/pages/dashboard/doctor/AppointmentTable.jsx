@@ -72,11 +72,10 @@ const DoctorAppointments = () => {
     }
   };
 
-  // Helper function to check if appointment has vitals
-  const hasVitals = (appointment) => {
-    // Check if appointment has vitals data (populated from backend)
+   const hasVitals = (appointment) => {
+    if (!vitalsEnabled) return true; 
     if (appointment.vitals) {
-      // Check if vitals object has any data
+      console.log("Checking vitals in appointment.vitals:", appointment.vitals);
       const vitalFields = ['bp', 'weight', 'pulse', 'spo2', 'temperature', 
                           'respiratory_rate', 'random_blood_sugar', 'height'];
       
@@ -86,9 +85,7 @@ const DoctorAppointments = () => {
       });
     }
     
-    // Check if appointment has a separate vitals_id field (if populated)
     if (appointment.vitals_id) {
-      // If vitals_id exists and has any field with data
       const vitalFields = ['bp', 'weight', 'pulse', 'spo2', 'temperature', 
                           'respiratory_rate', 'random_blood_sugar', 'height'];
       

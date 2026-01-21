@@ -83,11 +83,8 @@ const DoctorDashboard = () => {
 
   // Helper function to check if appointment has vitals
   const hasVitals = (appointment) => {
-    if (!vitalsEnabled) return true; // If vitals not required, return true
-    
-    // Check if appointment has vitals data (populated from backend)
+    if (!vitalsEnabled) return true;
     if (appointment.vitals) {
-      // Check if vitals object has any data
       const vitalFields = ['bp', 'weight', 'pulse', 'spo2', 'temperature', 
                           'respiratory_rate', 'random_blood_sugar', 'height'];
       
@@ -97,9 +94,7 @@ const DoctorDashboard = () => {
       });
     }
     
-    // Check if appointment has a separate vitals_id field (if populated)
     if (appointment.vitals_id) {
-      // If vitals_id exists and has any field with data
       const vitalFields = ['bp', 'weight', 'pulse', 'spo2', 'temperature', 
                           'respiratory_rate', 'random_blood_sugar', 'height'];
       
@@ -171,34 +166,24 @@ const DoctorDashboard = () => {
           procedures: apptsData.filter(a => a.type === 'Procedure').length,
           todayAppointments: todayAppointments.length,
         });
-
-        // --- UPDATED NEXT PATIENT LOGIC WITH VITALS CHECK ---
         if (todayAppointments.length > 0) {
-          // Filter for Next Patient Display: Only show 'Scheduled' appointments
           const scheduledForToday = todayAppointments.filter(a => a.status === 'Scheduled');
 
           if (scheduledForToday.length > 0) {
             let nextAppointment = null;
-            
-            // Strategy: Find the first appointment with vitals recorded (if vitals are enabled)
             if (vitalsEnabled) {
-              // First, try to find appointments that have vitals recorded
               const appointmentsWithVitals = scheduledForToday.filter(appt => hasVitals(appt));
               
               if (appointmentsWithVitals.length > 0) {
-                // Find the next future appointment with vitals, or the first one if all are past
                 nextAppointment = appointmentsWithVitals.find(a => 
                   dayjs(a.start_time || a.appointment_date).isAfter(dayjs())
                 ) || appointmentsWithVitals[0];
               } else {
-                // No appointments with vitals yet
-                // We'll show the first appointment without vitals as "next", but with a warning
                 nextAppointment = scheduledForToday.find(a => 
                   dayjs(a.start_time || a.appointment_date).isAfter(dayjs())
                 ) || scheduledForToday[0];
               }
             } else {
-              // Vitals not enabled, just find the next appointment
               nextAppointment = scheduledForToday.find(a => 
                 dayjs(a.start_time || a.appointment_date).isAfter(dayjs())
               ) || scheduledForToday[0];
