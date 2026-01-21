@@ -316,7 +316,7 @@ const PatientList = ({ patients, onPatientClick }) => {
             </div>
 
             <div className="flex-1 overflow-y-auto max-h-[400px] pr-2 custom-scrollbar space-y-2">
-                {filteredPatients.length > 0 ? filteredPatients.slice(0, 10).map((p) => (
+                {filteredPatients.length > 0 ? filteredPatients.slice(0, 100).map((p) => (
                     <div key={p._id} className="flex justify-between items-center p-3 hover:bg-slate-50 rounded-lg transition-colors border border-transparent hover:border-slate-100 cursor-pointer" onClick={() => onPatientClick(p)}>
                         <div className="flex items-center gap-3">
                             <div className="w-9 h-9 rounded-full bg-teal-100 flex items-center justify-center text-teal-700 font-bold text-xs">
