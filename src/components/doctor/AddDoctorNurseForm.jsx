@@ -265,6 +265,23 @@ const AddDoctorNurseForm = () => {
     setFormData(prev => ({ ...prev, shift: value, timeSlots: slots }));
   };
 
+  // Time slot helpers for part-time doctors (add/edit/remove)
+  const handleAddTimeSlot = () => {
+    setFormData(prev => ({ ...prev, timeSlots: [...(prev.timeSlots || []), { start: '', end: '' }] }));
+  };
+
+  const handleRemoveTimeSlot = (index) => {
+    setFormData(prev => ({ ...prev, timeSlots: (prev.timeSlots || []).filter((_, i) => i !== index) }));
+  };
+
+  const handleTimeSlotChange = (index, field, value) => {
+    setFormData(prev => {
+      const slots = Array.isArray(prev.timeSlots) ? [...prev.timeSlots] : [];
+      slots[index] = { ...slots[index], [field]: value };
+      return { ...prev, timeSlots: slots };
+    });
+  };
+
   const handleWorkingDaysChange = (e) => {
     const day = String(e.target.value);
     const isChecked = e.target.checked;
@@ -545,20 +562,31 @@ const AddDoctorNurseForm = () => {
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold text-blue-700 uppercase mb-3">Available Working Days</label>
-                      <div className="flex flex-wrap gap-3">
-                        {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
-                          <label key={day} className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border cursor-pointer transition-all ${formData.workingDaysPerWeek.includes(day) ? 'bg-blue-600 border-blue-600 text-white shadow-md' : 'bg-white border-blue-200 text-blue-900 hover:bg-blue-50'}`}>
+                      <label className="block text-xs font-bold text-blue-700 uppercase mb-3">Available Time Slots</label>
+                      <div className="space-y-3">
+                        {(formData.timeSlots || []).map((slot, i) => (
+                          <div key={i} className="grid grid-cols-3 gap-3 items-center">
                             <input
-                              type="checkbox"
-                              value={day}
-                              checked={formData.workingDaysPerWeek.includes(day)}
-                              onChange={handleWorkingDaysChange}
-                              className="hidden" // Hiding default checkbox for custom style
+                              type="time"
+                              value={slot.start || ''}
+                              onChange={(e) => handleTimeSlotChange(i, 'start', e.target.value)}
+                              className="col-span-1 block w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm"
                             />
-                            <span className="text-sm font-semibold">{day}</span>
-                          </label>
+                            <input
+                              type="time"
+                              value={slot.end || ''}
+                              onChange={(e) => handleTimeSlotChange(i, 'end', e.target.value)}
+                              className="col-span-1 block w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm"
+                            />
+                            <div className="col-span-1 flex items-center gap-2">
+                              <button type="button" onClick={() => handleRemoveTimeSlot(i)} className="px-3 py-2 bg-rose-50 text-rose-600 border border-rose-100 rounded-lg text-sm">Remove</button>
+                            </div>
+                          </div>
                         ))}
+
+                        <div>
+                          <button type="button" onClick={handleAddTimeSlot} className="px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm">Add Time Slot</button>
+                        </div>
                       </div>
                     </div>
                   </div>
