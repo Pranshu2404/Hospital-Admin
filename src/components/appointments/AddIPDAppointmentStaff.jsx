@@ -331,11 +331,11 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
         const durationMultiplier = parseInt(formData.duration) / 30;
         consultationFee = Math.round(consultationFee * durationMultiplier);
 
-        charges.push({
-          description: `${formData.appointment_type.charAt(0).toUpperCase() + formData.appointment_type.slice(1)} Fee`,
-          amount: consultationFee
-        });
-        total += consultationFee;
+        // charges.push({
+        //   description: `${formData.appointment_type.charAt(0).toUpperCase() + formData.appointment_type.slice(1)} Fee`,
+        //   amount: consultationFee
+        // });
+        // total += consultationFee;
       }
     }
 
