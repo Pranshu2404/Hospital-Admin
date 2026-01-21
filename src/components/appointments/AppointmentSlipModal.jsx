@@ -270,12 +270,20 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
     for (const s of possibleStarts) {
       if (!s) continue;
       const d = new Date(s);
-      if (!isNaN(d)) return d.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
+      // FIX: Added timeZone: 'UTC' to prevent conversion to local time (IST)
+      if (!isNaN(d)) {
+        return d.toLocaleString('en-IN', { 
+          dateStyle: 'medium', 
+          timeStyle: 'short', 
+          timeZone: 'UTC' 
+        });
+      }
     }
 
     // If we have an appointment_date (YYYY-MM-DD or ISO) and a time string
     const apptDateRaw = appointmentData.appointment_date || appointmentData.date;
     const timeRaw = appointmentData.time || appointmentData.start_time_local || appointmentData.time_slot;
+    
     if (apptDateRaw) {
       // parse as local date (avoid timezone shift)
       let dateObj;
@@ -288,7 +296,11 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
       } catch (e) {
         dateObj = null;
       }
-      const dateStr = dateObj && !isNaN(dateObj) ? dateObj.toLocaleDateString([], { dateStyle: 'medium' }) : String(apptDateRaw);
+      
+      // FIX: Ensure date string uses UTC logic if dateObj was created from UTC string, 
+      // but usually the manual parsing above handles local time correctly. 
+      // We keep the existing logic here but ensure locale is consistent.
+      const dateStr = dateObj && !isNaN(dateObj) ? dateObj.toLocaleDateString('en-IN', { dateStyle: 'medium' }) : String(apptDateRaw);
 
       // Normalize time: handle "HH:MM - HH:MM" strings, or object shapes
       let timeStr = '';
@@ -310,7 +322,7 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
           const tmp = new Date();
           tmp.setHours(parseInt(hh, 10));
           tmp.setMinutes(parseInt(mm, 10));
-          timeStr = tmp.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+          timeStr = tmp.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' });
         }
       }
 
@@ -320,13 +332,14 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
     // Fallback to billing appointment date if present
     if (billingDetails?.appointment_id?.appointment_date) {
       const d = new Date(billingDetails.appointment_id.appointment_date);
-      if (!isNaN(d)) return d.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
+      // FIX: Added timeZone: 'UTC' here as well just in case
+      if (!isNaN(d)) return d.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'UTC' });
       return String(billingDetails.appointment_id.appointment_date);
     }
 
     return 'N/A';
   };
-
+  
   return (
     <>
       <style>{`
