@@ -383,11 +383,31 @@ const AppointmentDetails = () => {
   };
 
   const handleSuggestionClick = (index, medicineName) => {
-    const newItems = [...prescription.items];
-    newItems[index].medicine_name = medicineName;
-    setPrescription(prev => ({ ...prev, items: newItems }));
+    setPrescription(prev => {
+      // 1. Make a shallow copy of the items array
+      const newItems = [...prev.items];
+
+      // 2. Make a shallow copy of the specific item object and update the name
+      newItems[index] = {
+        ...newItems[index],
+        medicine_name: medicineName
+      };
+
+      // 3. Return the new state
+      return { ...prev, items: newItems };
+    });
+
+    // Clear suggestions and hide dropdown
     setSuggestions([]);
     setActiveSuggestionIndex(null);
+  };
+
+  const handleKeyDown = (e, index) => {
+    // If Enter is pressed and we have suggestions
+    if (e.key === 'Enter' && suggestions.length > 0) {
+      e.preventDefault(); // Prevent form submission
+      handleSuggestionClick(index, suggestions[0]); // Select the first suggestion
+    }
   };
 
   const handleSubmitPrescription = async (e) => {
@@ -1168,7 +1188,7 @@ const AppointmentDetails = () => {
                       <span className="block text-xs text-slate-500 uppercase font-bold mb-1">Pulse</span>
                       <span className="text-md font-bold text-slate-800">{appointment.vitals?.pulse || '--'} <span className="text-[10px] text-slate-400">bpm</span></span>
                     </div>
-                    
+
                     <div className="text-center p-2 bg-slate-50 rounded border border-slate-100">
                       <span className="block text-xs text-slate-500 uppercase font-bold mb-1">SPO2</span>
                       <span className="text-md font-bold text-slate-800">{appointment.vitals?.spo2 || '--'} <span className="text-[10px] text-slate-400">%</span></span>
@@ -1181,7 +1201,7 @@ const AppointmentDetails = () => {
                       <span className="block text-xs text-slate-500 uppercase font-bold mb-1">RBS</span>
                       <span className="text-md font-bold text-slate-800">{appointment.vitals?.random_blood_sugar || '--'} <span className="text-[10px] text-slate-400">mg/dL</span></span>
                     </div>
-                    
+
                     {appointment.vitals?.temperature && (
                       <div className="text-center p-2 bg-slate-50 rounded border border-slate-100">
                         <span className="block text-xs text-slate-500 uppercase font-bold mb-1">Temp</span>
@@ -1346,44 +1366,6 @@ const AppointmentDetails = () => {
                                       </div>
 
                                       <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-                                        {/* Medicine Name with Search */}
-                                        <div className="md:col-span-3 relative">
-                                          <input
-                                            type="text"
-                                            name="medicine_name"
-                                            value={item.medicine_name}
-                                            onChange={(e) => handleMedicineChange(index, e)}
-                                            className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-teal-500 outline-none"
-                                            placeholder="Medicine Name"
-                                            required
-                                          />
-                                          {/* Suggestions Dropdown */}
-                                          {activeSuggestionIndex === index && suggestions.length > 0 && (
-                                            <ul className="absolute z-50 w-full bg-white border border-slate-200 rounded-lg mt-1 max-h-48 overflow-y-auto shadow-xl">
-                                              {suggestions.map((med, i) => (
-                                                <li
-                                                  key={i}
-                                                  onClick={() => handleSuggestionClick(index, med)}
-                                                  className="px-4 py-2 hover:bg-teal-50 cursor-pointer text-sm text-slate-700 hover:text-teal-700"
-                                                >
-                                                  {med}
-                                                </li>
-                                              ))}
-                                            </ul>
-                                          )}
-                                        </div>
-
-                                        <div className="md:col-span-2">
-                                          <input
-                                            type="text"
-                                            name="dosage"
-                                            value={item.dosage}
-                                            onChange={(e) => handleMedicineChange(index, e)}
-                                            className="w-full border border-slate-300 rounded px-1 py-2 text-sm focus:ring-1 focus:ring-teal-500 outline-none"
-                                            placeholder="Dosage(500mg)"
-                                            required
-                                          />
-                                        </div>
 
                                         {/* Medicine Type Dropdown */}
                                         <div className="md:col-span-3">
@@ -1403,6 +1385,49 @@ const AppointmentDetails = () => {
                                             <option value="Inhaler">Inhaler</option>
                                             <option value="Other">Other</option>
                                           </select>
+                                        </div>
+
+                                        {/* Medicine Name with Search */}
+                                        <div className="md:col-span-3 relative">
+                                          <input
+                                            type="text"
+                                            name="medicine_name"
+                                            value={item.medicine_name}
+                                            onChange={(e) => handleMedicineChange(index, e)}
+                                            onKeyDown={(e) => handleKeyDown(e, index)} // <--- Added Enter Key Listener
+                                            className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-teal-500 outline-none"
+                                            placeholder="Medicine Name"
+                                            required
+                                            autoComplete="off" // <--- Prevents browser history interfering with your dropdown
+                                          />
+
+                                          {/* Suggestions Dropdown */}
+                                          {activeSuggestionIndex === index && suggestions.length > 0 && (
+                                            <ul className="absolute z-50 w-full bg-white border border-slate-200 rounded-lg mt-1 max-h-48 overflow-y-auto shadow-xl">
+                                              {suggestions.map((med, i) => (
+                                                <li
+                                                  key={i}
+                                                  // Use onMouseDown instead of onClick to prevent input blur issues (optional but safer)
+                                                  onClick={() => handleSuggestionClick(index, med)}
+                                                  className="px-4 py-2 hover:bg-teal-50 cursor-pointer text-sm text-slate-700 hover:text-teal-700 border-b border-slate-50 last:border-none"
+                                                >
+                                                  {med}
+                                                </li>
+                                              ))}
+                                            </ul>
+                                          )}
+                                        </div>
+
+                                        <div className="md:col-span-2">
+                                          <input
+                                            type="text"
+                                            name="dosage"
+                                            value={item.dosage}
+                                            onChange={(e) => handleMedicineChange(index, e)}
+                                            className="w-full border border-slate-300 rounded px-1 py-2 text-sm focus:ring-1 focus:ring-teal-500 outline-none"
+                                            placeholder="Dosage(500mg)"
+                                            required
+                                          />
                                         </div>
 
                                         {/* Route of Administration Dropdown */}
