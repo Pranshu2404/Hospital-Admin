@@ -22,7 +22,6 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
   const [showUploadForm, setShowUploadForm] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [submittingPrescription, setSubmittingPrescription] = useState(false);
-  console.log('Loaded prescription from appointment-specific endpoint:', hospitalInfo);
   // helper to load prescription from server (cache-busted)
   const loadPrescription = async () => {
     if (!appointmentData || !appointmentData._id) return;
@@ -465,6 +464,7 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
             overflow-y: auto;
             z-index: 101;
             padding: 24px;
+            margin: 40px;
           }
         }
       `}</style>

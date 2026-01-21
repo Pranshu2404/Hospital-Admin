@@ -7,7 +7,8 @@ import { adminSidebar } from '@/constants/sidebarItems/adminSidebar';
 import AppointmentSlipModal from './AppointmentSlipModal';
 import QRCodeModal from './QRCodeModal';
 import PaymentPendingModal from './PaymentPendingModal';
-import { FaUser, FaCloudUploadAlt, FaTimes, FaIdCard } from 'react-icons/fa';
+import SuccessModal from './SuccessModal';
+import { FaUser, FaCloudUploadAlt, FaTimes, FaIdCard, FaCalendarAlt, FaClock, FaUserPlus, FaCheckCircle, FaArrowLeft } from 'react-icons/fa';
 
 const appointmentTypeOptions = [
   { value: 'consultation', label: 'Consultation' },
@@ -104,7 +105,7 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
     district: '',
     tehsil: '',
     patient_image: '',
-    aadhaarNumber: ''  // Added Aadhaar number field
+    aadhaarNumber: ''
   });
 
   const hospitalId = localStorage.getItem('hospitalId');
@@ -126,7 +127,7 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
   const [doctorWorkingHours, setDoctorWorkingHours] = useState([]);
   const [autoAssignedTime, setAutoAssignedTime] = useState(null);
   const [showErrors, setShowErrors] = useState(false);
-  const [slipModal, setSlipModal] = useState(false);
+  const [slipModal, setSlipModal] = useState(true);
   const [hospitalInfo, setHospitalInfo] = useState(null);
   const [submitDetails, setSubmitDetails] = useState(null);
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
@@ -135,6 +136,9 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
   const [pollingIntervalId, setPollingIntervalId] = useState(null);
   const [showFields, setShowFields] = useState(false);
   const [showPaymentPendingModal, setShowPaymentPendingModal] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [newPatientData, setNewPatientData] = useState(null);
 
   // New States for CSC API and Image Upload
   const [states, setStates] = useState([]);
@@ -199,6 +203,7 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
           `${import.meta.env.VITE_BASE_URL}/countries/${import.meta.env.VITE_COUNTRY_CODE}/states`,
           config
         );
+        console.log("States fetched successfully:", response.data);
         setStates(response.data);
       } catch (error) {
         console.error("Error fetching states:", error);
@@ -216,7 +221,7 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
     let charges = [];
     let total = 0;
 
-    // Check if patient is new (assuming this based on includeRegistrationFee)
+    // Check if patient is new (based on includeRegistrationFee checkbox)
     const isNewPatient = includeRegistrationFee;
 
     // Add OPD charges if applicable
@@ -347,16 +352,13 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
 
     if (field === 'state') {
       fetchCities(value);
-      setFormData2(prev => ({ ...prev, city: '' })); // Reset city when state changes
+      setFormData2(prev => ({ ...prev, city: '' }));
     }
   };
 
   // Format Aadhaar number with spaces (XXXX XXXX XXXX)
   const formatAadhaarNumber = (value) => {
-    // Remove all non-digits
     const digits = value.replace(/\D/g, '');
-
-    // Format as XXXX XXXX XXXX
     if (digits.length <= 4) return digits;
     if (digits.length <= 8) return `${digits.slice(0, 4)} ${digits.slice(4)}`;
     return `${digits.slice(0, 4)} ${digits.slice(4, 8)} ${digits.slice(8, 12)}`;
@@ -376,7 +378,6 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
           axios.get(`${import.meta.env.VITE_BACKEND_URL}/hospitals`)
         ]);
 
-        // ✅ Add a check to ensure the response is an array
         const patientsData = Array.isArray(patientRes.data)
           ? patientRes.data
           : Array.isArray(patientRes.data.patients)
@@ -408,11 +409,8 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
     fetchOptions();
   }, [formData.department]);
 
-  // Add a new useEffect hook after the existing one that fetches doctor data
-  // This hook will automatically set the start_time
   useEffect(() => {
     if (formData.doctorId && formData.date && formData.type === 'time-based') {
-      // Sort existing appointments by start time
       const sortedAppointments = [...existingAppointments].sort(
         (a, b) => new Date(a.startTime) - new Date(b.startTime)
       );
@@ -423,49 +421,30 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
       const isToday = today.toDateString() === now.toDateString();
       const duration = parseInt(formData.duration);
 
-      // Loop through the doctor's working hours
       for (const range of doctorWorkingHours) {
         const [startH, startM] = range.start.split(':').map(Number);
         const [endH, endM] = range.end.split(':').map(Number);
-
-        // Check if this is an overnight shift (e.g., 23:00 to 07:00)
         const isOvernightShift = (startH * 60 + startM) > (endH * 60 + endM);
 
         let currentTime = new Date();
         currentTime.setHours(startH, startM, 0, 0);
 
-        // If it's today, start searching from the next available slot after current time
         if (isToday) {
-          // Calculate current time in minutes since midnight
           const currentMinutes = now.getHours() * 60 + now.getMinutes();
-
-          // Round up to the next slot boundary
           const nextSlotMinutes = Math.ceil(currentMinutes / duration) * duration;
-
-          // Convert back to hours and minutes
           const nextHours = Math.floor(nextSlotMinutes / 60);
           const nextMins = nextSlotMinutes % 60;
-
-          // Create a time object for the next slot
-          const nextSlotTime = new Date();
-          nextSlotTime.setHours(nextHours, nextMins, 0, 0);
-
-          // Ensure we don't start before the doctor's actual start time for this range
           const rangeStartMinutes = startH * 60 + startM;
           const rangeEndMinutes = endH * 60 + endM;
           const nextSlotMinutesValue = nextHours * 60 + nextMins;
           
           if (isOvernightShift) {
-            // Overnight shift (e.g., 23:00-07:00): Valid if >= start OR < end
             if (nextSlotMinutesValue >= rangeStartMinutes || nextSlotMinutesValue < rangeEndMinutes) {
-              // Current time IS within overnight shift, use the calculated next slot
               currentTime.setHours(nextHours, nextMins, 0, 0);
             } else {
-              // Current time is in the gap, use shift start time
               currentTime.setHours(startH, startM, 0, 0);
             }
           } else {
-            // Normal shift logic
             if (nextSlotMinutesValue < rangeStartMinutes) {
               currentTime.setHours(startH, startM, 0, 0);
             } else if (nextSlotMinutesValue >= rangeStartMinutes && nextSlotMinutesValue < rangeEndMinutes) {
@@ -476,20 +455,16 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
           }
         }
 
-        // Check for available slots
         while (currentTime.getHours() * 60 + currentTime.getMinutes() < endH * 60 + endM) {
           const proposedStart = currentTime.toTimeString().slice(0, 5);
           const proposedEnd = calculateEndTime(proposedStart, formData.duration);
-
           const [proposedEndH, proposedEndM] = proposedEnd.split(':').map(Number);
           const proposedEndInMinutes = proposedEndH * 60 + proposedEndM;
 
-          // Check if the proposed end time is within the working hours range
           if (proposedEndInMinutes > endH * 60 + endM) {
-            break; // Stop if the slot would end after the working hours
+            break;
           }
 
-          // For today, also check if proposed start is not in the past
           if (isToday) {
             const proposedStartMinutes = currentTime.getHours() * 60 + currentTime.getMinutes();
             const currentMinutes = now.getHours() * 60 + now.getMinutes();
@@ -499,7 +474,6 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
             }
           }
 
-          // Check for conflicts with existing appointments
           const hasConflict = sortedAppointments.some(appt => {
             const apptStart = new Date(appt.startTime);
             const apptEnd = new Date(appt.endTime);
@@ -508,7 +482,6 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
             const newEnd = new Date(today);
             newEnd.setHours(proposedEndH, proposedEndM);
 
-            // Check for overlap
             return (
               (newStart >= apptStart && newStart < apptEnd) ||
               (newEnd > apptStart && newEnd <= apptEnd) ||
@@ -516,29 +489,22 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
             );
           });
 
-          // If no conflict, this is our next available slot
           if (!hasConflict) {
             proposedTime = proposedStart;
-            break; // Exit the while loop
+            break;
           }
 
-          // Move to the next potential slot
           currentTime.setMinutes(currentTime.getMinutes() + duration);
         }
 
         if (proposedTime) {
-          break; // Exit the for loop once a slot is found
+          break;
         }
       }
 
-      // Update the form state with the newly found time and track if it was auto-assigned
-      // If no slot found, use the first available working hour start time as fallback
       if (!proposedTime && doctorWorkingHours.length > 0) {
         proposedTime = doctorWorkingHours[0].start;
-        console.log('No available slot found, using first working hour:', proposedTime);
       }
-
-      console.log('Auto-assigned time:', proposedTime, 'for date:', formData.date);
 
       setFormData(prev => ({ ...prev, start_time: proposedTime || '' }));
       setAutoAssignedTime(proposedTime || null);
@@ -579,12 +545,11 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
     }
   }, [type]);
 
-  // Fetch doctor data and appointments when doctor or date changes
+  // Fetch doctor data and appointments
   useEffect(() => {
     if (formData.doctorId && hospitalId && formData.date) {
       const fetchDoctorData = async () => {
         try {
-          // Fetch doctor details
           const doctorRes = await axios.get(
             `${import.meta.env.VITE_BACKEND_URL}/doctors/${formData.doctorId}`
           );
@@ -596,13 +561,10 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
           let patients = [];
 
           try {
-            // Try fetching doctor's schedule for the day
             const scheduleRes = await axios.get(
               `${import.meta.env.VITE_BACKEND_URL}/calendar/${hospitalId}/doctor/${formData.doctorId}/${formData.date}`
             );
-
             const scheduleData = scheduleRes.data;
-            console.log("Schedule Data:", scheduleData);
 
             if (scheduleData?.workingHours?.length) {
               workingHours = scheduleData.workingHours;
@@ -613,8 +575,7 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
               patients = scheduleData.bookedPatients || [];
             }
           } catch (err) {
-            // If calendar entry doesn't exist, just use defaults
-            console.warn("No schedule found for this doctor/date, falling back to default slots.");
+            console.warn("No schedule found for this doctor/date");
           }
 
           setDoctorWorkingHours(workingHours);
@@ -638,7 +599,6 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
     }
   }, [formData.doctorId, formData.date, formData.type, hospitalId]);
 
-  // Helper function to check if time is within any working hour range
   const isWithinWorkingHours = (time) => {
     if (!time || doctorWorkingHours.length === 0) return false;
 
@@ -651,7 +611,6 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
       const startInMinutes = startH * 60 + startM;
       const endInMinutes = endH * 60 + endM;
 
-      // Handle overnight shifts (end time is next day)
       if (endInMinutes <= startInMinutes) {
         return timeInMinutes >= startInMinutes || timeInMinutes <= endInMinutes;
       }
@@ -659,15 +618,12 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
     });
   };
 
-  // Helper to get min/max time for time input
   const getTimeConstraints = () => {
     if (doctorWorkingHours.length === 0) return {};
 
-    // Find earliest start and latest end time
     let minTime = '00:00';
     let maxTime = '23:59';
 
-    // Calculate min/max from working hours
     if (doctorWorkingHours.length > 0) {
       const starts = doctorWorkingHours.map(r => r.start).sort();
       const ends = doctorWorkingHours.map(r => r.end).sort();
@@ -675,22 +631,17 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
       maxTime = ends[ends.length - 1];
     }
 
-    // If date is today, minTime should be rounded up to next slot boundary
     const today = new Date();
     const selectedDate = new Date(formData.date);
 
     if (selectedDate.toDateString() === today.toDateString()) {
       const currentMinutes = today.getHours() * 60 + today.getMinutes();
       const duration = parseInt(formData.duration) || 30;
-
-      // Round up to the next slot boundary
       const nextSlotMinutes = Math.ceil(currentMinutes / duration) * duration;
       const nextHours = Math.floor(nextSlotMinutes / 60);
       const nextMins = nextSlotMinutes % 60;
-
       const nextSlotTimeStr = `${nextHours.toString().padStart(2, '0')}:${nextMins.toString().padStart(2, '0')}`;
 
-      // Ensure we don't go before the doctor's earliest working hour
       if (nextSlotTimeStr > minTime) {
         minTime = nextSlotTimeStr;
       }
@@ -718,18 +669,15 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
     if (!formData.start_time) {
       errors.start_time = 'Please pick a start time';
     } else {
-      // Check if start time is within working hours
       if (!isWithinWorkingHours(formData.start_time)) {
         errors.start_time = 'Selected time is outside doctor working hours';
       } else {
-        // Also check if end time would be within working hours
         const endTime = calculateEndTime(formData.start_time, formData.duration);
         if (!isWithinWorkingHours(endTime)) {
-          errors.start_time = 'Appointment would end outside doctor working hours. Please select an earlier time or shorter duration.';
+          errors.start_time = 'Appointment would end outside doctor working hours.';
         }
       }
 
-      // Check if the selected time is not in the past (for today's date)
       const selectedDate = new Date(formData.date);
       const today = new Date();
       if (selectedDate.toDateString() === today.toDateString()) {
@@ -749,39 +697,33 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
   const checkTimeSlotAvailability = (proposedStart, proposedEnd) => {
     if (!proposedStart || !proposedEnd) return false;
 
-    // Convert proposed times to minutes for easier comparison
     const [startH, startM] = proposedStart.split(':').map(Number);
     const [endH, endM] = proposedEnd.split(':').map(Number);
     const proposedStartMin = startH * 60 + startM;
     const proposedEndMin = endH * 60 + endM;
 
-    // Check against existing appointments
     for (const appt of existingAppointments) {
       if (!appt.start_time || !appt.end_time) continue;
 
       const apptStartTime = new Date(appt.startTime).toTimeString().slice(0, 5);
       const apptEndTime = new Date(appt.endTime).toTimeString().slice(0, 5);
-
       const [apptStartH, apptStartM] = apptStartTime.split(':').map(Number);
       const [apptEndH, apptEndM] = apptEndTime.split(':').map(Number);
-
       const apptStartMin = apptStartH * 60 + apptStartM;
       const apptEndMin = apptEndH * 60 + apptEndM;
 
-      // Check for overlap
       if (
         (proposedStartMin >= apptStartMin && proposedStartMin < apptEndMin) ||
         (proposedEndMin > apptStartMin && proposedEndMin <= apptEndMin) ||
         (proposedStartMin <= apptStartMin && proposedEndMin >= apptEndMin)
       ) {
-        return false; // Slot is not available
+        return false;
       }
     }
 
-    return true; // Slot is available
+    return true;
   };
 
-  // 2. Function to stop the polling
   const stopPolling = () => {
     if (pollingIntervalId) {
       clearInterval(pollingIntervalId);
@@ -789,7 +731,6 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
     }
   };
 
-  // 3. Function to handle QR code generation
   const handleGenerateQR = async () => {
     if (!formData.patientId && !showFields) {
       alert("Please select a patient or add a new patient.");
@@ -804,19 +745,14 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
     setPaymentStatus('generating');
 
     try {
-      // If creating new patient, we need to get the patient ID first
       let patientIdForPayment = formData.patientId;
 
       if (showFields) {
-        // Validate required fields for new patient
         if (!formData2.salutation || !formData2.firstName || !formData2.phone) {
           alert("Please fill in all required patient information.");
           setIsLoading(false);
           return;
         }
-
-        // We'll need to create the patient first to get an ID
-        // For now, use a placeholder
         patientIdForPayment = "new-patient-temp";
       }
 
@@ -827,21 +763,16 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
 
       setQrData({ imageUrl: res.data.qrImageUrl, orderId: res.data.orderId });
       setPaymentStatus('waiting');
-      setIsQrModalOpen(true); // <-- open modal only AFTER we have data
+      setIsQrModalOpen(true);
 
-      // Start polling for payment status
       const intervalId = setInterval(async () => {
         try {
           const statusRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/payments/order-status/${res.data.orderId}`);
           if (statusRes.data.status === 'paid') {
             setPaymentStatus('paid');
-            stopPolling(); // Stop checking once paid
-
-            // Payment successful, now schedule the appointment
+            stopPolling();
             alert('Payment successful! Scheduling appointment...');
             setIsQrModalOpen(false);
-
-            // Pass payment details to the submit handler
             handleSubmit(null, {
               isPaid: true,
               method: 'QR Code',
@@ -850,9 +781,9 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
           }
         } catch (pollError) {
           console.error("Polling error:", pollError);
-          stopPolling(); // Stop on error
+          stopPolling();
         }
-      }, 3000); // Check every 3 seconds
+      }, 3000);
 
       setPollingIntervalId(intervalId);
 
@@ -870,110 +801,108 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
     return dob.toISOString().split('T')[0];
   };
 
+  const addNewPatient = async () => {
+    try {
+      if (!formData2.salutation || !formData2.firstName || !formData2.phone) {
+        alert("Please fill in all required patient information.");
+        return;
+      }
+
+      const patientPayload = {
+        salutation: formData2.salutation,
+        first_name: formData2.firstName,
+        last_name: formData2.lastName,
+        email: formData2.email,
+        phone: formData2.phone,
+        gender: formData2.gender,
+        dob: calculateDOBFromAge(formData2.age),
+        blood_group: formData2.bloodGroup,
+        address: formData2.address,
+        city: formData2.city,
+        state: formData2.state,
+        zipCode: formData2.zipCode,
+        patient_type: type,
+        village: formData2.village,
+        district: formData2.district,
+        tehsil: formData2.tehsil,
+        patient_image: formData2.patient_image,
+        aadhaar_number: formData2.aadhaarNumber.replace(/\s/g, '')
+      };
+
+      const patientRes = await axios.post(
+        `${import.meta.env.VITE_BACKEND_URL}/patients`,
+        patientPayload
+      );
+
+      const newPatient = patientRes.data;
+      setNewPatientData(newPatient);
+
+      // Refresh patients list
+      const allPatientsRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/patients?limit=1000`);
+      const patientsData = Array.isArray(allPatientsRes.data)
+        ? allPatientsRes.data
+        : Array.isArray(allPatientsRes.data.patients)
+          ? allPatientsRes.data.patients
+          : [];
+
+      setPatients(patientsData);
+      setFilteredPatients(patientsData);
+
+      // Show success modal
+      setSuccessMessage(`Patient ${formData2.firstName} ${formData2.lastName} added successfully!`);
+      setShowSuccessModal(true);
+      setShowFields(false);
+
+    } catch (err) {
+      console.error('Error adding patient:', err);
+      alert(err.response?.data?.error || 'Failed to add patient.');
+    }
+  };
+
+  const handleSelectPatientAfterSuccess = () => {
+    if (newPatientData) {
+      setFormData(prev => ({ ...prev, patientId: newPatientData._id }));
+      setShowSuccessModal(false);
+      setNewPatientData(null);
+      
+      // Reset patient form
+      setFormData2({
+        salutation: '',
+        firstName: '',
+        lastName: '',
+        email: '',
+        phone: '',
+        gender: '',
+        bloodGroup: '',
+        age: '',
+        address: '',
+        city: '',
+        state: '',
+        zipCode: '',
+        village: '',
+        district: '',
+        tehsil: '',
+        patient_image: '',
+        aadhaarNumber: ''
+      });
+    }
+  };
+
   const handleSubmit = async (e, paymentInfo = null, forcePending = false) => {
-    if (e) e.preventDefault(); // Prevent default form submission if triggered by button
+    if (e) e.preventDefault();
     setIsLoading(true);
 
-    // ==========================================
-    // CASE 1: ADD NEW PATIENT ONLY
-    // ==========================================
+    // If adding new patient
     if (showFields) {
-      try {
-        // Validate required fields for new patient
-        if (!formData2.salutation || !formData2.firstName || !formData2.phone) {
-          alert("Please fill in all required patient information.");
-          setIsLoading(false);
-          return;
-        }
-
-        const patientPayload = {
-          salutation: formData2.salutation,
-          first_name: formData2.firstName,
-          last_name: formData2.lastName,
-          email: formData2.email,
-          phone: formData2.phone,
-          gender: formData2.gender,
-          dob: calculateDOBFromAge(formData2.age),
-          blood_group: formData2.bloodGroup,
-          address: formData2.address,
-          city: formData2.city,
-          state: formData2.state,
-          zipCode: formData2.zipCode,
-          patient_type: type, // Use the appointment type (opd/ipd)
-          village: formData2.village,
-          district: formData2.district,
-          tehsil: formData2.tehsil,
-          patient_image: formData2.patient_image,
-          aadhaar_number: formData2.aadhaarNumber.replace(/\s/g, '') // Remove spaces before saving
-        };
-
-        const patientRes = await axios.post(
-          `${import.meta.env.VITE_BACKEND_URL}/patients`,
-          patientPayload
-        );
-
-        const newPatient = patientRes.data;
-
-        // Refresh patients list
-        const allPatientsRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/patients?limit=1000`);
-        const patientsData = Array.isArray(allPatientsRes.data)
-          ? allPatientsRes.data
-          : Array.isArray(allPatientsRes.data.patients)
-            ? allPatientsRes.data.patients
-            : [];
-
-        setPatients(patientsData);
-        setFilteredPatients(patientsData);
-
-        // Select the new patient
-        setFormData(prev => ({ ...prev, patientId: newPatient._id }));
-
-        // Reset patient form data (optional, or keep it cleared)
-        setFormData2({
-          salutation: '',
-          firstName: '',
-          lastName: '',
-          email: '',
-          phone: '',
-          gender: 'male',
-          bloodGroup: 'A+',
-          age: '',
-          address: '',
-          city: '',
-          state: '',
-          zipCode: '',
-          village: '',
-          district: '',
-          tehsil: '',
-          patient_image: '',
-          aadhaarNumber: ''
-        });
-
-        // Go back to schedule form
-        setShowFields(false);
-        alert("Patient added successfully!");
-
-      } catch (err) {
-        console.error('Error adding patient:', err);
-        alert(err.response?.data?.error || 'Failed to add patient.');
-      } finally {
-        setIsLoading(false);
-      }
-      return; // STOP HERE if we just added a patient
+      await addNewPatient();
+      setIsLoading(false);
+      return;
     }
 
-    // ==========================================
-    // CASE 2: SCHEDULE APPOINTMENT
-    // ==========================================
-
-    let patientId = formData.patientId;
-    // let patientRes; // Not needed as we handled creation above
-
-    // If payment was made via QR, use the details passed from the polling logic
+    // Schedule appointment
     const finalPaymentMethod = paymentInfo ? paymentInfo.method : formData.paymentMethod;
     const finalBillStatus = paymentInfo ? 'Paid' : status;
 
-    // Check if bill status is Pending and block execution
     if (finalBillStatus === 'Pending' && !forcePending && !paymentInfo) {
       setShowPaymentPendingModal(true);
       setIsLoading(false);
@@ -992,9 +921,8 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
         }
       }
 
-      // Prepare appointment data
       const appointmentData = {
-        patient_id: formData.patientId, // Always use selected ID
+        patient_id: formData.patientId,
         doctor_id: fixedDoctorId || formData.doctorId,
         hospital_id: hospitalId,
         department_id: formData.department,
@@ -1008,19 +936,16 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
         room_id: type === 'ipd' ? formData.roomId : null
       };
 
-      // Add time-specific data if time-based appointment
       if (formData.type === 'time-based') {
         appointmentData.start_time = `${formData.date}T${formData.start_time}:00`;
         appointmentData.end_time = `${formData.date}T${calculateEndTime(formData.start_time, formData.duration)}:00`;
       } else {
-        // For number-based, calculate serial number
         const lastSerial = existingPatients.length > 0
           ? Math.max(...existingPatients.map(p => p.serialNumber))
           : 0;
         appointmentData.serialNumber = lastSerial + 1;
       }
 
-      // Create Appointment
       const appointmentRes = await axios.post(
         `${import.meta.env.VITE_BACKEND_URL}/appointments`,
         appointmentData
@@ -1028,7 +953,6 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
 
       const appointmentId = appointmentRes.data._id;
 
-      // ✅ Create billing with charges summary
       await axios.post(`${import.meta.env.VITE_BACKEND_URL}/billing`, {
         patient_id: formData.patientId,
         appointment_id: appointmentId,
@@ -1036,18 +960,20 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
         payment_method: formData.paymentMethod,
         status: finalBillStatus,
         items: chargesSummary,
-        transaction_id: paymentInfo ? paymentInfo.transactionId : null, // Store transaction ID
+        transaction_id: paymentInfo ? paymentInfo.transactionId : null,
       });
 
-      alert('Appointment scheduled and bill generated!');
+      // Show appointment success modal
+      const selectedPatient = filteredPatients.find(p => p._id === formData.patientId);
+      const patientName = selectedPatient ? 
+        `${selectedPatient.salutation || ''} ${selectedPatient.first_name || ''} ${selectedPatient.last_name || ''}`.trim() : 
+        'Unknown Patient';
+      
+      setSuccessMessage(`Appointment for ${patientName} scheduled successfully!`);
+      setShowSuccessModal(true);
 
       const appointmentDetails = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/appointments/${appointmentId}`);
-      console.log("Appointment Details for Slip:", appointmentDetails.data);
       const appt = appointmentDetails.data;
-
-      // Get patient name from appropriate source
-      let patientName = `${appt.patient_id?.first_name || ''} ${appt.patient_id?.last_name || ''}`.trim();
-
       const enriched = {
         ...appt,
         patientName: patientName,
@@ -1060,43 +986,15 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
       };
       setSubmitDetails(enriched);
 
-      if (onSuccess) {
-        onSuccess(enriched);
-      } else {
-        setSlipModal(true);
-      }
-      onClose(); // Close the form if embedded
-
-      // Reset form data
-      setFormData({
-        patientId: '',
-        doctorId: '',
-        department: '',
-        date: getLocalDateString(),
-        start_time: '',
-        duration: '30',
-        type: 'time-based',
-        appointment_type: 'consultation',
-        priority: 'Normal',
-        notes: '',
-        roomId: '',
-        paymentMethod: 'Cash'
-      });
-
-      setChargesSummary([]);
-      setTotalAmount(0);
-      // setShowFields(false); // Already false
     } catch (err) {
-      console.error('Error scheduling appointment or generating bill:', err);
-      alert(err.response?.data?.error || 'Failed to schedule appointment or generate bill.');
+      console.error('Error scheduling appointment:', err);
+      alert(err.response?.data?.error || 'Failed to schedule appointment.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Format date for display
   const formatDateDisplay = (dateString) => {
-    // Parse as local midnight to avoid timezone shift when dateString is YYYY-MM-DD
     const date = new Date(dateString + 'T00:00:00');
     return date.toLocaleDateString('en-US', {
       weekday: 'long',
@@ -1106,683 +1004,729 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
     });
   };
 
-  const innerContent = (
-    <>
-      <div className='bg-white p-6 max-w-5xl mx-auto rounded-lg shadow-sm relative'>
-        {type && (
-          <div className="mb-2">
-            <h3 className="text-2xl font-semibold text-gray-800 capitalize">{type} Appointment</h3>
-            <div className="flex items-center justify-between mt-4">
-              <p className="text-base text-gray-600">If the patient is not registered, you can add them below.</p>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowFields(!showFields)}
-              >
-                {showFields ? '← Select Existing Patient' : '+ Add New Patient'}
-              </Button>
-            </div>
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 space-y-4">
-              {/* Patient Selection */}
-              {!showFields && (
-                <FormSelect
-                  label="Select Patient"
-                  value={formData.patientId}
-                  onChange={(e) => handleInputChange('patientId', e.target.value)}
-                  options={(filteredPatients || []).map(p => ({
-                    value: p._id,
-                    label: `${p.salutation || ''} ${p.first_name || ''} ${p.last_name || ''} - ${p.phone || ''} (${p.patientId || ''})${p.aadhaar_number ? ` - Aadhaar: ${p.aadhaar_number}` : ''}`
-                  }))}
-                  required
-                />
-              )}
-
-              {/* New Patient Registration Fields */}
-              {showFields && (
-                <div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Patient Information</h3>
-
-                    {/* Image Upload Section */}
-                    <div className="mb-6 flex justify-center">
-                      <div className="text-center">
-                        <div className="relative inline-block">
-                          <div className="w-32 h-32 rounded-full border-4 border-white shadow-lg overflow-hidden bg-slate-200 flex items-center justify-center">
-                            {formData2.patient_image ? (
-                              <img
-                                src={formData2.patient_image}
-                                alt="Patient"
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              <FaUser className="text-4xl text-slate-400" />
-                            )}
-                            {uploadingImage && (
-                              <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                                <div className="animate-spin rounded-full h-8 w-8 border-2 border-white border-t-transparent"></div>
-                              </div>
-                            )}
-                          </div>
-
-                          {formData2.patient_image ? (
-                            <button
-                              type="button"
-                              onClick={removeImage}
-                              className="absolute bottom-0 right-0 bg-red-500 text-white p-2 rounded-full shadow-md hover:bg-red-600 transition-colors"
-                              title="Remove Photo"
-                            >
-                              <FaTimes size={12} />
-                            </button>
-                          ) : (
-                            <label
-                              className="absolute bottom-0 right-0 bg-teal-600 text-white p-2 rounded-full shadow-md hover:bg-teal-700 transition-colors cursor-pointer"
-                              title="Upload Photo"
-                            >
-                              <FaCloudUploadAlt size={14} />
-                              <input
-                                type="file"
-                                accept="image/*"
-                                onChange={handleImageUpload}
-                                className="hidden"
-                                disabled={uploadingImage}
-                              />
-                            </label>
-                          )}
-                        </div>
-                        <p className="text-xs text-slate-500 mt-2">Allowed: JPG, PNG</p>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <FormSelect
-                        label="Salutation"
-                        value={formData2.salutation}
-                        onChange={(e) => handlePatientInputChange('salutation', e.target.value)}
-                        options={salutationOptions}
-                      />
-                      <FormInput
-                        label="First Name"
-                        value={formData2.firstName}
-                        onChange={(e) => handlePatientInputChange('firstName', e.target.value)}
-                        required
-                      />
-                      <FormInput
-                        label="Last Name"
-                        value={formData2.lastName}
-                        onChange={(e) => handlePatientInputChange('lastName', e.target.value)}
-                        required
-                      />
-                      <FormInput
-                        label="Email"
-                        type="email"
-                        value={formData2.email}
-                        onChange={(e) => handlePatientInputChange('email', e.target.value)}
-                      />
-                      <FormInput
-                        label="Phone Number"
-                        type="tel"
-                        value={formData2.phone}
-                        onChange={(e) => handlePatientInputChange('phone', e.target.value.replace(/\D/g, '').slice(0, 10))}
-                        required
-                        maxLength={10}
-                        inputMode="numeric"
-                        pattern="^[6-9]\d{9}$"
-                        title="10 digit Indian mobile number starting with 6-9"
-                      />
-                      <FormInput
-                        label="Age"
-                        type="number"
-                        min="0"
-                        max="120"
-                        value={formData2.age}
-                        onChange={(e) => handlePatientInputChange('age', e.target.value)}
-                        required
-                      />
-                      <FormSelect
-                        label="Gender"
-                        value={formData2.gender}
-                        onChange={(e) => handlePatientInputChange('gender', e.target.value)}
-                        options={genderOptions}
-                        required
-                      />
-                      <FormSelect
-                        label="Blood Group"
-                        value={formData2.bloodGroup}
-                        onChange={(e) => handlePatientInputChange('bloodGroup', e.target.value)}
-                        options={bloodGroupOptions}
-                      />
-                      <div className="md:col-span-2">
-                        <div className="relative">
-                          <FormInput
-                            label="Aadhaar Number"
-                            type="text"
-                            value={formData2.aadhaarNumber}
-                            onChange={(e) => handleAadhaarChange(e.target.value)}
-                            maxLength="14" // 12 digits + 2 spaces
-                            placeholder="XXXX XXXX XXXX"
-                            icon={<FaIdCard className="text-gray-400" />}
-                          />
-                          {formData2.aadhaarNumber && (
-                            <div className="text-xs text-gray-500 mt-1 flex items-center gap-1">
-                              <span>Aadhaar: {formData2.aadhaarNumber}</span>
-                              {formData2.aadhaarNumber.replace(/\s/g, '').length !== 12 && (
-                                <span className="text-amber-600">(Must be 12 digits)</span>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Address Information */}
-                    <h4 className="text-md font-semibold text-gray-900 mt-6 mb-4">Address Information</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="md:col-span-2">
-                        <FormTextarea
-                          label="Address"
-                          value={formData2.address}
-                          onChange={(e) => handlePatientInputChange('address', e.target.value)}
-                          rows={3}
-                          placeholder="Enter full address"
-                        />
-                      </div>
-                      <FormSelect
-                        label="State"
-                        value={formData2.state}
-                        onChange={(e) => handlePatientInputChange('state', e.target.value)}
-                        options={states.map(state => ({ value: state.iso2, label: state.name }))}
-                      />
-                      <FormSelect
-                        label="City"
-                        value={formData2.city}
-                        onChange={(e) => handlePatientInputChange('city', e.target.value)}
-                        options={cities.map(city => ({ value: city.name, label: city.name }))}
-                        disabled={!formData2.state}
-                      />
-                      <FormInput
-                        label="District"
-                        value={formData2.district}
-                        onChange={(e) => handlePatientInputChange('district', e.target.value)}
-                      />
-                      <FormInput
-                        label="Tehsil"
-                        value={formData2.tehsil}
-                        onChange={(e) => handlePatientInputChange('tehsil', e.target.value)}
-                      />
-                      <FormInput
-                        label="Village"
-                        value={formData2.village}
-                        onChange={(e) => handlePatientInputChange('village', e.target.value)}
-                      />
-                      <FormInput
-                        label="ZIP Code"
-                        value={formData2.zipCode}
-                        onChange={(e) => handlePatientInputChange('zipCode', e.target.value)}
-                      />
-                    </div>
-                  {/* <h3 className="text-lg font-semibold text-gray-900 mt-4">Appointment Information</h3> */ /* REMOVED HEADING */}
-                </div>
-              )}
-
-              {/* Department and Doctor Selection AND REST OF THE FORM */}
-              {!showFields && (
-                <>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                    <FormSelect
-                      label="Select Department"
-                      value={formData.department}
-                      onChange={(e) => handleInputChange('department', e.target.value)}
-                      options={departments.map(dep => ({ value: dep._id, label: dep.name }))}
-                      required
-                    />
-                    {showErrors && errors.department && (
-                      <p className="text-xs text-red-500 mt-1">{errors.department}</p>
-                    )}
-
-                    {!fixedDoctorId && (
-                      <FormSelect
-                        label="Select Doctor"
-                        value={formData.doctorId}
-                        onChange={(e) => handleInputChange('doctorId', e.target.value)}
-                        options={(doctors || []).map(d => ({
-                          value: d._id,
-                          label: (d.isFullTime) ? `Dr. ${d.firstName} ${d.lastName} (Full Time)` : `Dr. ${d.firstName} ${d.lastName} (Part Time)`
-                        }))}
-                        required
-                      />
-                    )}
-                    {showErrors && errors.doctorId && (
-                      <p className="text-xs text-red-500 mt-1">{errors.doctorId}</p>
-                    )}
-                  </div>
-
-                  {/* Date, Type and Duration */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <FormInput
-                      label="Date"
-                      type="date"
-                      value={formData.date}
-                      onChange={(e) => handleInputChange('date', e.target.value)}
-                      required
-                      min={getLocalDateString()}
-                    />
-
-                    <FormSelect
-                      label="Type"
-                      value={formData.type}
-                      onChange={(e) => handleInputChange('type', e.target.value)}
-                      options={schedulingTypeOptions}
-                      required
-                    />
-
-                    <FormSelect
-                      label="Duration (min)"
-                      value={formData.duration}
-                      onChange={(e) => handleInputChange('duration', e.target.value)}
-                      options={[
-                        { value: '15', label: '15 minutes' },
-                        { value: '30', label: '30 minutes' },
-                        { value: '45', label: '45 minutes' },
-                        { value: '60', label: '1 hour' },
-                        { value: '90', label: '1.5 hours' },
-                        { value: '120', label: '2 hours' }
-                      ]}
-                      required
-                    />
-                  </div>
-
-                  {/* Appointment Type and Priority */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormSelect
-                      label="Appointment Type"
-                      value={formData.appointment_type}
-                      onChange={(e) => handleInputChange('appointment_type', e.target.value)}
-                      options={appointmentTypeOptions}
-                      required
-                    />
-
-                    <FormSelect
-                      label="Priority"
-                      value={formData.priority}
-                      onChange={(e) => handleInputChange('priority', e.target.value)}
-                      options={priorityOptions}
-                    />
-                  </div>
-
-                  {/* Time Selection (for time-based appointments) */}
-                  {formData.type === 'time-based' && (
-                    <div className="space-y-2">
-                      <FormInput
-                        label="Start Time (HH:MM)"
-                        type="time"
-                        value={formData.start_time}
-                        onChange={(e) => { handleInputChange('start_time', e.target.value); setShowErrors(false); setAutoAssignedTime(null); }}
-                        onBlur={() => setShowErrors(true)}
-                        required
-                        min={minTime}
-                        max={maxTime}
-                        step="300" // 5 minute increments
-                      />
-                      {autoAssignedTime && !formData.start_time && (
-                        <p className="text-sm text-slate-500">Suggested slot: <span className="font-semibold">{autoAssignedTime}</span></p>
-                      )}
-                      {formData.start_time && (
-                        <div className="text-sm text-slate-600">
-                          <p>End Time: <span className="font-medium">{displayEndTime}</span></p>
-                          <p className={`mt-1 ${isWithinWorkingHours(formData.start_time) ? 'text-green-600' : 'text-red-600'}`}>
-                            {isWithinWorkingHours(formData.start_time) ? 'Within doctor working hours' : 'Outside working hours'}
-                          </p>
-                        </div>
-                      )}
-                      {showErrors && errors.start_time && (
-                        <p className="text-xs text-red-500 mt-1">{errors.start_time}</p>
-                      )}
-                      <div className="text-sm text-gray-500">
-                        <p>Doctor's available hours:</p>
-                        <ul className="list-disc pl-5">
-                          {doctorWorkingHours.map((range, i) => (
-                            <li key={i}>
-                              {range.start} to {range.end}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                      {formData.start_time && !isWithinWorkingHours(formData.start_time) && (
-                        <p className="text-sm text-red-500">
-                          Selected time is outside doctor's working hours
-                        </p>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Room Selection (for IPD) */}
-                  {type === 'ipd' && (
-                    <FormSelect
-                      label="Select Room"
-                      value={formData.roomId}
-                      onChange={(e) => handleInputChange('roomId', e.target.value)}
-                      options={rooms.map(r => ({
-                        value: r._id,
-                        label: `Room ${r.room_number} - ${r.type} (${r.ward || 'No Ward'})`
-                      }))}
-                      required
-                    />
-                  )}
-
-                  {/* Payment Method */}
-                  <FormSelect
-                    label="Payment Method"
-                    value={formData.paymentMethod}
-                    onChange={(e) => handleInputChange('paymentMethod', e.target.value)}
-                    options={[
-                      { value: 'Cash', label: 'Cash' },
-                      { value: 'Card', label: 'Card' },
-                      { value: 'UPI', label: 'UPI' },
-                      { value: 'Net Banking', label: 'Net Banking' },
-                      { value: 'Insurance', label: 'Insurance' },
-                      { value: 'Government Funded Scheme', label: 'Government Funded Scheme' },
-                    ]}
-                    required
-                  />
-
-                  <FormSelect
-                    label="Bill Status"
-                    value={status}
-                    onChange={(e) => setStatus(e.target.value)}
-                    options={[
-                      { value: 'Pending', label: 'Pending' },
-                      { value: 'Paid', label: 'Paid' },
-                      { value: 'Refunded', label: 'Refunded' }
-                    ]}
-                    required
-                  />
-
-                  {/* Registration Fee Checkbox */}
-                  <div className="flex items-center space-x-2 mb-4">
-                    <input
-                      type="checkbox"
-                      id="includeRegFee"
-                      checked={includeRegistrationFee}
-                      onChange={(e) => setIncludeRegistrationFee(e.target.checked)}
-                      className="w-4 h-4"
-                    />
-                    <label htmlFor="includeRegFee" className="text-sm text-gray-700">
-                      Include Registration Fee
-                    </label>
-                  </div>
-
-                  {/* Charges Summary */}
-                  <div className="border-t pt-4">
-                    <h4 className="text-md font-semibold text-gray-800 mb-2">Charges Summary</h4>
-                    {chargesSummary.length > 0 ? (
-                      <>
-                        {chargesSummary.map((item, index) => (
-                          <div key={index} className="flex justify-between text-sm mb-1">
-                            <span>{item.description}</span>
-                            <span>₹{item.amount.toFixed(2)}</span>
-                          </div>
-                        ))}
-                        <div className="flex justify-between font-bold text-gray-900 mt-2">
-                          <span>Total</span>
-                          <span>₹{totalAmount.toFixed(2)}</span>
-                        </div>
-                      </>
-                    ) : (
-                      <p className="text-sm text-gray-500">Select a doctor and appointment type to see charges</p>
-                    )}
-                  </div>
-
-                  {/* Live Preview Card */}
-                  <div className="mt-4 p-4 bg-slate-50 rounded-lg border border-slate-100">
-                    <h4 className="font-bold text-sm text-slate-800 mb-2">Appointment Preview</h4>
-                    <div className="text-sm text-slate-700 space-y-1">
-                      <div>
-                        <span className="font-medium">Patient:</span>
-                        {showFields
-                          ? `${formData2.salutation ? formData2.salutation + ' ' : ''}${formData2.firstName} ${formData2.lastName}`.trim()
-                          : (filteredPatients.find(p => p._id === formData.patientId)
-                            ? `${filteredPatients.find(p => p._id === formData.patientId).salutation || ''} ${filteredPatients.find(p => p._id === formData.patientId).first_name} ${filteredPatients.find(p => p._id === formData.patientId).last_name}`.trim()
-                            : '—'
-                          )
-                        }
-                      </div>
-                      <div>
-                        <span className="font-medium">Doctor:</span>
-                        {doctors.find(d => d._id === formData.doctorId)
-                          ? `Dr. ${doctors.find(d => d._id === formData.doctorId).firstName} ${doctors.find(d => d._id === formData.doctorId).lastName}`
-                          : (doctorDetails
-                            ? `Dr. ${doctorDetails.firstName} ${doctorDetails.lastName}`
-                            : '—'
-                          )
-                        }
-                      </div>
-                      <div><span className="font-medium">Date:</span> {formatDateDisplay(formData.date)}</div>
-                      <div><span className="font-medium">Time:</span> {formData.start_time || '—'} {displayEndTime && <span className="text-slate-500">to {displayEndTime}</span>}</div>
-                      <div><span className="font-medium">Duration:</span> {formData.duration} mins</div>
-                      {formData2.aadhaarNumber && (
-                        <div><span className="font-medium">Aadhaar:</span> {formData2.aadhaarNumber}</div>
-                      )}
-                      <div className="pt-2 border-t mt-2 flex justify-between items-center">
-                        <div>
-                          <div className="text-xs text-slate-500">Estimated Total</div>
-                          <div className="text-lg font-bold text-slate-800">₹{totalAmount.toFixed(2)}</div>
-                        </div>
-                        <div>
-                          <span className={`px-2 py-1 rounded-full text-xs font-semibold ${formData.type === 'time-based' ? 'bg-teal-50 text-teal-700' : 'bg-indigo-50 text-indigo-700'}`}>{formData.type}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Notes */}
-                  <FormTextarea
-                    label="Notes"
-                    value={formData.notes}
-                    onChange={(e) => handleInputChange('notes', e.target.value)}
-                    rows={3}
-                    placeholder="Enter any special instructions or notes for this appointment"
-                  />
-                </>
-              )}
-            </div>
-
-            <div className="lg:col-span-1 space-y-4">
-              {!showFields && ( // Only show schedule if not adding patient
-                <>
-                  {formData.doctorId && (
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <h4 className="font-medium text-lg mb-3">
-                        {formData.type === 'time-based' ?
-                          `Schedule for ${formatDateDisplay(formData.date)}` :
-                          "Patient Queue"
-                        }
-                      </h4>
-
-                      {doctorDetails && (
-                        <div className="mb-4 p-3 bg-blue-50 rounded-md">
-                          <p className="text-sm font-medium">
-                            Dr. {doctorDetails.firstName} {doctorDetails.lastName}
-                          </p>
-                          <p className="text-sm text-gray-600">
-                            {doctorDetails.isFullTime ? 'Full-time' : 'Part-time'} •
-                            {doctorDetails.specialization}
-                          </p>
-                        </div>
-                      )}
-
-                      {formData.type === 'time-based' ? (
-                        <div className="space-y-3">
-                          <div className="text-sm font-medium">
-                            <p>Available Hours:</p>
-                            <ul className="list-disc pl-5 mt-1">
-                              {doctorWorkingHours.map((range, i) => (
-                                <li key={i} className="text-sm">
-                                  {range.start} - {range.end}
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-
-                          {existingAppointments.length > 0 ? (
-                            <div>
-                              <p className="text-sm font-medium mb-2">Booked Appointments:</p>
-                              <div className="space-y-2 max-h-40 overflow-y-auto">
-                                {existingAppointments.map((appt, index) => {
-                                  const startTime = new Date(appt.startTime).toLocaleTimeString([], {
-                                    hour: '2-digit', minute: '2-digit'
-                                  });
-                                  const endTime = new Date(appt.endTime).toLocaleTimeString([], {
-                                    hour: '2-digit', minute: '2-digit'
-                                  });
-
-                                  return (
-                                    <div key={index} className="bg-white p-2 rounded border text-sm">
-                                      <div className="flex justify-between">
-                                        <span className="font-medium">
-                                          {startTime} - {endTime}
-                                        </span>
-                                        <span className="text-gray-600">{appt.duration} mins</span>
-                                      </div>
-                                      <div className="text-xs text-gray-500 mt-1">
-                                        {appt.patient?.first_name} {appt.patient?.last_name} • {appt.patient?.patient_type}
-                                      </div>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          ) : (
-                            <p className="text-sm text-gray-500">No appointments scheduled yet for this date.</p>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="space-y-3">
-                          <p className="text-sm font-medium">Current Queue:</p>
-                          {existingPatients.length > 0 ? (
-                            <div className="space-y-2">
-                              {existingPatients.map((patient, index) => (
-                                <div key={index} className="bg-white p-2 rounded border">
-                                  <div className="flex justify-between text-sm">
-                                    <span className="font-medium">#{patient.serialNumber}</span>
-                                    <span className="text-gray-600">
-                                      {patient.patientDetails?.first_name} {patient.patientDetails?.last_name}
-                                    </span>
-                                  </div>
-                                  <div className="text-xs text-gray-500 mt-1">
-                                    {patient.appointmentDetails?.appointment_type} - {patient.appointmentDetails?.priority}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <p className="text-sm text-gray-500">No patients in queue yet for today.</p>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* CORRECTED FORM ACTIONS PLACEMENT */}
-          <div className="flex justify-end space-x-3 pt-4 mt-6">
-            {!showFields ? (
-              <>
-                {/* QR Payment Button */}
-                <Button
-                  variant="secondary"
-                  type="button"
-                  onClick={handleGenerateQR}
-                  disabled={isLoading || totalAmount <= 0}
-                >
-                  {isLoading ? 'Processing...' : 'Pay with QR Code'}
-                </Button>
-
-                {/* Submit Button for non-QR payments */}
-                <Button
-                  variant="primary"
-                  type="submit"
-                  disabled={isLoading || !isFormValid}
-                  onClick={() => setShowErrors(true)}
-                >
-                  {isLoading ? 'Scheduling...' : 'Schedule Appointment'}
-                </Button>
-              </>
-            ) : (
-              <Button
-                variant="primary"
-                type="submit"
-                disabled={isLoading || (!formData2.salutation || !formData2.firstName || !formData2.phone)}
-              >
-                {isLoading ? 'Adding Patient...' : 'Add Patient'}
-              </Button>
-            )}
-          </div>
-        </form>
-      </div >
-
-      {/* MODALS SHOULD BE HERE, OUTSIDE THE MAIN CONTENT DIV BUT INSIDE THE FRAGMENT */}
-      {
-        isQrModalOpen && qrData.imageUrl && (
-          <QRCodeModal
-            isOpen={isQrModalOpen}
-            onClose={() => {
-              setIsQrModalOpen(false);
-              if (pollingIntervalId) clearInterval(pollingIntervalId);
-            }}
-            qrImageUrl={qrData.imageUrl}
-            amount={totalAmount}
-            paymentStatus={paymentStatus}
-          />
-        )
-      }
-
-      <AppointmentSlipModal
-        isOpen={slipModal}
-        onClose={() => setSlipModal(false)}
-        appointmentData={submitDetails}
-        hospitalInfo={hospitalInfo}
-      />
-
-      <PaymentPendingModal
-        isOpen={showPaymentPendingModal}
-        onClose={() => setShowPaymentPendingModal(false)}
-        onProceed={() => {
-          setShowPaymentPendingModal(false);
-          handleSubmit(null, null, true);
-        }}
-        amount={totalAmount}
-        patientName={
-          showFields
-            ? `${formData2.salutation ? formData2.salutation + ' ' : ''}${formData2.firstName} ${formData2.lastName}`.trim()
-            : (filteredPatients.find(p => p._id === formData.patientId)
-              ? `${filteredPatients.find(p => p._id === formData.patientId).salutation || ''} ${filteredPatients.find(p => p._id === formData.patientId).first_name} ${filteredPatients.find(p => p._id === formData.patientId).last_name}`.trim()
-              : 'Unknown Patient'
-            )
-        }
-        appointmentDetails={{
-          date: formatDateDisplay(formData.date),
-          time: formData.start_time || 'Queue Based',
-          doctor: doctors.find(d => d._id === formData.doctorId)
-            ? `Dr. ${doctors.find(d => d._id === formData.doctorId).firstName} ${doctors.find(d => d._id === formData.doctorId).lastName}`
-            : 'Doctor Selected'
-        }}
-      />
-    </>
-  );
-
-  if (embedded) return innerContent;
+  const selectedPatient = formData.patientId ? 
+    filteredPatients.find(p => p._id === formData.patientId) : null;
 
   return (
-    <Layout sidebarItems={adminSidebar}>
-      {innerContent}
-    </Layout>
+    <>
+      <style>{`
+        .fixed-calendar {
+          position: fixed;
+          top: 50%;
+          right: 20px;
+          transform: translateY(-50%);
+          width: 350px;
+          max-height: 80vh;
+          overflow-y: auto;
+          z-index: 40;
+          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+          border-radius: 12px;
+        }
+        
+        @media (max-width: 1200px) {
+          .fixed-calendar {
+            position: relative;
+            top: auto;
+            right: auto;
+            transform: none;
+            width: 100%;
+            margin-top: 20px;
+          }
+        }
+        
+        .patient-added-popup {
+          position: fixed;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          background: white;
+          padding: 30px;
+          border-radius: 12px;
+          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+          z-index: 100;
+          max-width: 500px;
+          width: 90%;
+        }
+      `}</style>
+
+      <div className="min-h-screen">
+        <div className="max-w-7xl mx-auto">
+          {/* Header */}
+          <div className="flex flex-col md:flex-row md:items-center items-center w-full justify-between mb-8">
+            <div>
+              <h1 className="text-2xl font-bold text-center text-gray-800 capitalize">{type} Appointment Booking</h1>
+              <p className="text-gray-500 mt-1 text-sm">
+                {showFields ? 'Add new patient details' : 'Schedule an appointment for existing or new patient'}
+              </p>
+            </div>
+          </div>
+
+          {/* Main Content */}
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+            {/* Left Column - Form */}
+            <div className={`col-span-1 ${showFields ? 'lg:col-span-5' : 'lg:col-span-3'}`}>
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div className="p-6 border-b border-gray-100">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-xl font-bold text-gray-900">
+                        {showFields ? 'Add New Patient' : 'Schedule Appointment'}
+                      </h2>
+                      <p className="text-gray-600 mt-1 text-sm">
+                        {showFields ? 'Fill in patient details below' : 'Select patient and appointment details'}
+                      </p>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      {showFields ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setShowFields(false)}
+                          className="flex items-center"
+                        >
+                          <FaArrowLeft className="mr-2" />
+                          Back to Appointment
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setShowFields(true)}
+                          className="flex items-center"
+                        >
+                          <FaUserPlus className="mr-2" />
+                          Add New Patient
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-6">
+                  <form onSubmit={handleSubmit} className="space-y-6">
+                    {/* Patient Selection / Registration */}
+                    {!showFields ? (
+                      <>
+                        <div className="space-y-4">
+                          <FormSelect
+                            label="Select Patient"
+                            value={formData.patientId}
+                            onChange={(e) => handleInputChange('patientId', e.target.value)}
+                            options={[
+                              { value: '', label: 'Select a patient' },
+                              ...(filteredPatients || []).map(p => ({
+                                value: p._id,
+                                label: `${p.salutation || ''} ${p.first_name || ''} ${p.last_name || ''} - ${p.phone || ''} (${p.patientId || ''})${p.aadhaar_number ? ` - Aadhaar: ${p.aadhaar_number}` : ''}`
+                              }))
+                            ]}
+                            required
+                          />
+                          {selectedPatient && (
+                            <div className="bg-teal-50 border border-teal-100 rounded-lg p-4">
+                              <div className="flex items-center">
+                                {selectedPatient.patient_image ? (
+                                  <img
+                                    src={selectedPatient.patient_image}
+                                    alt="Patient"
+                                    className="h-12 w-12 rounded-full object-cover mr-3"
+                                  />
+                                ) : (
+                                  <div className="h-12 w-12 rounded-full bg-teal-100 flex items-center justify-center text-teal-600 font-bold text-lg mr-3">
+                                    {selectedPatient.first_name?.charAt(0) || 'P'}
+                                  </div>
+                                )}
+                                <div>
+                                  <h4 className="font-semibold text-gray-900">
+                                    {selectedPatient.salutation || ''} {selectedPatient.first_name || ''} {selectedPatient.last_name || ''}
+                                  </h4>
+                                  <p className="text-sm text-gray-600">
+                                    Phone: {selectedPatient.phone} • Gender: {selectedPatient.gender || 'N/A'}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Appointment Details */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <FormSelect
+                            label="Select Department"
+                            value={formData.department}
+                            onChange={(e) => handleInputChange('department', e.target.value)}
+                            options={departments.map(dep => ({ value: dep._id, label: dep.name }))}
+                            required
+                          />
+                          {!fixedDoctorId && (
+                            <FormSelect
+                              label="Select Doctor"
+                              value={formData.doctorId}
+                              onChange={(e) => handleInputChange('doctorId', e.target.value)}
+                              options={(doctors || []).map(d => ({
+                                value: d._id,
+                                label: (d.isFullTime) ? `Dr. ${d.firstName} ${d.lastName} (Full Time)` : `Dr. ${d.firstName} ${d.lastName} (Part Time)`
+                              }))}
+                              required
+                            />
+                          )}
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <FormInput
+                            label="Date"
+                            type="date"
+                            value={formData.date}
+                            onChange={(e) => handleInputChange('date', e.target.value)}
+                            required
+                            min={getLocalDateString()}
+                          />
+                          <FormSelect
+                            label="Type"
+                            value={formData.type}
+                            onChange={(e) => handleInputChange('type', e.target.value)}
+                            options={schedulingTypeOptions}
+                            required
+                          />
+                          <FormSelect
+                            label="Duration (min)"
+                            value={formData.duration}
+                            onChange={(e) => handleInputChange('duration', e.target.value)}
+                            options={[
+                              { value: '15', label: '15 minutes' },
+                              { value: '30', label: '30 minutes' },
+                              { value: '45', label: '45 minutes' },
+                              { value: '60', label: '1 hour' },
+                              { value: '90', label: '1.5 hours' },
+                              { value: '120', label: '2 hours' }
+                            ]}
+                            required
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <FormSelect
+                            label="Appointment Type"
+                            value={formData.appointment_type}
+                            onChange={(e) => handleInputChange('appointment_type', e.target.value)}
+                            options={appointmentTypeOptions}
+                            required
+                          />
+                          <FormSelect
+                            label="Priority"
+                            value={formData.priority}
+                            onChange={(e) => handleInputChange('priority', e.target.value)}
+                            options={priorityOptions}
+                          />
+                        </div>
+
+                        {formData.type === 'time-based' && (
+                          <div className="space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <FormInput
+                                label="Start Time (HH:MM)"
+                                type="time"
+                                value={formData.start_time}
+                                onChange={(e) => { 
+                                  handleInputChange('start_time', e.target.value); 
+                                  setShowErrors(false); 
+                                  setAutoAssignedTime(null); 
+                                }}
+                                onBlur={() => setShowErrors(true)}
+                                required
+                                min={minTime}
+                                max={maxTime}
+                                step="300"
+                              />
+                              {formData.start_time && (
+                                <div className="flex items-center justify-center bg-gray-50 rounded-lg p-4">
+                                  <div className="text-center">
+                                    <p className="text-sm text-gray-600">End Time</p>
+                                    <p className="text-lg font-bold text-gray-900">{displayEndTime}</p>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                            {autoAssignedTime && !formData.start_time && (
+                              <div className="bg-blue-50 border border-blue-100 rounded-lg p-3">
+                                <p className="text-sm text-blue-700">
+                                  Suggested available slot: <span className="font-semibold">{autoAssignedTime}</span>
+                                </p>
+                              </div>
+                            )}
+                            {showErrors && errors.start_time && (
+                              <div className="bg-red-50 border border-red-100 rounded-lg p-3">
+                                <p className="text-sm text-red-700">{errors.start_time}</p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {type === 'ipd' && (
+                          <FormSelect
+                            label="Select Room"
+                            value={formData.roomId}
+                            onChange={(e) => handleInputChange('roomId', e.target.value)}
+                            options={[
+                              { value: '', label: 'Select a room' },
+                              ...rooms.map(r => ({
+                                value: r._id,
+                                label: `Room ${r.room_number} - ${r.type} (${r.ward || 'No Ward'})`
+                              }))
+                            ]}
+                            required
+                          />
+                        )}
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <FormSelect
+                            label="Payment Method"
+                            value={formData.paymentMethod}
+                            onChange={(e) => handleInputChange('paymentMethod', e.target.value)}
+                            options={[
+                              { value: 'Cash', label: 'Cash' },
+                              { value: 'Card', label: 'Card' },
+                              { value: 'UPI', label: 'UPI' },
+                              { value: 'Net Banking', label: 'Net Banking' },
+                              { value: 'Insurance', label: 'Insurance' },
+                              { value: 'Government Funded Scheme', label: 'Government Funded Scheme' },
+                            ]}
+                            required
+                          />
+                          <FormSelect
+                            label="Bill Status"
+                            value={status}
+                            onChange={(e) => setStatus(e.target.value)}
+                            options={[
+                              { value: 'Pending', label: 'Pending' },
+                              { value: 'Paid', label: 'Paid' },
+                              { value: 'Refunded', label: 'Refunded' }
+                            ]}
+                            required
+                          />
+                        </div>
+
+                        {/* Registration Fee Checkbox */}
+                        <div className="bg-gray-50 border border-gray-100 rounded-lg p-4">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="font-medium text-gray-900">Registration Fee</p>
+                              <p className="text-sm text-gray-600">
+                                Include one-time registration fee for new patients
+                              </p>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <label className="relative inline-flex items-center cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={includeRegistrationFee}
+                                  onChange={(e) => setIncludeRegistrationFee(e.target.checked)}
+                                  className="sr-only peer"
+                                />
+                                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600"></div>
+                              </label>
+                              <span className="text-sm font-medium text-gray-700">
+                                {includeRegistrationFee ? 'Included' : 'Excluded'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Charges Summary */}
+                        <div className="bg-gray-50 border border-gray-100 rounded-lg p-6">
+                          <h3 className="text-lg font-semibold text-gray-900 mb-4">Charges Summary</h3>
+                          {chargesSummary.length > 0 ? (
+                            <div className="space-y-3">
+                              {chargesSummary.map((item, index) => (
+                                <div key={index} className="flex justify-between items-center py-2 border-b border-gray-100">
+                                  <span className="text-gray-700">{item.description}</span>
+                                  <span className="font-medium text-gray-900">₹{item.amount.toFixed(2)}</span>
+                                </div>
+                              ))}
+                              <div className="flex justify-between items-center pt-3 border-t border-gray-200">
+                                <span className="text-lg font-bold text-gray-900">Total Amount</span>
+                                <span className="text-2xl font-bold text-teal-600">₹{totalAmount.toFixed(2)}</span>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="text-center py-8">
+                              <FaClock className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                              <p className="text-gray-500">Select doctor and appointment type to see charges</p>
+                            </div>
+                          )}
+                        </div>
+
+                        <FormTextarea
+                          label="Notes (Optional)"
+                          value={formData.notes}
+                          onChange={(e) => handleInputChange('notes', e.target.value)}
+                          rows={3}
+                          placeholder="Enter any special instructions or notes for this appointment"
+                        />
+                      </>
+                    ) : (
+                      /* New Patient Form */
+                      <>
+                        <div className="space-y-6">
+                          {/* Image Upload */}
+                          <div className="flex flex-col items-center">
+                            <div className="relative mb-4">
+                              <div className="w-32 h-32 rounded-full border-4 border-white shadow-lg overflow-hidden bg-slate-200 flex items-center justify-center">
+                                {formData2.patient_image ? (
+                                  <img
+                                    src={formData2.patient_image}
+                                    alt="Patient"
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <FaUser className="text-5xl text-slate-400" />
+                                )}
+                                {uploadingImage && (
+                                  <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                                    <div className="animate-spin rounded-full h-8 w-8 border-2 border-white border-t-transparent"></div>
+                                  </div>
+                                )}
+                              </div>
+                              <div className="flex justify-center mt-4 space-x-2">
+                                {formData2.patient_image ? (
+                                  <Button
+                                    variant="secondary"
+                                    size="sm"
+                                    onClick={removeImage}
+                                    className="flex items-center"
+                                  >
+                                    <FaTimes className="mr-2" />
+                                    Remove Photo
+                                  </Button>
+                                ) : (
+                                  <label className="cursor-pointer">
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="flex items-center"
+                                      disabled={uploadingImage}
+                                    >
+                                      <FaCloudUploadAlt className="mr-2" />
+                                      Upload Photo
+                                      <input
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={handleImageUpload}
+                                        className="hidden"
+                                        disabled={uploadingImage}
+                                      />
+                                    </Button>
+                                  </label>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Patient Details */}
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <FormSelect
+                              label="Salutation"
+                              value={formData2.salutation}
+                              onChange={(e) => handlePatientInputChange('salutation', e.target.value)}
+                              options={salutationOptions}
+                            />
+                            <FormInput
+                              label="First Name"
+                              value={formData2.firstName}
+                              onChange={(e) => handlePatientInputChange('firstName', e.target.value)}
+                              required
+                            />
+                            <FormInput
+                              label="Last Name"
+                              value={formData2.lastName}
+                              onChange={(e) => handlePatientInputChange('lastName', e.target.value)}
+                              required
+                            />
+                            <FormInput
+                              label="Phone Number"
+                              type="tel"
+                              value={formData2.phone}
+                              onChange={(e) => handlePatientInputChange('phone', e.target.value.replace(/\D/g, '').slice(0, 10))}
+                              required
+                              maxLength={10}
+                              inputMode="numeric"
+                              pattern="^[6-9]\d{9}$"
+                              title="10 digit Indian mobile number starting with 6-9"
+                            />
+                            <FormInput
+                              label="Email"
+                              type="email"
+                              value={formData2.email}
+                              onChange={(e) => handlePatientInputChange('email', e.target.value)}
+                            />
+                            <FormInput
+                              label="Age"
+                              type="number"
+                              min="0"
+                              max="120"
+                              value={formData2.age}
+                              onChange={(e) => handlePatientInputChange('age', e.target.value)}
+                              required
+                            />
+                            <FormSelect
+                              label="Gender"
+                              value={formData2.gender}
+                              onChange={(e) => handlePatientInputChange('gender', e.target.value)}
+                              options={genderOptions}
+                              required
+                            />
+                            <FormSelect
+                              label="Blood Group"
+                              value={formData2.bloodGroup}
+                              onChange={(e) => handlePatientInputChange('bloodGroup', e.target.value)}
+                              options={bloodGroupOptions}
+                            />
+                            <div className="">
+                              <FormInput
+                                label="Aadhaar Number (Optional)"
+                                type="text"
+                                value={formData2.aadhaarNumber}
+                                onChange={(e) => handleAadhaarChange(e.target.value)}
+                                maxLength="14"
+                                placeholder="XXXX XXXX XXXX"
+                                icon={<FaIdCard className="text-gray-400" />}
+                              />
+                            </div>
+                          </div>
+
+                          {/* Address */}
+                          <div className="space-y-4">
+                            <FormTextarea
+                              label="Address"
+                              value={formData2.address}
+                              onChange={(e) => handlePatientInputChange('address', e.target.value)}
+                              rows={3}
+                              placeholder="Enter full address"
+                            />
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <FormSelect
+                                label="State"
+                                value={formData2.state}
+                                onChange={(e) => handlePatientInputChange('state', e.target.value)}
+                                options={states.map(state => ({ value: state.iso2, label: state.name }))}
+                              />
+                              <FormSelect
+                                label="City"
+                                value={formData2.city}
+                                onChange={(e) => handlePatientInputChange('city', e.target.value)}
+                                options={cities.map(city => ({ value: city.name, label: city.name }))}
+                                disabled={!formData2.state}
+                              />
+                              <FormInput
+                                label="District"
+                                value={formData2.district}
+                                onChange={(e) => handlePatientInputChange('district', e.target.value)}
+                              />
+                              <FormInput
+                                label="Tehsil"
+                                value={formData2.tehsil}
+                                onChange={(e) => handlePatientInputChange('tehsil', e.target.value)}
+                              />
+                              <FormInput
+                                label="Village"
+                                value={formData2.village}
+                                onChange={(e) => handlePatientInputChange('village', e.target.value)}
+                              />
+                              <FormInput
+                                label="ZIP Code"
+                                value={formData2.zipCode}
+                                onChange={(e) => handlePatientInputChange('zipCode', e.target.value)}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </>
+                    )}
+
+                    {/* Action Buttons */}
+                    <div className="flex justify-end space-x-4 pt-6 border-t border-gray-100">
+                      {showFields ? (
+                        <>
+                          <Button
+                            variant="secondary"
+                            type="button"
+                            onClick={() => setShowFields(false)}
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            variant="primary"
+                            type="submit"
+                            disabled={isLoading || (!formData2.salutation || !formData2.firstName || !formData2.phone)}
+                          >
+                            {isLoading ? 'Adding Patient...' : 'Add Patient'}
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <Button
+                            variant="secondary"
+                            type="button"
+                            onClick={handleGenerateQR}
+                            disabled={isLoading || totalAmount <= 0 || !formData.patientId}
+                          >
+                            {isLoading ? 'Processing...' : 'Pay with QR Code'}
+                          </Button>
+                          <Button
+                            variant="primary"
+                            type="submit"
+                            disabled={isLoading || !isFormValid || !formData.patientId}
+                            onClick={() => setShowErrors(true)}
+                          >
+                            {isLoading ? 'Scheduling...' : 'Schedule Appointment'}
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+
+            {/* Right Column - Calendar (Fixed Position) */}
+            {!showFields && formData.doctorId && (
+              <div className="fixed-calendar hidden lg:block">
+                <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+                  <div className="bg-gradient-to-r from-teal-600 to-teal-800 p-4">
+                    <h3 className="text-lg font-bold text-white flex items-center">
+                      <FaCalendarAlt className="mr-2" />
+                      Doctor's Schedule
+                    </h3>
+                  </div>
+                  <div className="p-4">
+                    {doctorDetails && (
+                      <div className="mb-4 p-3 bg-teal-50 rounded-lg">
+                        <p className="font-semibold text-gray-900">
+                          Dr. {doctorDetails.firstName} {doctorDetails.lastName}
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          {doctorDetails.specialization} • {doctorDetails.isFullTime ? 'Full-time' : 'Part-time'}
+                        </p>
+                      </div>
+                    )}
+
+                    <div className="space-y-4">
+                      <div>
+                        <h4 className="font-medium text-gray-900 mb-2">Available Hours</h4>
+                        <div className="space-y-2">
+                          {doctorWorkingHours.map((range, i) => (
+                            <div key={i} className="flex justify-between items-center bg-gray-50 p-2 rounded">
+                              <span className="text-sm font-medium">{range.start}</span>
+                              <span className="text-gray-500">to</span>
+                              <span className="text-sm font-medium">{range.end}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {formData.type === 'time-based' && existingAppointments.length > 0 && (
+                        <div>
+                          <h4 className="font-medium text-gray-900 mb-2">Booked Appointments</h4>
+                          <div className="space-y-2 max-h-60 overflow-y-auto">
+                            {existingAppointments.map((appt, index) => {
+                              const startTime = new Date(appt.startTime).toLocaleTimeString([], {
+                                hour: '2-digit', minute: '2-digit'
+                              });
+                              const endTime = new Date(appt.endTime).toLocaleTimeString([], {
+                                hour: '2-digit', minute: '2-digit'
+                              });
+
+                              return (
+                                <div key={index} className="bg-white border border-gray-100 p-3 rounded-lg shadow-sm">
+                                  <div className="flex justify-between items-center">
+                                    <span className="font-medium text-sm">
+                                      {startTime} - {endTime}
+                                    </span>
+                                    <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
+                                      {appt.duration} min
+                                    </span>
+                                  </div>
+                                  <div className="text-xs text-gray-500 mt-1 truncate">
+                                    {appt.patient?.first_name} {appt.patient?.last_name}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Modals */}
+      {isQrModalOpen && qrData.imageUrl && (
+        <QRCodeModal
+          isOpen={isQrModalOpen}
+          onClose={() => {
+            setIsQrModalOpen(false);
+            if (pollingIntervalId) clearInterval(pollingIntervalId);
+          }}
+          qrImageUrl={qrData.imageUrl}
+          amount={totalAmount}
+          paymentStatus={paymentStatus}
+        />
+      )}
+
+      {showPaymentPendingModal && (
+        <PaymentPendingModal
+          isOpen={showPaymentPendingModal}
+          onClose={() => setShowPaymentPendingModal(false)}
+          onProceed={() => {
+            setShowPaymentPendingModal(false);
+            handleSubmit(null, null, true);
+          }}
+          amount={totalAmount}
+          patientName={
+            selectedPatient ? 
+              `${selectedPatient.salutation || ''} ${selectedPatient.first_name || ''} ${selectedPatient.last_name || ''}`.trim() : 
+              'Unknown Patient'
+          }
+          appointmentDetails={{
+            date: formatDateDisplay(formData.date),
+            time: formData.start_time || 'Queue Based',
+            doctor: doctors.find(d => d._id === formData.doctorId)
+              ? `Dr. ${doctors.find(d => d._id === formData.doctorId).firstName} ${doctors.find(d => d._id === formData.doctorId).lastName}`
+              : 'Doctor Selected'
+          }}
+        />
+      )}
+
+      {showSuccessModal && (
+        <SuccessModal
+          isOpen={showSuccessModal}
+          onClose={() => setShowSuccessModal(false)}
+          message={successMessage}
+          patientName={newPatientData ? 
+            `${newPatientData.salutation || ''} ${newPatientData.first_name || ''} ${newPatientData.last_name || ''}`.trim() :
+            (selectedPatient ? 
+              `${selectedPatient.salutation || ''} ${selectedPatient.first_name || ''} ${selectedPatient.last_name || ''}`.trim() : 
+              ''
+            )
+          }
+          isPatient={!!newPatientData}
+          onContinue={handleSelectPatientAfterSuccess}
+        />
+      )}
+
+      {slipModal && submitDetails && (
+        <AppointmentSlipModal
+          isOpen={slipModal}
+          onClose={() => setSlipModal(false)}
+          appointmentData={submitDetails}
+          hospitalInfo={hospitalInfo}
+        />
+      )}
+    </>
   );
 };
 
