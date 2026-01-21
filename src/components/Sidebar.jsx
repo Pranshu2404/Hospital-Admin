@@ -110,7 +110,7 @@ const Sidebar = ({ sidebarItems, onCloseMobile }) => {
           </div>
 
           <div className="ml-3 flex flex-col leading-tight">
-            <h1 className="text-lg lg:text-xl font-bold text-gray-800 truncate">
+            <h1 className="text-lg lg:text-xl font-bold text-gray-800 whitespace-normal break-words">
               {hospitalName}
             </h1>
             <span className="text-[11px] lg:text-xs text-gray-400 font-medium ml-1">
