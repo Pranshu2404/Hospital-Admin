@@ -1145,7 +1145,6 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
               {/* New Patient Registration Fields */}
               {showFields && (
                 <div>
-                  <div className='border-b border-gray-400 py-4'>
                     <h3 className="text-lg font-semibold text-gray-900 mb-4">Patient Information</h3>
 
                     {/* Image Upload Section */}
@@ -1222,7 +1221,6 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
                         type="email"
                         value={formData2.email}
                         onChange={(e) => handlePatientInputChange('email', e.target.value)}
-                        required
                       />
                       <FormInput
                         label="Phone Number"
@@ -1326,7 +1324,6 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
                         onChange={(e) => handlePatientInputChange('zipCode', e.target.value)}
                       />
                     </div>
-                  </div>
                   {/* <h3 className="text-lg font-semibold text-gray-900 mt-4">Appointment Information</h3> */ /* REMOVED HEADING */}
                 </div>
               )}
@@ -1334,7 +1331,6 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
               {/* Department and Doctor Selection AND REST OF THE FORM */}
               {!showFields && (
                 <>
-                  <h3 className="text-lg font-semibold text-gray-900 mt-4 border-t pt-4">Appointment Information</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                     <FormSelect
                       label="Select Department"
@@ -1695,7 +1691,7 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
           </div>
 
           {/* CORRECTED FORM ACTIONS PLACEMENT */}
-          <div className="flex justify-end space-x-3 pt-4 border-t mt-6">
+          <div className="flex justify-end space-x-3 pt-4 mt-6">
             {!showFields ? (
               <>
                 {/* QR Payment Button */}
