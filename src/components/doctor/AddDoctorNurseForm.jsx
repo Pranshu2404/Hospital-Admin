@@ -175,7 +175,7 @@ const AddDoctorNurseForm = () => {
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
-    firstName: '', lastName: '', email: '', password: '', phone: '', dateOfBirth: '', gender: 'Male',
+    firstName: '', lastName: '', email: '', password: '', phone: '', dateOfBirth: '', gender: '',
     address: '', city: '', state: '', zipCode: '', aadharNumber: '', panNumber: '',
     department: '', specialization: '', licenseNumber: '', experience: '', education: '',
     startDate: getTodayDate(), isFullTime: true, paymentType: 'Salary', amount: '',
