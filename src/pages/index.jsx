@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
@@ -25,6 +25,21 @@ export default function Login() {
   const [error, setError] = useState('');
   const [showForgot, setShowForgot] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [hospitalName, setHospitalName] = useState('');
+
+  useEffect(() => {
+      const fetchHospitalData = async () => {
+        try {
+          const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/hospitals`);
+          if (res.data && res.data.length > 0) {
+            setHospitalName(res.data[0].hospitalName);
+          }
+        } catch (err) {
+          console.error('Failed to fetch hospital data:', err);
+        }
+      };
+      fetchHospitalData();
+    }, []);
 
   const handleSubmit = async e => {
     e.preventDefault();
@@ -206,6 +221,7 @@ export default function Login() {
             </div>
 
             {/* Create Account CTA (professional, subtle) */}
+            {!hospitalName && (
             <div className="mt-4">
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
@@ -225,6 +241,7 @@ export default function Login() {
                 </Link>
               </div>
             </div>
+            )}
           </form>
 
           {/* Footer Text */}
