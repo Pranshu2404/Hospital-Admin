@@ -175,7 +175,7 @@ const AddDoctorNurseForm = () => {
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
-    firstName: '', lastName: '', email: '', password: '', phone: '', dateOfBirth: '', gender: '',
+    firstName: '', lastName: '', email: '', phone: '', dateOfBirth: '', gender: '',
     address: '', city: '', state: '', zipCode: '', aadharNumber: '', panNumber: '',
     department: '', specialization: '', licenseNumber: '', experience: '', education: '',
     startDate: getTodayDate(), isFullTime: true, paymentType: 'Salary', amount: '',
@@ -353,6 +353,14 @@ const AddDoctorNurseForm = () => {
     label: city.name
   }));
 
+    const getLocalDateString = () => {
+    const t = new Date();
+    const yyyy = t.getFullYear();
+    const mm = String(t.getMonth() + 1).padStart(2, '0');
+    const dd = String(t.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  };
+
   // --- Step Indicator ---
   const StepIndicator = () => {
 
@@ -436,8 +444,8 @@ const AddDoctorNurseForm = () => {
                   <FormInput label="Email Address" type="email" value={formData.email} onChange={(e) => handleInputChange('email', e.target.value)} required placeholder="doctor@hospital.com" />
                   <FormInput label="Phone Number" type="tel" value={formData.phone} onChange={(e) => handleInputChange('phone', e.target.value.replace(/[^0-9]/g, '').slice(0, 10))} required placeholder="e.g. 9876543210" maxLength={10} />
 
-                  <FormInput label="Password" type="password" value={formData.password} onChange={(e) => handleInputChange('password', e.target.value)} required placeholder="••••••••" />
-                  <FormInput label="Date of Birth" type="date" value={formData.dateOfBirth} onChange={(e) => handleInputChange('dateOfBirth', e.target.value)} required />
+
+                  <FormInput label="Date of Birth" type="date" value={formData.dateOfBirth} onChange={(e) => handleInputChange('dateOfBirth', e.target.value)} required max={getLocalDateString()}/>
 
                   <FormSelect label="Gender" value={formData.gender} onChange={(e) => handleInputChange('gender', e.target.value)} options={[{ value: 'male', label: 'Male' }, { value: 'female', label: 'Female' }, { value: 'other', label: 'Other' }]} />
                   <FormInput label="Aadhar Number" value={formData.aadharNumber} onChange={(e) => handleInputChange('aadharNumber', e.target.value.replace(/[^0-9]/g, '').slice(0, 12))} maxLength={12} placeholder="12-digit UID" />
@@ -555,10 +563,10 @@ const AddDoctorNurseForm = () => {
                       <Icons.Briefcase /> Consultant Configuration
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                      <FormSelect label="Payment Model" value={formData.paymentType} onChange={(e) => handleInputChange('paymentType', e.target.value)} options={[{ value: 'Fee per Visit', label: 'Fee per Visit' }, { value: 'Per Hour', label: 'Per Hour' }]} />
-                      <FormInput label="Rate / Amount (₹)" type="number" value={formData.amount} onChange={(e) => handleInputChange('amount', e.target.value)} />
-                      <FormInput label="Contract Start" type="date" value={formData.contractStartDate} onChange={(e) => handleInputChange('contractStartDate', e.target.value)} />
-                      <FormInput label="Contract End" type="date" value={formData.contractEndDate} onChange={(e) => handleInputChange('contractEndDate', e.target.value)} />
+                      <FormSelect label="Payment Model" value={formData.paymentType} onChange={(e) => handleInputChange('paymentType', e.target.value)} options={[{ value: 'Fee per Visit', label: 'Fee per Visit' }, { value: 'Per Hour', label: 'Per Hour' }]} required/>
+                      <FormInput label="Rate / Amount (₹)" type="number" value={formData.amount} onChange={(e) => handleInputChange('amount', e.target.value)} required/>
+                      <FormInput label="Contract Start" type="date" value={formData.contractStartDate} onChange={(e) => handleInputChange('contractStartDate', e.target.value)} required/>
+                      <FormInput label="Contract End" type="date" value={formData.contractEndDate} onChange={(e) => handleInputChange('contractEndDate', e.target.value)} required/>
                     </div>
 
                     <div>

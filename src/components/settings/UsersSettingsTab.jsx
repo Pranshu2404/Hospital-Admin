@@ -75,7 +75,7 @@ const UsersSettingsTab = () => {
       'Doctor': 'bg-blue-100 text-blue-800',
       'Nurse': 'bg-green-100 text-green-800',
       'IT Support': 'bg-gray-100 text-gray-800',
-      'Receptionist': 'bg-yellow-100 text-yellow-800'
+      'registrar': 'bg-yellow-100 text-yellow-800'
     };
     
     return `px-2 py-1 text-xs font-medium rounded-full ${roleClasses[role] || 'bg-gray-100 text-gray-800'}`;

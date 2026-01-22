@@ -194,23 +194,28 @@ export const adminSidebar = [
     ],
   },
   {
-    label: 'Registrar',
-    icon: RegistrarIcon,
-    path: '/dashboard/admin/registrar-list',
-    submenu: [
-      { label: 'Add Registrar', path: '/dashboard/admin/add-registrar' },
-      { label: 'Registrar List', path: '/dashboard/admin/registrar-list' },
-    ],
+    label: 'Staff Login',
+    icon: FaLock,
+    path: '/dashboard/admin/staff-login',
   },
-  {
-    label: 'Nurses',
-    icon: StaffIcon, // Reusing StaffIcon or similar if available
-    path: '/dashboard/admin/nurse-list',
-    submenu: [
-      { label: 'Add Nurse', path: '/dashboard/admin/add-nurse' },
-      { label: 'Nurse List', path: '/dashboard/admin/nurse-list' },
-    ],
-  },
+  // {
+  //   label: 'Registrar',
+  //   icon: RegistrarIcon,
+  //   path: '/dashboard/admin/registrar-list',
+  //   submenu: [
+  //     { label: 'Add Registrar', path: '/dashboard/admin/add-registrar' },
+  //     { label: 'Registrar List', path: '/dashboard/admin/registrar-list' },
+  //   ],
+  // },
+  // {
+  //   label: 'Nurses',
+  //   icon: StaffIcon, // Reusing StaffIcon or similar if available
+  //   path: '/dashboard/admin/nurse-list',
+  //   submenu: [
+  //     { label: 'Add Nurse', path: '/dashboard/admin/add-nurse' },
+  //     { label: 'Nurse List', path: '/dashboard/admin/nurse-list' },
+  //   ],
+  // },
   {
     label: 'Rooms',
     icon: RoomIcon,

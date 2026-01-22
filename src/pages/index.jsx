@@ -66,7 +66,7 @@ export default function Login() {
           const staffRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/staff/${staffId}`, {
             headers: { Authorization: `Bearer ${token}` }
           });
-          const actualRole = staffRes.data.role; // e.g., 'Nurse', 'Receptionist'
+          const actualRole = staffRes.data.role; // e.g., 'Nurse', 'registrar'
           if (actualRole && actualRole.toLowerCase() === 'nurse') {
             role = 'nurse';
           }

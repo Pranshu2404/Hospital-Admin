@@ -1442,7 +1442,6 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
                               label="Last Name"
                               value={formData2.lastName}
                               onChange={(e) => handlePatientInputChange('lastName', e.target.value)}
-                              required
                             />
                             <FormInput
                               label="Phone Number"

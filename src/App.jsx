@@ -121,6 +121,7 @@ import OutstandingPayments from './pages/dashboard/pharmacy/OutstandingPaymentsP
 import PaySalaryPage from './pages/dashboard/admin/PaySalaryPage';
 import DoctorSalaryPage from './pages/dashboard/doctor/DoctorSalaryPage';
 import StaffProfilePage1 from './pages/dashboard/staff/staff-profile';
+import StaffLoginPage from './pages/dashboard/admin/staff-login';
 
 // Nurse Pages
 import NurseDashboard from './pages/dashboard/nurse/index';
@@ -450,6 +451,16 @@ export default function App() {
               <ProtectedRoute role="admin">
                 <AdminLayout>
                   <SettingsPage />
+                </AdminLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/admin/staff-login"
+            element={
+              <ProtectedRoute role="admin">
+                <AdminLayout>
+                  <StaffLoginPage />
                 </AdminLayout>
               </ProtectedRoute>
             }

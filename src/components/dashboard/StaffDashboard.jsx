@@ -632,7 +632,7 @@ const StaffDashboard = () => {
                             onClick={() => navigate('/dashboard/staff/patient-list')}
                         />
                         <StatCard
-                            title="Appointments"
+                            title="Total Visits"
                             value={appointments.length}
                             icon={<FaUser />}
                             color={{ bg: 'bg-indigo-50', text: 'text-indigo-600' }}

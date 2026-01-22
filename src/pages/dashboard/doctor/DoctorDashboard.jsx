@@ -130,18 +130,20 @@ const DoctorDashboard = () => {
 
     const fetchDashboardStats = async () => {
       try {
-        const [patientsRes, appointmentsRes, doctorsRes, calendarRes] = await Promise.all([
-          axios.get(`${import.meta.env.VITE_BACKEND_URL}/patients`),
-          axios.get(`${import.meta.env.VITE_BACKEND_URL}/appointments/doctor/${doctorId}`),
-          axios.get(`${import.meta.env.VITE_BACKEND_URL}/doctors`),
-          axios.get(`${import.meta.env.VITE_BACKEND_URL}/calendar/doctor/${doctorId}`)
-        ]);
+        // const [patientsRes, appointmentsRes, doctorsRes, calendarRes] = await Promise.all([
+        //   axios.get(`${import.meta.env.VITE_BACKEND_URL}/patients`),
+        //   axios.get(`${import.meta.env.VITE_BACKEND_URL}/appointments/doctor/${doctorId}`),
+        //   axios.get(`${import.meta.env.VITE_BACKEND_URL}/doctors`),
+        //   axios.get(`${import.meta.env.VITE_BACKEND_URL}/calendar/doctor/${doctorId}`)
+        // ]);
+        const appointmentsRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/appointments/doctor/${doctorId}`);
+        const doctorsRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/doctors`);
 
         const currentDoctor = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/doctors/${doctorId}`);
+        console.log('Current Doctor Data:', currentDoctor.data);
         setName(currentDoctor.data.firstName);
 
         const today = dayjs();
-        const patientsData = patientsRes.data.patients || [];
         const apptsData = appointmentsRes.data || [];
 
         const uniquePatientsMap = new Map();
@@ -352,12 +354,6 @@ const DoctorDashboard = () => {
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Welcome Back, Dr. {name}</h1>
           <p className="text-slate-500 text-sm mt-1">Here is your daily activity digest.</p>
-          {vitalsEnabled && (
-            <div className="flex items-center gap-2 mt-2 text-xs text-slate-600 bg-white/50 px-3 py-1 rounded-full w-fit">
-              <FaHeartbeat className="text-teal-500" />
-              <span>Vitals checking is <span className="font-semibold text-teal-600">ENABLED</span></span>
-            </div>
-          )}
         </div>
         <div className="mt-4 md:mt-0 bg-white px-4 py-2 rounded-lg shadow-sm border border-slate-200 flex items-center gap-2 text-slate-600">
           <FaCalendarCheck className="text-teal-500" />

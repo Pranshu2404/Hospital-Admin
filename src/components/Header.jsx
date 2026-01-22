@@ -162,7 +162,7 @@ const Header = ({
     const pathSegments = location.pathname.split('/');
     if (pathSegments.length > 2 && pathSegments[1] === 'dashboard') {
       const role = pathSegments[2];
-      if (role === 'staff') {
+      if (role === 'registrar' || role === 'receptionist') {
         return 'Registrar';
       }
       return role.charAt(0).toUpperCase() + role.slice(1);
@@ -177,7 +177,6 @@ const Header = ({
           
           {/* --- Left: Menu Button & Title --- */}
           <div className="flex items-center space-x-3 sm:space-x-4">
-            {/* Mobile Menu Button */}
 <button
   onClick={(e) => {
     e.stopPropagation(); // Prevent event bubbling

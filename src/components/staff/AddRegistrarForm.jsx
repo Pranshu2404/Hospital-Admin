@@ -181,7 +181,7 @@
 //     const fetchStaff = async () => {
 //       try {
 //         const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/staff`);
-//         const filteredStaff = response.data.filter(staff => staff.role === 'Receptionist' || staff.role === 'Other' || staff.role === 'Nurse');
+//         const filteredStaff = response.data.filter(staff => staff.role === 'registrar' || staff.role === 'Other' || staff.role === 'Nurse');
 //         setStaffOptions(filteredStaff);
 //       } catch (err) {
 //         console.error('Failed to fetch staff:', err);
@@ -326,7 +326,7 @@ const AddRegistrarForm = () => {
     const fetchStaff = async () => {
       try {
         const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/staff`);
-        const filteredStaff = response.data.filter(staff => staff.role === 'Receptionist' || staff.role === 'Other' || staff.role === 'Nurse');
+        const filteredStaff = response.data.filter(staff => staff.role === 'registrar' || staff.role === 'Other' || staff.role === 'Nurse');
         setStaffOptions(filteredStaff);
       } catch (err) {
         console.error('Failed to fetch staff:', err);
@@ -374,7 +374,7 @@ const AddRegistrarForm = () => {
 
     const registrarData = {
       ...selectedStaff,
-      role: 'receptionist', // Ensure role is set to receptionist
+      role: 'registrar', // Ensure role is set to registrar
       department,
       email,
       joiningDate, // Use the date from the state

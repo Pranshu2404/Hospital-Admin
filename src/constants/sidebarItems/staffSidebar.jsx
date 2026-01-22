@@ -17,7 +17,7 @@ export const staffSidebar = [
     path: '/dashboard/staff',
   },
   { 
-    label: 'Staff Guide', 
+    label: 'Registrar Guide', 
     path: '/dashboard/staff/guide', 
     icon: FaBook 
   },

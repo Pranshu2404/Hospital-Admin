@@ -317,8 +317,7 @@ const AddPatientIPDForm = () => {
               <FormInput 
                 label="Last Name" 
                 value={formData.lastName} 
-                onChange={(e) => handleInputChange('lastName', e.target.value)} 
-                required 
+                onChange={(e) => handleInputChange('lastName', e.target.value)}
               />
               <FormInput 
                 label="Email" 

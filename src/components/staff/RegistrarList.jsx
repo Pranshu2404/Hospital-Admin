@@ -26,7 +26,7 @@ const RegistrarList = ({ setCurrentPage, setSelectedStaff }) => {
   }, []);
 
   const filteredStaff = staffMembers
-  .filter((staff) => staff.role === 'receptionist')
+  .filter((staff) => staff.role === 'registrar')
   .filter((staff) =>
     staff.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     `${staff.first_name} ${staff.last_name}`.toLowerCase().includes(searchTerm.toLowerCase())

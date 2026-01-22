@@ -15,9 +15,6 @@ const AddNurseForm = () => {
         const fetchStaff = async () => {
             try {
                 const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/staff`);
-                // Filter for staff who might be eligible to become nurses (e.g., role 'Staff', 'Other', or already 'Nurse' but updating credentials)
-                // Adjust filter as needed. For now, showing all or a subset makes sense. 
-                // Showing 'Staff', 'Other' and 'Nurse' (to update) seems consistent with Registrar form.
                 const filteredStaff = response.data.filter(staff => ['Staff', 'Other', 'Nurse', 'nurse'].includes(staff.role));
                 setStaffOptions(filteredStaff);
             } catch (err) {

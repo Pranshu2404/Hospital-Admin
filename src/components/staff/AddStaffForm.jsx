@@ -71,7 +71,7 @@
 //   const roleOptions = [
 //     { value: 'Nurse', label: 'Nurse' },
 //     { value: 'Wardboy', label: 'Wardboy' },
-//     { value: 'Receptionist', label: 'Receptionist' },
+//     { value: 'registrar', label: 'registrar' },
 //     { value: 'Lab Technician', label: 'Lab Technician' },
 //     { value: 'Radiologist', label: 'Radiologist' },
 //     { value: 'Surgeon', label: 'Surgeon' },
@@ -233,7 +233,7 @@ const AddStaffForm = () => {
   const roleOptions = [
     { value: 'Nurse', label: 'Nurse' },
     { value: 'Wardboy', label: 'Wardboy' },
-    { value: 'Receptionist', label: 'Receptionist' },
+    { value: 'Registrar', label: 'Registrar' },
     { value: 'Lab Technician', label: 'Lab Technician' },
     { value: 'Radiologist', label: 'Radiologist' },
     { value: 'Surgeon', label: 'Surgeon' },
@@ -282,7 +282,7 @@ const AddStaffForm = () => {
     { value: 'Basic Training', label: 'Basic Training in Patient Care' },
     { value: 'First Aid Certification', label: 'First Aid Certification' }
   ],
-  Receptionist: [
+  registrar: [
     { value: 'Diploma in Hospital Management', label: 'Diploma in Hospital Management' },
     { value: 'Graduate', label: 'Graduate in Any Stream' },
     { value: 'Computer Knowledge', label: 'Basic Computer Knowledge' }
