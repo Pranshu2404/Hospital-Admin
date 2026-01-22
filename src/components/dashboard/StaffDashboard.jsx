@@ -4,6 +4,7 @@ import {
     LineChart as LineChartIcon, ArrowUp, ArrowDown, Clock,
     X, ChevronDown, Edit, Save, Search, Filter, Calendar as CalendarIcon
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import {
     Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
     Legend, Line, LineChart, BarChart, Area, AreaChart
@@ -36,17 +37,19 @@ const calendarStyles = `
 
 // --- Reusable UI Components --- //
 
-const StatCard = ({ title, value, icon, color }) => (
+const StatCard = ({ title, value, icon, color, onClick }) => (
     <div
-        className="
+        onClick={onClick}
+        className={`
       relative bg-white
       p-4 rounded-xl
       border border-slate-100
       shadow-sm
       transition-all duration-300
       hover:shadow-lg hover:-translate-y-0.5
-      cursor-pointer group
-    "
+      group
+      ${onClick ? 'cursor-pointer' : ''}
+    `}
     >
         {/* Top gradient accent */}
         <div className={`absolute inset-x-0 top-0 h-1 rounded-t-xl ${color.bg}`} />
@@ -451,6 +454,7 @@ const PatientDetailModal = ({ patient, onClose, onSave }) => {
 // --- Main Dashboard Component --- //
 
 const StaffDashboard = () => {
+    const navigate = useNavigate();
     const [staff, setStaff] = useState([]);
     const [patients, setPatients] = useState([]);
     const [departments, setDepartments] = useState([]);
@@ -625,25 +629,28 @@ const StaffDashboard = () => {
                             value={patients.length}
                             icon={<UserIcon />}
                             color={{ bg: 'bg-teal-50', text: 'text-teal-600' }}
-
+                            onClick={() => navigate('/dashboard/staff/patient-list')}
                         />
                         <StatCard
-                            title="Active Doctors"
-                            value={doctors.length}
+                            title="Appointments"
+                            value={appointments.length}
                             icon={<FaUser />}
                             color={{ bg: 'bg-indigo-50', text: 'text-indigo-600' }}
+                            onClick={() => navigate('/dashboard/staff/appointments')}
                         />
                         <StatCard
                             title="Today's Registration Collection"
                             value={`₹${todayCollection}`}
                             icon={<FaMoneyBill />}
                             color={{ bg: 'bg-blue-50', text: 'text-blue-600' }}
+                            onClick={() => navigate('/dashboard/staff/billing')}
                         />
                         <StatCard
                             title="Total Registration Collection"
                             value={`₹${Number(totalCollection)}`}
                             icon={<FaMoneyBill />}
                             color={{ bg: 'bg-emerald-50', text: 'text-emerald-600' }}
+                            onClick={() => navigate('/dashboard/staff/billing')}
                         />
                     </div>
 

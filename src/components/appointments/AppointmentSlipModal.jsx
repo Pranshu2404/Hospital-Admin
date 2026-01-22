@@ -529,7 +529,7 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
               <div className="w-64 flex-shrink-0 text-center pl-6 border-l-2 border-gray-200 mr-2">
                 <div className="border-2 border-gray-800 py-2 px-1 mb-2">
                   <h2 className="text-lg font-bold text-gray-900 leading-none uppercase">
-                    Appointment Cum<br /> Registration Slip
+                    Registration Cum<br /> Appointment Slip
                   </h2>
                 </div>
                 {/* <div className="text-xs font-bold text-gray-800 uppercase tracking-widest bg-gray-100 py-1 rounded">
