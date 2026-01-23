@@ -275,6 +275,29 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
     }
   };
 
+  // Add this helper function near the top (after other helper functions):
+const convertUTCTimeToLocalForDate = (utcTimeString, targetDateString) => {
+  if (!utcTimeString) return null;
+  
+  // Create a date object in UTC
+  const utcDate = new Date(utcTimeString);
+  
+  // Get the target date in local timezone
+  const targetDate = new Date(targetDateString + 'T00:00:00');
+  
+  // Combine target date with UTC time components
+  const localDate = new Date(
+    targetDate.getFullYear(),
+    targetDate.getMonth(),
+    targetDate.getDate(),
+    utcDate.getUTCHours(),
+    utcDate.getUTCMinutes(),
+    utcDate.getUTCSeconds()
+  );
+  
+  return localDate;
+};
+
   // Fetch States on component mount
   useEffect(() => {
     const fetchStates = async () => {
@@ -715,19 +738,24 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
           }
 
           const hasConflict = sortedAppointments.some(appt => {
-            const apptStart = new Date(appt.startTime);
-            const apptEnd = new Date(appt.endTime);
-            const newStart = new Date(today);
-            newStart.setHours(currentTime.getHours(), currentTime.getMinutes());
-            const newEnd = new Date(today);
-            newEnd.setHours(proposedEndH, proposedEndM);
+  // Convert UTC appointment times to local time for the selected date
+  const apptStartLocal = convertUTCTimeToLocalForDate(appt.startTime, formData.date);
+  const apptEndLocal = convertUTCTimeToLocalForDate(appt.endTime, formData.date);
+  
+  if (!apptStartLocal || !apptEndLocal) return false;
+  
+  // Create local time for proposed appointment
+  const newStart = new Date(today);
+  newStart.setHours(currentTime.getHours(), currentTime.getMinutes());
+  const newEnd = new Date(today);
+  newEnd.setHours(proposedEndH, proposedEndM);
 
-            return (
-              (newStart >= apptStart && newStart < apptEnd) ||
-              (newEnd > apptStart && newEnd <= apptEnd) ||
-              (newStart <= apptStart && newEnd >= apptEnd)
-            );
-          });
+  return (
+    (newStart >= apptStartLocal && newStart < apptEndLocal) ||
+    (newEnd > apptStartLocal && newEnd <= apptEndLocal) ||
+    (newStart <= apptStartLocal && newEnd >= apptEndLocal)
+  );
+});
 
           if (!hasConflict) {
             proposedTime = proposedStart;
@@ -810,7 +838,7 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
             if (scheduleData?.workingHours?.length) {
               workingHours = scheduleData.workingHours;
             }
-
+            console.log("Schedule Data:", scheduleData);
             appointments = scheduleData.bookedAppointments || [];
             if (formData.type === "number-based") {
               patients = scheduleData.bookedPatients || [];
@@ -940,35 +968,42 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
   const displayEndTime = formData.start_time ? calculateEndTime(formData.start_time, formData.duration) : null;
   const isFormValid = Object.keys(errors).length === 0;
 
-  const checkTimeSlotAvailability = (proposedStart, proposedEnd) => {
-    if (!proposedStart || !proposedEnd) return false;
+ const checkTimeSlotAvailability = (proposedStart, proposedEnd) => {
+  if (!proposedStart || !proposedEnd) return false;
 
-    const [startH, startM] = proposedStart.split(':').map(Number);
-    const [endH, endM] = proposedEnd.split(':').map(Number);
-    const proposedStartMin = startH * 60 + startM;
-    const proposedEndMin = endH * 60 + endM;
+  const [startH, startM] = proposedStart.split(':').map(Number);
+  const [endH, endM] = proposedEnd.split(':').map(Number);
+  const proposedStartMin = startH * 60 + startM;
+  const proposedEndMin = endH * 60 + endM;
 
-    for (const appt of existingAppointments) {
-      if (!appt.start_time || !appt.end_time) continue;
+  for (const appt of existingAppointments) {
+    if (!appt.startTime || !appt.endTime) continue;
 
-      const apptStartTime = new Date(appt.startTime).toTimeString().slice(0, 5);
-      const apptEndTime = new Date(appt.endTime).toTimeString().slice(0, 5);
-      const [apptStartH, apptStartM] = apptStartTime.split(':').map(Number);
-      const [apptEndH, apptEndM] = apptEndTime.split(':').map(Number);
-      const apptStartMin = apptStartH * 60 + apptStartM;
-      const apptEndMin = apptEndH * 60 + endM;
+    // Convert UTC appointment times to local time for comparison
+    const apptStartLocal = convertUTCTimeToLocalForDate(appt.startTime, formData.date);
+    const apptEndLocal = convertUTCTimeToLocalForDate(appt.endTime, formData.date);
+    
+    if (!apptStartLocal || !apptEndLocal) continue;
+    
+    const apptStartHour = apptStartLocal.getHours();
+    const apptStartMinute = apptStartLocal.getMinutes();
+    const apptEndHour = apptEndLocal.getHours();
+    const apptEndMinute = apptEndLocal.getMinutes();
+    
+    const apptStartMin = apptStartHour * 60 + apptStartMinute;
+    const apptEndMin = apptEndHour * 60 + apptEndMinute;
 
-      if (
-        (proposedStartMin >= apptStartMin && proposedStartMin < apptEndMin) ||
-        (proposedEndMin > apptStartMin && proposedEndMin <= apptEndMin) ||
-        (proposedStartMin <= apptStartMin && proposedEndMin >= apptEndMin)
-      ) {
-        return false;
-      }
+    if (
+      (proposedStartMin >= apptStartMin && proposedStartMin < apptEndMin) ||
+      (proposedEndMin > apptStartMin && proposedEndMin <= apptEndMin) ||
+      (proposedStartMin <= apptStartMin && proposedEndMin >= apptEndMin)
+    ) {
+      return false;
     }
+  }
 
-    return true;
-  };
+  return true;
+};
 
   const stopPolling = () => {
     if (pollingIntervalId) {
@@ -1183,9 +1218,24 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
       };
 
       if (formData.type === 'time-based') {
-        appointmentData.start_time = `${formData.date}T${formData.start_time}:00`;
-        appointmentData.end_time = `${formData.date}T${calculateEndTime(formData.start_time, formData.duration)}:00`;
-      } else {
+  // Store times as UTC without timezone conversion
+  // If user selects 9 PM, store as 21:00 UTC
+  appointmentData.start_time = `${formData.date}T${formData.start_time}:00+00:00`;
+  
+  // Calculate end time in 24-hour format
+  const [hours, minutes] = formData.start_time.split(':').map(Number);
+  const totalMinutes = hours * 60 + minutes + parseInt(formData.duration);
+  const endHours = Math.floor(totalMinutes / 60) % 24;
+  const endMinutes = totalMinutes % 60;
+  const endTimeFormatted = `${String(endHours).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')}`;
+  
+  appointmentData.end_time = `${formData.date}T${endTimeFormatted}:00+00:00`;
+  
+  console.log('Storing times as UTC:', {
+    start: appointmentData.start_time,
+    end: appointmentData.end_time
+  });
+}else {
         const lastSerial = existingPatients.length > 0
           ? Math.max(...existingPatients.map(p => p.serialNumber))
           : 0;
@@ -1892,29 +1942,34 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
                           <h4 className="font-medium text-gray-900 mb-2">Booked Appointments</h4>
                           <div className="space-y-2 max-h-60 overflow-y-auto">
                             {existingAppointments.map((appt, index) => {
-                              const startTime = new Date(appt.startTime).toLocaleTimeString([], {
-                                hour: '2-digit', minute: '2-digit'
-                              });
-                              const endTime = new Date(appt.endTime).toLocaleTimeString([], {
-                                hour: '2-digit', minute: '2-digit'
-                              });
+  // Convert UTC times to local time for display
+  const startTimeLocal = convertUTCTimeToLocalForDate(appt.startTime, formData.date);
+  const endTimeLocal = convertUTCTimeToLocalForDate(appt.endTime, formData.date);
+  
+  const startTime = startTimeLocal ? startTimeLocal.toLocaleTimeString([], {
+    hour: '2-digit', minute: '2-digit'
+  }) : 'N/A';
+  
+  const endTime = endTimeLocal ? endTimeLocal.toLocaleTimeString([], {
+    hour: '2-digit', minute: '2-digit'
+  }) : 'N/A';
 
-                              return (
-                                <div key={index} className="bg-white border border-gray-100 p-3 rounded-lg shadow-sm">
-                                  <div className="flex justify-between items-center">
-                                    <span className="font-medium text-sm">
-                                      {startTime} - {endTime}
-                                    </span>
-                                    <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
-                                      {appt.duration} min
-                                    </span>
-                                  </div>
-                                  <div className="text-xs text-gray-500 mt-1 truncate">
-                                    {appt.patient?.first_name} {appt.patient?.last_name}
-                                  </div>
-                                </div>
-                              );
-                            })}
+  return (
+    <div key={index} className="bg-white border border-gray-100 p-3 rounded-lg shadow-sm">
+      <div className="flex justify-between items-center">
+        <span className="font-medium text-sm">
+          {startTime} - {endTime}
+        </span>
+        <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
+          {appt.duration} min
+        </span>
+      </div>
+      <div className="text-xs text-gray-500 mt-1 truncate">
+        {appt.patient?.first_name} {appt.patient?.last_name}
+      </div>
+    </div>
+  );
+})}
                           </div>
                         </div>
                       )}
