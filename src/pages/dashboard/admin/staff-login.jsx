@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUserMd, faUserNurse, faUserTie, faCheckCircle, faSearch, faKey } from "@fortawesome/free-solid-svg-icons";
+import { faUserMd, faUserNurse, faUserTie, faCheckCircle, faSearch, faKey, faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
 import Layout from '../../../components/Layout';
 import { adminSidebar } from '../../../constants/sidebarItems/adminSidebar';
 
@@ -13,6 +13,9 @@ const StaffLoginPage = () => {
     const [selectedId, setSelectedId] = useState('');
     const [details, setDetails] = useState({ email: '', department: '', name: '', phone: '' });
     const [password, setPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const [fetchingList, setFetchingList] = useState(false);
 
@@ -106,6 +109,13 @@ const StaffLoginPage = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        
+        // Validate passwords match
+        if (password !== confirmPassword) {
+            alert("Passwords do not match. Please try again.");
+            return;
+        }
+        
         if (!role || !selectedId || !password) return;
 
         setLoading(true);
@@ -121,6 +131,7 @@ const StaffLoginPage = () => {
 
             alert("Credential created/updated successfully!");
             setPassword(''); // Clear password after success
+            setConfirmPassword(''); // Clear confirm password after success
 
         } catch (err) {
             console.error("Error creating login:", err);
@@ -264,22 +275,66 @@ const StaffLoginPage = () => {
 
                                             <div className="space-y-1.5">
                                                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide ml-1">
-                                                    New Password <span className="text-rose-500">*</span>
+                                                   Enter  Password <span className="text-rose-500">*</span>
                                                 </label>
-                                                <input
-                                                    type="password"
-                                                    value={password}
-                                                    onChange={(e) => setPassword(e.target.value)}
-                                                    placeholder="Type secure password..."
-                                                    className="block w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all"
-                                                    required
-                                                />
+                                                <div className="relative">
+                                                    <input
+                                                        type={showPassword ? "text" : "password"}
+                                                        value={password}
+                                                        onChange={(e) => setPassword(e.target.value)}
+                                                        placeholder="Type secure password..."
+                                                        className="block w-full px-4 py-3 pr-12 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all"
+                                                        required
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setShowPassword(!showPassword)}
+                                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-teal-600 transition-colors p-1.5 hover:bg-teal-50 rounded-lg"
+                                                        title={showPassword ? "Hide password" : "Show password"}
+                                                    >
+                                                        <FontAwesomeIcon icon={showPassword ? faEyeSlash : faEye} className="text-base" />
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            <div className="space-y-1.5">
+                                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide ml-1">
+                                                    Confirm Password <span className="text-rose-500">*</span>
+                                                </label>
+                                                <div className="relative">
+                                                    <input
+                                                        type={showConfirmPassword ? "text" : "password"}
+                                                        value={confirmPassword}
+                                                        onChange={(e) => setConfirmPassword(e.target.value)}
+                                                        placeholder="Re-enter password..."
+                                                        className={`block w-full px-4 py-3 pr-12 bg-white border rounded-xl text-sm focus:outline-none focus:ring-2 transition-all
+                                                        ${password && confirmPassword && password !== confirmPassword 
+                                                            ? 'border-rose-300 focus:ring-rose-500/20 focus:border-rose-500' 
+                                                            : 'border-slate-200 focus:ring-teal-500/20 focus:border-teal-500'
+                                                        }`}
+                                                        required
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-teal-600 transition-colors p-1.5 hover:bg-teal-50 rounded-lg"
+                                                        title={showConfirmPassword ? "Hide password" : "Show password"}
+                                                    >
+                                                        <FontAwesomeIcon icon={showConfirmPassword ? faEyeSlash : faEye} className="text-base" />
+                                                    </button>
+                                                </div>
+                                                {password && confirmPassword && password !== confirmPassword && (
+                                                    <p className="text-xs text-rose-500 font-medium mt-1.5">Passwords do not match</p>
+                                                )}
+                                                {password && confirmPassword && password === confirmPassword && (
+                                                    <p className="text-xs text-emerald-500 font-medium mt-1.5">Passwords match ✓</p>
+                                                )}
                                             </div>
                                         </div>
 
                                         <button
                                             type="submit"
-                                            disabled={loading || !password}
+                                            disabled={loading || !password || !confirmPassword || password !== confirmPassword}
                                             className="w-full py-3.5 px-4 bg-teal-600 text-white font-bold rounded-xl hover:bg-teal-700 transition-all shadow-lg shadow-teal-600/20 hover:-translate-y-0.5 disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2"
                                         >
                                             {loading ? (

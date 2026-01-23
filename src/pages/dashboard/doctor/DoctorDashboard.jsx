@@ -56,6 +56,7 @@ const DoctorDashboard = () => {
   const [currentView, setCurrentView] = useState("month");
   const [hospital, setHospital] = useState(null);
   const [name, setName] = useState("");
+  const [currentTime, setCurrentTime] = useState(dayjs());
   const [vitalsEnabled, setVitalsEnabled] = useState(() => {
     const stored = localStorage.getItem('vitalsEnabled');
     return stored === null ? true : stored === 'true';
@@ -79,6 +80,11 @@ const DoctorDashboard = () => {
       }
     };
     fetchHospitalData();
+  }, []);
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(dayjs()), 1000);
+    return () => clearInterval(timer);
   }, []);
 
   // Helper function to check if appointment has vitals
@@ -352,12 +358,18 @@ const DoctorDashboard = () => {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">Welcome Back, Dr. {name}</h1>
+          <h1 className="text-3xl font-bold text-slate-800">Welcome Back, Dr. {name}</h1>
           <p className="text-slate-500 text-sm mt-1">Here is your daily activity digest.</p>
         </div>
-        <div className="mt-4 md:mt-0 bg-white px-4 py-2 rounded-lg shadow-sm border border-slate-200 flex items-center gap-2 text-slate-600">
-          <FaCalendarCheck className="text-teal-500" />
-          <span className="font-medium text-sm">{dayjs().format('dddd, MMMM D, YYYY')}</span>
+        <div className="mt-4 md:mt-0 flex flex-col sm:flex-row gap-3">
+          <div className="bg-white px-4 py-2 rounded-lg shadow-sm border border-slate-200 flex items-center gap-2 text-slate-600">
+            <FaCalendarCheck className="text-teal-500" />
+            <span className="font-medium text-sm">{dayjs().format('dddd, MMMM D, YYYY')}</span>
+          </div>
+          <div className="bg-gradient-to-r from-teal-50 to-emerald-50 px-4 py-2 rounded-lg shadow-sm border border-teal-200 flex items-center gap-2">
+            <div className="w-2 h-2 bg-teal-500 rounded-full animate-pulse"></div>
+            <span className="font-bold text-teal-700 font-mono text-sm tracking-wide">{currentTime.format('HH:mm:ss')}</span>
+          </div>
         </div>
       </div>
 
