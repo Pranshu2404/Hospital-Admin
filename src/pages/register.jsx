@@ -47,35 +47,109 @@ const BackIcon = () => (
   </svg>
 );
 
-const FormInput = ({ label, name, type = "text", placeholder, required = false, pattern, title, value, onChange, autoFocus, maxLength, inputMode, icon, ...rest }) => (
-  <div className="space-y-1">
-    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide ml-1">
-      {label} {required && <span className="text-red-500">*</span>}
-    </label>
-    <div className="relative">
-      {icon && (
-        <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
-          {icon}
-        </div>
+// Updated FormInput component that properly handles different input types
+const FormInput = ({ 
+  label, 
+  name, 
+  type = "text", 
+  placeholder, 
+  required = false, 
+  pattern, 
+  title, 
+  value, 
+  onChange, 
+  autoFocus, 
+  maxLength, 
+  inputMode, 
+  icon, 
+  error, 
+  as, // 'input', 'select', or 'textarea'
+  children, // For select options
+  rows, // For textarea
+  ...rest 
+}) => {
+  const baseClassName = `block w-full px-4 py-3 bg-gray-50 border ${
+    error ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20' : 'border-gray-200 focus:border-emerald-500 focus:ring-emerald-500/20'
+  } text-gray-900 text-sm rounded-xl focus:outline-none focus:ring-2 focus:bg-white transition-all duration-200 placeholder-gray-400 ${icon ? 'pl-10' : ''}`;
+
+  const InputElement = as || 'input';
+  
+  return (
+    <div className="space-y-1">
+      <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide ml-1">
+        {label} {required && <span className="text-red-500">*</span>}
+      </label>
+      <div className="relative">
+        {icon && (
+          <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+            {icon}
+          </div>
+        )}
+        
+        {InputElement === 'textarea' ? (
+          <textarea
+            name={name}
+            placeholder={placeholder}
+            value={value}
+            onChange={onChange}
+            required={required}
+            autoFocus={autoFocus}
+            rows={rows}
+            className={`${baseClassName} ${icon ? 'pl-10' : ''} resize-none`}
+            {...rest}
+          />
+        ) : InputElement === 'select' ? (
+          <select
+            name={name}
+            value={value}
+            onChange={onChange}
+            required={required}
+            autoFocus={autoFocus}
+            className={`${baseClassName} ${icon ? 'pl-10' : ''} appearance-none`}
+            {...rest}
+          >
+            {children}
+          </select>
+        ) : (
+          <input
+            type={type}
+            name={name}
+            placeholder={placeholder}
+            value={value}
+            onChange={onChange}
+            required={required}
+            pattern={pattern}
+            title={title}
+            autoFocus={autoFocus}
+            maxLength={maxLength}
+            inputMode={inputMode}
+            className={baseClassName}
+            {...rest}
+          />
+        )}
+        
+        {InputElement === 'select' && (
+          <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none text-gray-400">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+        )}
+        
+        {error && InputElement !== 'select' && (
+          <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+            <svg className="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+            </svg>
+          </div>
+        )}
+      </div>
+      {error && (
+        <p className="text-xs text-red-600 mt-1 ml-1">{error}</p>
       )}
-      <input
-        type={type}
-        name={name}
-        placeholder={placeholder}
-        value={value}
-        onChange={onChange}
-        required={required}
-        pattern={pattern}
-        title={title}
-        autoFocus={autoFocus}
-        maxLength={maxLength}
-        inputMode={inputMode}
-        className={`block w-full px-4 py-3 bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all duration-200 placeholder-gray-400 ${icon ? 'pl-10' : ''}`}
-        {...rest}
-      />
     </div>
-  </div>
-);
+  );
+};
 
 // --- Progress Bar Component ---
 const ProgressBar = ({ currentStep, totalSteps }) => {
@@ -204,7 +278,7 @@ const PreviewDetails = ({ form, isdCode, stateName, cityName, pincode }) => {
               <div className="flex">
                 <span className="font-medium text-gray-600 w-32">Contact:</span>
                 <span className="text-gray-900">
-                  {isdCode ? `${isdCode} ` : ''}{form.contact}
+                  {form.contactPrefix ? `${form.contactPrefix} ` : ''}{form.contact}
                 </span>
               </div>
               <div className="flex">
@@ -255,6 +329,10 @@ export default function Register() {
   const [detectedCity, setDetectedCity] = useState('');
   const [detectedPincode, setDetectedPincode] = useState('');
   const [addressTouched, setAddressTouched] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [phoneType, setPhoneType] = useState('mobile'); // 'mobile' or 'landline'
+  const [manualIsdCode, setManualIsdCode] = useState('');
+  const [hospitalIDTouched, setHospitalIDTouched] = useState(false);
 
   const config = {
     headers: {
@@ -268,7 +346,7 @@ export default function Register() {
     companyName: '', companyNumber: '', logo: null,
     pinCode: '', city: '', state: '',
     // Step 2
-    name: '', email: '', password: '', contact: '', role: 'admin',
+    name: '', email: '', password: '', contact: '', contactPrefix: '+91', role: 'admin',
     // Step 3
     fireNOC: '', additionalInfo: ''
   });
@@ -347,22 +425,65 @@ export default function Register() {
     
     if (isdEntry) {
       setIsdCode(isdEntry.code);
+      setManualIsdCode(isdEntry.code);
     } else {
-      // Default to common codes based on region
-      if (stateName.includes('Uttar Pradesh') || stateName.includes('Uttarakhand')) {
-        setIsdCode('0512');
-      } else if (stateName.includes('Maharashtra')) {
-        setIsdCode('022');
-      } else if (stateName.includes('Karnataka')) {
-        setIsdCode('080');
-      } else if (stateName.includes('Tamil Nadu')) {
-        setIsdCode('044');
-      } else if (stateName.includes('Chhattisgarh')) {
-        setIsdCode('0771');
-      } else {
-        setIsdCode('');
-      }
+      setIsdCode('');
+      setManualIsdCode('');
     }
+  };
+
+  // Validate individual field
+  const validateField = (name, value) => {
+    let error = '';
+    
+    switch (name) {
+      case 'contact':
+        if (phoneType === 'mobile') {
+          if (!/^[6-9]\d{9}$/.test(value)) {
+            error = 'Mobile number must start with 6-9 and be 10 digits';
+          }
+        } else {
+          // Landline validation
+          if (!/^\d{6,8}$/.test(value)) {
+            error = 'Landline must be 6-8 digits';
+          }
+        }
+        break;
+      case 'email':
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+          error = 'Please enter a valid email address';
+        }
+        break;
+      case 'password':
+        if (value.length < 8) {
+          error = 'Password must be at least 8 characters';
+        }
+        break;
+      case 'pinCode':
+        if (value && !/^\d{6}$/.test(value)) {
+          error = 'Pincode must be 6 digits';
+        }
+        break;
+      default:
+        break;
+    }
+    
+    return error;
+  };
+
+  // Handle field blur
+  const handleBlur = (e) => {
+    const { name, value } = e.target;
+    
+    if (name === 'hospitalID') {
+      setHospitalIDTouched(true);
+    }
+    
+    const error = validateField(name, value);
+    setFieldErrors(prev => ({
+      ...prev,
+      [name]: error
+    }));
   };
 
   // -- Handlers --
@@ -372,8 +493,43 @@ export default function Register() {
     if (name === 'logo') {
       setForm({ ...form, logo: e.target.files[0] });
     } else {
-      const newForm = { ...form, [name]: value };
+      let newValue = value;
+      
+      // Format hospital ID to uppercase
+      if (name === 'hospitalID') {
+        newValue = value.toUpperCase();
+        // Only allow letters and numbers
+        newValue = newValue.replace(/[^A-Za-z0-9]/g, '');
+        // Limit to 6 characters
+        if (newValue.length > 6) newValue = newValue.slice(0, 6);
+      }
+      
+      // Handle contact number based on phone type
+      if (name === 'contact') {
+        newValue = value.replace(/\D/g, '');
+        if (phoneType === 'mobile' && newValue.length > 10) {
+          newValue = newValue.slice(0, 10);
+        } else if (phoneType === 'landline' && newValue.length > 8) {
+          newValue = newValue.slice(0, 8);
+        }
+      }
+      
+      // Handle pincode
+      if (name === 'pinCode') {
+        newValue = value.replace(/\D/g, '');
+        if (newValue.length > 6) newValue = newValue.slice(0, 6);
+      }
+      
+      const newForm = { ...form, [name]: newValue };
       setForm(newForm);
+
+      // Clear field error when user starts typing
+      if (fieldErrors[name]) {
+        setFieldErrors(prev => ({
+          ...prev,
+          [name]: ''
+        }));
+      }
 
       // Extract details when address changes
       if (name === 'address') {
@@ -398,43 +554,98 @@ export default function Register() {
     }
   };
 
+  // Handle phone type change
+  const handlePhoneTypeChange = (type) => {
+    setPhoneType(type);
+    // Reset contact number when switching types
+    setForm(prev => ({ ...prev, contact: '' }));
+    setFieldErrors(prev => ({ ...prev, contact: '' }));
+    
+    // Set appropriate prefix
+    if (type === 'mobile') {
+      setForm(prev => ({ ...prev, contactPrefix: '+91' }));
+    } else {
+      // For landline, use detected ISD code or manual input
+      const prefix = manualIsdCode ? `${manualIsdCode}` : '';
+      setForm(prev => ({ ...prev, contactPrefix: prefix }));
+    }
+  };
+
+  // Handle manual ISD code change
+  const handleManualIsdCodeChange = (code) => {
+    setManualIsdCode(code);
+    if (phoneType === 'landline') {
+      const prefix = code ? `${code}` : '';
+      setForm(prev => ({ ...prev, contactPrefix: prefix }));
+    }
+  };
+
   // Validate Step 1 before moving to Step 2
   const validateStep1 = () => {
-    if (!form.hospitalName || !form.hospitalID || !form.registryNo || !form.address) {
-      setError("Please fill in all required fields marked with *");
-      return false;
-    }
+    const errors = {};
+    
+    if (!form.hospitalName) errors.hospitalName = 'Hospital Name is required';
+    if (!form.hospitalID) errors.hospitalID = 'Hospital ID is required';
+    if (!form.registryNo) errors.registryNo = 'Registry Number is required';
+    if (!form.address) errors.address = 'Address is required';
+    
     // Validate Hospital ID format
-    if (!/^[A-Za-z]{2}\d{4}$/.test(form.hospitalID)) {
-      setError("Hospital ID must be 2 letters followed by 4 numbers (e.g., AB1234)");
+    if (form.hospitalID && !/^[A-Za-z]{2}\d{4}$/.test(form.hospitalID)) {
+      errors.hospitalID = 'Hospital ID must be 2 letters followed by 4 numbers';
+    }
+    
+    setFieldErrors(errors);
+    
+    if (Object.keys(errors).length > 0) {
       return false;
     }
+    
     setError("");
     return true;
   };
 
   // Validate Step 2 before moving to Step 3
   const validateStep2 = () => {
-    if (!form.name || !form.email || !form.password || !form.contact) {
-      setError("Please fill in all admin details.");
-      return false;
-    }
+    const errors = {};
+    
+    if (!form.name) errors.name = 'Admin Name is required';
+    if (!form.email) errors.email = 'Email is required';
+    if (!form.password) errors.password = 'Password is required';
+    if (!form.contact) errors.contact = 'Contact Number is required';
+    
     // Validate email
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
-      setError("Please enter a valid email address.");
-      return false;
+    if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+      errors.email = 'Please enter a valid email address';
     }
-    // Validate contact number (accepts landlines and mobiles)
-    const contactRegex = /^(\d{10}|\d{6,8})$/;
-    if (!contactRegex.test(form.contact)) {
-      setError("Please enter a valid contact number (6-10 digits)");
-      return false;
+    
+    // Validate contact number based on type
+    if (form.contact) {
+      if (phoneType === 'mobile') {
+        if (!/^[6-9]\d{9}$/.test(form.contact)) {
+          errors.contact = 'Mobile number must start with 6-9 and be 10 digits';
+        }
+      } else {
+        if (!/^\d{6,8}$/.test(form.contact)) {
+          errors.contact = 'Landline must be 6-8 digits';
+        }
+        if (!manualIsdCode && isdCode) {
+          // Auto-use detected ISD code
+          handleManualIsdCodeChange(isdCode);
+        }
+      }
     }
+    
     // Validate password strength
-    if (form.password.length < 8) {
-      setError("Password must be at least 8 characters long.");
+    if (form.password && form.password.length < 8) {
+      errors.password = 'Password must be at least 8 characters long';
+    }
+    
+    setFieldErrors(errors);
+    
+    if (Object.keys(errors).length > 0) {
       return false;
     }
+    
     setError("");
     return true;
   };
@@ -469,6 +680,9 @@ export default function Register() {
       formData.append('email', form.email);
       formData.append('password', form.password);
       formData.append('contact', form.contact);
+      // Append full contact with prefix
+      const fullContact = form.contactPrefix ? `${form.contactPrefix} ${form.contact}` : form.contact;
+      formData.append('fullContact', fullContact);
       formData.append('role', form.role);
       
       // Additional details
@@ -532,16 +746,18 @@ export default function Register() {
           <form onSubmit={(e) => e.preventDefault()}>
             {/* --- STEP 1: ORGANIZATION DETAILS --- */}
             {step === 1 && (
-              <div className="space-y-6 animate-fade-in-right">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="space-y-3 animate-fade-in-right">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormInput 
                     label="Hospital Name" 
                     name="hospitalName" 
                     placeholder="e.g. City Care Hospital" 
                     value={form.hospitalName} 
                     onChange={handleChange} 
+                    onBlur={handleBlur}
                     required 
                     autoFocus 
+                    error={fieldErrors.hospitalName}
                   />
                   <FormInput 
                     label="Registry No." 
@@ -549,7 +765,9 @@ export default function Register() {
                     placeholder="REG-123456" 
                     value={form.registryNo} 
                     onChange={handleChange} 
+                    onBlur={handleBlur}
                     required 
+                    error={fieldErrors.registryNo}
                   />
                   <FormInput 
                     label="Hospital ID" 
@@ -559,7 +777,10 @@ export default function Register() {
                     title="2 letters + 4 numbers" 
                     value={form.hospitalID} 
                     onChange={handleChange} 
+                    onBlur={handleBlur}
                     required 
+                    error={fieldErrors.hospitalID}
+                    maxLength="6"
                   />
                   <FormInput 
                     label="Company Name" 
@@ -630,29 +851,28 @@ export default function Register() {
                   </div>
 
                   {/* Address with auto-detection */}
-                  <div className="md:col-span-2 space-y-3">
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide ml-1">
-                      Full Address <span className="text-red-500">*</span>
-                    </label>
-                    <textarea
+                  <div className="md:col-span-2 space-y-2">
+                    <FormInput
+                      label="Full Address"
                       name="address"
                       placeholder="Street, City, State, Pincode. We'll auto-detect city, state and pincode for you."
                       value={form.address}
                       onChange={handleChange}
-                      required
-                      rows={1}
-                      className="block w-full px-4 py-3 bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all resize-none"
+                      onBlur={handleBlur}
+                      error={fieldErrors.address}
                     />
 
                     {/* Manual override fields */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">State<span className="text-red-500">*</span></label>
-                        <select
+                        <FormInput
+                          label="State"
                           name="state"
                           value={form.state}
                           onChange={handleChange}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                          required
+                          as="select"
+                          error={fieldErrors.state}
                         >
                           <option value="">Select State</option>
                           {states.map((state) => (
@@ -660,35 +880,37 @@ export default function Register() {
                               {state.name}
                             </option>
                           ))}
-                        </select>
+                        </FormInput>
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">City<span className="text-red-500">*</span></label>
-                        <select
+                        <FormInput
+                          label="City"
                           name="city"
                           value={form.city}
                           onChange={handleChange}
-                          disabled={!form.state}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 disabled:bg-gray-100"
+                          required
+                          as="select"
+                          error={fieldErrors.city}
                         >
                           <option value="">Select City</option>
                           {cities.map((city) => (
-                            <option key={city.id} value={city.name}>
+                            <option key={city.name} value={city.name}>
                               {city.name}
                             </option>
                           ))}
-                        </select>
+                        </FormInput>
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">Pincode</label>
-                        <input
-                          type="text"
+                        <FormInput
+                          label="Pincode"
                           name="pinCode"
+                          placeholder="6-digit Pincode"
                           value={form.pinCode}
                           onChange={handleChange}
+                          onBlur={handleBlur}
                           maxLength="6"
-                          placeholder="6-digit pincode"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                          inputMode="numeric"
+                          error={fieldErrors.pinCode}
                         />
                       </div>
                     </div>
@@ -699,16 +921,18 @@ export default function Register() {
 
             {/* --- STEP 2: ADMIN DETAILS --- */}
             {step === 2 && (
-              <div className="space-y-6 animate-fade-in-right">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="space-y-2 animate-fade-in-right">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormInput 
                     label="Admin Name" 
                     name="name" 
                     placeholder="Dr. John Doe" 
                     value={form.name} 
                     onChange={handleChange} 
+                    onBlur={handleBlur}
                     required 
                     autoFocus 
+                    error={fieldErrors.name}
                     icon={
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -716,40 +940,57 @@ export default function Register() {
                     }
                   />
                   
+                  {/* Contact Number with Phone Type Selection */}
                   <div className="space-y-1">
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide ml-1">
-                      Contact Number <span className="text-red-500">*</span>
-                    </label>
-                    <div className="flex gap-2">
-                      <div className="relative flex-1">
-                        {isdCode && (
-                          <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-sm text-gray-600">
-                            {isdCode}
-                          </div>
-                        )}
-                        <input
-                          type="tel"
-                          name="contact"
-                          placeholder={isdCode ? "Enter number" : "Enter landline or mobile"}
-                          value={form.contact}
-                          onChange={(e) => {
-                            let val = e.target.value.replace(/\D/g, '');
-                            // Allow 6-10 digits for landlines and mobiles
-                            if (val.length > 10) val = val.slice(0, 10);
-                            setForm({ ...form, contact: val });
-                          }}
-                          required
-                          maxLength={isdCode ? 8 : 10}
-                          inputMode="numeric"
-                          className={`block w-full px-4 py-3 bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all duration-200 placeholder-gray-400 ${isdCode ? 'pl-16' : ''}`}
+                    <FormInput 
+                      label="Contact Number" 
+                      name="contact" 
+                      placeholder={phoneType === 'mobile' ? '10-digit Mobile Number' : '6-8 digit Landline Number'} 
+                      value={form.contact}  
+                      onChange={handleChange} 
+                      onBlur={handleBlur}
+                      required 
+                      error={fieldErrors.contact}
+                      icon={
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.213l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.213-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.163 21 3 14.837 3 7V5z" />
+                        </svg>
+                      }
+                    />
+                    <div className="flex items-center gap-4 mt-2">
+                      <label className={`flex items-center gap-2 text-sm cursor-pointer ${phoneType === 'mobile' ? 'font-bold text-emerald-600' : 'text-gray-600'}`}>
+                        <input 
+                          type="radio" 
+                          name="phoneType" 
+                          value="mobile" 
+                          checked={phoneType === 'mobile'} 
+                          onChange={() => handlePhoneTypeChange('mobile')}
+                          className="w-4 h-4 text-emerald-600 border-gray-300 focus:ring-emerald-500"
                         />
-                      </div>
+                        Mobile
+                      </label>
+                      <label className={`flex items-center gap-2 text-sm cursor-pointer ${phoneType === 'landline' ? 'font-bold text-emerald-600' : 'text-gray-600'}`}>
+                        <input 
+                          type="radio" 
+                          name="phoneType" 
+                          value="landline" 
+                          checked={phoneType === 'landline'} 
+                          onChange={() => handlePhoneTypeChange('landline')}
+                          className="w-4 h-4 text-emerald-600 border-gray-300 focus:ring-emerald-500"
+                        />
+                        Landline
+                      </label>
+                      {phoneType === 'landline' && (
+                        <input
+                          type="text"
+                          name="manualIsdCode"
+                          placeholder="ISD Code"
+                          value={manualIsdCode}
+                          onChange={(e) => handleManualIsdCodeChange(e.target.value.replace(/\D/g, ''))}
+                          className="w-20 px-2 py-1 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                        />
+                      )}
                     </div>
-                    {isdCode && (
-                      <p className="text-xs text-gray-500 mt-1">
-                        Landline detected for {detectedState}. Area code: {isdCode}
-                      </p>
-                    )}
                   </div>
                   
                   <div className="md:col-span-2">
@@ -760,7 +1001,9 @@ export default function Register() {
                       placeholder="admin@hospital.com" 
                       value={form.email} 
                       onChange={handleChange} 
+                      onBlur={handleBlur}
                       required 
+                      error={fieldErrors.email}
                       icon={
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -777,16 +1020,20 @@ export default function Register() {
                       placeholder="Create a strong password (min. 8 characters)" 
                       value={form.password} 
                       onChange={handleChange} 
+                      onBlur={handleBlur}
                       required 
+                      error={fieldErrors.password}
                       icon={
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                         </svg>
                       }
                     />
-                    <p className="text-xs text-gray-500 mt-1 ml-1">
-                      Password must be at least 8 characters long
-                    </p>
+                    {!fieldErrors.password && (
+                      <p className="text-xs text-gray-500 mt-1 ml-1">
+                        Password must be at least 8 characters long
+                      </p>
+                    )}
                   </div>
                 </div>
                 
@@ -799,17 +1046,15 @@ export default function Register() {
                     value={form.fireNOC} 
                     onChange={handleChange} 
                   />
-                  <div className="space-y-1">
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide ml-1">
-                      Additional Information (Optional)
-                    </label>
-                    <textarea
-                      name="additionalInfo"
-                      placeholder="Any other relevant details regarding policies, insurance, or special requirements..."
-                      value={form.additionalInfo}
-                      onChange={handleChange}
-                      rows={2}
-                      className="block w-full px-4 py-3 bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all resize-none"
+                  <div>
+                    <FormInput 
+                      label="Additional Information (Optional)" 
+                      name="additionalInfo" 
+                      placeholder="Any other relevant details about the hospital" 
+                      value={form.additionalInfo} 
+                      onChange={handleChange} 
+                      as="textarea"
+                      rows="2"
                     />
                   </div>
                 </div>
@@ -820,7 +1065,7 @@ export default function Register() {
             {step === 3 && (
               <PreviewDetails 
                 form={form}
-                isdCode={isdCode}
+                isdCode={manualIsdCode || isdCode}
                 stateName={detectedState}
                 cityName={detectedCity}
                 pincode={detectedPincode}
