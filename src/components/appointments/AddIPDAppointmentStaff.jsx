@@ -1218,9 +1218,24 @@ const convertUTCTimeToLocalForDate = (utcTimeString, targetDateString) => {
       };
 
       if (formData.type === 'time-based') {
-        appointmentData.start_time = `${formData.date}T${formData.start_time}:00`;
-        appointmentData.end_time = `${formData.date}T${calculateEndTime(formData.start_time, formData.duration)}:00`;
-      } else {
+  // Store times as UTC without timezone conversion
+  // If user selects 9 PM, store as 21:00 UTC
+  appointmentData.start_time = `${formData.date}T${formData.start_time}:00+00:00`;
+  
+  // Calculate end time in 24-hour format
+  const [hours, minutes] = formData.start_time.split(':').map(Number);
+  const totalMinutes = hours * 60 + minutes + parseInt(formData.duration);
+  const endHours = Math.floor(totalMinutes / 60) % 24;
+  const endMinutes = totalMinutes % 60;
+  const endTimeFormatted = `${String(endHours).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')}`;
+  
+  appointmentData.end_time = `${formData.date}T${endTimeFormatted}:00+00:00`;
+  
+  console.log('Storing times as UTC:', {
+    start: appointmentData.start_time,
+    end: appointmentData.end_time
+  });
+}else {
         const lastSerial = existingPatients.length > 0
           ? Math.max(...existingPatients.map(p => p.serialNumber))
           : 0;
