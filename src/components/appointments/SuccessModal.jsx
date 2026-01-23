@@ -2,7 +2,7 @@
 import { FaCheckCircle, FaUser, FaCalendarAlt, FaClock, FaTimes } from 'react-icons/fa';
 import { Button } from '../common/FormElements';
 
-const SuccessModal = ({ isOpen, onClose, message, patientName, isPatient, onContinue }) => {
+const SuccessModal = ({ isOpen, onClose, message, patientName, isPatient, onContinue, showSlipButton = false }) => {
   if (!isOpen) return null;
 
   return (

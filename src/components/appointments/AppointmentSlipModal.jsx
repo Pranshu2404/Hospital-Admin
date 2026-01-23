@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import ReactDOM from 'react-dom'; // Added ReactDOM import
 import axios from 'axios';
 import { SearchInput, Button } from '../common/FormElements';
 import { PlusIcon, FilterIcon, EditIcon, DeleteIcon, ViewIcon } from '../common/Icons';
@@ -22,6 +23,13 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
   const [showUploadForm, setShowUploadForm] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [submittingPrescription, setSubmittingPrescription] = useState(false);
+  const [mounted, setMounted] = useState(false); // Added for portal
+
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
+
   // helper to load prescription from server (cache-busted)
   const loadPrescription = async () => {
     if (!appointmentData || !appointmentData._id) return;
@@ -234,7 +242,9 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
     }
   };
 
-  if (!isOpen || !appointmentData) return null;
+  // Don't render anything if not mounted, not open, or no appointment data
+  if (!mounted || !isOpen || !appointmentData) return null;
+
   // derive display values for patient, doctor and department with fallbacks
   const patientObj = appointmentData.patient_id || {};
   const billingPatient = billingDetails && billingDetails.patient_id ? billingDetails.patient_id : null;
@@ -339,8 +349,9 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
 
     return 'N/A';
   };
-  
-  return (
+
+  // Use React Portal to render directly to document body
+  return ReactDOM.createPortal(
     <>
       <style>{`
         @media print {
@@ -452,18 +463,17 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
           }
         }
 
-        /* Screen styles */
+        /* Screen styles - UPDATED for portal */
         @media screen {
           .printable-slip-container {
-            position: absolute;
+            position: fixed; /* Changed from absolute to fixed */
             inset: 0;
-            z-index: 50;
+            z-index: 9999; /* Very high z-index to be on top of everything */
             display: flex;
             align-items: center;
             justify-content: center;
             background: rgba(0, 0, 0, 0.5);
             padding: 20px;
-            z-index: 100;
             overflow-y: auto;
           }
           .printable-slip {
@@ -475,7 +485,7 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
             max-width: 800px; /* Increased max-width for better preview */
             max-height: 90vh;
             overflow-y: auto;
-            z-index: 101;
+            z-index: 10000;
             padding: 24px;
             margin: 40px;
           }
@@ -496,17 +506,14 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
           </button>
 
           {/* Header */}
-          {/* Header */}
-          <div className="slip-header mb-2 border-b-4 border-double border-gray-800 ">
+          <div className="slip-header mb-2 pb-4 border-b-4 border-double border-gray-800 ">
             <div className="header-flex flex items-center justify-between">
               {/* Left: Logo */}
               <div className="w-40 h-40 flex-shrink-0 flex items-center justify-center">
                 {hospitalInfo?.logo ? (
                   <img src={hospitalInfo.logo} alt="Logo" className="max-w-full max-h-full object-contain" />
                 ) : (
-                  <div className="flex flex-col items-center justify-center text-gray-400 border-2 border-dashed border-gray-300 rounded-lg p-2 w-full h-full">
-                    <span className="text-xs font-medium">LOGO</span>
-                  </div>
+                    <img src="/hospital-icon.jpg" alt="Logo" className="max-w-full max-h-full object-contain" />
                 )}
               </div>
 
@@ -519,25 +526,15 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
                   <p>{hospitalInfo?.address || '123 Medical Lane, Health City, State, 123456'}</p>
                   <p className="mt-0.5">
                     <span className="font-bold">Phone:</span> {hospitalInfo?.contact || '9876543210'}
-                    {/* {hospitalInfo?.email && <span className="mx-2"></span>} */}
                     {hospitalInfo?.email && <span> <br/> Email: {hospitalInfo.email}</span>}
                   </p>
                 </div>
               </div>
-
-              {/* Right: Slip Title & Type */}
-              <div className="w-64 flex-shrink-0 text-center pl-6 border-l-2 border-gray-200 mr-2">
-                <div className="border-2 border-gray-800 py-2 px-1 mb-2">
-                  <h2 className="text-lg font-bold text-gray-900 leading-none uppercase">
-                    Registration Cum<br /> Appointment Slip
-                  </h2>
-                </div>
-                {/* <div className="text-xs font-bold text-gray-800 uppercase tracking-widest bg-gray-100 py-1 rounded">
-                  OPD / IPD / Casualty
-                </div> */}
-              </div>
             </div>
           </div>
+            <div className="mt-4 text-center">
+              <h2 className="text-xl font-bold text-gray-800 uppercase">Registration Cum Appointment Slip</h2>
+            </div>
 
           {/* Appointment Details */}
           <div className="slip-section">
@@ -644,109 +641,9 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
             </div>
           )}
 
-          {/* Prescription Section */}
+          {/* Prescription Section (commented out) */}
           {/* <div className="slip-section mt-4">
-            <h4 className="text-lg font-semibold text-gray-800 mb-2 border-b pb-1">PRESCRIPTION</h4>
-
-            {prescription ? (
-              <div className="space-y-3 text-sm">
-                <div><span className="text-gray-600 font-medium">Diagnosis:</span> <strong>{prescription.diagnosis || 'N/A'}</strong></div>
-                <div><span className="text-gray-600 font-medium">Notes:</span> <span>{prescription.notes || 'N/A'}</span></div>
-                <div>
-                  <span className="text-gray-600 font-medium">Medications:</span>
-                  <div className="mt-2 space-y-2">
-                    {prescription.items && prescription.items.length > 0 ? prescription.items.map((it, i) => (
-                      <div key={i} className="p-2 bg-gray-50 rounded border">
-                        <div className="text-sm font-medium">{it.medicine_name || 'Medicine'}</div>
-                        <div className="text-xs text-gray-600">{it.dosage}{it.frequency ? ` • ${it.frequency}` : ''}{it.duration ? ` • ${it.duration}` : ''}{it.instructions ? ` • ${it.instructions}` : ''}</div>
-                      </div>
-                    )) : <div className="text-sm text-gray-500">No medication items</div>}
-                  </div>
-                </div>
-                {prescription.prescription_image && (
-                  <div>
-                    <span className="text-gray-600 font-medium">Prescription Image:</span>
-                    <div className="mt-2">
-                      <img src={prescription.prescription_image} alt="Prescription" className="max-w-full rounded border" />
-                    </div>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="text-sm text-gray-600">
-                <p>No prescription uploaded for this appointment.</p> */}
-          {/* if we found prescriptions for the same patient, offer to attach one */}
-          {/* {candidatePrescriptions && candidatePrescriptions.length > 0 && (
-                  <div className="mt-3">
-                    <p className="text-sm text-gray-700">Found {candidatePrescriptions.length} prescription(s) for this patient. Attach one to this appointment:</p>
-                    <div className="mt-2 space-y-2">
-                      {candidatePrescriptions.map(cp => (
-                        <div key={cp._id} className="flex items-center justify-between p-2 bg-gray-50 rounded border">
-                          <div className="text-sm">
-                            <div className="font-medium">{cp.diagnosis || 'Prescription'}</div>
-                            <div className="text-xs text-gray-600">{new Date(cp.created_at || cp.createdAt).toLocaleString()}</div>
-                          </div>
-                          <div>
-                            <button onClick={() => attachPrescriptionToAppointment(cp._id)} className="px-3 py-1 bg-indigo-600 text-white rounded">Attach</button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {!showUploadForm && (
-                  <div className="mt-3">
-                    <button onClick={() => setShowUploadForm(true)} className="px-3 py-1 bg-blue-600 text-white rounded">Add Prescription</button>
-                  </div>
-                )}
-
-                {showUploadForm && (
-                  <form onSubmit={handleSubmitPrescription} className="mt-4 space-y-3">
-                    <div>
-                      <label className="block text-sm font-medium">Diagnosis</label>
-                      <input name="diagnosis" value={prescriptionForm.diagnosis} onChange={handlePrescriptionInputChange} className="w-full border rounded px-2 py-1" />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium">Notes</label>
-                      <textarea name="notes" value={prescriptionForm.notes} onChange={handlePrescriptionInputChange} className="w-full border rounded px-2 py-1" rows={2} />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium">Upload Image</label>
-                      <input type="file" accept="image/*" onChange={handleImageUpload} className="w-full" />
-                      {uploadingImage && <p className="text-xs text-blue-600">Uploading image...</p>}
-                      {prescriptionForm.prescriptionImage && (
-                        <img src={prescriptionForm.prescriptionImage} alt="Preview" className="mt-2 max-w-xs rounded border" />
-                      )}
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium">Medications</label>
-                      <div className="space-y-2 mt-2">
-                        {prescriptionForm.items.map((item, idx) => (
-                          <div key={idx} className="grid grid-cols-1 md:grid-cols-5 gap-2 p-2 bg-white rounded border">
-                            <input name="medicine_name" placeholder="Medicine" value={item.medicine_name} onChange={(e) => handleMedicineChange(idx, e)} className="border rounded px-2 py-1" />
-                            <input name="dosage" placeholder="Dosage" value={item.dosage} onChange={(e) => handleMedicineChange(idx, e)} className="border rounded px-2 py-1" />
-                            <input name="frequency" placeholder="Frequency" value={item.frequency} onChange={(e) => handleMedicineChange(idx, e)} className="border rounded px-2 py-1" />
-                            <input name="duration" placeholder="Duration" value={item.duration} onChange={(e) => handleMedicineChange(idx, e)} className="border rounded px-2 py-1" />
-                            <div className="flex items-center">
-                              <input name="instructions" placeholder="Instructions" value={item.instructions} onChange={(e) => handleMedicineChange(idx, e)} className="border rounded px-2 py-1 flex-1" />
-                              {idx > 0 && <button type="button" onClick={() => removeMedicine(idx)} className="ml-2 bg-red-500 text-white px-2 py-1 rounded">Remove</button>}
-                            </div>
-                          </div>
-                        ))}
-                        <button type="button" onClick={addMedicine} className="mt-2 px-3 py-1 bg-green-600 text-white rounded">+ Add Medicine</button>
-                      </div>
-                    </div>
-
-                    <div className="flex justify-end space-x-2">
-                      <button type="button" onClick={() => setShowUploadForm(false)} className="px-3 py-1 bg-gray-200 rounded">Cancel</button>
-                      <button type="submit" disabled={submittingPrescription} className="px-3 py-1 bg-blue-600 text-white rounded">{submittingPrescription ? 'Saving...' : 'Save Prescription'}</button>
-                    </div>
-                  </form>
-                )}
-              </div>
-            )}
+            ... prescription content ...
           </div> */}
 
           {/* Instructions */}
@@ -790,7 +687,8 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
           </div>
         </div>
       </div>
-    </>
+    </>,
+    document.body // Render directly to body, outside any parent modals
   );
 };
 

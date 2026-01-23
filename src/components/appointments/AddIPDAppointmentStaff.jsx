@@ -204,7 +204,7 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
   const [doctorWorkingHours, setDoctorWorkingHours] = useState([]);
   const [autoAssignedTime, setAutoAssignedTime] = useState(null);
   const [showErrors, setShowErrors] = useState(false);
-  const [slipModal, setSlipModal] = useState(true);
+  const [slipModal, setSlipModal] = useState(false); // CHANGED FROM true TO false
   const [hospitalInfo, setHospitalInfo] = useState(null);
   const [submitDetails, setSubmitDetails] = useState(null);
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
@@ -1231,6 +1231,12 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
         patientId: appt.patient_id?.patientId
       };
       setSubmitDetails(enriched);
+      
+      // Close success modal after a delay and show slip
+      setTimeout(() => {
+        setShowSuccessModal(false);
+        setSlipModal(true); // Show slip modal
+      }, 2000);
 
     } catch (err) {
       console.error('Error scheduling appointment:', err);
@@ -1962,7 +1968,13 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
       {showSuccessModal && (
         <SuccessModal
           isOpen={showSuccessModal}
-          onClose={() => setShowSuccessModal(false)}
+          onClose={() => {
+            setShowSuccessModal(false);
+            // Optionally show slip modal here if user wants to see it immediately
+            // if (!newPatientData) {
+            //   setSlipModal(true);
+            // }
+          }}
           message={successMessage}
           patientName={newPatientData ?
             `${newPatientData.salutation || ''} ${newPatientData.first_name || ''} ${newPatientData.last_name || ''}`.trim() :
@@ -1972,10 +1984,19 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
             )
           }
           isPatient={!!newPatientData}
-          onContinue={handleSelectPatientAfterSuccess}
+          onContinue={() => {
+            setShowSuccessModal(false);
+            if (!newPatientData) {
+              setSlipModal(true); // Show slip for appointments
+            } else {
+              handleSelectPatientAfterSuccess();
+            }
+          }}
+          showSlipButton={!newPatientData} // Show slip button only for appointments, not new patients
         />
       )}
 
+      {/* Appointment Slip Modal - This will now render independently via React Portal */}
       {slipModal && submitDetails && (
         <AppointmentSlipModal
           isOpen={slipModal}
