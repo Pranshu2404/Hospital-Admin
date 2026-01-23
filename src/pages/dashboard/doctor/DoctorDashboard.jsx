@@ -358,7 +358,7 @@ const DoctorDashboard = () => {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">Welcome Back, Dr. {name}</h1>
+          <h1 className="text-3xl font-bold text-slate-800">Welcome Back, Dr. {name}</h1>
           <p className="text-slate-500 text-sm mt-1">Here is your daily activity digest.</p>
         </div>
         <div className="mt-4 md:mt-0 flex flex-col sm:flex-row gap-3">

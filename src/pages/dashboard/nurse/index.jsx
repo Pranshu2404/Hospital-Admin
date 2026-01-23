@@ -52,7 +52,7 @@ const NurseDashboard = () => {
         <Layout sidebarItems={nurseSidebar} role="nurse">
             <div className="p-6">
                 <div className="flex flex-col md:flex-row md:items-center justify-between mb-6">
-                    <h1 className="text-2xl font-bold text-gray-800">Nurse Dashboard</h1>
+                    <h1 className="text-3xl font-bold text-gray-800">Nurse Dashboard</h1>
                     <div className="mt-4 md:mt-0 flex flex-col sm:flex-row gap-3">
                         <div className="bg-white px-4 py-2 rounded-lg shadow-sm border border-slate-200 flex items-center gap-2 text-slate-600">
                             <span className="font-medium text-sm">{dayjs().format('dddd, MMMM D, YYYY')}</span>

@@ -614,13 +614,13 @@ const StaffDashboard = () => {
             <style>{calendarStyles}</style>
             <PatientDetailModal patient={selectedPatient} onClose={() => setSelectedPatient(null)} onSave={handleSavePatient} />
 
-            <div className="bg-slate-50/50 min-h-screen p-2 font-sans">
+            <div className="bg-slate-50/50 min-h-screen p-6 font-sans">
                 <div className="max-w-[1600px] mx-auto space-y-6">
 
                     {/* Header */}
                     <div className="flex flex-col md:flex-row md:items-center justify-between">
                         <div>
-                            <h1 className="text-2xl font-bold text-slate-800">Staff Overview</h1>
+                            <h1 className="text-3xl font-bold text-slate-800">Staff Overview</h1>
                             <p className="text-slate-500 text-sm mt-1">Manage hospital resources and patient flows.</p>
                         </div>
                         <div className="mt-4 md:mt-0 flex flex-col sm:flex-row gap-3">
