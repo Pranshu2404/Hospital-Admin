@@ -146,9 +146,50 @@ const DoctorNurseList = () => {
       'Morning': 'bg-orange-50 text-orange-700 border-orange-200',
       'Evening': 'bg-indigo-50 text-indigo-700 border-indigo-200',
       'Night': 'bg-slate-800 text-slate-200 border-slate-700',
-      'Rotating': 'bg-blue-50 text-blue-700 border-blue-200'
+      'Rotating': 'bg-blue-50 text-blue-700 border-blue-200',
+      'Part-time': 'bg-violet-50 text-violet-700 border-violet-200'
     };
     return `inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${styles[shift] || 'bg-slate-50 text-slate-600 border-slate-200'}`;
+  };
+
+  const Clock = () => (
+    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  );
+
+  const renderShiftCell = (member) => {
+    // If shift is defined, show it as a badge
+    if (member.shift) {
+      return <span className={getShiftBadge(member.shift)}>{member.shift}</span>;
+    }
+    
+    // If no shift but has time slots, show as part-time with slots
+    if (member.timeSlots && member.timeSlots.length > 0) {
+      return (
+        <div className="flex flex-col gap-2">
+          <span className={getShiftBadge('Part-time')}>
+            <Clock /> Part-time
+          </span>
+          <div className="flex flex-wrap gap-1.5 mt-1">
+            {member.timeSlots.map((slot, idx) => (
+              <div
+                key={idx}
+                className="inline-flex items-center gap-1 px-2.5 py-1 bg-gradient-to-r from-violet-50 to-purple-50 text-violet-700 text-xs font-semibold rounded-full border border-violet-200/60 shadow-sm hover:shadow-md hover:border-violet-300 transition-all"
+              >
+                <Clock />
+                <span>{slot.start}</span>
+                <span className="text-violet-400">–</span>
+                <span>{slot.end}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+    
+    // Default: N/A
+    return <span className={getShiftBadge(null)}>N/A</span>;
   };
 
   return (
@@ -265,7 +306,7 @@ const DoctorNurseList = () => {
                                     {member.experience ? `${member.experience} Yrs` : '-'}
                                 </td>
                                 <td className="px-6 py-4">
-                                    <span className={getShiftBadge(member.shift)}>{member.shift || 'N/A'}</span>
+                                    {renderShiftCell(member)}
                                 </td>
                                 <td className="px-6 py-4">
                                     <span className={getStatusBadge(member.status || 'Active')}>{member.status || 'Active'}</span>

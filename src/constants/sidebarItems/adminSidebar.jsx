@@ -194,7 +194,7 @@ export const adminSidebar = [
     ],
   },
   {
-    label: 'Staff Login',
+    label: 'Create Staff Login',
     icon: FaLock,
     path: '/dashboard/admin/staff-login',
   },

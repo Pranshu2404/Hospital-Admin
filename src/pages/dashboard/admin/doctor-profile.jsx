@@ -12,7 +12,8 @@ const Icons = {
   Briefcase: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>,
   User: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>,
   ShieldCheck: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>,
-  Calendar: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+  Calendar: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>,
+  Clock: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
 };
 
 const DoctorProfilePage = () => {
@@ -188,8 +189,52 @@ const DoctorProfilePage = () => {
                             <>
                                 <InfoRow label="Payment Model" value={doctor.paymentType} />
                                 <InfoRow label="Rate / Amount" value={`₹${doctor.amount}`} />
-                                <InfoRow label="Contract Period" value={`${doctor.contractStartDate || 'N/A'} to ${doctor.contractEndDate || 'N/A'}`} />
                                 <InfoRow label="Visits / Week" value={doctor.visitsPerWeek} />
+                                
+                                {/* Time Slots for Part-time */}
+                                {doctor.timeSlots && doctor.timeSlots.length > 0 && (
+                                    <div className="col-span-1 md:col-span-2 py-3 border-t border-slate-50">
+                                        <div className="flex items-start gap-3">
+                                            <div className="mt-0.5 text-slate-400"><Icons.Clock className="w-4 h-4" /></div>
+                                            <div className="flex-1">
+                                                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Available Time Slots</p>
+                                                <div className="flex flex-wrap gap-2 mt-2">
+                                                    {doctor.timeSlots.map((slot, idx) => (
+                                                        <div
+                                                            key={idx}
+                                                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-violet-50 to-purple-50 text-violet-700 text-xs font-semibold rounded-full border border-violet-200/60 shadow-sm hover:shadow-md hover:border-violet-300 transition-all"
+                                                        >
+                                                            <Icons.Clock className="w-3.5 h-3.5" />
+                                                            <span>{slot.start}</span>
+                                                            <span className="text-violet-400">–</span>
+                                                            <span>{slot.end}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Contract Period with improved styling */}
+                                <div className="col-span-1 md:col-span-2 pt-2">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="bg-gradient-to-br from-blue-50 to-cyan-50 p-4 rounded-2xl border border-blue-200/50">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <Icons.Calendar className="w-4 h-4 text-blue-600" />
+                                                <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide">Contract Start</p>
+                                            </div>
+                                            <p className="text-sm font-bold text-blue-900">{formatDate(doctor.contractStartDate)}</p>
+                                        </div>
+                                        <div className="bg-gradient-to-br from-red-50 to-pink-50 p-4 rounded-2xl border border-red-200/50">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <Icons.Calendar className="w-4 h-4 text-red-600" />
+                                                <p className="text-xs font-semibold text-red-600 uppercase tracking-wide">Contract End</p>
+                                            </div>
+                                            <p className="text-sm font-bold text-red-900">{formatDate(doctor.contractEndDate)}</p>
+                                        </div>
+                                    </div>
+                                </div>
                             </>
                         )}
                         
