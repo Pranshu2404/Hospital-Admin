@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate, Link } from 'react-router-dom';
 import hospitalImg from '../assets/registererp.png';
+import { Button, FormTextarea, SearchableFormSelect } from '@/components/common/FormElements';
 
 // ISD codes for Indian states
 const ISD_CODES = [
@@ -47,7 +48,6 @@ const BackIcon = () => (
   </svg>
 );
 
-// Updated FormInput component that properly handles different input types
 const FormInput = ({ 
   label, 
   name, 
@@ -137,6 +137,72 @@ const FormInput = ({
         )}
         
         {error && InputElement !== 'select' && (
+          <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+            <svg className="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+            </svg>
+          </div>
+        )}
+      </div>
+      {error && (
+        <p className="text-xs text-red-600 mt-1 ml-1">{error}</p>
+      )}
+    </div>
+  );
+};
+
+// Updated Input component with icons support
+const InputWithIcon = ({ 
+  label, 
+  name, 
+  type = "text", 
+  placeholder, 
+  required = false, 
+  pattern, 
+  title, 
+  value, 
+  onChange, 
+  onBlur,
+  autoFocus, 
+  maxLength, 
+  inputMode, 
+  icon, 
+  error, 
+  disabled,
+  className = ""
+}) => {
+  return (
+    <div className={`space-y-1 ${className}`}>
+      <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide ml-1">
+        {label} {required && <span className="text-red-500">*</span>}
+      </label>
+      <div className="relative">
+        {icon && (
+          <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+            {icon}
+          </div>
+        )}
+        
+        <input
+          type={type}
+          name={name}
+          placeholder={placeholder}
+          value={value}
+          onChange={onChange}
+          onBlur={onBlur}
+          required={required}
+          pattern={pattern}
+          title={title}
+          autoFocus={autoFocus}
+          maxLength={maxLength}
+          inputMode={inputMode}
+          disabled={disabled}
+          className={`block w-full px-4 py-3 bg-gray-50 border ${
+            error ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20' : 'border-gray-200 focus:border-emerald-500 focus:ring-emerald-500/20'
+          } text-gray-900 text-sm rounded-xl focus:outline-none focus:ring-2 focus:bg-white transition-all duration-200 placeholder-gray-400 ${icon ? 'pl-10' : ''}`}
+        />
+        
+        {error && (
           <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
             <svg className="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
@@ -359,7 +425,11 @@ export default function Register() {
           `${import.meta.env.VITE_BASE_URL}/countries/${import.meta.env.VITE_COUNTRY_CODE}/states`,
           config
         );
-        setStates(response.data);
+        const formattedStates = response.data.map(state => ({
+          value: state.iso2,
+          label: state.name
+        }));
+        setStates(formattedStates);
       } catch (error) {
         console.error("Error fetching states:", error);
       }
@@ -374,6 +444,10 @@ export default function Register() {
         `${import.meta.env.VITE_BASE_URL}/countries/${import.meta.env.VITE_COUNTRY_CODE}/states/${stateIso}/cities`,
         config
       );
+      // const formattedCities = response.data.map(city => ({
+      //   value: city.name,
+      //   label: city.name
+      // }));
       setCities(response.data);
     } catch (error) {
       console.error("Error fetching cities:", error);
@@ -391,23 +465,23 @@ export default function Register() {
       let foundCity = '';
 
       for (const state of states) {
-        if (address.toLowerCase().includes(state.name.toLowerCase())) {
-          foundState = state.iso2;
-          setDetectedState(state.name);
-          setForm(prev => ({ ...prev, state: state.iso2 }));
+        if (address.toLowerCase().includes(state.label.toLowerCase())) {
+          foundState = state.value;
+          setDetectedState(state.label);
+          setForm(prev => ({ ...prev, state: state.value }));
           
           // Fetch cities for this state
-          fetchCities(state.iso2);
+          fetchCities(state.value);
           break;
         }
       }
 
       if (cities.length > 0) {
         for (const city of cities) {
-          if (address.toLowerCase().includes(city.name.toLowerCase())) {
-            foundCity = city.name;
-            setDetectedCity(city.name);
-            setForm(prev => ({ ...prev, city: city.name }));
+          if (address.toLowerCase().includes(city.value.toLowerCase())) {
+            foundCity = city.value;
+            setDetectedCity(city.value);
+            setForm(prev => ({ ...prev, city: city.value }));
             break;
           }
         }
@@ -539,10 +613,10 @@ export default function Register() {
 
       // Detect ISD code when state changes
       if (name === 'state') {
-        const selectedState = states.find(s => s.iso2 === value);
+        const selectedState = states.find(s => s.value === value);
         if (selectedState) {
-          setDetectedState(selectedState.name);
-          detectIsdCode(selectedState.name);
+          setDetectedState(selectedState.label);
+          detectIsdCode(selectedState.label);
           fetchCities(value);
         }
       }
@@ -748,7 +822,7 @@ export default function Register() {
             {step === 1 && (
               <div className="space-y-3 animate-fade-in-right">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormInput 
+                  <InputWithIcon 
                     label="Hospital Name" 
                     name="hospitalName" 
                     placeholder="e.g. City Care Hospital" 
@@ -759,7 +833,7 @@ export default function Register() {
                     autoFocus 
                     error={fieldErrors.hospitalName}
                   />
-                  <FormInput 
+                  <InputWithIcon 
                     label="Registry No." 
                     name="registryNo" 
                     placeholder="REG-123456" 
@@ -769,7 +843,7 @@ export default function Register() {
                     required 
                     error={fieldErrors.registryNo}
                   />
-                  <FormInput 
+                  <InputWithIcon 
                     label="Hospital ID" 
                     name="hospitalID" 
                     placeholder="AB1234" 
@@ -782,14 +856,14 @@ export default function Register() {
                     error={fieldErrors.hospitalID}
                     maxLength="6"
                   />
-                  <FormInput 
+                  <InputWithIcon 
                     label="Company Name" 
                     name="companyName" 
                     placeholder="Optional Company Name" 
                     value={form.companyName} 
                     onChange={handleChange} 
                   />
-                  <FormInput 
+                  <InputWithIcon 
                     label="License No." 
                     name="companyNumber" 
                     placeholder="Optional License Number" 
@@ -852,38 +926,28 @@ export default function Register() {
 
                   {/* Address with auto-detection */}
                   <div className="md:col-span-2 space-y-2">
-                    <FormInput
+                    <FormTextarea
                       label="Full Address"
-                      name="address"
-                      placeholder="Street, City, State, Pincode. We'll auto-detect city, state and pincode for you."
                       value={form.address}
                       onChange={handleChange}
-                      onBlur={handleBlur}
-                      error={fieldErrors.address}
+                      placeholder="Street, City, State, Pincode. We'll auto-detect city, state and pincode for you."
+                      required
+                      rows={3}
+                      className="mt-0"
                     />
 
-                    {/* Manual override fields */}
+                    {/* Manual override fields using searchable select */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div>
-                        <FormInput
-                          label="State"
-                          name="state"
-                          value={form.state}
-                          onChange={handleChange}
-                          required
-                          as="select"
-                          error={fieldErrors.state}
-                        >
-                          <option value="">Select State</option>
-                          {states.map((state) => (
-                            <option key={state.iso2} value={state.iso2}>
-                              {state.name}
-                            </option>
-                          ))}
-                        </FormInput>
-                      </div>
-                      <div>
-                        <FormInput
+                      <SearchableFormSelect
+                        label="State"
+                        value={form.state}
+                        onChange={handleChange}
+                        options={states}
+                        required
+                        placeholder="Search or select state..."
+                        className="mt-0"
+                      />
+                      <FormInput
                           label="City"
                           name="city"
                           value={form.city}
@@ -899,20 +963,18 @@ export default function Register() {
                             </option>
                           ))}
                         </FormInput>
-                      </div>
-                      <div>
-                        <FormInput
-                          label="Pincode"
-                          name="pinCode"
-                          placeholder="6-digit Pincode"
-                          value={form.pinCode}
-                          onChange={handleChange}
-                          onBlur={handleBlur}
-                          maxLength="6"
-                          inputMode="numeric"
-                          error={fieldErrors.pinCode}
-                        />
-                      </div>
+                      <InputWithIcon 
+                        label="Pincode"
+                        name="pinCode"
+                        placeholder="6-digit Pincode"
+                        value={form.pinCode}
+                        onChange={handleChange}
+                        onBlur={handleBlur}
+                        maxLength="6"
+                        inputMode="numeric"
+                        error={fieldErrors.pinCode}
+                        className="mt-0"
+                      />
                     </div>
                   </div>
                 </div>
@@ -923,7 +985,7 @@ export default function Register() {
             {step === 2 && (
               <div className="space-y-2 animate-fade-in-right">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormInput 
+                  <InputWithIcon 
                     label="Admin Name" 
                     name="name" 
                     placeholder="Dr. John Doe" 
@@ -942,7 +1004,7 @@ export default function Register() {
                   
                   {/* Contact Number with Phone Type Selection */}
                   <div className="space-y-1">
-                    <FormInput 
+                    <InputWithIcon 
                       label="Contact Number" 
                       name="contact" 
                       placeholder={phoneType === 'mobile' ? '10-digit Mobile Number' : '6-8 digit Landline Number'} 
@@ -994,7 +1056,7 @@ export default function Register() {
                   </div>
                   
                   <div className="md:col-span-2">
-                    <FormInput 
+                    <InputWithIcon 
                       label="Email Address" 
                       name="email" 
                       type="email" 
@@ -1013,7 +1075,7 @@ export default function Register() {
                   </div>
                   
                   <div className="md:col-span-2">
-                    <FormInput 
+                    <InputWithIcon 
                       label="Password" 
                       name="password" 
                       type="password" 
@@ -1039,24 +1101,21 @@ export default function Register() {
                 
                 {/* Additional Details */}
                 <div className="space-y-4 mt-6">
-                  <FormInput 
+                  <InputWithIcon 
                     label="Fire NOC Details (Optional)" 
                     name="fireNOC" 
                     placeholder="Enter Fire NOC Number/Details" 
                     value={form.fireNOC} 
                     onChange={handleChange} 
                   />
-                  <div>
-                    <FormInput 
-                      label="Additional Information (Optional)" 
-                      name="additionalInfo" 
-                      placeholder="Any other relevant details about the hospital" 
-                      value={form.additionalInfo} 
-                      onChange={handleChange} 
-                      as="textarea"
-                      rows="2"
-                    />
-                  </div>
+                  <FormTextarea
+                    label="Additional Information (Optional)"
+                    value={form.additionalInfo}
+                    onChange={handleChange}
+                    placeholder="Any other relevant details about the hospital"
+                    rows={2}
+                    className="mt-0"
+                  />
                 </div>
               </div>
             )}
@@ -1076,26 +1135,30 @@ export default function Register() {
             <div className="pt-8 flex gap-4">
               {/* Back Button */}
               {step > 1 && step < 3 && (
-                <button
+                <Button
                   type="button"
                   onClick={() => setStep(step - 1)}
-                  className="flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-gray-600 bg-gray-100 hover:bg-gray-200 font-bold text-sm transition-all"
+                  variant="outline"
+                  size="lg"
+                  className="flex items-center gap-2"
                 >
                   <BackIcon /> Back
-                </button>
+                </Button>
               )}
               {step === 3 && (
-                <button
+                <Button
                   type="button"
                   onClick={() => setStep(2)}
-                  className="flex items-center justify-center gap-2 px-6 py-4 rounded-xl text-gray-600 bg-gray-100 hover:bg-gray-200 font-bold text-sm transition-all"
+                  variant="outline"
+                  size="lg"
+                  className="flex items-center gap-2"
                 >
                   <BackIcon /> Edit Details
-                </button>
+                </Button>
               )}
 
               {/* Next/Submit Button */}
-              <button
+              <Button
                 type="button"
                 onClick={() => {
                   if (step === 1) {
@@ -1107,7 +1170,9 @@ export default function Register() {
                   }
                 }}
                 disabled={isLoading}
-                className="flex-1 flex justify-center py-4 px-6 rounded-xl text-white font-bold text-sm uppercase tracking-wide bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-lg shadow-emerald-500/30 transform transition-all active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed hover:-translate-y-1"
+                variant="primary"
+                size="lg"
+                className="flex-1"
               >
                 {isLoading ? (
                   <span className="flex items-center gap-2">
@@ -1121,7 +1186,7 @@ export default function Register() {
                   step === 1 ? 'Continue to Admin Details' :
                   step === 2 ? 'Preview & Submit' : 'Complete Registration'
                 )}
-              </button>
+              </Button>
             </div>
           </form>
         </div>

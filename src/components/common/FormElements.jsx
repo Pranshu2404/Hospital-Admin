@@ -80,7 +80,7 @@ export const SearchableFormSelect = ({
   label, 
   value, 
   onChange, 
-  options, 
+  options = [], 
   required, 
   className = "", 
   placeholder = "Search...",
@@ -88,44 +88,59 @@ export const SearchableFormSelect = ({
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isOpen, setIsOpen] = useState(false);
-  const [activeIndex, setActiveIndex] = useState(0); // For arrow key tracking
+  const [activeIndex, setActiveIndex] = useState(0);
   const wrapperRef = useRef(null);
 
-  // 1. Sort options based on search (Your Hint)
+  // 1. Normalize options: Convert ['A', 'B'] to [{label: 'A', value: 'A'}]
+  const normalizedOptions = useMemo(() => {
+    return options.map(opt => 
+      typeof opt === 'object' ? opt : { label: String(opt), value: String(opt) }
+    );
+  }, [options]);
+
+  // 2. Sort/Filter based on Normalized Options
   const displayedOptions = useMemo(() => {
-    if (!searchTerm) return options;
-    return [...options].sort((a, b) => {
-      const aMatch = a.label.toLowerCase().includes(searchTerm.toLowerCase());
-      const bMatch = b.label.toLowerCase().includes(searchTerm.toLowerCase());
+    if (!searchTerm) return normalizedOptions;
+    const lowerSearch = searchTerm.toLowerCase();
+    
+    return [...normalizedOptions].sort((a, b) => {
+      const aMatch = a.label.toLowerCase().includes(lowerSearch);
+      const bMatch = b.label.toLowerCase().includes(lowerSearch);
       if (aMatch && !bMatch) return -1;
       if (!aMatch && bMatch) return 1;
       return 0;
     });
-  }, [searchTerm, options]);
+  }, [searchTerm, normalizedOptions]);
 
-  // 2. Handle Arrow Keys manually since we are using a custom list
+  // 3. Sync search term when value changes externally
+  useEffect(() => {
+    const selected = normalizedOptions.find(opt => opt.value === value);
+    if (selected) setSearchTerm(selected.label);
+    else if (!value) setSearchTerm('');
+  }, [value, normalizedOptions]);
+
   const handleKeyDown = (e) => {
     if (e.key === 'ArrowDown') {
       e.preventDefault();
+      setIsOpen(true);
       setActiveIndex(prev => (prev < displayedOptions.length - 1 ? prev + 1 : prev));
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
       setActiveIndex(prev => (prev > 0 ? prev - 1 : prev));
     } else if (e.key === 'Enter' && isOpen) {
       e.preventDefault();
-      handleSelect(displayedOptions[activeIndex]);
+      if (displayedOptions[activeIndex]) handleSelect(displayedOptions[activeIndex]);
     } else if (e.key === 'Escape') {
       setIsOpen(false);
     }
   };
 
   const handleSelect = (opt) => {
-    onChange({ target: { value: opt.value } });
+    onChange({ target: { name: label.toLowerCase().replace(/\s/g, ''), value: opt.value } });
     setSearchTerm(opt.label);
     setIsOpen(false);
   };
 
-  // Close when clicking outside
   useEffect(() => {
     const clickOutside = (e) => {
       if (wrapperRef.current && !wrapperRef.current.contains(e.target)) setIsOpen(false);
@@ -136,8 +151,8 @@ export const SearchableFormSelect = ({
 
   return (
     <div className={`mb-4 ${className} relative`} ref={wrapperRef}>
-      <label className="block text-sm font-medium text-gray-700 mb-2">
-        {label} {required && <span className="text-red-500 ml-1">*</span>}
+      <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide ml-1">
+        {label} {required && <span className="text-red-500">*</span>}
       </label>
 
       <div className="relative">
@@ -147,28 +162,26 @@ export const SearchableFormSelect = ({
           onFocus={() => setIsOpen(true)}
           onChange={(e) => {
             setSearchTerm(e.target.value);
-            setActiveIndex(0); // Reset selection to top on search
+            setActiveIndex(0);
+            setIsOpen(true);
           }}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-sm"
-          style={{ height: '38px' }}
+          disabled={disabled}
+          className="block w-full px-4 py-3 bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all"
         />
 
-        {isOpen && (
-          <div 
-            className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-xl overflow-hidden"
-            style={{ maxHeight: '200px' }} // Fixed Height Controlled Here
-          >
+        {isOpen && displayedOptions.length > 0 && (
+          <div className="absolute border border-gray-200 z-50 w-full mt-1 bg-white rounded-xl shadow-xl overflow-hidden">
             <div className="overflow-y-auto max-h-[200px]">
               {displayedOptions.map((opt, index) => (
                 <div
                   key={opt.value}
                   onClick={() => handleSelect(opt)}
                   onMouseEnter={() => setActiveIndex(index)}
-                  className={`px-3 py-2 text-sm cursor-pointer transition-colors ${
-                    index === activeIndex ? 'bg-teal-100 text-teal-900 font-semibold' : 'text-gray-700'
-                  } ${opt.value === value ? 'text-teal-600' : ''}`}
+                  className={`px-4 py-2 text-sm cursor-pointer transition-colors ${
+                    index === activeIndex ? 'bg-emerald-50 text-emerald-900 font-semibold' : 'text-gray-700'
+                  } ${opt.value === value ? 'bg-emerald-100/50 text-emerald-700' : ''}`}
                 >
                   {opt.label}
                 </div>
