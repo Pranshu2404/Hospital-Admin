@@ -77,7 +77,6 @@ const checkIfAllHoursPassed = (doctorWorkingHours, currentTime) => {
   if (!doctorWorkingHours || doctorWorkingHours.length === 0) return true;
   
   const currentMinutes = currentTime.getHours() * 60 + currentTime.getMinutes();
-  const currentDate = currentTime.getDate();
   
   return doctorWorkingHours.every(range => {
     const [startH, startM] = range.start.split(':').map(Number);
@@ -100,7 +99,6 @@ const hasFutureTimeSlotsToday = (doctorWorkingHours, currentTime, duration) => {
   if (!doctorWorkingHours || doctorWorkingHours.length === 0) return false;
   
   const currentMinutes = currentTime.getHours() * 60 + currentTime.getMinutes();
-  const today = new Date();
   
   for (const range of doctorWorkingHours) {
     const [startH, startM] = range.start.split(':').map(Number);
@@ -114,14 +112,16 @@ const hasFutureTimeSlotsToday = (doctorWorkingHours, currentTime, duration) => {
         return true; // Overnight shift hasn't started yet
       }
       // Check if we're during the overnight shift (before the end time on next day)
-      if (currentMinutes >= startInMinutes) {
-        return true; // Still within overnight shift
+      if (currentMinutes >= startInMinutes && currentMinutes < endInMinutes) {
+        return true; // Still within overnight shift (night portion)
       }
+      // If we're between end time and start time of next day's overnight shift
+      // (e.g., 07:00 to 23:00 for a 23:00-07:00 shift), no slots available
     } else { // Normal shift
       // Check if we're before the end of the shift
       if (currentMinutes < endInMinutes) {
         // Check if there's enough time for at least one appointment
-        const timeRemaining = endInMinutes - currentMinutes;
+        const timeRemaining = endInMinutes - Math.max(currentMinutes, startInMinutes);
         if (timeRemaining >= duration) {
           return true;
         }
@@ -130,6 +130,13 @@ const hasFutureTimeSlotsToday = (doctorWorkingHours, currentTime, duration) => {
   }
   
   return false;
+};
+
+// Check if a date is today
+const isToday = (dateString) => {
+  const today = new Date();
+  const checkDate = new Date(dateString);
+  return today.toDateString() === checkDate.toDateString();
 };
 
 const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false, onClose = () => { }, onSuccess }) => {
@@ -210,6 +217,7 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
   const [successMessage, setSuccessMessage] = useState('');
   const [newPatientData, setNewPatientData] = useState(null);
   const [autoSwitchMessage, setAutoSwitchMessage] = useState('');
+  const [previousDoctorId, setPreviousDoctorId] = useState('');
 
   // New States for CSC API and Image Upload
   const [states, setStates] = useState([]);
@@ -409,6 +417,29 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
   };
 
   const handleInputChange = (field, value) => {
+    if (field === 'doctorId') {
+      // Store previous doctor ID before changing
+      setPreviousDoctorId(formData.doctorId);
+      
+      // Check if we're switching doctors
+      if (formData.doctorId && value && formData.doctorId !== value) {
+        // Reset to today if the selected date is not today
+        // This ensures when switching doctors, we always check availability for today first
+        const today = getLocalDateString();
+        if (formData.date !== today) {
+          setFormData(prev => ({ 
+            ...prev, 
+            [field]: value,
+            date: today, // Reset to today when switching doctors
+            start_time: '' // Clear start time
+          }));
+          setAutoSwitchMessage('Date reset to today for new doctor selection');
+          setTimeout(() => setAutoSwitchMessage(''), 3000);
+          return;
+        }
+      }
+    }
+    
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -474,7 +505,7 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
     fetchOptions();
   }, [formData.department]);
 
-  // Monitor time and auto-switch date when needed - FIXED VERSION
+  // Monitor time and auto-switch date when needed
   useEffect(() => {
     if (!formData.doctorId || !formData.date || formData.type !== 'time-based') return;
 
@@ -484,7 +515,7 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
       const isToday = today.toDateString() === now.toDateString();
       const duration = parseInt(formData.duration);
 
-      // Check if it's today, doctor has working hours, and all hours have passed
+      // Only check for auto-switch if it's today
       if (isToday && doctorWorkingHours.length > 0) {
         const allHoursPassed = checkIfAllHoursPassed(doctorWorkingHours, now);
         const hasFutureSlots = hasFutureTimeSlotsToday(doctorWorkingHours, now, duration);
@@ -517,7 +548,33 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
     return () => clearInterval(interval);
   }, [formData.doctorId, formData.date, formData.type, doctorWorkingHours, formData.duration]);
 
-  // Main effect for finding time slots - FIXED VERSION
+  // Reset date to today when doctor changes - FIX FOR THE ISSUE
+  useEffect(() => {
+    if (formData.doctorId && previousDoctorId && formData.doctorId !== previousDoctorId) {
+      // Check if current date is not today and doctor has working hours
+      const today = getLocalDateString();
+      const isDateToday = isToday(formData.date);
+      
+      if (!isDateToday && doctorWorkingHours.length > 0) {
+        const now = new Date();
+        const duration = parseInt(formData.duration);
+        const hasSlotsToday = hasFutureTimeSlotsToday(doctorWorkingHours, now, duration);
+        
+        // Only reset to today if new doctor has slots available today
+        if (hasSlotsToday) {
+          setFormData(prev => ({ 
+            ...prev, 
+            date: today,
+            start_time: '' // Clear start time
+          }));
+          setAutoSwitchMessage('Date reset to today for new doctor selection');
+          setTimeout(() => setAutoSwitchMessage(''), 3000);
+        }
+      }
+    }
+  }, [formData.doctorId, previousDoctorId, doctorWorkingHours, formData.duration]);
+
+  // Main effect for finding time slots
   useEffect(() => {
     if (formData.doctorId && formData.date && formData.type === 'time-based') {
       const sortedAppointments = [...existingAppointments].sort(
@@ -530,7 +587,7 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
       const isToday = today.toDateString() === now.toDateString();
       const duration = parseInt(formData.duration);
 
-      // Check if we should switch date
+      // Check if we should switch date (only if it's today)
       if (isToday && doctorWorkingHours.length > 0) {
         const allHoursPassed = checkIfAllHoursPassed(doctorWorkingHours, now);
         const hasFutureSlots = hasFutureTimeSlotsToday(doctorWorkingHours, now, duration);
@@ -899,7 +956,7 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
       const [apptStartH, apptStartM] = apptStartTime.split(':').map(Number);
       const [apptEndH, apptEndM] = apptEndTime.split(':').map(Number);
       const apptStartMin = apptStartH * 60 + apptStartM;
-      const apptEndMin = apptEndH * 60 + apptEndM;
+      const apptEndMin = apptEndH * 60 + endM;
 
       if (
         (proposedStartMin >= apptStartMin && proposedStartMin < apptEndMin) ||
@@ -1365,7 +1422,10 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
                             label="Date"
                             type="date"
                             value={formData.date}
-                            onChange={(e) => handleInputChange('date', e.target.value)}
+                            onChange={(e) => {
+                              handleInputChange('date', e.target.value);
+                              setAutoSwitchMessage('');
+                            }}
                             required
                             min={getLocalDateString()}
                           />
