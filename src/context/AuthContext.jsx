@@ -32,7 +32,7 @@ export const AuthProvider = ({ children }) => {
     if (role === 'admin') navigate('/dashboard/admin');
     else if (role === 'doctor') navigate('/dashboard/doctor');
     else if (role && role.toLowerCase() === 'nurse') navigate('/dashboard/nurse');
-    else if (role === 'staff') navigate('/dashboard/staff');
+    else if (role === 'staff' || role === 'registrar' || role === 'receptionist') navigate('/dashboard/staff');
     else if (role === 'pharmacy') navigate('/dashboard/pharmacy');
     else navigate('/');
   };
