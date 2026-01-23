@@ -204,7 +204,7 @@ const PreviewDetails = ({ form, isdCode, stateName, cityName, pincode }) => {
               <div className="flex">
                 <span className="font-medium text-gray-600 w-32">Contact:</span>
                 <span className="text-gray-900">
-                  {isdCode ? `+91 ${isdCode} ` : ''}{form.contact}
+                  {isdCode ? `${isdCode} ` : ''}{form.contact}
                 </span>
               </div>
               <div className="flex">
@@ -480,12 +480,8 @@ export default function Register() {
           'Content-Type': 'multipart/form-data'
         }
       });
-
-      if (response.data.success) {
-        setStep(3);
-      } else {
-        setError(response.data.message || 'Registration failed.');
-      }
+      console.log(response.data);
+      navigate('/');
     } catch (err) {
       console.log(err.response);
       setError(err.response?.data?.message || 'Registration failed. Please try again.');
@@ -651,7 +647,7 @@ export default function Register() {
                     {/* Manual override fields */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">State</label>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">State<span className="text-red-500">*</span></label>
                         <select
                           name="state"
                           value={form.state}
@@ -667,7 +663,7 @@ export default function Register() {
                         </select>
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">City</label>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">City<span className="text-red-500">*</span></label>
                         <select
                           name="city"
                           value={form.city}
@@ -728,7 +724,7 @@ export default function Register() {
                       <div className="relative flex-1">
                         {isdCode && (
                           <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-sm text-gray-600">
-                            +91 {isdCode}
+                            {isdCode}
                           </div>
                         )}
                         <input
