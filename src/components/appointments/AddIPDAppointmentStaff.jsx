@@ -62,6 +62,83 @@ const bloodGroupOptions = [
   { value: 'O-', label: 'O-' }
 ];
 
+// Helper to add days to date
+const addDaysToDate = (dateString, days) => {
+  const date = new Date(dateString + 'T00:00:00');
+  date.setDate(date.getDate() + days);
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const dd = String(date.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+};
+
+// Check if all available hours have passed for today - FIXED VERSION
+const checkIfAllHoursPassed = (doctorWorkingHours, currentTime) => {
+  if (!doctorWorkingHours || doctorWorkingHours.length === 0) return true;
+  
+  const currentMinutes = currentTime.getHours() * 60 + currentTime.getMinutes();
+  
+  return doctorWorkingHours.every(range => {
+    const [startH, startM] = range.start.split(':').map(Number);
+    const [endH, endM] = range.end.split(':').map(Number);
+    const startInMinutes = startH * 60 + startM;
+    const endInMinutes = endH * 60 + endM;
+    
+    if (endInMinutes <= startInMinutes) { // Overnight shift (e.g., 23:00 to 07:00)
+      // For overnight shift, check if current time is after the end time AND after the start time
+      // This means we've passed both parts of the overnight shift
+      return currentMinutes >= endInMinutes && currentMinutes >= startInMinutes;
+    } else { // Normal shift (e.g., 09:00 to 17:00)
+      return currentMinutes >= endInMinutes;
+    }
+  });
+};
+
+// Helper to check if there are any future time slots available today
+const hasFutureTimeSlotsToday = (doctorWorkingHours, currentTime, duration) => {
+  if (!doctorWorkingHours || doctorWorkingHours.length === 0) return false;
+  
+  const currentMinutes = currentTime.getHours() * 60 + currentTime.getMinutes();
+  
+  for (const range of doctorWorkingHours) {
+    const [startH, startM] = range.start.split(':').map(Number);
+    const [endH, endM] = range.end.split(':').map(Number);
+    const startInMinutes = startH * 60 + startM;
+    const endInMinutes = endH * 60 + endM;
+    
+    if (endInMinutes <= startInMinutes) { // Overnight shift
+      // Check if we're before the overnight shift starts
+      if (currentMinutes < startInMinutes) {
+        return true; // Overnight shift hasn't started yet
+      }
+      // Check if we're during the overnight shift (before the end time on next day)
+      if (currentMinutes >= startInMinutes && currentMinutes < endInMinutes) {
+        return true; // Still within overnight shift (night portion)
+      }
+      // If we're between end time and start time of next day's overnight shift
+      // (e.g., 07:00 to 23:00 for a 23:00-07:00 shift), no slots available
+    } else { // Normal shift
+      // Check if we're before the end of the shift
+      if (currentMinutes < endInMinutes) {
+        // Check if there's enough time for at least one appointment
+        const timeRemaining = endInMinutes - Math.max(currentMinutes, startInMinutes);
+        if (timeRemaining >= duration) {
+          return true;
+        }
+      }
+    }
+  }
+  
+  return false;
+};
+
+// Check if a date is today
+const isToday = (dateString) => {
+  const today = new Date();
+  const checkDate = new Date(dateString);
+  return today.toDateString() === checkDate.toDateString();
+};
+
 const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false, onClose = () => { }, onSuccess }) => {
   const navigate = useNavigate();
   // Helper to get local YYYY-MM-DD date string (avoids timezone-shift issues)
@@ -139,6 +216,8 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [newPatientData, setNewPatientData] = useState(null);
+  const [autoSwitchMessage, setAutoSwitchMessage] = useState('');
+  const [previousDoctorId, setPreviousDoctorId] = useState('');
 
   // New States for CSC API and Image Upload
   const [states, setStates] = useState([]);
@@ -204,7 +283,6 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
           `${import.meta.env.VITE_BASE_URL}/countries/${import.meta.env.VITE_COUNTRY_CODE}/states`,
           config
         );
-        console.log("States fetched successfully:", response.data);
         setStates(response.data);
       } catch (error) {
         console.error("Error fetching states:", error);
@@ -330,12 +408,6 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
         // Adjust fee based on duration for full-time doctors too
         const durationMultiplier = parseInt(formData.duration) / 30;
         consultationFee = Math.round(consultationFee * durationMultiplier);
-
-        // charges.push({
-        //   description: `${formData.appointment_type.charAt(0).toUpperCase() + formData.appointment_type.slice(1)} Fee`,
-        //   amount: consultationFee
-        // });
-        // total += consultationFee;
       }
     }
 
@@ -345,6 +417,29 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
   };
 
   const handleInputChange = (field, value) => {
+    if (field === 'doctorId') {
+      // Store previous doctor ID before changing
+      setPreviousDoctorId(formData.doctorId);
+      
+      // Check if we're switching doctors
+      if (formData.doctorId && value && formData.doctorId !== value) {
+        // Reset to today if the selected date is not today
+        // This ensures when switching doctors, we always check availability for today first
+        const today = getLocalDateString();
+        if (formData.date !== today) {
+          setFormData(prev => ({ 
+            ...prev, 
+            [field]: value,
+            date: today, // Reset to today when switching doctors
+            start_time: '' // Clear start time
+          }));
+          setAutoSwitchMessage('Date reset to today for new doctor selection');
+          setTimeout(() => setAutoSwitchMessage(''), 3000);
+          return;
+        }
+      }
+    }
+    
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -410,6 +505,76 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
     fetchOptions();
   }, [formData.department]);
 
+  // Monitor time and auto-switch date when needed
+  useEffect(() => {
+    if (!formData.doctorId || !formData.date || formData.type !== 'time-based') return;
+
+    const checkAndSwitchDate = () => {
+      const now = new Date();
+      const today = new Date(formData.date);
+      const isToday = today.toDateString() === now.toDateString();
+      const duration = parseInt(formData.duration);
+
+      // Only check for auto-switch if it's today
+      if (isToday && doctorWorkingHours.length > 0) {
+        const allHoursPassed = checkIfAllHoursPassed(doctorWorkingHours, now);
+        const hasFutureSlots = hasFutureTimeSlotsToday(doctorWorkingHours, now, duration);
+        
+        // Only switch date if ALL hours have passed AND no future slots available
+        if (allHoursPassed && !hasFutureSlots) {
+          // Switch to next date
+          const nextDate = addDaysToDate(formData.date, 1);
+          handleInputChange('date', nextDate);
+
+          // Set proposed time to first available slot on next date
+          if (doctorWorkingHours.length > 0) {
+            const firstSlot = doctorWorkingHours[0];
+            handleInputChange('start_time', firstSlot.start);
+            setAutoAssignedTime(firstSlot.start);
+
+            // Clear message after 5 seconds
+            setTimeout(() => setAutoSwitchMessage(''), 5000);
+          }
+        }
+      }
+    };
+
+    // Check immediately
+    checkAndSwitchDate();
+
+    // Check every minute
+    const interval = setInterval(checkAndSwitchDate, 60000);
+
+    return () => clearInterval(interval);
+  }, [formData.doctorId, formData.date, formData.type, doctorWorkingHours, formData.duration]);
+
+  // Reset date to today when doctor changes - FIX FOR THE ISSUE
+  useEffect(() => {
+    if (formData.doctorId && previousDoctorId && formData.doctorId !== previousDoctorId) {
+      // Check if current date is not today and doctor has working hours
+      const today = getLocalDateString();
+      const isDateToday = isToday(formData.date);
+      
+      if (!isDateToday && doctorWorkingHours.length > 0) {
+        const now = new Date();
+        const duration = parseInt(formData.duration);
+        const hasSlotsToday = hasFutureTimeSlotsToday(doctorWorkingHours, now, duration);
+        
+        // Only reset to today if new doctor has slots available today
+        if (hasSlotsToday) {
+          setFormData(prev => ({ 
+            ...prev, 
+            date: today,
+            start_time: '' // Clear start time
+          }));
+          setAutoSwitchMessage('Date reset to today for new doctor selection');
+          setTimeout(() => setAutoSwitchMessage(''), 3000);
+        }
+      }
+    }
+  }, [formData.doctorId, previousDoctorId, doctorWorkingHours, formData.duration]);
+
+  // Main effect for finding time slots
   useEffect(() => {
     if (formData.doctorId && formData.date && formData.type === 'time-based') {
       const sortedAppointments = [...existingAppointments].sort(
@@ -422,6 +587,31 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
       const isToday = today.toDateString() === now.toDateString();
       const duration = parseInt(formData.duration);
 
+      // Check if we should switch date (only if it's today)
+      if (isToday && doctorWorkingHours.length > 0) {
+        const allHoursPassed = checkIfAllHoursPassed(doctorWorkingHours, now);
+        const hasFutureSlots = hasFutureTimeSlotsToday(doctorWorkingHours, now, duration);
+        
+        // Only switch date if ALL hours have passed AND no future slots available
+        if (allHoursPassed && !hasFutureSlots) {
+          // Switch to next date
+          const nextDate = addDaysToDate(formData.date, 1);
+          handleInputChange('date', nextDate);
+
+          // Set proposed time to first available slot on next date
+          if (doctorWorkingHours.length > 0) {
+            const firstSlot = doctorWorkingHours[0];
+            handleInputChange('start_time', firstSlot.start);
+            setAutoAssignedTime(firstSlot.start);
+
+            // Clear message after 5 seconds
+            setTimeout(() => setAutoSwitchMessage(''), 5000);
+          }
+          return; // Exit early since date changed
+        }
+      }
+
+      // Find available time slot
       for (const range of doctorWorkingHours) {
         const [startH, startM] = range.start.split(':').map(Number);
         const [endH, endM] = range.end.split(':').map(Number);
@@ -438,14 +628,17 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
           const rangeStartMinutes = startH * 60 + startM;
           const rangeEndMinutes = endH * 60 + endM;
           const nextSlotMinutesValue = nextHours * 60 + nextMins;
-          
+
           if (isOvernightShift) {
+            // For overnight shift (e.g., 23:00 to 07:00)
+            // If current time is before shift starts OR during overnight portion
             if (nextSlotMinutesValue >= rangeStartMinutes || nextSlotMinutesValue < rangeEndMinutes) {
               currentTime.setHours(nextHours, nextMins, 0, 0);
             } else {
               currentTime.setHours(startH, startM, 0, 0);
             }
           } else {
+            // For normal shift
             if (nextSlotMinutesValue < rangeStartMinutes) {
               currentTime.setHours(startH, startM, 0, 0);
             } else if (nextSlotMinutesValue >= rangeStartMinutes && nextSlotMinutesValue < rangeEndMinutes) {
@@ -456,13 +649,59 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
           }
         }
 
-        while (currentTime.getHours() * 60 + currentTime.getMinutes() < endH * 60 + endM) {
+        while (true) {
+          const currentHour = currentTime.getHours();
+          const currentMinute = currentTime.getMinutes();
+          const currentTotalMinutes = currentHour * 60 + currentMinute;
+          
+          const [endHour, endMinute] = [endH, endM];
+          const endTotalMinutes = endHour * 60 + endMinute;
+          
+          // Check if we're still within the shift
+          if (isOvernightShift) {
+            // For overnight shift, we need special handling
+            if (currentTotalMinutes >= startH * 60 + startM) {
+              // We're in the overnight portion (after start time)
+              if (currentTotalMinutes >= 1440) {
+                // We've wrapped past midnight
+                break;
+              }
+            } else {
+              // We're before the shift starts
+              if (currentTotalMinutes >= endTotalMinutes && currentTotalMinutes < startH * 60 + startM) {
+                // We're after the morning end time but before the evening start time
+                break;
+              }
+            }
+          } else {
+            // For normal shift
+            if (currentTotalMinutes >= endTotalMinutes) {
+              break;
+            }
+          }
+
           const proposedStart = currentTime.toTimeString().slice(0, 5);
           const proposedEnd = calculateEndTime(proposedStart, formData.duration);
           const [proposedEndH, proposedEndM] = proposedEnd.split(':').map(Number);
           const proposedEndInMinutes = proposedEndH * 60 + proposedEndM;
 
-          if (proposedEndInMinutes > endH * 60 + endM) {
+          // Check if appointment would end outside working hours
+          let wouldEndOutside = false;
+          if (isOvernightShift) {
+            // For overnight shift, ending time needs special handling
+            if (proposedEndInMinutes > endTotalMinutes && proposedEndInMinutes <= startH * 60 + startM) {
+              // Would end after morning end time but before evening start time - this is OK
+            } else if (proposedEndInMinutes > 1440) {
+              // Would end after midnight (next day) - not allowed
+              wouldEndOutside = true;
+            }
+          } else {
+            if (proposedEndInMinutes > endTotalMinutes) {
+              wouldEndOutside = true;
+            }
+          }
+
+          if (wouldEndOutside) {
             break;
           }
 
@@ -504,6 +743,7 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
       }
 
       if (!proposedTime && doctorWorkingHours.length > 0) {
+        // If no slot found, suggest the first available start time
         proposedTime = doctorWorkingHours[0].start;
       }
 
@@ -635,6 +875,7 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
     const today = new Date();
     const selectedDate = new Date(formData.date);
 
+    // Only apply time restrictions if it's today's date
     if (selectedDate.toDateString() === today.toDateString()) {
       const currentMinutes = today.getHours() * 60 + today.getMinutes();
       const duration = parseInt(formData.duration) || 30;
@@ -670,23 +911,27 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
     if (!formData.start_time) {
       errors.start_time = 'Please pick a start time';
     } else {
+      const selectedDate = new Date(formData.date);
+      const today = new Date();
+
+      // Check if it's today and time is in past
+      if (selectedDate.toDateString() === today.toDateString()) {
+        const [startH, startM] = formData.start_time.split(':').map(Number);
+        const selectedMinutes = startH * 60 + startM;
+        const currentMinutes = today.getHours() * 60 + today.getMinutes();
+
+        if (selectedMinutes < currentMinutes) {
+          errors.start_time = 'Cannot select a time in the past';
+        }
+      }
+
+      // Check working hours
       if (!isWithinWorkingHours(formData.start_time)) {
         errors.start_time = 'Selected time is outside doctor working hours';
       } else {
         const endTime = calculateEndTime(formData.start_time, formData.duration);
         if (!isWithinWorkingHours(endTime)) {
           errors.start_time = 'Appointment would end outside doctor working hours.';
-        }
-      }
-
-      const selectedDate = new Date(formData.date);
-      const today = new Date();
-      if (selectedDate.toDateString() === today.toDateString()) {
-        const [startH, startM] = formData.start_time.split(':').map(Number);
-        const selectedMinutes = startH * 60 + startM;
-        const currentMinutes = today.getHours() * 60 + today.getMinutes();
-        if (selectedMinutes < currentMinutes) {
-          errors.start_time = 'Cannot select a time in the past';
         }
       }
     }
@@ -711,7 +956,7 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
       const [apptStartH, apptStartM] = apptStartTime.split(':').map(Number);
       const [apptEndH, apptEndM] = apptEndTime.split(':').map(Number);
       const apptStartMin = apptStartH * 60 + apptStartM;
-      const apptEndMin = apptEndH * 60 + apptEndM;
+      const apptEndMin = apptEndH * 60 + endM;
 
       if (
         (proposedStartMin >= apptStartMin && proposedStartMin < apptEndMin) ||
@@ -865,7 +1110,7 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
       setFormData(prev => ({ ...prev, patientId: newPatientData._id }));
       setShowSuccessModal(false);
       setNewPatientData(null);
-      
+
       // Reset patient form
       setFormData2({
         salutation: '',
@@ -966,10 +1211,10 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
 
       // Show appointment success modal
       const selectedPatient = filteredPatients.find(p => p._id === formData.patientId);
-      const patientName = selectedPatient ? 
-        `${selectedPatient.salutation || ''} ${selectedPatient.first_name || ''} ${selectedPatient.last_name || ''}`.trim() : 
+      const patientName = selectedPatient ?
+        `${selectedPatient.salutation || ''} ${selectedPatient.first_name || ''} ${selectedPatient.last_name || ''}`.trim() :
         'Unknown Patient';
-      
+
       setSuccessMessage(`Appointment for ${patientName} scheduled successfully!`);
       setShowSuccessModal(true);
 
@@ -1005,50 +1250,50 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
     });
   };
 
-  const selectedPatient = formData.patientId ? 
+  const selectedPatient = formData.patientId ?
     filteredPatients.find(p => p._id === formData.patientId) : null;
 
   return (
     <>
       <style>{`
-        .fixed-calendar {
-          position: fixed;
-          top: 50%;
-          right: 20px;
-          transform: translateY(-50%);
-          width: 350px;
-          max-height: 80vh;
-          overflow-y: auto;
-          z-index: 40;
-          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-          border-radius: 12px;
-        }
-        
-        @media (max-width: 1200px) {
           .fixed-calendar {
-            position: relative;
-            top: auto;
-            right: auto;
-            transform: none;
-            width: 100%;
-            margin-top: 20px;
+            position: fixed;
+            top: 50%;
+            right: 20px;
+            transform: translateY(-50%);
+            width: 350px;
+            max-height: 80vh;
+            overflow-y: auto;
+            z-index: 40;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            border-radius: 12px;
           }
-        }
-        
-        .patient-added-popup {
-          position: fixed;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
-          background: white;
-          padding: 30px;
-          border-radius: 12px;
-          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
-          z-index: 100;
-          max-width: 500px;
-          width: 90%;
-        }
-      `}</style>
+          
+          @media (max-width: 1200px) {
+            .fixed-calendar {
+              position: relative;
+              top: auto;
+              right: auto;
+              transform: none;
+              width: 100%;
+              margin-top: 20px;
+            }
+          }
+          
+          .patient-added-popup {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+            z-index: 100;
+            max-width: 500px;
+            width: 90%;
+          }
+        `}</style>
 
       <div className="min-h-screen">
         <div className="max-w-7xl mx-auto">
@@ -1177,7 +1422,10 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
                             label="Date"
                             type="date"
                             value={formData.date}
-                            onChange={(e) => handleInputChange('date', e.target.value)}
+                            onChange={(e) => {
+                              handleInputChange('date', e.target.value);
+                              setAutoSwitchMessage('');
+                            }}
                             required
                             min={getLocalDateString()}
                           />
@@ -1227,10 +1475,11 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
                                 label="Start Time (HH:MM)"
                                 type="time"
                                 value={formData.start_time}
-                                onChange={(e) => { 
-                                  handleInputChange('start_time', e.target.value); 
-                                  setShowErrors(false); 
-                                  setAutoAssignedTime(null); 
+                                onChange={(e) => {
+                                  handleInputChange('start_time', e.target.value);
+                                  setShowErrors(false);
+                                  setAutoAssignedTime(null);
+                                  setAutoSwitchMessage('');
                                 }}
                                 onBlur={() => setShowErrors(true)}
                                 required
@@ -1247,7 +1496,14 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
                                 </div>
                               )}
                             </div>
-                            {autoAssignedTime && !formData.start_time && (
+                            {autoSwitchMessage && (
+                              <div className="bg-yellow-50 border border-yellow-100 rounded-lg p-3">
+                                <p className="text-sm text-yellow-700">
+                                  <span className="font-semibold">{autoSwitchMessage}</span>
+                                </p>
+                              </div>
+                            )}
+                            {autoAssignedTime && !formData.start_time && !autoSwitchMessage && (
                               <div className="bg-blue-50 border border-blue-100 rounded-lg p-3">
                                 <p className="text-sm text-blue-700">
                                   Suggested available slot: <span className="font-semibold">{autoAssignedTime}</span>
@@ -1689,8 +1945,8 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
           }}
           amount={totalAmount}
           patientName={
-            selectedPatient ? 
-              `${selectedPatient.salutation || ''} ${selectedPatient.first_name || ''} ${selectedPatient.last_name || ''}`.trim() : 
+            selectedPatient ?
+              `${selectedPatient.salutation || ''} ${selectedPatient.first_name || ''} ${selectedPatient.last_name || ''}`.trim() :
               'Unknown Patient'
           }
           appointmentDetails={{
@@ -1708,10 +1964,10 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
           isOpen={showSuccessModal}
           onClose={() => setShowSuccessModal(false)}
           message={successMessage}
-          patientName={newPatientData ? 
+          patientName={newPatientData ?
             `${newPatientData.salutation || ''} ${newPatientData.first_name || ''} ${newPatientData.last_name || ''}`.trim() :
-            (selectedPatient ? 
-              `${selectedPatient.salutation || ''} ${selectedPatient.first_name || ''} ${selectedPatient.last_name || ''}`.trim() : 
+            (selectedPatient ?
+              `${selectedPatient.salutation || ''} ${selectedPatient.first_name || ''} ${selectedPatient.last_name || ''}`.trim() :
               ''
             )
           }
