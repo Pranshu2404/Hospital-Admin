@@ -52,8 +52,12 @@ const Dashboard = () => {
   const [recentAppointments, setRecentAppointments] = useState([]);
   const [recentActivities, setRecentActivities] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [currentTime, setCurrentTime] = useState(dayjs());
 
-  const today = dayjs().format('dddd, DD MMMM YYYY');
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(dayjs()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -176,7 +180,15 @@ const Dashboard = () => {
       <div className="flex flex-col md:flex-row md:items-end justify-between mb-10">
         <div>
           <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Dashboard Overview</h1>
-          <p className="text-slate-500 mt-2 font-medium">{today}</p>
+          <div className="mt-4 flex flex-col sm:flex-row gap-3">
+            <div className="bg-white px-4 py-2 rounded-lg shadow-sm border border-slate-200 flex items-center gap-2 text-slate-600">
+              <span className="font-medium text-sm">{dayjs().format('dddd, MMMM D, YYYY')}</span>
+            </div>
+            <div className="bg-gradient-to-r from-teal-50 to-emerald-50 px-4 py-2 rounded-lg shadow-sm border border-teal-200 flex items-center gap-2">
+              <div className="w-2 h-2 bg-teal-500 rounded-full animate-pulse"></div>
+              <span className="font-bold text-teal-700 font-mono text-sm tracking-wide">{currentTime.format('HH:mm:ss')}</span>
+            </div>
+          </div>
         </div>
         <button 
             onClick={() => navigate('/dashboard/admin/appointments')}

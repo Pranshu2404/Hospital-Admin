@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import dayjs from 'dayjs';
 import {
     Users, Bed, User as UserIcon, BarChart as BarChartIcon,
     LineChart as LineChartIcon, ArrowUp, ArrowDown, Clock,
@@ -472,7 +473,13 @@ const StaffDashboard = () => {
     const [invoices, setInvoices] = useState([]);
     const [todayCollection, setTodayCollection] = useState(0);
     const [totalCollection, setTotalCollection] = useState(0);
+    const [currentTime, setCurrentTime] = useState(dayjs());
 
+    // Update current time every second
+    useEffect(() => {
+        const timer = setInterval(() => setCurrentTime(dayjs()), 1000);
+        return () => clearInterval(timer);
+    }, []);
 
     // Fetch Data
     useEffect(() => {
@@ -616,9 +623,15 @@ const StaffDashboard = () => {
                             <h1 className="text-2xl font-bold text-slate-800">Staff Overview</h1>
                             <p className="text-slate-500 text-sm mt-1">Manage hospital resources and patient flows.</p>
                         </div>
-                        <div className="mt-4 md:mt-0 bg-white px-4 py-2 rounded-xl shadow-sm border border-slate-200 text-sm font-medium text-slate-600 flex items-center gap-2">
-                            <Clock size={16} className="text-teal-600" />
-                            {format(new Date(), 'EEEE, MMMM do, yyyy')}
+                        <div className="mt-4 md:mt-0 flex flex-col sm:flex-row gap-3">
+                            <div className="bg-white px-4 py-2 rounded-lg shadow-sm border border-slate-200 flex items-center gap-2 text-slate-600">
+                                <Clock size={16} className="text-teal-600" />
+                                <span className="font-medium text-sm">{dayjs().format('dddd, MMMM D, YYYY')}</span>
+                            </div>
+                            <div className="bg-gradient-to-r from-teal-50 to-emerald-50 px-4 py-2 rounded-lg shadow-sm border border-teal-200 flex items-center gap-2">
+                                <div className="w-2 h-2 bg-teal-500 rounded-full animate-pulse"></div>
+                                <span className="font-bold text-teal-700 font-mono text-sm tracking-wide">{currentTime.format('HH:mm:ss')}</span>
+                            </div>
                         </div>
                     </div>
 

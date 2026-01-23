@@ -132,7 +132,8 @@ function Billing() {
         .reduce((sum, inv) => sum + (inv.total_amount || 0), 0);
 
       // Overdue Count
-      const overdue = data.filter(inv => inv.status === 'Pending' && new Date(inv.generated_at) < new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)).length;
+     // Replace the existing overdue line with this:
+const overdue = data.filter(inv => inv.status === 'Pending').length;
 
       // Total Collected (All Paid)
       const totalCollected = data
