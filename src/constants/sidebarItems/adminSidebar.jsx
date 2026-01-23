@@ -267,14 +267,14 @@ export const adminSidebar = [
   //   ],
   // },
   {
-    label: 'Profile',
+    label: 'Profile & Settings',
     icon: UserProfileIcon,
     path: '/dashboard/admin/profile',
   },
-  {
-    label: 'Settings',
-    icon: SettingsIcon,
-    path: '/dashboard/admin/settings',
-  },
+  // {
+  //   label: 'Settings',
+  //   icon: SettingsIcon,
+  //   path: '/dashboard/admin/settings',
+  // },
   { label: 'Forgot Password', path: '/forgot-password', icon: FaLock }
 ];
