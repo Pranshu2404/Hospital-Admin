@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { FormSelect, Button } from '../common/FormElements';
+import { SearchableFormSelect } from '../common/FormElements';
 import axios from 'axios';
 
 const AddNurseForm = () => {
@@ -95,7 +96,7 @@ const AddNurseForm = () => {
                 </div>
 
                 <form onSubmit={handleSubmit} className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormSelect
+                    <SearchableFormSelect
                         label="Select Staff"
                         value={selectedStaffId}
                         onChange={(e) => setSelectedStaffId(e.target.value)}
@@ -106,7 +107,7 @@ const AddNurseForm = () => {
                         required
                     />
 
-                    <FormSelect
+                    <SearchableFormSelect
                         label="Department"
                         value={department}
                         onChange={(e) => setDepartment(e.target.value)}

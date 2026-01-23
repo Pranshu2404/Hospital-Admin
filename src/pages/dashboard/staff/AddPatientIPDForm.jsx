@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FormInput, FormSelect, FormTextarea, Button } from '../../../components/common/FormElements';
+import { SearchableFormSelect } from '../../../components/common/FormElements';
 import axios from 'axios';
 import { FaUser, FaCloudUploadAlt, FaTimes, FaIdCard } from 'react-icons/fa';
 
@@ -297,7 +298,7 @@ const AddPatientIPDForm = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <FormSelect
+              <SearchableFormSelect
                 label="Salutation"
                 value={formData.salutation}
                 onChange={(e) => handleInputChange('salutation', e.target.value)}
@@ -343,7 +344,7 @@ const AddPatientIPDForm = () => {
                 onChange={(e) => handleInputChange('dateOfBirth', e.target.value)} 
                 required 
               />
-              <FormSelect 
+              <SearchableFormSelect 
                 label="Gender" 
                 value={formData.gender} 
                 onChange={(e) => handleInputChange('gender', e.target.value)} 
@@ -385,13 +386,13 @@ const AddPatientIPDForm = () => {
                 rows={3} 
                 className="md:col-span-2" 
               />
-              <FormSelect 
+              <SearchableFormSelect 
                 label="State" 
                 value={formData.state} 
                 onChange={(e) => handleInputChange('state', e.target.value)} 
                 options={stateOptions} 
               />
-              <FormSelect 
+              <SearchableFormSelect 
                 label="City" 
                 value={formData.city} 
                 onChange={(e) => handleInputChange('city', e.target.value)} 
@@ -473,7 +474,7 @@ const AddPatientIPDForm = () => {
                 value={formData.medications} 
                 onChange={(e) => handleInputChange('medications', e.target.value)} 
               />
-              <FormSelect 
+              <SearchableFormSelect 
                 label="Blood Group" 
                 value={formData.bloodGroup} 
                 onChange={(e) => handleInputChange('bloodGroup', e.target.value)} 

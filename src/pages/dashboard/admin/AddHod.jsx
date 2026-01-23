@@ -1,6 +1,7 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import Layout from '../../../components/Layout';
 import { adminSidebar } from '../../../constants/sidebarItems/adminSidebar';
+import { SearchableFormSelect } from '../../../components/common/FormElements';
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import {
@@ -168,7 +169,7 @@ const AddHodPage = () => {
                   <FormInput label="Password" type="password" value={formData.password} onChange={e => handleInputChange('password', e.target.value)} required />
                   <FormInput label="Phone" type="tel" value={formData.phone} onChange={e => handleInputChange('phone', e.target.value)} required />
                   <FormInput label="DOB" type="date" value={formData.dateOfBirth} onChange={e => handleInputChange('dateOfBirth', e.target.value)} required />
-                  <FormSelect label="Gender" value={formData.gender} onChange={e => handleInputChange('gender', e.target.value)} options={genderOptions} required />
+                  <SearchableFormSelect label="Gender" value={formData.gender} onChange={e => handleInputChange('gender', e.target.value)} options={genderOptions} required />
                 </div>
               </div>
 
@@ -189,7 +190,7 @@ const AddHodPage = () => {
                   <FormInput label="Specialization" value={formData.specialization} onChange={e => handleInputChange('specialization', e.target.value)} />
                   <FormInput label="License Number" value={formData.licenseNumber} onChange={e => handleInputChange('licenseNumber', e.target.value)} required />
                   <FormInput label="Experience (Years)" type="number" value={formData.experience} onChange={e => handleInputChange('experience', e.target.value)} />
-                  <FormSelect label="Shift" value={formData.shift} onChange={e => handleInputChange('shift', e.target.value)} options={shiftOptions} required />
+                  <SearchableFormSelect label="Shift" value={formData.shift} onChange={e => handleInputChange('shift', e.target.value)} options={shiftOptions} required />
                   <FormTextarea label="Education" value={formData.education} onChange={e => handleInputChange('education', e.target.value)} rows={3} className="md:col-span-2" />
                 </div>
               </div>

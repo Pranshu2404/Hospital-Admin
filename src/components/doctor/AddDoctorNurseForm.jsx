@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { Link, useNavigate } from 'react-router-dom';
+import { FormInput, FormSelect, SearchableFormSelect } from '../common/FormElements';
 
 // --- Icons ---
 const Icons = {
@@ -10,156 +11,6 @@ const Icons = {
   Shield: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>,
   Check: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>,
   Building: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>,
-};
-
-// --- Reusable Modern Input Component ---
-const FormInput = ({ label, type = "text", value, onChange, placeholder, required, className = "", icon, maxLength }) => (
-  <div className={`space-y-1.5 ${className}`}>
-    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide ml-1">
-      {label} {required && <span className="text-rose-500">*</span>}
-    </label>
-    <div className="relative group">
-      {icon && (
-        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 group-focus-within:text-emerald-500 transition-colors">
-          {icon}
-        </div>
-      )}
-      <input
-        type={type}
-        value={value}
-        onChange={onChange}
-        placeholder={placeholder}
-        required={required}
-        maxLength={maxLength}
-        className={`block w-full ${icon ? 'pl-10' : 'pl-4'} pr-4 py-3 bg-slate-50 border border-slate-200 text-slate-900 text-sm rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all placeholder-slate-400 hover:bg-white hover:shadow-sm`}
-      />
-    </div>
-  </div>
-);
-
-const FormSelect = ({ label, value, onChange, options, required, className = "", icon }) => (
-  <div className={`space-y-1.5 ${className}`}>
-    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide ml-1">
-      {label} {required && <span className="text-rose-500">*</span>}
-    </label>
-    <div className="relative group">
-      {icon && (
-        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 group-focus-within:text-emerald-500 transition-colors">
-          {icon}
-        </div>
-      )}
-      <select
-        value={value}
-        onChange={onChange}
-        required={required}
-        className={`block w-full ${icon ? 'pl-10' : 'pl-4'} pr-10 py-3 bg-slate-50 border border-slate-200 text-slate-900 text-sm rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all appearance-none cursor-pointer hover:bg-white hover:shadow-sm`}
-      >
-        <option value="" disabled>Select an option</option>
-        {options.map((opt) => (
-          <option key={opt.value} value={opt.value}>{opt.label}</option>
-        ))}
-      </select>
-      <div className="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none text-slate-500">
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
-      </div>
-    </div>
-  </div>
-);
-
-const SearchableFormSelect = ({ label, value, onChange, options, required, className = "", icon, placeholder, disabled }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const wrapperRef = useRef(null);
-
-  useEffect(() => {
-    const selected = options.find(opt => opt.value === value);
-    if (selected) {
-      setSearchTerm(selected.label);
-    } else if (!value) {
-      setSearchTerm('');
-    }
-  }, [value, options]);
-
-  useEffect(() => {
-    function handleClickOutside(event) {
-      if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
-        setIsOpen(false);
-        const selected = options.find(opt => opt.value === value);
-        // If the user typed something but didn't select, revert to the valid selected value's label or empty if none
-        if (!selected && searchTerm !== '') {
-          // If we want to allow custom text, we wouldn't clear it. 
-          // But for State/City API which strictly follows the list, we should probably revert.
-          // However, strictly reverting might be annoying if they just clicked out.
-          // Let's clear it if no match found for now to enforce selection.
-          // Better: if the current searchTerm EXACTLY matches a label, select it?
-          // For simplicity: Revert to last valid value text.
-          setSearchTerm(selected ? selected.label : '');
-        } else if (selected) {
-          setSearchTerm(selected.label);
-        }
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [wrapperRef, value, options, searchTerm]);
-
-  const filteredOptions = options.filter(opt =>
-    opt.label.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  return (
-    <div className={`space-y-1.5 ${className}`} ref={wrapperRef}>
-      <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide ml-1">
-        {label} {required && <span className="text-rose-500">*</span>}
-      </label>
-      <div className="relative group">
-        {icon && (
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 group-focus-within:text-emerald-500 transition-colors">
-            {icon}
-          </div>
-        )}
-        <input
-          type="text"
-          value={searchTerm}
-          onChange={(e) => {
-            setSearchTerm(e.target.value);
-            setIsOpen(true);
-            if (e.target.value === '') {
-              onChange({ target: { value: '' } });
-            }
-          }}
-          onFocus={() => !disabled && setIsOpen(true)}
-          placeholder={placeholder || "Select or type..."}
-          disabled={disabled}
-          className={`block w-full ${icon ? 'pl-10' : 'pl-4'} pr-10 py-3 bg-slate-50 border border-slate-200 text-slate-900 text-sm rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all hover:bg-white hover:shadow-sm ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-        />
-        <div className="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none text-slate-500">
-          <svg className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
-        </div>
-
-        {isOpen && !disabled && (
-          <div className="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-60 overflow-y-auto">
-            {filteredOptions.length > 0 ? (
-              filteredOptions.map((opt) => (
-                <div
-                  key={opt.value}
-                  className="px-4 py-2 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer text-sm"
-                  onClick={() => {
-                    onChange({ target: { value: opt.value } });
-                    setIsOpen(false);
-                  }}
-                >
-                  {opt.label}
-                </div>
-              ))
-            ) : (
-              <div className="px-4 py-3 text-sm text-slate-500 text-center">No results found</div>
-            )}
-          </div>
-        )}
-      </div>
-    </div>
-  );
 };
 
 const AddDoctorNurseForm = () => {
@@ -439,7 +290,7 @@ const AddDoctorNurseForm = () => {
               <div className="space-y-8 animate-fade-in-right">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                   <FormInput label="First Name" value={formData.firstName} onChange={(e) => handleInputChange('firstName', e.target.value)} required placeholder="e.g. John" />
-                  <FormInput label="Last Name" value={formData.lastName} onChange={(e) => handleInputChange('lastName', e.target.value)} required placeholder="e.g. Doe" />
+                  <FormInput label="Last Name" value={formData.lastName} onChange={(e) => handleInputChange('lastName', e.target.value)} placeholder="e.g. Doe" />
 
                   <FormInput label="Email Address" type="email" value={formData.email} onChange={(e) => handleInputChange('email', e.target.value)} required placeholder="doctor@hospital.com" />
                   <FormInput label="Phone Number" type="tel" value={formData.phone} onChange={(e) => handleInputChange('phone', e.target.value.replace(/[^0-9]/g, '').slice(0, 10))} required placeholder="e.g. 9876543210" maxLength={10} />
@@ -447,7 +298,7 @@ const AddDoctorNurseForm = () => {
 
                   <FormInput label="Date of Birth" type="date" value={formData.dateOfBirth} onChange={(e) => handleInputChange('dateOfBirth', e.target.value)} required max={getLocalDateString()}/>
 
-                  <FormSelect label="Gender" value={formData.gender} onChange={(e) => handleInputChange('gender', e.target.value)} options={[{ value: 'male', label: 'Male' }, { value: 'female', label: 'Female' }, { value: 'other', label: 'Other' }]} />
+                  <SearchableFormSelect label="Gender" value={formData.gender} onChange={(e) => handleInputChange('gender', e.target.value)} options={[{ value: 'male', label: 'Male' }, { value: 'female', label: 'Female' }, { value: 'other', label: 'Other' }]} />
                   <FormInput label="Aadhar Number" value={formData.aadharNumber} onChange={(e) => handleInputChange('aadharNumber', e.target.value.replace(/[^0-9]/g, '').slice(0, 12))} maxLength={12} placeholder="12-digit UID" />
                 </div>
 
@@ -494,11 +345,11 @@ const AddDoctorNurseForm = () => {
               <div className="space-y-8 animate-fade-in-right">
                 <div className="bg-slate-50/50 p-6 rounded-2xl border border-slate-100">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-                    <FormSelect label="Department" value={formData.department} onChange={(e) => handleInputChange('department', e.target.value)} options={departmentOptions} required icon={<Icons.Briefcase />} />
+                    <SearchableFormSelect label="Department" value={formData.department} onChange={(e) => handleInputChange('department', e.target.value)} options={departmentOptions} required icon={<Icons.Briefcase />} />
                     <FormInput label="Specialization" value={formData.specialization} onChange={(e) => handleInputChange('specialization', e.target.value)} required placeholder="e.g. Cardiology" />
 
                     <FormInput label="License / Registration No." value={formData.licenseNumber} onChange={(e) => handleInputChange('licenseNumber', e.target.value)} required placeholder="MED-12345" />
-                    <FormSelect
+                    <SearchableFormSelect
                       label="Highest Qualification"
                       value={formData.education}
                       onChange={(e) => handleInputChange('education', e.target.value)}
@@ -518,7 +369,7 @@ const AddDoctorNurseForm = () => {
               <div className="space-y-8 animate-fade-in-right">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <FormInput label="Joining Date" type="date" value={formData.startDate} onChange={(e) => handleInputChange('startDate', e.target.value)} required />
-                  <FormSelect
+                  <SearchableFormSelect
                     label="Employment Type"
                     value={formData.isFullTime ? 'Full-time' : 'Part-time'}
                     onChange={(e) => {
@@ -535,7 +386,7 @@ const AddDoctorNurseForm = () => {
                       <Icons.Clock /> Shift Configuration
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <FormSelect
+                      <SearchableFormSelect
                         label="Select Shift"
                         value={formData.shift}
                         onChange={(e) => handleShiftChange(e.target.value)}
@@ -563,7 +414,7 @@ const AddDoctorNurseForm = () => {
                       <Icons.Briefcase /> Consultant Configuration
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                      <FormSelect label="Payment Model" value={formData.paymentType} onChange={(e) => handleInputChange('paymentType', e.target.value)} options={[{ value: 'Fee per Visit', label: 'Fee per Visit' }, { value: 'Per Hour', label: 'Per Hour' }]} required/>
+                      <SearchableFormSelect label="Payment Model" value={formData.paymentType} onChange={(e) => handleInputChange('paymentType', e.target.value)} options={[{ value: 'Fee per Visit', label: 'Fee per Visit' }, { value: 'Per Hour', label: 'Per Hour' }]} required/>
                       <FormInput label="Rate / Amount (₹)" type="number" value={formData.amount} onChange={(e) => handleInputChange('amount', e.target.value)} required/>
                       <FormInput label="Contract Start" type="date" value={formData.contractStartDate} onChange={(e) => handleInputChange('contractStartDate', e.target.value)} required/>
                       <FormInput label="Contract End" type="date" value={formData.contractEndDate} onChange={(e) => handleInputChange('contractEndDate', e.target.value)} required/>

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Modal } from '../common/Modals';
-import { FormInput, FormSelect, FormTextarea, Button } from '../common/FormElements';
+import { FormInput, FormSelect, FormTextarea, Button, SearchableFormSelect } from '../common/FormElements';
 
 const AddItemsModal = ({ isOpen, onClose }) => {
   const [formData, setFormData] = useState({
@@ -88,7 +88,7 @@ const AddItemsModal = ({ isOpen, onClose }) => {
 
         {/* Category and Unit */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormSelect
+          <SearchableFormSelect
             label="Category"
             value={formData.category}
             onChange={(e) => handleInputChange('category', e.target.value)}
@@ -96,7 +96,7 @@ const AddItemsModal = ({ isOpen, onClose }) => {
             placeholder="Select category"
             required
           />
-          <FormSelect
+          <SearchableFormSelect
             label="Unit"
             value={formData.unit}
             onChange={(e) => handleInputChange('unit', e.target.value)}

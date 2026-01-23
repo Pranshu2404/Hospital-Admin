@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Modal } from '../common/Modals';
-import { FormInput, FormSelect, FormTextarea, Button, FormCheckbox } from '../common/FormElements';
+import { FormInput, FormSelect, FormTextarea, Button, FormCheckbox, SearchableFormSelect } from '../common/FormElements';
 
 const AddDonorModal = ({ isOpen, onClose }) => {
   const [formData, setFormData] = useState({
@@ -125,7 +125,7 @@ const AddDonorModal = ({ isOpen, onClose }) => {
             onChange={(e) => handleInputChange('dateOfBirth', e.target.value)}
             required
           />
-          <FormSelect
+          <SearchableFormSelect
             label="Gender"
             value={formData.gender}
             onChange={(e) => handleInputChange('gender', e.target.value)}
@@ -133,7 +133,7 @@ const AddDonorModal = ({ isOpen, onClose }) => {
             placeholder="Select gender"
             required
           />
-          <FormSelect
+          <SearchableFormSelect
             label="Blood Type"
             value={formData.bloodType}
             onChange={(e) => handleInputChange('bloodType', e.target.value)}

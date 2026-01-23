@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FormInput, FormSelect, FormTextarea, Button } from '../common/FormElements';
+import { FormInput, FormSelect, FormTextarea, Button, SearchableFormSelect } from '../common/FormElements';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
@@ -143,7 +143,7 @@ const handleSubmit = async (e) => {
                 onChange={(e) => handleInputChange('dateOfBirth', e.target.value)}
                 required
               />
-              <FormSelect
+              <SearchableFormSelect
                 label="Gender"
                 value={formData.gender}
                 onChange={(e) => handleInputChange('gender', e.target.value)}
@@ -212,7 +212,7 @@ const handleSubmit = async (e) => {
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Medical Information</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               
-              <FormSelect
+              <SearchableFormSelect
                 label="Patient Type"
                 value={formData.patientType}
                 onChange={(e) => handleInputChange('patientType', e.target.value)}

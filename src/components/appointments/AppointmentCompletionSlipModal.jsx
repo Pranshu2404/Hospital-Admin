@@ -1,6 +1,57 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 
+// Helper function to format stored UTC time to local display
+const formatStoredTime = (utcTimeString) => {
+    if (!utcTimeString) return 'N/A';
+    
+    try {
+        // Parse the ISO string
+        const date = new Date(utcTimeString);
+        
+        // Get the UTC hours/minutes
+        const hours = date.getUTCHours();
+        const minutes = date.getUTCMinutes();
+        
+        // Create a new date with these hours/minutes in local timezone
+        const displayDate = new Date();
+        displayDate.setHours(hours, minutes, 0, 0);
+        
+        return displayDate.toLocaleTimeString([], { 
+            hour: '2-digit', 
+            minute: '2-digit',
+            hour12: true 
+        });
+    } catch (error) {
+        console.error('Error formatting time:', error);
+        return 'Invalid Time';
+    }
+};
+
+// Helper function to format date
+const formatStoredDate = (utcDateString) => {
+    if (!utcDateString) return 'N/A';
+    
+    try {
+        const date = new Date(utcDateString);
+        // Use UTC components to avoid timezone conversion
+        const year = date.getUTCFullYear();
+        const month = date.getUTCMonth(); // 0-indexed
+        const day = date.getUTCDate();
+        
+        // Create a local date with UTC components
+        const localDate = new Date(year, month, day);
+        
+        return localDate.toLocaleDateString('en-IN', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric'
+        });
+    } catch (error) {
+        return 'Invalid Date';
+    }
+};
+
 const AppointmentCompletionSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }) => {
     const [prescription, setPrescription] = useState(null);
     const [vitals, setVitals] = useState(null);
@@ -77,7 +128,30 @@ const AppointmentCompletionSlipModal = ({ isOpen, onClose, appointmentData, hosp
             `Dr. ${d.firstName || d.first_name || ''} ${d.lastName || d.last_name || ''}`.trim() || 'N/A';
     };
 
-    const formattedDate = new Date().toLocaleDateString();
+    // Get formatted appointment date
+    const getAppointmentDate = () => {
+        if (appointmentData.date) return appointmentData.date;
+        
+        // Try from appointment_date field
+        if (appointmentData.appointment_date) {
+            return formatStoredDate(appointmentData.appointment_date);
+        }
+        
+        // Fallback to current date
+        return new Date().toLocaleDateString();
+    };
+
+    // Get formatted appointment time
+    const getAppointmentTime = () => {
+        if (appointmentData.time) return appointmentData.time;
+        
+        // Try from start_time field
+        if (appointmentData.start_time) {
+            return formatStoredTime(appointmentData.start_time);
+        }
+        
+        return 'N/A';
+    };
 
     const handlePrint = () => {
         window.print();
@@ -227,17 +301,13 @@ const AppointmentCompletionSlipModal = ({ isOpen, onClose, appointmentData, hosp
                                     </p>
                                 </div>
                             </div>
-
-                            {/* Right: Slip Title */}
-                            <div className="w-64 flex-shrink-0 text-center pl-6 border-l-2 border-gray-200 mr-2">
-                                <div className="border-2 border-gray-800 py-2 px-1 mb-2">
-                                    <h2 className="text-lg font-bold text-gray-900 leading-none uppercase">
-                                        Appointment<br /> Completion Slip
-                                    </h2>
-                                </div>
-                            </div>
                         </div>
                     </div>
+                                <div className="py-2 px-1 mb-2">
+                                    <h2 className="text-xl text-center font-bold text-gray-900 leading-none uppercase">
+                                        Doctor's Prescription
+                                    </h2>
+                                </div>
 
                     {/* 1. Doctor Details & Slip Date (Top Row) */}
                     
@@ -249,7 +319,7 @@ const AppointmentCompletionSlipModal = ({ isOpen, onClose, appointmentData, hosp
                             </div>
                             <div className="text-right">
                                 <p className="label">Slip Date</p>
-                                <p className="value">{formattedDate}</p>
+                                <p className="value">{new Date().toLocaleDateString()}</p>
                             </div>
                         </div>
                    
@@ -271,11 +341,12 @@ const AppointmentCompletionSlipModal = ({ isOpen, onClose, appointmentData, hosp
                                 <p className="value font-mono text-sm">{appointmentData.patientId || appointmentData.patient_id?.patientId || 'N/A'}</p>
                             </div>
                             <div>
-                                <p className="label">Appt Date/Time</p>
-                                <p className="value text-sm">
-                                    {appointmentData.date || new Date(appointmentData.appointment_date).toLocaleDateString()}
-                                    {appointmentData.time ? `, ${appointmentData.time}` : ''}
-                                </p>
+                                <p className="label">Appointment Date</p>
+                                <p className="value text-sm">{getAppointmentDate()}</p>
+                            </div>
+                            <div className="col-span-2">
+                                <p className="label">Appointment Time</p>
+                                <p className="value text-sm">{getAppointmentTime()}</p>
                             </div>
                         </div>
                    
@@ -305,6 +376,24 @@ const AppointmentCompletionSlipModal = ({ isOpen, onClose, appointmentData, hosp
                                     <p className="label text-xs">SPO2</p>
                                     <p className="value font-bold">{vitals.spo2 || '-'} <span className="text-[10px] font-normal text-slate-500">%</span></p>
                                 </div>
+                                {vitals.height && (
+                                    <div>
+                                        <p className="label text-xs">Height</p>
+                                        <p className="value font-bold">{vitals.height || '-'} <span className="text-[10px] font-normal text-slate-500">cm</span></p>
+                                    </div>
+                                )}
+                                {vitals.respiratory_rate && (
+                                    <div>
+                                        <p className="label text-xs">Resp. Rate</p>
+                                        <p className="value font-bold">{vitals.respiratory_rate || '-'} <span className="text-[10px] font-normal text-slate-500">/min</span></p>
+                                    </div>
+                                )}
+                                {vitals.random_blood_sugar && (
+                                    <div>
+                                        <p className="label text-xs">RBS</p>
+                                        <p className="value font-bold">{vitals.random_blood_sugar || '-'} <span className="text-[10px] font-normal text-slate-500">mg/dL</span></p>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}

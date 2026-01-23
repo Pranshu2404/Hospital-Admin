@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FormInput, FormSelect, FormTextarea, Button, FormCheckbox } from '../common/FormElements';
+import { FormInput, FormSelect, FormTextarea, Button, FormCheckbox, SearchableFormSelect } from '../common/FormElements';
 
 const GeneralSettingsTab = () => {
   const [settings, setSettings] = useState({
@@ -148,35 +148,35 @@ const GeneralSettingsTab = () => {
         <div>
           <h3 className="text-lg font-medium text-gray-900 mb-4">System Settings</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormSelect
+            <SearchableFormSelect
               label="Timezone"
               value={settings.timezone}
               onChange={(e) => handleInputChange('timezone', e.target.value)}
               options={timezoneOptions}
               required
             />
-            <FormSelect
+            <SearchableFormSelect
               label="Currency"
               value={settings.currency}
               onChange={(e) => handleInputChange('currency', e.target.value)}
               options={currencyOptions}
               required
             />
-            <FormSelect
+            <SearchableFormSelect
               label="Date Format"
               value={settings.dateFormat}
               onChange={(e) => handleInputChange('dateFormat', e.target.value)}
               options={dateFormatOptions}
               required
             />
-            <FormSelect
+            <SearchableFormSelect
               label="Time Format"
               value={settings.timeFormat}
               onChange={(e) => handleInputChange('timeFormat', e.target.value)}
               options={timeFormatOptions}
               required
             />
-            <FormSelect
+            <SearchableFormSelect
               label="Language"
               value={settings.language}
               onChange={(e) => handleInputChange('language', e.target.value)}

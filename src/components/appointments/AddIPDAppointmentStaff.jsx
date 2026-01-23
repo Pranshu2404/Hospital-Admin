@@ -1,9 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import { FormInput, FormSelect, FormTextarea, Button } from '../common/FormElements';
+import { FormInput, FormSelect, FormTextarea, Button, SearchableFormSelect } from '../common/FormElements';
 import { useNavigate } from 'react-router-dom';
-import Layout from '../Layout';
-import { adminSidebar } from '@/constants/sidebarItems/adminSidebar';
 import AppointmentSlipModal from './AppointmentSlipModal';
 import QRCodeModal from './QRCodeModal';
 import PaymentPendingModal from './PaymentPendingModal';
@@ -1410,7 +1408,7 @@ const convertUTCTimeToLocalForDate = (utcTimeString, targetDateString) => {
                     {!showFields ? (
                       <>
                         <div className="space-y-4">
-                          <FormSelect
+                          <SearchableFormSelect
                             label="Select Patient"
                             value={formData.patientId}
                             onChange={(e) => handleInputChange('patientId', e.target.value)}
@@ -1452,7 +1450,7 @@ const convertUTCTimeToLocalForDate = (utcTimeString, targetDateString) => {
 
                         {/* Appointment Details */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <FormSelect
+                          <SearchableFormSelect
                             label="Select Department"
                             value={formData.department}
                             onChange={(e) => handleInputChange('department', e.target.value)}
@@ -1460,7 +1458,7 @@ const convertUTCTimeToLocalForDate = (utcTimeString, targetDateString) => {
                             required
                           />
                           {!fixedDoctorId && (
-                            <FormSelect
+                            <SearchableFormSelect
                               label="Select Doctor"
                               value={formData.doctorId}
                               onChange={(e) => handleInputChange('doctorId', e.target.value)}
@@ -1485,14 +1483,14 @@ const convertUTCTimeToLocalForDate = (utcTimeString, targetDateString) => {
                             required
                             min={getLocalDateString()}
                           />
-                          <FormSelect
+                          <SearchableFormSelect
                             label="Type"
                             value={formData.type}
                             onChange={(e) => handleInputChange('type', e.target.value)}
                             options={schedulingTypeOptions}
                             required
                           />
-                          <FormSelect
+                          <SearchableFormSelect
                             label="Duration (min)"
                             value={formData.duration}
                             onChange={(e) => handleInputChange('duration', e.target.value)}
@@ -1509,14 +1507,14 @@ const convertUTCTimeToLocalForDate = (utcTimeString, targetDateString) => {
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <FormSelect
+                          <SearchableFormSelect
                             label="Appointment Type"
                             value={formData.appointment_type}
                             onChange={(e) => handleInputChange('appointment_type', e.target.value)}
                             options={appointmentTypeOptions}
                             required
                           />
-                          <FormSelect
+                          <SearchableFormSelect
                             label="Priority"
                             value={formData.priority}
                             onChange={(e) => handleInputChange('priority', e.target.value)}
@@ -1575,7 +1573,7 @@ const convertUTCTimeToLocalForDate = (utcTimeString, targetDateString) => {
                         )}
 
                         {type === 'ipd' && (
-                          <FormSelect
+                          <SearchableFormSelect
                             label="Select Room"
                             value={formData.roomId}
                             onChange={(e) => handleInputChange('roomId', e.target.value)}
@@ -1591,7 +1589,7 @@ const convertUTCTimeToLocalForDate = (utcTimeString, targetDateString) => {
                         )}
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <FormSelect
+                          <SearchableFormSelect
                             label="Payment Method"
                             value={formData.paymentMethod}
                             onChange={(e) => handleInputChange('paymentMethod', e.target.value)}
@@ -1605,7 +1603,7 @@ const convertUTCTimeToLocalForDate = (utcTimeString, targetDateString) => {
                             ]}
                             required
                           />
-                          <FormSelect
+                          <SearchableFormSelect
                             label="Bill Status"
                             value={status}
                             onChange={(e) => setStatus(e.target.value)}
@@ -1738,7 +1736,7 @@ const convertUTCTimeToLocalForDate = (utcTimeString, targetDateString) => {
 
                           {/* Patient Details */}
                           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <FormSelect
+                            <SearchableFormSelect
                               label="Salutation"
                               value={formData2.salutation}
                               onChange={(e) => handlePatientInputChange('salutation', e.target.value)}
@@ -1781,14 +1779,14 @@ const convertUTCTimeToLocalForDate = (utcTimeString, targetDateString) => {
                               onChange={(e) => handlePatientInputChange('age', e.target.value)}
                               required
                             />
-                            <FormSelect
+                            <SearchableFormSelect
                               label="Gender"
                               value={formData2.gender}
                               onChange={(e) => handlePatientInputChange('gender', e.target.value)}
                               options={genderOptions}
                               required
                             />
-                            <FormSelect
+                            <SearchableFormSelect
                               label="Blood Group"
                               value={formData2.bloodGroup}
                               onChange={(e) => handlePatientInputChange('bloodGroup', e.target.value)}
@@ -1817,13 +1815,13 @@ const convertUTCTimeToLocalForDate = (utcTimeString, targetDateString) => {
                               placeholder="Enter full address"
                             />
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              <FormSelect
+                              <SearchableFormSelect
                                 label="State"
                                 value={formData2.state}
                                 onChange={(e) => handlePatientInputChange('state', e.target.value)}
                                 options={states.map(state => ({ value: state.iso2, label: state.name }))}
                               />
-                              <FormSelect
+                              <SearchableFormSelect
                                 label="City"
                                 value={formData2.city}
                                 onChange={(e) => handlePatientInputChange('city', e.target.value)}

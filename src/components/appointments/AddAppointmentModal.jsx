@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Modal } from '../common/Modals';
-import { FormInput, FormSelect, FormTextarea, Button } from '../common/FormElements';
+import { FormInput, FormSelect, FormTextarea, Button, SearchableFormSelect } from '../common/FormElements';
 import { useNavigate } from 'react-router-dom';
 
 const appointmentTypeOptions = [
@@ -391,7 +391,7 @@ const AddAppointmentModal = ({ isOpen, onClose, type = "ipd", hospitalId, fixedD
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-4">
             {/* Patient Selection */}
-            <FormSelect
+            <SearchableFormSelect
               label="Select Patient"
               value={formData.patientId}
               onChange={(e) => handleInputChange('patientId', e.target.value)}
@@ -404,7 +404,7 @@ const AddAppointmentModal = ({ isOpen, onClose, type = "ipd", hospitalId, fixedD
 
             {/* Department and Doctor Selection */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormSelect
+              <SearchableFormSelect
                 label="Select Department"
                 value={formData.department}
                 onChange={(e) => handleInputChange('department', e.target.value)}
@@ -413,7 +413,7 @@ const AddAppointmentModal = ({ isOpen, onClose, type = "ipd", hospitalId, fixedD
               />
 
               {!fixedDoctorId && (
-                <FormSelect
+                <SearchableFormSelect
                   label="Select Doctor"
                   value={formData.doctorId}
                   onChange={(e) => handleInputChange('doctorId', e.target.value)}
@@ -437,7 +437,7 @@ const AddAppointmentModal = ({ isOpen, onClose, type = "ipd", hospitalId, fixedD
                 min={new Date().toISOString().split('T')[0]}
               />
 
-              <FormSelect
+              <SearchableFormSelect
                 label="Scheduling Type"
                 value={formData.type}
                 onChange={(e) => handleInputChange('type', e.target.value)}
@@ -445,7 +445,7 @@ const AddAppointmentModal = ({ isOpen, onClose, type = "ipd", hospitalId, fixedD
                 required
               />
 
-              <FormSelect
+              <SearchableFormSelect
                 label="Duration (minutes)"
                 value={formData.duration}
                 onChange={(e) => handleInputChange('duration', e.target.value)}
@@ -463,7 +463,7 @@ const AddAppointmentModal = ({ isOpen, onClose, type = "ipd", hospitalId, fixedD
 
             {/* Appointment Type and Priority */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormSelect
+              <SearchableFormSelect
                 label="Appointment Type"
                 value={formData.appointment_type}
                 onChange={(e) => handleInputChange('appointment_type', e.target.value)}
@@ -471,7 +471,7 @@ const AddAppointmentModal = ({ isOpen, onClose, type = "ipd", hospitalId, fixedD
                 required
               />
 
-              <FormSelect
+              <SearchableFormSelect
                 label="Priority"
                 value={formData.priority}
                 onChange={(e) => handleInputChange('priority', e.target.value)}
@@ -513,7 +513,7 @@ const AddAppointmentModal = ({ isOpen, onClose, type = "ipd", hospitalId, fixedD
 
             {/* Room Selection (for IPD) */}
             {type === 'ipd' && (
-              <FormSelect
+              <SearchableFormSelect
                 label="Select Room"
                 value={formData.roomId}
                 onChange={(e) => handleInputChange('roomId', e.target.value)}
@@ -526,7 +526,7 @@ const AddAppointmentModal = ({ isOpen, onClose, type = "ipd", hospitalId, fixedD
             )}
 
             {/* Payment Method */}
-            <FormSelect
+            <SearchableFormSelect
               label="Payment Method"
               value={formData.paymentMethod}
               onChange={(e) => handleInputChange('paymentMethod', e.target.value)}
@@ -541,7 +541,7 @@ const AddAppointmentModal = ({ isOpen, onClose, type = "ipd", hospitalId, fixedD
               required
             />
 
-            <FormSelect
+            <SearchableFormSelect
               label="Bill Status"
               value={status}
               onChange={(e) => setStatus(e.target.value)}

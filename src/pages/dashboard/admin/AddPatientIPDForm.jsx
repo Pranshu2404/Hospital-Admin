@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { FormInput, FormSelect, FormTextarea, Button } from '../../../components/common/FormElements';
+import { SearchableFormSelect } from '../../../components/common/FormElements';
 import axios from 'axios';
 import { FaUser, FaCloudUploadAlt, FaTimes } from 'react-icons/fa';
 
@@ -293,15 +294,15 @@ const AddPatientIPDForm = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <FormSelect label="Salutation" value={formData.salutation} onChange={(e) => handleInputChange('salutation', e.target.value)} options={[{ value: 'Mr.', label: 'Mr.' }, { value: 'Mrs.', label: 'Mrs.' }, { value: 'Ms.', label: 'Ms.' }, { value: 'Dr.', label: 'Dr.' }, { value: 'Prof.', label: 'Prof.' }]} required />
+              <SearchableFormSelect label="Salutation" value={formData.salutation} onChange={(e) => handleInputChange('salutation', e.target.value)} options={[{ value: 'Mr.', label: 'Mr.' }, { value: 'Mrs.', label: 'Mrs.' }, { value: 'Ms.', label: 'Ms.' }, { value: 'Dr.', label: 'Dr.' }, { value: 'Prof.', label: 'Prof.' }]} required />
               <FormInput label="First Name" value={formData.firstName} onChange={(e) => handleInputChange('firstName', e.target.value)} required />
               <FormInput label="Middle Name" value={formData.middleName} onChange={(e) => handleInputChange('middleName', e.target.value)} />
               <FormInput label="Last Name" value={formData.lastName} onChange={(e) => handleInputChange('lastName', e.target.value)} required />
               <FormInput label="Email" type="email" value={formData.email} onChange={(e) => handleInputChange('email', e.target.value)} />
               <FormInput label="Phone Number" type="tel" value={formData.phone} onChange={(e) => handleInputChange('phone', e.target.value)} required />
               <FormInput label="Date of Birth" type="date" value={formData.dateOfBirth} onChange={(e) => handleInputChange('dateOfBirth', e.target.value)} required max={getLocalDateString()}/>
-              <FormSelect label="Gender" value={formData.gender} onChange={(e) => handleInputChange('gender', e.target.value)} options={genderOptions} />
-              <FormSelect label="Blood Group" value={formData.bloodGroup} onChange={(e) => handleInputChange('bloodGroup', e.target.value)} options={bloodGroupOptions} />
+              <SearchableFormSelect label="Gender" value={formData.gender} onChange={(e) => handleInputChange('gender', e.target.value)} options={genderOptions} />
+              <SearchableFormSelect label="Blood Group" value={formData.bloodGroup} onChange={(e) => handleInputChange('bloodGroup', e.target.value)} options={bloodGroupOptions} />
             </div>
           </div>
 
@@ -312,8 +313,8 @@ const AddPatientIPDForm = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormTextarea label="Address" value={formData.address} onChange={(e) => handleInputChange('address', e.target.value)} rows={3} className="md:col-span-2" />
               {/* Modified City and State inputs to Select */}
-              <FormSelect label="State" value={formData.state} onChange={(e) => handleInputChange('state', e.target.value)} options={stateOptions} />
-              <FormSelect label="City" value={formData.city} onChange={(e) => handleInputChange('city', e.target.value)} options={cityOptions} disabled={!formData.state} />
+              <SearchableFormSelect label="State" value={formData.state} onChange={(e) => handleInputChange('state', e.target.value)} options={stateOptions} />
+              <SearchableFormSelect label="City" value={formData.city} onChange={(e) => handleInputChange('city', e.target.value)} options={cityOptions} disabled={!formData.state} />
               <FormInput label="District" value={formData.district} onChange={(e) => handleInputChange('district', e.target.value)} />
               <FormInput label="Tehsil" value={formData.tehsil} onChange={(e) => handleInputChange('tehsil', e.target.value)} />
               <FormInput label="Village" value={formData.village} onChange={(e) => handleInputChange('village', e.target.value)} />
@@ -334,7 +335,7 @@ const AddPatientIPDForm = () => {
           <div className="mb-8">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Admission Information</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormSelect
+              <SearchableFormSelect
                 label="Department"
                 value={formData.department}
                 onChange={(e) => handleInputChange('department', e.target.value)}

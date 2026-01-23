@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { FormInput, FormSelect, FormTextarea, Button } from '../../../components/common/FormElements';
+import { SearchableFormSelect } from '../../../components/common/FormElements';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
@@ -126,7 +127,7 @@ const AddPatientOPDForm = () => {
           <div>
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Personal Information</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormSelect 
+              <SearchableFormSelect 
                 label="Salutation" 
                 value={formData.salutation} 
                 onChange={(e) => handleInputChange('salutation', e.target.value)} 
@@ -170,7 +171,7 @@ const AddPatientOPDForm = () => {
                 onChange={(e) => handleInputChange('age', e.target.value)} 
                 required 
               />
-              <FormSelect 
+              <SearchableFormSelect 
                 label="Gender" 
                 value={formData.gender} 
                 onChange={(e) => handleInputChange('gender', e.target.value)} 
@@ -179,7 +180,7 @@ const AddPatientOPDForm = () => {
                   ...genderOptions
                 ]} 
               />
-              <FormSelect 
+              <SearchableFormSelect 
                 label="Blood Group" 
                 value={formData.bloodGroup} 
                 onChange={(e) => handleInputChange('bloodGroup', e.target.value)} 

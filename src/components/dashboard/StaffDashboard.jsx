@@ -36,6 +36,85 @@ const calendarStyles = `
   .rbc-toolbar button:hover { background-color: #f1f5f9; color: #0f172a; }
 `;
 
+// --- Helper Functions ---
+const formatStoredTime = (utcTimeString) => {
+    if (!utcTimeString) return 'N/A';
+    
+    try {
+        const date = new Date(utcTimeString);
+        // Extract UTC hours and minutes
+        const hours = date.getUTCHours();
+        const minutes = date.getUTCMinutes();
+        
+        // Format as 12-hour time
+        const hour12 = hours % 12 || 12;
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        
+        return `${hour12}:${minutes.toString().padStart(2, '0')} ${ampm}`;
+    } catch (error) {
+        console.error('Error formatting time:', error);
+        return 'Invalid Time';
+    }
+};
+
+const formatStoredDate = (utcTimeString) => {
+    if (!utcTimeString) return '';
+    
+    try {
+        const date = new Date(utcTimeString);
+        return date.toLocaleDateString([], {
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric'
+        });
+    } catch (error) {
+        return '';
+    }
+};
+
+const getAppointmentStartDate = (appt) => {
+    if (!appt.start_time) return new Date(appt.appointment_date);
+    
+    try {
+        const date = new Date(appt.start_time);
+        // Extract UTC components
+        const utcHours = date.getUTCHours();
+        const utcMinutes = date.getUTCMinutes();
+        
+        // Create a new date with these components (treated as local time)
+        const localDate = new Date(appt.appointment_date || date);
+        localDate.setHours(utcHours, utcMinutes, 0, 0);
+        
+        return localDate;
+    } catch (error) {
+        return new Date(appt.appointment_date);
+    }
+};
+
+const getAppointmentEndDate = (appt) => {
+    if (!appt.end_time) {
+        const start = getAppointmentStartDate(appt);
+        return new Date(start.getTime() + (appt.duration || 30) * 60000);
+    }
+    
+    try {
+        const date = new Date(appt.end_time);
+        // Extract UTC components
+        const utcHours = date.getUTCHours();
+        const utcMinutes = date.getUTCMinutes();
+        
+        // Create a new date with these components (treated as local time)
+        const startDate = getAppointmentStartDate(appt);
+        const endDate = new Date(startDate);
+        endDate.setHours(utcHours, utcMinutes, 0, 0);
+        
+        return endDate;
+    } catch (error) {
+        const start = getAppointmentStartDate(appt);
+        return new Date(start.getTime() + (appt.duration || 30) * 60000);
+    }
+};
+
 // --- Reusable UI Components --- //
 
 const StatCard = ({ title, value, icon, color, onClick }) => (
@@ -229,11 +308,17 @@ const RecentAppointments = ({ appointments }) => {
             ? `${appt.patient_id.first_name} ${appt.patient_id.last_name}`
             : 'Unknown Patient';
         const doctorName = appt.doctor_id?.firstName ? `Dr. ${appt.doctor_id.firstName}` : 'Doctor';
-        const time = appt.start_time
-            ? format(parseISO(appt.start_time), 'h:mm a')
-            : (appt.time_slot || 'Time N/A');
+        const time = formatStoredTime(appt.start_time);
+        const date = formatStoredDate(appt.start_time);
 
-        return { patientName, doctorName, time, type: appt.type || 'Visit', status: appt.status || 'Scheduled' };
+        return { 
+            patientName, 
+            doctorName, 
+            time, 
+            date,
+            type: appt.type || 'Visit', 
+            status: appt.status || 'Scheduled' 
+        };
     };
 
     const statusColors = {
@@ -257,7 +342,7 @@ const RecentAppointments = ({ appointments }) => {
 
             <div className="space-y-4 overflow-y-auto flex-1 max-h-[400px] pr-2 custom-scrollbar">
                 {appointments.length > 0 ? appointments.slice(0, 6).map((appt) => {
-                    const { patientName, doctorName, time, type, status } = getApptDetails(appt);
+                    const { patientName, doctorName, time, date, type, status } = getApptDetails(appt);
                     return (
                         <div key={appt._id} className="flex items-center p-3 rounded-xl border border-slate-100 hover:border-blue-100 hover:bg-blue-50/30 transition-all group">
                             <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold text-sm mr-3 group-hover:bg-white group-hover:shadow-sm">
@@ -269,6 +354,7 @@ const RecentAppointments = ({ appointments }) => {
                             </div>
                             <div className="text-right">
                                 <p className="text-xs font-bold text-slate-700">{time}</p>
+                                <p className="text-[10px] text-gray-500">{date}</p>
                                 <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${statusColors[status] || 'bg-gray-100 text-gray-600'}`}>
                                     {status}
                                 </span>
@@ -534,10 +620,7 @@ const StaffDashboard = () => {
 
                 setTotalCollection(totalAmount);
 
-
-
                 setDoctors(doctorsData || []);
-
 
                 setStaff(await staffRes.json());
                 setPatients(pData.patients || []);
@@ -547,9 +630,8 @@ const StaffDashboard = () => {
 
                 // Process Calendar Events
                 const events = aData.map(appt => {
-                    const start = appt.start_time ? new Date(appt.start_time) : new Date(appt.appointment_date);
-                    // Default duration 30 mins if not specified
-                    const end = appt.end_time ? new Date(appt.end_time) : new Date(start.getTime() + 30 * 60000);
+                    const start = getAppointmentStartDate(appt);
+                    const end = getAppointmentEndDate(appt);
 
                     return {
                         title: `${appt.patient_id?.first_name || 'Patient'} (${appt.type})`,

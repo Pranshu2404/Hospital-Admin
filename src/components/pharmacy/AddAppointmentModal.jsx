@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Modal } from '../common/Modals';
-import { FormInput, FormSelect, FormTextarea, Button } from '../common/FormElements';
+import { FormInput, FormSelect, FormTextarea, Button, SearchableFormSelect } from '../common/FormElements';
 import { useNavigate } from 'react-router-dom';
 
  const typeOptions = [
@@ -128,7 +128,7 @@ const AddAppointmentModal = ({ isOpen, onClose, type }) => {
 
         {/* Patient and Doctor Selection */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormSelect
+          <SearchableFormSelect
             label="Select Patient"
             value={formData.patientId}
             onChange={(e) => handleInputChange('patientId', e.target.value)}
@@ -140,7 +140,7 @@ const AddAppointmentModal = ({ isOpen, onClose, type }) => {
             required
           />
 
-          <FormSelect
+          <SearchableFormSelect
             label="Select Department"
             value={formData.department}
             onChange={(e) => handleInputChange('department', e.target.value)}
@@ -155,7 +155,7 @@ const AddAppointmentModal = ({ isOpen, onClose, type }) => {
           />
         </div>
 
-        <FormSelect
+        <SearchableFormSelect
           label="Select Doctor"
           value={formData.doctorId}
           onChange={(e) => handleInputChange('doctorId', e.target.value)}
@@ -183,7 +183,7 @@ const AddAppointmentModal = ({ isOpen, onClose, type }) => {
             onChange={(e) => handleInputChange('time', e.target.value)}
             required
           />
-          <FormSelect
+          <SearchableFormSelect
             label="Duration"
             value={formData.duration}
             onChange={(e) => handleInputChange('duration', e.target.value)}
@@ -198,7 +198,7 @@ const AddAppointmentModal = ({ isOpen, onClose, type }) => {
         </div>
         {/* Appointment Details */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormSelect
+          <SearchableFormSelect
             label="Appointment Type"
             value={formData.type}
             onChange={(e) => handleInputChange('type', e.target.value)}
@@ -206,7 +206,7 @@ const AddAppointmentModal = ({ isOpen, onClose, type }) => {
             placeholder="Select type"
             required
           />
-          <FormSelect
+          <SearchableFormSelect
             label="Priority"
             value={formData.priority}
             onChange={(e) => handleInputChange('priority', e.target.value)}

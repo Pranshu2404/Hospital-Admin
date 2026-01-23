@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FormInput, FormSelect, FormTextarea, Button, FormCheckbox } from '../common/FormElements';
+import { FormInput, FormSelect, FormTextarea, Button, FormCheckbox, SearchableFormSelect } from '../common/FormElements';
 
 const EmailSettingsTab = () => {
   const [emailSettings, setEmailSettings] = useState({
@@ -110,7 +110,7 @@ const EmailSettingsTab = () => {
               onChange={(e) => handleSmtpConfigChange('password', e.target.value)}
               placeholder="Leave blank to keep current password"
             />
-            <FormSelect
+            <SearchableFormSelect
               label="Encryption"
               value={emailSettings.smtpConfig.encryption}
               onChange={(e) => handleSmtpConfigChange('encryption', e.target.value)}

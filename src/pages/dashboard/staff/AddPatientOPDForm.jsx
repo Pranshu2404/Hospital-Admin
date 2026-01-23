@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { FormInput, FormSelect, FormTextarea, Button } from '../../../components/common/FormElements';
+import { SearchableFormSelect } from '../../../components/common/FormElements';
 import axios from 'axios';
 
 const AddPatientOPDForm = () => {
@@ -103,14 +104,14 @@ const AddPatientOPDForm = () => {
               {/* <FormInput label="Date of Birth" type="date" value={formData.dateOfBirth} onChange={(e) => handleInputChange('dateOfBirth', e.target.value)} required /> */}
               <FormInput label="Age" type="number" value={formData.age || ''} onChange={(e) => handleInputChange('age', e.target.value)} required />
 
-              <FormSelect
+              <SearchableFormSelect
                 label="Gender"
                 value={formData.gender}
                 onChange={(e) => handleInputChange('gender', e.target.value)}
                 options={genderOptions}
                 required
               />
-              <FormSelect
+              <SearchableFormSelect
                 label="Blood Group"
                 value={formData.bloodGroup}
                 onChange={(e) => handleInputChange('bloodGroup', e.target.value)}

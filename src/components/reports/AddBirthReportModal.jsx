@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Modal } from '../common/Modals';
-import { FormInput, FormSelect, FormTextarea, Button } from '../common/FormElements';
+import { FormInput, FormSelect, FormTextarea, Button, SearchableFormSelect } from '../common/FormElements';
 
 const AddBirthReportModal = ({ isOpen, onClose }) => {
   const [formData, setFormData] = useState({
@@ -100,7 +100,7 @@ const AddBirthReportModal = ({ isOpen, onClose }) => {
 
         {/* Baby Information */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <FormSelect
+          <SearchableFormSelect
             label="Baby Gender"
             value={formData.babyGender}
             onChange={(e) => handleInputChange('babyGender', e.target.value)}
@@ -129,7 +129,7 @@ const AddBirthReportModal = ({ isOpen, onClose }) => {
 
         {/* Delivery Information */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormSelect
+          <SearchableFormSelect
             label="Delivery Type"
             value={formData.deliveryType}
             onChange={(e) => handleInputChange('deliveryType', e.target.value)}

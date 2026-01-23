@@ -1,4 +1,13 @@
-import { useState, useRef, useEffect } from 'react';
+
+
+import * as React from "react"
+import { cn } from "@/lib/utils"
+import { Check, Search } from "lucide-react"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { useState, useEffect, useRef, useMemo } from "react"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command"
+import Textarea from "./Textarea"
 
 export const FormInput = ({ label, type = "text", value, onChange, placeholder, required = false, className = "", maxLength, inputMode, pattern, title, min, max, step, onBlur, icon, disabled }) => (
   <div className={`mb-4 ${className}`}>
@@ -48,149 +57,194 @@ export const OldFormSelect = ({ label, value, onChange, options, placeholder, re
   </div>
 );
 
-export const FormSelect = ({
-  label,
-  value,
-  onChange,
-  options,
-  placeholder = "Select an option",
-  required = false,
-  className = ""
+// 1. Standard Select (Arrow keys work natively)
+export const FormSelect = ({ label, value, onChange, options, placeholder = "Select...", required = false, className = "" }) => (
+  <div className={cn("mb-4", className)}>
+    <label className="block text-sm font-medium text-gray-700 mb-2">
+      {label} {required && <span className="text-red-500">*</span>}
+    </label>
+    <Select value={value} onValueChange={(val) => onChange({ target: { value: val } })}>
+      <SelectTrigger className="rounded-lg border-gray-300">
+        <SelectValue placeholder={placeholder} />
+      </SelectTrigger>
+      <SelectContent>
+        {options.map((opt) => (
+          <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  </div>
+);
+
+export const SearchableFormSelect = ({ 
+  label, 
+  value, 
+  onChange, 
+  options, 
+  required, 
+  className = "", 
+  placeholder = "Search...",
+  disabled 
 }) => {
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState('');
   const [isOpen, setIsOpen] = useState(false);
-  const ref = useRef(null);
+  const [activeIndex, setActiveIndex] = useState(0); // For arrow key tracking
+  const wrapperRef = useRef(null);
 
-  // Sync searchTerm with value when not open
-  useEffect(() => {
-    if (!isOpen) {
-      const selectedOption = options.find((opt) => opt.value === value);
-      setSearchTerm(selectedOption ? selectedOption.label : "");
+  // 1. Sort options based on search (Your Hint)
+  const displayedOptions = useMemo(() => {
+    if (!searchTerm) return options;
+    return [...options].sort((a, b) => {
+      const aMatch = a.label.toLowerCase().includes(searchTerm.toLowerCase());
+      const bMatch = b.label.toLowerCase().includes(searchTerm.toLowerCase());
+      if (aMatch && !bMatch) return -1;
+      if (!aMatch && bMatch) return 1;
+      return 0;
+    });
+  }, [searchTerm, options]);
+
+  // 2. Handle Arrow Keys manually since we are using a custom list
+  const handleKeyDown = (e) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setActiveIndex(prev => (prev < displayedOptions.length - 1 ? prev + 1 : prev));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setActiveIndex(prev => (prev > 0 ? prev - 1 : prev));
+    } else if (e.key === 'Enter' && isOpen) {
+      e.preventDefault();
+      handleSelect(displayedOptions[activeIndex]);
+    } else if (e.key === 'Escape') {
+      setIsOpen(false);
     }
-  }, [value, isOpen, options]);
+  };
 
+  const handleSelect = (opt) => {
+    onChange({ target: { value: opt.value } });
+    setSearchTerm(opt.label);
+    setIsOpen(false);
+  };
+
+  // Close when clicking outside
   useEffect(() => {
-    const handleOutside = (e) => {
-      if (ref.current && !ref.current.contains(e.target)) {
-        setIsOpen(false);
-      }
+    const clickOutside = (e) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target)) setIsOpen(false);
     };
-    document.addEventListener('mousedown', handleOutside);
-    return () => document.removeEventListener('mousedown', handleOutside);
+    document.addEventListener("mousedown", clickOutside);
+    return () => document.removeEventListener("mousedown", clickOutside);
   }, []);
 
-  const filteredOptions = options.filter((option) => {
-    const selectedLabel = options.find((opt) => opt.value === value)?.label;
-    // Show all options if search term matches the currently selected value's label
-    if (searchTerm === selectedLabel) return true;
-    return option.label.toLowerCase().includes(searchTerm.toLowerCase());
-  });
-
   return (
-    <div className={`mb-4 relative ${className}`} ref={ref}>
+    <div className={`mb-4 ${className} relative`} ref={wrapperRef}>
       <label className="block text-sm font-medium text-gray-700 mb-2">
-        {label}
-        {required && <span className="text-red-500 ml-1">*</span>}
+        {label} {required && <span className="text-red-500 ml-1">*</span>}
       </label>
 
-      {/* Main Input Field (Acts as Search & Trigger) */}
       <div className="relative">
         <input
           type="text"
           value={searchTerm}
+          onFocus={() => setIsOpen(true)}
           onChange={(e) => {
             setSearchTerm(e.target.value);
-            setIsOpen(true);
+            setActiveIndex(0); // Reset selection to top on search
           }}
-          onFocus={() => setIsOpen(true)}
+          onKeyDown={handleKeyDown}
           placeholder={placeholder}
-          required={required && !value} // Only required if no value selected
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors pr-10"
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-sm"
+          style={{ height: '38px' }}
         />
-        <div
-          className="absolute right-3 top-2.5 cursor-pointer text-gray-500"
-          onClick={() => setIsOpen(!isOpen)}
-        >
-          <svg className={`h-4 w-4 transform transition-transform ${isOpen ? 'rotate-180' : ''}`} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
-        </div>
-      </div>
 
-      {/* Dropdown Options */}
-      {isOpen && (
-        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-auto">
-          {filteredOptions.length > 0 ? (
-            filteredOptions.map((option) => (
-              <div
-                key={option.value}
-                className={`px-3 py-2 cursor-pointer hover:bg-teal-100 ${option.value === value ? "bg-teal-50 font-semibold" : ""
-                  }`}
-                onClick={() => {
-                  onChange({ target: { value: option.value } });
-                  setIsOpen(false);
-                  // searchTerm will be updated by useEffect
-                }}
-              >
-                {option.label}
-              </div>
-            ))
-          ) : (
-            <div className="p-3 text-gray-500 text-sm">No results found</div>
-          )}
-        </div>
-      )}
+        {isOpen && (
+          <div 
+            className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-xl overflow-hidden"
+            style={{ maxHeight: '200px' }} // Fixed Height Controlled Here
+          >
+            <div className="overflow-y-auto max-h-[200px]">
+              {displayedOptions.map((opt, index) => (
+                <div
+                  key={opt.value}
+                  onClick={() => handleSelect(opt)}
+                  onMouseEnter={() => setActiveIndex(index)}
+                  className={`px-3 py-2 text-sm cursor-pointer transition-colors ${
+                    index === activeIndex ? 'bg-teal-100 text-teal-900 font-semibold' : 'text-gray-700'
+                  } ${opt.value === value ? 'text-teal-600' : ''}`}
+                >
+                  {opt.label}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
 
-export const FormTextarea = ({ label, value, onChange, placeholder, required = false, rows = 4, className = "" }) => (
-  <div className={`mb-4 ${className}`}>
-    <label className="block text-sm font-medium text-gray-700 mb-2">
-      {label}
-      {required && <span className="text-red-500 ml-1">*</span>}
-    </label>
-    <textarea
-      value={value}
-      onChange={onChange}
-      placeholder={placeholder}
-      required={required}
-      rows={rows}
-      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors resize-vertical"
-    />
-  </div>
-);
+export function FormTextarea({
+  label,
+  value,
+  onChange,
+  placeholder,
+  required = false,
+  className = "",
+  rows = 4
+}) {
+  return (
+    <div className={cn("space-y-1", className)}>
+      <label className="text-xs font-medium text-slate-600">
+        {label} {required && <span className="text-red-500">*</span>}
+      </label>
 
-export const FormCheckbox = ({ label, checked, onChange, className = "" }) => (
-  <div className={`mb-4 ${className}`}>
-    <label className="flex items-center">
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={onChange}
-        className="h-4 w-4 text-teal-600 focus:ring-teal-500 border-gray-300 rounded"
-      />
-      <span className="ml-2 text-sm text-gray-700">{label}</span>
-    </label>
-  </div>
-);
-
-export const FormRadio = ({ label, name, value, checked, onChange, className = "" }) => (
-  <div className={`mb-2 ${className}`}>
-    <label className="flex items-center">
-      <input
-        type="radio"
-        name={name}
+      <Textarea
         value={value}
-        checked={checked}
         onChange={onChange}
-        className="h-4 w-4 text-teal-600 focus:ring-teal-500 border-gray-300"
+        placeholder={placeholder}
+        rows={rows}
+        required={required}
+        className="text-sm"
       />
-      <span className="ml-2 text-sm text-gray-700">{label}</span>
-    </label>
-  </div>
-);
+    </div>
+  )
+}
 
+
+
+// =======================
+// Checkbox
+// =======================
+export function FormCheckbox({ label, checked, onChange, className = "" }) {
+  return (
+    <div className={cn("flex items-center space-x-2", className)}>
+      <Checkbox checked={checked} onCheckedChange={onChange} />
+      <label className="text-sm text-slate-700">{label}</label>
+    </div>
+  )
+}
+
+
+
+// =======================
+// Radio
+// =======================
+export function FormRadioGroup({ value, onChange, options, className = "" }) {
+  return (
+    <RadioGroup value={value} onValueChange={onChange} className={className}>
+      {options.map((opt) => (
+        <div key={opt.value} className="flex items-center space-x-2">
+          <RadioGroupItem value={opt.value} />
+          <label className="text-sm text-slate-700">{opt.label}</label>
+        </div>
+      ))}
+    </RadioGroup>
+  )
+}
+
+
+
+// =======================
+// Button
+// =======================
 export const Button = ({
   children,
   onClick,
@@ -227,23 +281,30 @@ export const Button = ({
   );
 };
 
-export const SearchInput = ({ value, onChange, placeholder = "Search...", className = "" }) => (
-  <div className={`relative ${className}`}>
-    <input
-      type="text"
-      value={value}
-      onChange={onChange}
-      placeholder={placeholder}
-      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
-    />
-    <svg
-      className="absolute left-3 top-2.5 h-5 w-5 text-gray-400"
-      fill="none"
-      viewBox="0 0 24 24"
-      stroke="currentColor"
-    >
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-    </svg>
-  </div>
-);
 
+
+// =======================
+// Search Input
+// =======================
+export function SearchInput({ value, onChange, placeholder = "Search..." }) {
+  return (
+    <div className="relative">
+      <Input
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        className="pl-9 h-8 text-sm"
+      />
+      <svg
+        className="absolute left-2 top-2.5 h-4 w-4 text-slate-400"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+      >
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+          d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+        />
+      </svg>
+    </div>
+  )
+}

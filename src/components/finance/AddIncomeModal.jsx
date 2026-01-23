@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Modal } from '../common/Modals';
 import { FormInput, FormSelect, FormTextarea, Button } from '../common/FormElements';
+import { SearchableFormSelect } from '../common/FormElements';
 
 const AddIncomeModal = ({ isOpen, onClose }) => {
   const [formData, setFormData] = useState({
@@ -94,7 +95,7 @@ const AddIncomeModal = ({ isOpen, onClose }) => {
 
         {/* Source and Category */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormSelect
+          <SearchableFormSelect
             label="Income Source"
             value={formData.source}
             onChange={(e) => handleInputChange('source', e.target.value)}
@@ -102,7 +103,7 @@ const AddIncomeModal = ({ isOpen, onClose }) => {
             placeholder="Select source"
             required
           />
-          <FormSelect
+          <SearchableFormSelect
             label="Category"
             value={formData.category}
             onChange={(e) => handleInputChange('category', e.target.value)}
@@ -130,7 +131,7 @@ const AddIncomeModal = ({ isOpen, onClose }) => {
 
         {/* Payment Details */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormSelect
+          <SearchableFormSelect
             label="Payment Method"
             value={formData.paymentMethod}
             onChange={(e) => handleInputChange('paymentMethod', e.target.value)}

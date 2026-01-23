@@ -4,6 +4,7 @@ import axios from 'axios';
 import Layout from '../../../components/Layout';
 import { adminSidebar } from '../../../constants/sidebarItems/adminSidebar';
 import { staffSidebar } from '../../../constants/sidebarItems/staffSidebar';
+import { SearchableFormSelect } from '../../../components/common/FormElements';
 import { useLocation } from 'react-router-dom';
 import { FaUser, FaCloudUploadAlt, FaTimes, FaMapMarkerAlt, FaPhoneAlt, FaNotesMedical, FaSave, FaArrowLeft } from 'react-icons/fa';
 import { FormInput, FormSelect, FormTextarea, Button } from '../../../components/common/FormElements';
@@ -263,7 +264,7 @@ const UpdatePatientProfile = () => {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <FormSelect
+                <SearchableFormSelect
                   label="Salutation"
                   value={formData.salutation}
                   onChange={(e) => handleInputChange('salutation', e.target.value)}
@@ -305,19 +306,19 @@ const UpdatePatientProfile = () => {
                   value={formData.dob}
                   onChange={(e) => handleInputChange('dob', e.target.value)}
                 />
-                <FormSelect
+                <SearchableFormSelect
                   label="Gender"
                   value={formData.gender}
                   onChange={(e) => handleInputChange('gender', e.target.value)}
                   options={genderOptions}
                 />
-                <FormSelect
+                <SearchableFormSelect
                   label="Blood Group"
                   value={formData.blood_group}
                   onChange={(e) => handleInputChange('blood_group', e.target.value)}
                   options={bloodGroupOptions}
                 />
-                {/* <FormSelect
+                {/* <SearchableFormSelect
                   label="Patient Type"
                   value={formData.patient_type}
                   onChange={(e) => handleInputChange('patient_type', e.target.value)}

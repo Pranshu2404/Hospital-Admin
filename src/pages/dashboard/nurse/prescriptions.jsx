@@ -142,8 +142,26 @@ const NurseAppointments = () => {
                                 filteredList.map(a => (
                                     <tr key={a._id} className="hover:bg-slate-50 transition">
                                         <td className="px-6 py-4">
-                                            {a.start_time ? new Date(a.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A'}
-                                        </td>
+    {a.start_time ? 
+        (() => {
+            // Parse the ISO string
+            const date = new Date(a.start_time);
+            
+            // Get the UTC hours/minutes
+            const hours = date.getUTCHours();
+            const minutes = date.getUTCMinutes();
+            
+            // Create a new date with these hours/minutes in local timezone
+            const displayDate = new Date();
+            displayDate.setHours(hours, minutes, 0, 0);
+            
+            return displayDate.toLocaleTimeString([], { 
+                hour: '2-digit', 
+                minute: '2-digit',
+                hour12: true 
+            });
+        })() : 'N/A'}
+</td>
                                         <td className="px-6 py-4 font-medium text-slate-900">
                                             {a.patient_id?.first_name} {a.patient_id?.last_name}
                                         </td>
@@ -188,7 +206,7 @@ const NurseAppointments = () => {
 
                         <form onSubmit={submitVitals} className="space-y-4">
                             <div className="grid grid-cols-2 gap-4">
-                                
+
                                 <div>
                                     <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Height (cm)</label>
                                     <input
@@ -253,7 +271,7 @@ const NurseAppointments = () => {
                                         className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500"
                                     />
                                 </div>
-                                
+
                             </div>
 
                             <div className="flex justify-end gap-3 mt-6">

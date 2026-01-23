@@ -1,79 +1,9 @@
-// import React, { useEffect, useState } from 'react';
-// import { useParams, useNavigate } from 'react-router-dom';
-// import axios from 'axios';
-// import Layout from '../../../components/Layout';
-// import { adminSidebar } from '../../../constants/sidebarItems/adminSidebar';
-
-// const EditDoctor = () => {
-//   const { id } = useParams();
-//   const navigate = useNavigate();
-//   const [formData, setFormData] = useState(null);
-
-//   useEffect(() => {
-//     const fetchDoctor = async () => {
-//       try {
-//         const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/doctors/${id}`);
-//         setFormData(res.data);
-//       } catch (err) {
-//         console.error('Failed to load doctor', err);
-//       }
-//     };
-//     fetchDoctor();
-//   }, [id]);
-
-//   const handleChange = (e) => {
-//     setFormData(prev => ({
-//       ...prev,
-//       [e.target.name]: e.target.value
-//     }));
-//   };
-
-//   const handleSubmit = async (e) => {
-//     e.preventDefault();
-//     try {
-//       await axios.put(`${import.meta.env.VITE_BACKEND_URL}/doctors/${id}`, formData);
-//       navigate(`/dashboard/admin/doctor-profile/${id}`);
-//     } catch (err) {
-//       console.error('Failed to update doctor:', err);
-//     }
-//   };
-
-//   if (!formData) return <div className="p-6">Loading...</div>;
-
-//   return (
-//     <Layout sidebarItems={adminSidebar}>
-//       <div className="p-6 max-w-3xl mx-auto">
-//         <h2 className="text-xl font-bold mb-4">Edit Doctor</h2>
-//         <form onSubmit={handleSubmit} className="space-y-4 bg-white p-6 rounded-xl shadow">
-//           <div>
-//             <label className="block text-sm font-medium text-gray-700">First Name</label>
-//             <input type="text" name="firstName" value={formData.firstName} onChange={handleChange} className="mt-1 w-full border rounded px-3 py-2" />
-//           </div>
-//           <div>
-//             <label className="block text-sm font-medium text-gray-700">Last Name</label>
-//             <input type="text" name="lastName" value={formData.lastName} onChange={handleChange} className="mt-1 w-full border rounded px-3 py-2" />
-//           </div>
-//           <div>
-//             <label className="block text-sm font-medium text-gray-700">Email</label>
-//             <input type="email" name="email" value={formData.email} onChange={handleChange} className="mt-1 w-full border rounded px-3 py-2" />
-//           </div>
-//           {/* Add more fields as needed */}
-//           <button type="submit" className="bg-teal-600 text-white px-4 py-2 rounded">Save Changes</button>
-//         </form>
-//       </div>
-//     </Layout>
-//   );
-// };
-
-// export default EditDoctor;
-
-
-
 // File: src/pages/dashboard/admin/EditDoctor.jsx
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Layout from '../../../components/Layout';
+import { SearchableFormSelect } from '../../../components/common/FormElements';
 import { adminSidebar } from '../../../constants/sidebarItems/adminSidebar';
 
 // --- Icons ---
@@ -221,7 +151,7 @@ const EditDoctor = () => {
                     <div>
                         <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide border-b border-slate-100 pb-3 mb-6">Professional Details</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <FormSelect label="Department" value={formData.department} onChange={(e) => handleInputChange('department', e.target.value)} options={departmentOptions} required />
+                            <SearchableFormSelect label="Department" value={formData.department} onChange={(e) => handleInputChange('department', e.target.value)} options={departmentOptions} required />
                             <FormInput label="Specialization" value={formData.specialization} onChange={(e) => handleInputChange('specialization', e.target.value)} />
                             <FormInput label="License Number" value={formData.licenseNumber} onChange={(e) => handleInputChange('licenseNumber', e.target.value)} required />
                             <FormInput label="Experience (Years)" type="number" value={formData.experience} onChange={(e) => handleInputChange('experience', e.target.value)} />
@@ -241,7 +171,7 @@ const EditDoctor = () => {
                     <div>
                         <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide border-b border-slate-100 pb-3 mb-6">Shift & Emergency</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <FormSelect 
+                            <SearchableFormSelect 
                                 label="Shift" 
                                 value={formData.shift} 
                                 onChange={(e) => handleInputChange('shift', e.target.value)} 

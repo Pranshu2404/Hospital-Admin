@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { FormInput, FormSelect, FormTextarea, Button } from '../common/FormElements';
+import { SearchableFormSelect } from '../common/FormElements';
 
 const AddMedicineForm = () => {
   const [formData, setFormData] = useState({
@@ -56,7 +57,7 @@ const AddMedicineForm = () => {
               placeholder="Enter medicine name"
               required
             />
-            <FormSelect
+            <SearchableFormSelect
               label="Type"
               value={formData.type}
               onChange={(e) => handleInputChange('type', e.target.value)}
@@ -93,7 +94,7 @@ const AddMedicineForm = () => {
               onChange={(e) => handleInputChange('expiryDate', e.target.value)}
               required
             />
-            <FormSelect
+            <SearchableFormSelect
               label="Status"
               value={formData.status}
               onChange={(e) => handleInputChange('status', e.target.value)}

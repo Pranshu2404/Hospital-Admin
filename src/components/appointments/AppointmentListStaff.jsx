@@ -39,6 +39,28 @@ const AppointmentListStaff = () => {
     }
   }, [patientType]);
 
+  // Helper function to format stored UTC time as local time (treat UTC as IST)
+  const formatStoredTime = (utcTimeString) => {
+    if (!utcTimeString) return 'N/A';
+    
+    try {
+      const date = new Date(utcTimeString);
+      
+      // Get UTC hours and minutes directly (since the time is stored in UTC but represents IST)
+      const hours = date.getUTCHours();
+      const minutes = date.getUTCMinutes();
+      
+      // Format as 12-hour time
+      const hour12 = hours % 12 || 12;
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      
+      return `${hour12}:${minutes.toString().padStart(2, '0')} ${ampm}`;
+    } catch (error) {
+      console.error('Error formatting time:', error);
+      return 'Invalid Time';
+    }
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -55,15 +77,14 @@ const AppointmentListStaff = () => {
           patientImage: appt.patient_id?.patient_image || null,
           doctorName: `Dr. ${appt.doctor_id?.firstName || ''} ${appt.doctor_id?.lastName || ''}`.trim(),
           departmentName: appt.department_id?.name || 'N/A',
-          date: new Date(appt.appointment_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+          date: new Date(appt.appointment_date).toLocaleDateString('en-US', { 
+            month: 'short', 
+            day: 'numeric', 
+            year: 'numeric' 
+          }),
           rawDate: appt.appointment_date,
-          time: appt.start_time
-            ? new Date(appt.start_time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
-            : (typeof appt.time_slot === 'string'
-              ? appt.time_slot.split(' - ')[0]
-              : (appt.time_slot && appt.time_slot.start_time
-                ? new Date(appt.time_slot.start_time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
-                : (appt.time || 'N/A'))),
+          // Use the formatStoredTime helper for proper time display
+          time: formatStoredTime(appt.start_time),
           patientId: appt.patient_id?.patientId,
           // Fallback type if not present
           type: appt.type || 'Consultation'
