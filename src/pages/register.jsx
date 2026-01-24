@@ -926,14 +926,14 @@ export default function Register() {
 
                   {/* Address with auto-detection */}
                   <div className="md:col-span-2 space-y-2">
-                    <FormTextarea
+                    <FormInput
                       label="Full Address"
+                      name="address"
+                      placeholder="Street, City, State, Pincode. We'll auto-detect city, state and pincode for you."
                       value={form.address}
                       onChange={handleChange}
-                      placeholder="Street, City, State, Pincode. We'll auto-detect city, state and pincode for you."
-                      required
-                      rows={3}
-                      className="mt-0"
+                      onBlur={handleBlur}
+                      error={fieldErrors.address}
                     />
 
                     {/* Manual override fields using searchable select */}
