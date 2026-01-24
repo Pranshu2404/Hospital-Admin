@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import {
@@ -6,12 +6,250 @@ import {
   FaCheckCircle, FaPlus, FaTimes, FaMoneyBillWave,
   FaArrowLeft, FaFilePrescription, FaCloudUploadAlt, FaTrash,
   FaHistory, FaCalendarCheck, FaPrescriptionBottleAlt,
-  FaFlask, FaFileAlt, FaChevronDown, FaChevronUp, FaCapsules, FaHeartbeat, FaMagic, FaTimesCircle
+  FaFlask, FaFileAlt, FaChevronDown, FaChevronUp, FaCapsules, FaHeartbeat, FaMagic, FaTimesCircle,
+  FaProcedures, FaSearch, FaExclamationTriangle
 } from 'react-icons/fa';
 import { summarizePatientHistory } from '@/utils/geminiService';
 import Layout from '@/components/Layout';
 import { doctorSidebar } from '@/constants/sidebarItems/doctorSidebar';
-import { POPULAR_MEDICINES } from '@/constants/medicines';
+
+// Searchable Form Select Component
+const SearchableFormSelect = ({ 
+  label, 
+  value, 
+  onChange, 
+  options = [], 
+  required, 
+  className = "", 
+  placeholder = "Search...",
+  disabled,
+  name,
+  onCustomInput,
+  loading = false
+}) => {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isOpen, setIsOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [customInput, setCustomInput] = useState('');
+  const [showCustomInput, setShowCustomInput] = useState(false);
+  const wrapperRef = useRef(null);
+
+  // Normalize options
+  const normalizedOptions = useMemo(() => {
+    return options.map(opt => 
+      typeof opt === 'object' ? opt : { label: String(opt), value: String(opt) }
+    );
+  }, [options]);
+
+  // Filter options based on search term
+  const displayedOptions = useMemo(() => {
+    if (!searchTerm) return normalizedOptions;
+    const lowerSearch = searchTerm.toLowerCase();
+    
+    return normalizedOptions.filter(opt => 
+      opt.label.toLowerCase().includes(lowerSearch) || 
+      opt.value.toLowerCase().includes(lowerSearch)
+    );
+  }, [searchTerm, normalizedOptions]);
+
+  // Sync search term when value changes
+  useEffect(() => {
+    const selected = normalizedOptions.find(opt => opt.value === value);
+    if (selected) {
+      setSearchTerm(selected.label);
+      setShowCustomInput(false);
+    } else if (value && !normalizedOptions.some(opt => opt.value === value)) {
+      // This is a custom value
+      setSearchTerm(value);
+      setShowCustomInput(true);
+      setCustomInput(value);
+    } else {
+      setSearchTerm('');
+    }
+  }, [value, normalizedOptions]);
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setIsOpen(true);
+      setActiveIndex(prev => (prev < displayedOptions.length - 1 ? prev + 1 : prev));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setActiveIndex(prev => (prev > 0 ? prev - 1 : prev));
+    } else if (e.key === 'Enter' && isOpen) {
+      e.preventDefault();
+      if (displayedOptions[activeIndex]) {
+        handleSelect(displayedOptions[activeIndex]);
+      }
+    } else if (e.key === 'Escape') {
+      setIsOpen(false);
+    } else if (e.key === 'Tab' && !isOpen) {
+      // If not found in list, allow custom input
+      if (searchTerm && !normalizedOptions.some(opt => opt.label.toLowerCase() === searchTerm.toLowerCase())) {
+        e.preventDefault();
+        setShowCustomInput(true);
+        setCustomInput(searchTerm);
+      }
+    }
+  };
+
+  const handleSelect = (opt) => {
+    onChange({ target: { name: name || label.toLowerCase().replace(/\s/g, ''), value: opt.value } });
+    setSearchTerm(opt.label);
+    setIsOpen(false);
+    setShowCustomInput(false);
+  };
+
+  const handleCustomInput = () => {
+    if (customInput.trim()) {
+      onChange({ target: { name: name || label.toLowerCase().replace(/\s/g, ''), value: customInput } });
+      setSearchTerm(customInput);
+      setShowCustomInput(false);
+      if (onCustomInput) {
+        onCustomInput(customInput);
+      }
+    }
+  };
+
+  const handleCustomInputChange = (e) => {
+    setCustomInput(e.target.value);
+  };
+
+  const handleCustomInputKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleCustomInput();
+    } else if (e.key === 'Escape') {
+      setShowCustomInput(false);
+      setCustomInput('');
+    }
+  };
+
+  useEffect(() => {
+    const clickOutside = (e) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target)) {
+        setIsOpen(false);
+        if (searchTerm && !value && !showCustomInput) {
+          // If user typed something but didn't select, allow custom input
+          setShowCustomInput(true);
+          setCustomInput(searchTerm);
+        }
+      }
+    };
+    document.addEventListener("mousedown", clickOutside);
+    return () => document.removeEventListener("mousedown", clickOutside);
+  }, [searchTerm, value, showCustomInput]);
+
+  return (
+    <div className={`mb-4 ${className} relative`} ref={wrapperRef}>
+      <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide ml-1 mb-2">
+        {label} {required && <span className="text-red-500">*</span>}
+      </label>
+
+      <div className="relative">
+        <div className="relative">
+          <input
+            type="text"
+            value={searchTerm}
+            onFocus={() => setIsOpen(true)}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setActiveIndex(0);
+              setIsOpen(true);
+              setShowCustomInput(false);
+            }}
+            onKeyDown={handleKeyDown}
+            placeholder={placeholder}
+            disabled={disabled}
+            className="block w-full px-4 py-3 bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all pl-10"
+          />
+          <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm" />
+          {loading && (
+            <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-emerald-600"></div>
+            </div>
+          )}
+        </div>
+
+        {isOpen && displayedOptions.length > 0 && (
+          <div className="absolute border border-gray-200 z-50 w-full mt-1 bg-white rounded-xl shadow-xl overflow-hidden">
+            <div className="overflow-y-auto max-h-[200px]">
+              {displayedOptions.map((opt, index) => (
+                <div
+                  key={opt.value}
+                  onClick={() => handleSelect(opt)}
+                  onMouseEnter={() => setActiveIndex(index)}
+                  className={`px-4 py-2 text-sm cursor-pointer transition-colors flex items-center justify-between ${
+                    index === activeIndex ? 'bg-emerald-50 text-emerald-900 font-semibold' : 'text-gray-700'
+                  } ${opt.value === value ? 'bg-emerald-100/50 text-emerald-700' : ''}`}
+                >
+                  <span>{opt.label}</span>
+                  {opt.category && (
+                    <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
+                      {opt.category}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+            {searchTerm && !displayedOptions.some(opt => opt.label.toLowerCase() === searchTerm.toLowerCase()) && (
+              <div 
+                className="px-4 py-3 text-sm border-t border-gray-100 bg-gray-50 text-gray-600 cursor-pointer hover:bg-gray-100"
+                onClick={() => {
+                  setShowCustomInput(true);
+                  setCustomInput(searchTerm);
+                  setIsOpen(false);
+                }}
+              >
+                <div className="flex items-center justify-between">
+                  <span>Use custom value: <strong>"{searchTerm}"</strong></span>
+                  <span className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded">Custom</span>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {showCustomInput && (
+          <div className="absolute z-50 w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-xl p-4">
+            <div className="mb-3">
+              <h4 className="font-semibold text-gray-700 mb-1">Custom {label}</h4>
+              <p className="text-xs text-gray-500">This value is not in our database. Please confirm:</p>
+            </div>
+            <input
+              type="text"
+              value={customInput}
+              onChange={handleCustomInputChange}
+              onKeyDown={handleCustomInputKeyDown}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg mb-3 focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+              placeholder={`Enter custom ${label.toLowerCase()}`}
+              autoFocus
+            />
+            <div className="flex justify-end space-x-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowCustomInput(false);
+                  setCustomInput('');
+                }}
+                className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-800"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleCustomInput}
+                className="px-3 py-1.5 text-sm bg-amber-500 text-white rounded-lg hover:bg-amber-600"
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
 
 const AppointmentDetails = () => {
   const { id } = useParams();
@@ -27,29 +265,24 @@ const AppointmentDetails = () => {
   const [calculatingSalary, setCalculatingSalary] = useState(false);
   const [message, setMessage] = useState('');
   const [salaryInfo, setSalaryInfo] = useState(null);
-  const [pastPrescriptions, setPastPrescriptions] = useState(+[]);
+  const [pastPrescriptions, setPastPrescriptions] = useState([]);
   const [pastAppointments, setPastAppointments] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
-  const [activeTab, setActiveTab] = useState('current'); // 'current', 'prescriptions', 'appointments'
+  const [activeTab, setActiveTab] = useState('current');
   const [expandedPrescription, setExpandedPrescription] = useState(null);
   const [currentDoctorDept, setCurrentDoctorDept] = useState(null);
-
-  useEffect(() => {
-    const fetchCurrentDoctor = async () => {
-      const dId = localStorage.getItem('doctorId');
-      if (dId) {
-        try {
-          const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/doctors/${dId}`);
-          // Handle department as object (populated) or string (ID)
-          const dept = res.data.department?._id || res.data.department;
-          setCurrentDoctorDept(dept);
-        } catch (e) {
-          console.error('Error fetching current doctor:', e);
-        }
-      }
-    };
-    fetchCurrentDoctor();
-  }, []);
+  
+  // State for medicine search
+  const [medicineOptions, setMedicineOptions] = useState([]);
+  const [loadingMedicines, setLoadingMedicines] = useState(false);
+  const [searchingMedicines, setSearchingMedicines] = useState(false);
+  const [medicineSearchTerm, setMedicineSearchTerm] = useState('');
+  
+  // State for procedure search
+  const [procedureOptions, setProcedureOptions] = useState([]);
+  const [loadingProcedures, setLoadingProcedures] = useState(false);
+  const [searchingProcedures, setSearchingProcedures] = useState(false);
+  const [procedureSearchTerm, setProcedureSearchTerm] = useState('');
 
   // Frequency options with common medical abbreviations
   const frequencyOptions = [
@@ -79,10 +312,43 @@ const AppointmentDetails = () => {
     label: `${i + 1} day${i > 0 ? 's' : ''}`
   }));
 
+  // Route of administration options
+  const routeOptions = [
+    "Oral",
+    "Sublingual",
+    "Intramuscular Injection",
+    "Intravenous Injection",
+    "Subcutaneous Injection",
+    "Topical Application",
+    "Inhalation",
+    "Nasal",
+    "Eye Drops",
+    "Ear Drops",
+    "Rectal",
+    "Other"
+  ];
+
+  // Medicine type options
+  const medicineTypeOptions = [
+    "Tablet",
+    "Capsule",
+    "Syrup",
+    "Injection",
+    "Ointment",
+    "Drops",
+    "Inhaler",
+    "Suppository",
+    "Powder",
+    "Cream",
+    "Lotion",
+    "Other"
+  ];
+
   const [prescription, setPrescription] = useState({
     diagnosis: '',
     notes: '',
     investigation: '',
+    recommendedProcedures: [],
     items: [{
       medicine_name: '',
       dosage: '',
@@ -101,8 +367,86 @@ const AppointmentDetails = () => {
   const [summarizing, setSummarizing] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
 
+  // Fetch medicines from backend
+  const fetchMedicines = async (searchTerm = '') => {
+    if (searchTerm.length < 2 && searchTerm !== '') return;
+    
+    setSearchingMedicines(true);
+    try {
+      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/NLEMmedicines/search`, {
+        params: { q: searchTerm, limit: 20 }
+      });
+      
+      if (response.data && response.data.medicines) {
+        const medicineOpts = response.data.medicines.map(med => ({
+          label: med.medicine_name,
+          value: med.medicine_name,
+          dosage: med.dosage_form,
+          strength: med.strength,
+          code: med.code,
+          healthcare_level: med.healthcare_level
+        }));
+        setMedicineOptions(medicineOpts);
+      }
+    } catch (error) {
+      console.error('Error fetching medicines:', error);
+      // Fallback to empty array
+      setMedicineOptions([]);
+    } finally {
+      setSearchingMedicines(false);
+    }
+  };
+
+  // Fetch procedures from backend
+  const fetchProcedures = async (searchTerm = '') => {
+    if (searchTerm.length < 2 && searchTerm !== '') return;
+    
+    setSearchingProcedures(true);
+    try {
+      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/procedures/search`, {
+        params: { q: searchTerm, limit: 20 }
+      });
+      
+      if (response.data && response.data.procedures) {
+        const procedureOpts = response.data.procedures.map(proc => ({
+          label: `${proc.code} - ${proc.name}`,
+          value: proc.code,
+          name: proc.name,
+          category: proc.category
+        }));
+        setProcedureOptions(procedureOpts);
+      }
+    } catch (error) {
+      console.error('Error fetching procedures:', error);
+      setProcedureOptions([]);
+    } finally {
+      setSearchingProcedures(false);
+    }
+  };
+
+  // Load initial medicines and procedures
   useEffect(() => {
-    // Check if appointment is missing OR if the appointment exists but Vitals are missing
+    const loadInitialData = async () => {
+      setLoadingMedicines(true);
+      setLoadingProcedures(true);
+      
+      try {
+        // Fetch initial medicines (empty search to get popular ones)
+        await fetchMedicines('');
+        // Fetch initial procedures (empty search to get popular ones)
+        await fetchProcedures('');
+      } catch (error) {
+        console.error('Error loading initial data:', error);
+      } finally {
+        setLoadingMedicines(false);
+        setLoadingProcedures(false);
+      }
+    };
+
+    loadInitialData();
+  }, []);
+
+  useEffect(() => {
     if (!state?.appointment || (state?.appointment && !state.appointment.vitals)) {
       if (id) {
         console.log("Fetching full appointment details (including vitals)...");
@@ -123,43 +467,34 @@ const AppointmentDetails = () => {
 
     setLoadingHistory(true);
     try {
-      // Fetch all doctors to resolve departments (since history items might not have dept populated)
       const doctorsRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/doctors`);
       const doctorsMap = {};
       if (doctorsRes.data) {
         doctorsRes.data.forEach(doc => {
-          // Store department ID for each doctor
           const dDept = doc.department?._id || doc.department;
           doctorsMap[doc._id] = dDept;
         });
       }
 
-      // 1. Fetch Prescriptions
-      // FIX 1: Removed "?status=Completed" so it fetches Active prescriptions too
       const prescriptionsRes = await axios.get(
         `${import.meta.env.VITE_BACKEND_URL}/prescriptions/patient/${patientId}?limit=10`
       );
       let rxs = prescriptionsRes.data.prescriptions || prescriptionsRes.data || [];
 
-      // Filter Prescriptions by Department
       if (currentDoctorDept) {
         rxs = rxs.filter(rx => {
-          // rx.doctor_id might be an object or string
           const dId = rx.doctor_id?._id || rx.doctor_id;
-          // Look up this doctor's department
           const docDept = doctorsMap[dId];
           return docDept === currentDoctorDept;
         });
       }
       setPastPrescriptions(rxs);
 
-      // 2. Fetch Appointments
       const appointmentsRes = await axios.get(
         `${import.meta.env.VITE_BACKEND_URL}/appointments/patient/${patientId}?status=Completed&limit=5`
       );
       let appts = appointmentsRes.data.appointments || appointmentsRes.data || [];
 
-      // Filter Appointments by Department
       if (currentDoctorDept) {
         appts = appts.filter(appt => {
           const dId = appt.doctor_id?._id || appt.doctor_id;
@@ -179,7 +514,6 @@ const AppointmentDetails = () => {
     const id = appointmentId && appointmentId._id ? appointmentId._id : appointmentId;
     if (!id) return;
 
-    // Switch tab and show loading
     setActiveTab('prescriptions');
     setLoadingHistory(true);
     setPastPrescriptions([]);
@@ -200,17 +534,32 @@ const AppointmentDetails = () => {
     }
   };
 
-  const searchMedicines = (query, index) => {
+  const searchMedicines = async (query, index) => {
     setActiveSuggestionIndex(index);
+    setMedicineSearchTerm(query);
+    
     if (query.length < 2) {
       setSuggestions([]);
       return;
     }
 
-    const filteredMedicines = POPULAR_MEDICINES.filter(med =>
-      med.toLowerCase().includes(query.toLowerCase())
-    );
-    setSuggestions(filteredMedicines);
+    try {
+      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/NLEMmedicines/search`, {
+        params: { q: query, limit: 10 }
+      });
+      
+      if (response.data && response.data.medicines) {
+        const filteredMedicines = response.data.medicines.map(med => ({
+          label: med.medicine_name,
+          value: med.medicine_name,
+          dosage: med.dosage_form
+        }));
+        setSuggestions(filteredMedicines);
+      }
+    } catch (error) {
+      console.error('Error searching medicines:', error);
+      setSuggestions([]);
+    }
   };
 
   const fetchAppointment = async () => {
@@ -218,12 +567,6 @@ const AppointmentDetails = () => {
       setLoading(true);
       const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/appointments/${id}`);
       const data = response.data;
-      console.log("[DEBUG] Appointment Data Received:", data); // Check if 'vitals' key exists and has data
-      if (data.vitals) {
-        console.log("[DEBUG] Vitals in Appointment:", data.vitals);
-      } else {
-        console.log("[DEBUG] Vitals MISSING in Appointment object");
-      }
       setAppointment(data);
     } catch (err) {
       console.error('Error fetching appointment:', err);
@@ -246,51 +589,37 @@ const AppointmentDetails = () => {
   };
 
   const calculateQuantityFromFrequency = (frequency, duration) => {
-    // Parse duration (e.g., "7 days" -> 7)
     const durationDays = parseInt(duration) || 0;
     if (durationDays === 0) return '';
 
-    // Define daily frequency based on common abbreviations
     const frequencyMap = {
-      // Once daily
       'OD': 1, 'Mane': 1, 'Nocte': 1, 'q.a.m.': 1, 'q.p.m.': 1,
-      'q.o.d.': 0.5, // Every other day = 0.5 times per day
-      'Stat': 1, // Immediate single dose
-
-      // Multiple times daily
-      'BD': 2, '1-0-1': 2, // Twice daily
-      'TDS': 3, '1-1-1': 3, // Three times daily
-      'QDS': 4, // Four times daily
-
-      // Hourly frequencies
-      'q4h': Math.floor(24 / 4), // 6 times daily
-      'q6h': Math.floor(24 / 6), // 4 times daily
-      'q8h': Math.floor(24 / 8), // 3 times daily
-      'q12h': Math.floor(24 / 12), // 2 times daily
-
-      // Meal related
-      'AC': 3, // Before each meal (assuming 3 meals)
-      'PC': 3, // After each meal
-
-      // PRN and SOS don't have fixed quantities
+      'q.o.d.': 0.5,
+      'Stat': 1,
+      'BD': 2, '1-0-1': 2,
+      'TDS': 3, '1-1-1': 3,
+      'QDS': 4,
+      'q4h': Math.floor(24 / 4),
+      'q6h': Math.floor(24 / 6),
+      'q8h': Math.floor(24 / 8),
+      'q12h': Math.floor(24 / 12),
+      'AC': 3,
+      'PC': 3,
       'PRN': 0,
       'SOS': 0
     };
 
-    // Check for pattern like "1-0-1"
     if (/^\d+-\d+-\d+$/.test(frequency)) {
       const parts = frequency.split('-').map(Number);
       const dailyDoses = parts.reduce((sum, num) => sum + num, 0);
       return durationDays * dailyDoses;
     }
 
-    // Check if frequency is in map
     if (frequencyMap.hasOwnProperty(frequency)) {
       const dailyFrequency = frequencyMap[frequency];
       return dailyFrequency > 0 ? durationDays * dailyFrequency : '';
     }
 
-    // Try to parse numeric frequency (e.g., "2 times daily")
     const numericMatch = frequency.match(/(\d+)\s*(?:times|time)\s*(?:daily|per day)/i);
     if (numericMatch) {
       return durationDays * parseInt(numericMatch[1]);
@@ -325,6 +654,45 @@ const AppointmentDetails = () => {
     const newItems = [...prescription.items];
     newItems.splice(index, 1);
     setPrescription(prev => ({ ...prev, items: newItems }));
+  };
+
+  const addProcedure = () => {
+    setPrescription(prev => ({
+      ...prev,
+      recommendedProcedures: [...prev.recommendedProcedures, {
+        procedure_code: '',
+        procedure_name: '',
+        notes: ''
+      }]
+    }));
+  };
+
+  const removeProcedure = (index) => {
+    const newProcedures = [...prescription.recommendedProcedures];
+    newProcedures.splice(index, 1);
+    setPrescription(prev => ({ ...prev, recommendedProcedures: newProcedures }));
+  };
+
+  const handleProcedureChange = (index, e) => {
+    const { name, value } = e.target;
+    const newProcedures = [...prescription.recommendedProcedures];
+    
+    if (name === 'procedure_code') {
+      const selectedProcedure = procedureOptions.find(proc => proc.value === value);
+      if (selectedProcedure) {
+        newProcedures[index] = {
+          ...newProcedures[index],
+          procedure_code: value,
+          procedure_name: selectedProcedure.name || selectedProcedure.label.replace(`${value} - `, '')
+        };
+      } else {
+        newProcedures[index][name] = value;
+      }
+    } else {
+      newProcedures[index][name] = value;
+    }
+    
+    setPrescription(prev => ({ ...prev, recommendedProcedures: newProcedures }));
   };
 
   const handleImageUpload = async (e) => {
@@ -364,7 +732,6 @@ const AppointmentDetails = () => {
     const newItems = [...prescription.items];
     newItems[index][name] = value;
 
-    // Auto-calculate quantity when frequency or duration changes
     if (name === 'frequency' || name === 'duration') {
       const frequency = name === 'frequency' ? value : newItems[index].frequency;
       const duration = name === 'duration' ? value : newItems[index].duration;
@@ -382,31 +749,22 @@ const AppointmentDetails = () => {
     }
   };
 
-  const handleSuggestionClick = (index, medicineName) => {
-    setPrescription(prev => {
-      // 1. Make a shallow copy of the items array
-      const newItems = [...prev.items];
-
-      // 2. Make a shallow copy of the specific item object and update the name
-      newItems[index] = {
-        ...newItems[index],
-        medicine_name: medicineName
-      };
-
-      // 3. Return the new state
-      return { ...prev, items: newItems };
-    });
-
-    // Clear suggestions and hide dropdown
+  const handleSuggestionClick = (index, medicine) => {
+    const newItems = [...prescription.items];
+    newItems[index] = {
+      ...newItems[index],
+      medicine_name: medicine.label,
+      dosage: medicine.dosage || newItems[index].dosage
+    };
+    setPrescription(prev => ({ ...prev, items: newItems }));
     setSuggestions([]);
     setActiveSuggestionIndex(null);
   };
 
   const handleKeyDown = (e, index) => {
-    // If Enter is pressed and we have suggestions
     if (e.key === 'Enter' && suggestions.length > 0) {
-      e.preventDefault(); // Prevent form submission
-      handleSuggestionClick(index, suggestions[0]); // Select the first suggestion
+      e.preventDefault();
+      handleSuggestionClick(index, suggestions[0]);
     }
   };
 
@@ -435,6 +793,9 @@ const AppointmentDetails = () => {
         diagnosis: prescription.diagnosis,
         notes: prescription.notes,
         investigation: prescription.investigation,
+        recommendedProcedures: prescription.recommendedProcedures.filter(proc => 
+          proc.procedure_code || proc.procedure_name
+        ),
         items: validItems.map(item => ({
           ...item,
           quantity: parseInt(item.quantity) || 0
@@ -495,12 +856,7 @@ const AppointmentDetails = () => {
       };
 
       const result = await summarizePatientHistory(pastPrescriptions, patientDetails);
-
-      // Cleanup response:
-      // 1. Remove ** markers explicitly asked by user
       let cleanResult = result.replace(/\*\*/g, '');
-
-      // 2. Remove "Patient Summary..." heading if present (assumes it's the first line)
       const lines = cleanResult.split('\n');
       if (lines.length > 0 && lines[0].toLowerCase().includes('patient summary')) {
         cleanResult = lines.slice(1).join('\n').trim();
@@ -525,12 +881,27 @@ const AppointmentDetails = () => {
     });
   };
 
+  // Custom search handler for medicine search
+  const handleMedicineSearch = async (searchTerm) => {
+    setMedicineSearchTerm(searchTerm);
+    if (searchTerm.length >= 2) {
+      await fetchMedicines(searchTerm);
+    }
+  };
+
+  // Custom search handler for procedure search
+  const handleProcedureSearch = async (searchTerm) => {
+    setProcedureSearchTerm(searchTerm);
+    if (searchTerm.length >= 2) {
+      await fetchProcedures(searchTerm);
+    }
+  };
+
   const PatientHistoryTabs = () => {
     if (!appointment?.patient_id) return null;
 
     return (
       <div className=" bg-white rounded-xl shadow-sm border border-slate-200">
-        {/* Tabs Header */}
         <div className="border-b border-slate-200">
           <nav className="flex space-x-1 px-4" aria-label="Tabs">
             <button
@@ -572,7 +943,6 @@ const AppointmentDetails = () => {
           </nav>
         </div>
 
-        {/* Tabs Content */}
         <div className="p-4">
           {loadingHistory ? (
             <div className="flex items-center justify-center py-8">
@@ -581,7 +951,6 @@ const AppointmentDetails = () => {
             </div>
           ) : (
             <>
-              {/* AI Summary Tab */}
               {activeTab === 'summary' && (
                 <div className="space-y-4">
                   <div className="mb-6">
@@ -630,8 +999,6 @@ const AppointmentDetails = () => {
                             <div className="space-y-3">
                               {summary.split('\n').map((line, idx) => {
                                 if (!line.trim()) return null;
-
-                                // Check for Overview Line
                                 if (line.startsWith('OVERVIEW:')) {
                                   return (
                                     <div key={idx} className="bg-gradient-to-r from-teal-50 to-emerald-50 border border-teal-200 rounded-lg p-4 mb-4 shadow-sm flex items-start gap-3">
@@ -648,29 +1015,22 @@ const AppointmentDetails = () => {
                                   );
                                 }
 
-                                // Regex to parse: Date -> Doctor -> Diagnosis -> Notes -> Investigation -> Medicines -> Status
                                 const parts = line.split(' -> ');
-
                                 if (parts.length >= 6) {
                                   const [dateStr, doctorStr, diagnosisStr, notesStr, investStr, medsStr, statusStr] = parts;
                                   const isFollowUp = statusStr && statusStr.toLowerCase().includes('follow-up');
 
                                   return (
                                     <div key={idx} className="bg-white p-3 rounded-lg border border-slate-100 shadow-sm flex flex-col md:flex-row gap-3 text-sm">
-                                      {/* Date & Doctor */}
                                       <div className="min-w-[140px]">
                                         <div className="font-bold text-slate-800">{dateStr}</div>
                                         <div className="text-xs text-slate-500 mt-1 truncate" title={doctorStr}>{doctorStr}</div>
                                       </div>
-
-                                      {/* Clinical Details */}
                                       <div className="flex-1 space-y-2">
                                         <div>
                                           <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Diagnosis</span>
                                           <div className="font-medium text-teal-700">{diagnosisStr}</div>
                                         </div>
-
-                                        {/* Notes & Investigation */}
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
                                           {notesStr && notesStr !== 'None' && (
                                             <div className="bg-yellow-50 p-2 rounded border border-yellow-100">
@@ -685,14 +1045,11 @@ const AppointmentDetails = () => {
                                             </div>
                                           )}
                                         </div>
-
                                         <div>
                                           <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Medicines</span>
                                           <div className="text-slate-600 text-xs leading-relaxed whitespace-pre-wrap">{medsStr}</div>
                                         </div>
                                       </div>
-
-                                      {/* Status Badge */}
                                       {statusStr && (
                                         <div className="min-w-[100px] flex items-start justify-end">
                                           <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${isFollowUp
@@ -706,7 +1063,6 @@ const AppointmentDetails = () => {
                                     </div>
                                   );
                                 } else {
-                                  // Fallback for lines that don't match strict format
                                   return <div key={idx} className="text-slate-600 text-sm py-1 border-b border-dashed border-slate-100 last:border-0">{line}</div>;
                                 }
                               })}
@@ -722,13 +1078,11 @@ const AppointmentDetails = () => {
                 </div>
               )}
 
-              {/* Prescriptions Tab */}
               {activeTab === 'prescriptions' && (
                 <div className="space-y-4">
                   {pastPrescriptions.length > 0 ? (
                     pastPrescriptions.map((rx, idx) => (
                       <div key={rx._id} className="bg-gradient-to-br from-slate-50 to-white border border-slate-200 rounded-xl overflow-hidden hover:shadow-md transition-all duration-200">
-                        {/* Header */}
                         <div className="bg-gradient-to-r from-teal-600 to-teal-700 px-6 py-4 text-white">
                           <div className="flex justify-between items-start">
                             <div>
@@ -753,31 +1107,8 @@ const AppointmentDetails = () => {
                           </div>
                         </div>
 
-                        {/* Content - Collapsible */}
                         {expandedPrescription === rx._id && (
                           <div className="px-6 py-5 space-y-5">
-                            {/* Doctor & Metadata Row */}
-                            {/* <div className="flex justify-between items-start pb-4 border-b border-slate-200"> */}
-                            {/* <div>
-                                {rx.doctor_id && (
-                                  <p className="text-sm text-slate-700">
-                                    <span className="font-semibold text-slate-900">By Dr. {rx.doctor_id.firstName} {rx.doctor_id.lastName}</span>
-                                  </p>
-                                )}
-                              </div> */}
-                            {/* <div className="flex gap-6 text-sm">
-                                <div className="text-center">
-                                  <div className="text-xs text-slate-500 font-semibold">Validity</div>
-                                  <div className="text-slate-800 font-bold">{rx.validity_days ? `${rx.validity_days}d` : '-'}</div>
-                                </div>
-                                <div className="text-center">
-                                  <div className="text-xs text-slate-500 font-semibold">Follow-up</div>
-                                  <div className="text-slate-800 font-bold">{rx.follow_up_date ? formatDate(rx.follow_up_date) : '-'}</div>
-                                </div>
-                              </div> */}
-                            {/* </div> */}
-
-                            {/* Clinical Notes Section */}
                             {rx.notes && (
                               <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
                                 <div className="flex items-start gap-3">
@@ -790,7 +1121,6 @@ const AppointmentDetails = () => {
                               </div>
                             )}
 
-                            {/* Investigation Section */}
                             {rx.investigation && (
                               <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
                                 <div className="flex items-start gap-3">
@@ -803,7 +1133,6 @@ const AppointmentDetails = () => {
                               </div>
                             )}
 
-                            {/* Diagnosis Section */}
                             <div className="bg-amber-50 rounded-lg p-4 border border-amber-200">
                               <div className="flex items-start gap-3">
                                 <FaStethoscope className="text-amber-600 text-lg mt-1 flex-shrink-0" />
@@ -814,8 +1143,32 @@ const AppointmentDetails = () => {
                               </div>
                             </div>
 
+                            {rx.recommendedProcedures && rx.recommendedProcedures.length > 0 && (
+                              <div className="bg-indigo-50 rounded-lg p-4 border border-indigo-200">
+                                <div className="flex items-start gap-3">
+                                  <FaProcedures className="text-indigo-600 text-lg mt-1 flex-shrink-0" />
+                                  <div className="flex-1">
+                                    <h6 className="font-bold text-slate-800 mb-2">Recommended Procedures</h6>
+                                    <div className="space-y-2">
+                                      {rx.recommendedProcedures.map((proc, i) => (
+                                        <div key={i} className="bg-white p-3 rounded border border-indigo-100">
+                                          <div className="flex items-center justify-between mb-1">
+                                            <span className="font-semibold text-slate-700">{proc.procedure_name}</span>
+                                            <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded">
+                                              {proc.procedure_code}
+                                            </span>
+                                          </div>
+                                          {proc.notes && (
+                                            <p className="text-xs text-slate-600 mt-1">{proc.notes}</p>
+                                          )}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
 
-                            {/* Medicines Section */}
                             {rx.items && rx.items.length > 0 && (
                               <div>
                                 <h6 className="font-bold text-slate-800 mb-3 flex items-center gap-2">
@@ -834,8 +1187,6 @@ const AppointmentDetails = () => {
                                           </div>
                                         </div>
                                       </div>
-
-
                                       <div className="flex gap-2 flex-wrap justify-end mt-2">
                                         <span className="text-xs bg-teal-600 text-white px-2 py-1.5 rounded-full font-semibold">{item.dosage || '-'}</span>
                                         <span className="text-xs bg-cyan-600 text-white px-2 py-1.5 rounded-full font-semibold">{item.frequency || '-'}</span>
@@ -855,13 +1206,11 @@ const AppointmentDetails = () => {
                                         </div>
                                       )}
                                     </div>
-
                                   ))}
                                 </div>
                               </div>
                             )}
 
-                            {/* Prescription Image */}
                             {rx.prescription_image && (
                               <div className="mt-4 pt-4 border-t border-slate-200">
                                 <h6 className="font-bold text-slate-800 mb-3">Prescription Document</h6>
@@ -882,14 +1231,11 @@ const AppointmentDetails = () => {
                 </div>
               )}
 
-              {/* Appointments Tab */}
               {activeTab === 'appointments' && (
                 <div className="space-y-4">
                   {pastAppointments.length > 0 ? (
                     pastAppointments.map((apt, idx) => (
                       <div key={apt._id} className="bg-gradient-to-br from-slate-50 to-white border border-slate-200 rounded-xl overflow-hidden hover:shadow-md transition-all duration-200">
-
-                        {/* Header */}
                         <div className="bg-gradient-to-r from-teal-600 to-teal-700 px-6 py-4 text-white">
                           <div className="flex justify-between items-start">
                             <div>
@@ -911,11 +1257,7 @@ const AppointmentDetails = () => {
                             </div>
                           </div>
                         </div>
-
-                        {/* Content */}
                         <div className="px-6 py-5 space-y-4">
-
-                          {/* Doctor & Priority Row */}
                           <div className="flex justify-between items-start">
                             <div>
                               {apt.doctor_id && (
@@ -933,27 +1275,12 @@ const AppointmentDetails = () => {
                               </span>
                             </div>
                           </div>
-
-
-
-                          {/* --- REPLACED TYPE SECTION WITH DETAILED HISTORY SECTION --- */}
                           <div className="bg-slate-50 rounded-lg border border-slate-200 overflow-hidden">
                             <div className="px-4 py-2 bg-slate-100 border-b border-slate-200 flex items-center gap-2">
                               <FaHistory className="text-slate-500" />
                               <h6 className="font-bold text-slate-700 text-sm">Appointment History Details</h6>
                             </div>
-
                             <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-6 text-sm">
-
-                              {/* ID */}
-                              {/* <div className="col-span-2 md:col-span-2">
-                  <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold block">Appointment ID</span>
-                  <span className="font-mono text-xs text-slate-600 bg-white border border-slate-200 px-2 py-1 rounded inline-block mt-1">
-                    {apt._id}
-                  </span>
-                </div> */}
-
-                              {/* Timing */}
                               <div>
                                 <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold block">Scheduled Time</span>
                                 <div className="font-medium text-slate-700 mt-0.5">
@@ -962,8 +1289,6 @@ const AppointmentDetails = () => {
                                   {apt.end_time ? new Date(apt.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--'}
                                 </div>
                               </div>
-
-                              {/* Actual End Time */}
                               <div>
                                 <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold block">Actual Completion</span>
                                 <div className="font-medium text-slate-700 mt-0.5">
@@ -972,32 +1297,20 @@ const AppointmentDetails = () => {
                                     : <span className="text-slate-400 italic">Not recorded</span>}
                                 </div>
                               </div>
-
-                              {/* Duration & Type */}
                               <div>
                                 <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold block">Duration</span>
                                 <div className="font-medium text-slate-700 mt-0.5 flex items-center gap-1">
                                   <FaClock className="text-slate-400 text-xs" /> {apt.duration || 0} mins
                                 </div>
                               </div>
-
                               <div>
                                 <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold block">Category</span>
                                 <div className="font-medium text-slate-700 mt-0.5 capitalize">
                                   {apt.type || 'N/A'} <span className="text-slate-400">({apt.appointment_type || 'General'})</span>
                                 </div>
                               </div>
-
-                              {/* Created At
-                <div className="col-span-2 border-t border-slate-100 pt-3 mt-1">
-                   <span className="text-xs text-slate-400">Record Created: {new Date(apt.created_at).toLocaleString()}</span>
-                </div> */}
-
                             </div>
                           </div>
-                          {/* --- END HISTORY SECTION --- */}
-
-                          {/* Notes Section */}
                           {apt.notes && (
                             <div className="bg-amber-50 rounded-lg p-4 border border-amber-200">
                               <div className="flex items-start gap-3">
@@ -1009,8 +1322,6 @@ const AppointmentDetails = () => {
                               </div>
                             </div>
                           )}
-
-                          {/* View Prescription Button */}
                           <div className="pt-2">
                             <button
                               type="button"
@@ -1060,7 +1371,6 @@ const AppointmentDetails = () => {
       <div className="min-h-screen bg-slate-50/50 p-6 md:p-2 font-sans">
         <div className="max-w-6xl mx-auto">
 
-          {/* Top Navigation */}
           <div className="flex items-center justify-between mb-8">
             <button
               onClick={() => navigate('/dashboard/doctor/appointments')}
@@ -1077,7 +1387,6 @@ const AppointmentDetails = () => {
             </div>
           </div>
 
-          {/* Alert Messages */}
           {message && (
             <div className={`mb-6 p-4 rounded-lg border flex items-center shadow-sm animate-fade-in ${message.includes('Error') || message.includes('Failed')
               ? 'bg-red-50 border-red-200 text-red-700'
@@ -1088,7 +1397,6 @@ const AppointmentDetails = () => {
             </div>
           )}
 
-          {/* Salary Success Card */}
           {salaryInfo && (
             <div className="mb-8 bg-gradient-to-r from-blue-600 to-indigo-700 rounded-xl shadow-lg p-6 text-white animate-fade-in-up">
               <div className="flex items-center justify-between">
@@ -1108,13 +1416,10 @@ const AppointmentDetails = () => {
             </div>
           )}
 
-          {/* Main Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
 
-            {/* Left Column: Patient & Appointment Info */}
             <div className="lg:col-span-1 space-y-4">
 
-              {/* Patient Card */}
               <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                 <div className="bg-slate-50 px-4 py-3 border-b border-slate-100 flex items-center">
                   {appointment.patient_id?.patient_image ? (
@@ -1157,7 +1462,7 @@ const AppointmentDetails = () => {
                   </div>
                 </div>
               </div>
-              {/* Vitals Card */}
+
               {appointment.vitals && (appointment.vitals.bp || appointment.vitals.pulse || appointment.vitals.weight || appointment.vitals.spo2 || appointment.vitals.temperature || appointment.vitals.respiratory_rate || appointment.vitals.random_blood_sugar || appointment.vitals.height) && (
                 <div className="bg-white rounded-xl shadow-sm border border-teal-100 overflow-hidden">
                   <div className="bg-teal-50 px-4 py-3 border-b border-teal-100 flex items-center">
@@ -1212,7 +1517,6 @@ const AppointmentDetails = () => {
                 </div>
               )}
 
-              {/* Appointment Context Card */}
               <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                 <div className="bg-slate-50 px-4 py-3 border-b border-slate-100 flex items-center">
                   <div className="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 mr-2 text-sm">
@@ -1241,8 +1545,6 @@ const AppointmentDetails = () => {
                     <span className="text-slate-500 text-sm">Type</span>
                     <span className="font-medium text-slate-700 text-xs capitalize">{appointment.type}</span>
                   </div>
-
-                  {/* Vitals Card (Moved Here) */}
                   <div className="flex justify-between">
                     <span className="text-slate-500 text-sm">Priority</span>
                     <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${appointment.priority === 'High' ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'
@@ -1254,10 +1556,7 @@ const AppointmentDetails = () => {
               </div>
             </div>
 
-
-            {/* Right Column: Main Content */}
             <div className="lg:col-span-3 space-y-6">
-              {/* Patient history tabs shown above prescription as requested */}
               <PatientHistoryTabs />
               {activeTab === 'current' ? (
                 <>

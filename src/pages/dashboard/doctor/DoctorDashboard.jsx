@@ -136,12 +136,6 @@ const DoctorDashboard = () => {
 
     const fetchDashboardStats = async () => {
       try {
-        // const [patientsRes, appointmentsRes, doctorsRes, calendarRes] = await Promise.all([
-        //   axios.get(`${import.meta.env.VITE_BACKEND_URL}/patients`),
-        //   axios.get(`${import.meta.env.VITE_BACKEND_URL}/appointments/doctor/${doctorId}`),
-        //   axios.get(`${import.meta.env.VITE_BACKEND_URL}/doctors`),
-        //   axios.get(`${import.meta.env.VITE_BACKEND_URL}/calendar/doctor/${doctorId}`)
-        // ]);
         const appointmentsRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/appointments/doctor/${doctorId}`);
         const doctorsRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/doctors`);
 
@@ -170,7 +164,7 @@ const DoctorDashboard = () => {
 
         setStats({
           patients: myPatients.length,
-          consultations: apptsData.filter(a => a.type === 'Consultation').length,
+          consultations: apptsData.filter(a => a.status === "Completed").length,
           procedures: apptsData.filter(a => a.type === 'Procedure').length,
           todayAppointments: todayAppointments.length,
         });
@@ -283,7 +277,7 @@ const DoctorDashboard = () => {
 
   // --- UI Components ---
 
-  const StatCard = ({ title, value, icon: Icon, color }) => {
+  const StatCard = ({ title, value, icon: Icon, color, route }) => {
     const colors = {
       teal: 'bg-teal-50 text-teal-600 border-teal-100',
       blue: 'bg-blue-50 text-blue-600 border-blue-100',
@@ -291,8 +285,17 @@ const DoctorDashboard = () => {
       indigo: 'bg-indigo-50 text-indigo-600 border-indigo-100',
     };
 
+    const handleClick = () => {
+      if (route) {
+        navigate(route);
+      }
+    };
+
     return (
-      <div className={`p-5 rounded-2xl border transition-all duration-300 hover:shadow-md ${colors[color] || colors.teal} bg-white border-slate-100`}>
+      <div 
+        className={`p-5 rounded-2xl border transition-all duration-300 hover:cursor-pointer hover:shadow-md ${colors[color] || colors.teal} bg-white border-slate-100`}
+        onClick={handleClick}
+      >
         <div className="flex justify-between items-start">
           <div>
             <p className="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">{title}</p>
@@ -375,10 +378,34 @@ const DoctorDashboard = () => {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <StatCard title="My Patients" value={stats.patients} icon={FaUsers} color="indigo" />
-        <StatCard title="Today's Completed Consultations" value={stats.consultations} icon={FaUserInjured} color="blue" />
-        <StatCard title="Procedures" value={stats.procedures} icon={FaTooth} color="rose" />
-        <StatCard title="Today's Visits" value={stats.todayAppointments} icon={FaClock} color="teal" />
+        <StatCard 
+          title="My Patients" 
+          value={stats.patients} 
+          icon={FaUsers} 
+          color="indigo" 
+          route="/dashboard/doctor/patients"
+        />
+        <StatCard 
+          title="Today's Completed Consultations" 
+          value={stats.consultations} 
+          icon={FaUserInjured} 
+          color="blue" 
+          route="/dashboard/doctor/appointments"
+        />
+        <StatCard 
+          title="Procedures" 
+          value={stats.procedures} 
+          icon={FaTooth} 
+          color="rose" 
+          route="/dashboard/doctor/appointments"
+        />
+        <StatCard 
+          title="Today's Visits" 
+          value={stats.todayAppointments} 
+          icon={FaClock} 
+          color="teal" 
+          route="/dashboard/doctor/schedule"
+        />
       </div>
 
       {/* Main Content Grid */}
