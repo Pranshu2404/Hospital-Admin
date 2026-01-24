@@ -247,6 +247,7 @@ const ProgressBar = ({ currentStep, totalSteps }) => {
 
 // --- Preview Component ---
 const PreviewDetails = ({ form, isdCode, stateName, cityName, pincode }) => {
+  console.log(form)
   return (
     <div className="space-y-2 animate-fade-in-right">
         <h3 className="text-lg font-bold text-center text-green-800">Review Your Details</h3>
@@ -308,15 +309,15 @@ const PreviewDetails = ({ form, isdCode, stateName, cityName, pincode }) => {
             </div>
             <div className="flex">
               <span className="font-medium text-gray-600 w-24">City:</span>
-              <span className="text-gray-900">{cityName || 'Not detected'}</span>
+              <span className="text-gray-900">{cityName || form.city || 'Not provided'}</span>
             </div>
             <div className="flex">
               <span className="font-medium text-gray-600 w-24">State:</span>
-              <span className="text-gray-900">{stateName || 'Not detected'}</span>
+              <span className="text-gray-900">{stateName || form.state || 'Not provided'}</span>
             </div>
             <div className="flex">
               <span className="font-medium text-gray-600 w-24">Pincode:</span>
-              <span className="text-gray-900">{pincode || 'Not detected'}</span>
+              <span className="text-gray-900">{pincode || form.pinCode || 'Not provided'}</span>
             </div>
           </div>
         </div>
