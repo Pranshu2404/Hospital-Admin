@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import {
@@ -14,6 +14,7 @@ import Layout from '@/components/Layout';
 import { doctorSidebar } from '@/constants/sidebarItems/doctorSidebar';
 
 // Searchable Form Select Component
+// Searchable Form Select Component - Fixed Version
 const SearchableFormSelect = ({ 
   label, 
   value, 
@@ -28,119 +29,176 @@ const SearchableFormSelect = ({
   loading = false,
   type = "text", // "medicine" or "procedure"
   error = false,
-  onSearch
+  onSearch,
+  debounceDelay = 500, // Add debounce delay
+  allowCustom = true // Allow custom input
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const [customInput, setCustomInput] = useState('');
   const [showCustomInput, setShowCustomInput] = useState(false);
+  const [filteredOptions, setFilteredOptions] = useState([]);
   const wrapperRef = useRef(null);
+  const inputRef = useRef(null);
+  const searchTimeoutRef = useRef(null);
 
-  // Normalize options
+  // Normalize options once
   const normalizedOptions = useMemo(() => {
     return options.map(opt => 
       typeof opt === 'object' ? opt : { label: String(opt), value: String(opt) }
     );
   }, [options]);
 
-  // Filter options based on search term
-  const displayedOptions = useMemo(() => {
-    if (!searchTerm) return normalizedOptions;
-    const lowerSearch = searchTerm.toLowerCase();
-    
-    return normalizedOptions.filter(opt => 
-      opt.label.toLowerCase().includes(lowerSearch) || 
-      opt.value.toLowerCase().includes(lowerSearch) ||
-      (opt.dosage && opt.dosage.toLowerCase().includes(lowerSearch)) ||
-      (opt.category && opt.category.toLowerCase().includes(lowerSearch))
-    );
-  }, [searchTerm, normalizedOptions]);
-
-  // Sync search term when value changes
+  // Initialize search term from value
   useEffect(() => {
     const selected = normalizedOptions.find(opt => opt.value === value);
     if (selected) {
       setSearchTerm(selected.label);
-      setShowCustomInput(false);
-    } else if (value && !normalizedOptions.some(opt => opt.value === value)) {
-      // This is a custom value
+    } else if (value) {
       setSearchTerm(value);
-      setShowCustomInput(true);
-      setCustomInput(value);
     } else {
       setSearchTerm('');
     }
   }, [value, normalizedOptions]);
 
+  // Filter options based on search term (local filtering)
+  useEffect(() => {
+    if (!searchTerm.trim()) {
+      setFilteredOptions(normalizedOptions.slice(0, 20)); // Show first 20 when empty
+      return;
+    }
+    
+    const lowerSearch = searchTerm.toLowerCase();
+    const filtered = normalizedOptions.filter(opt => 
+      opt.label.toLowerCase().includes(lowerSearch) || 
+      opt.value.toLowerCase().includes(lowerSearch) ||
+      (opt.dosage && opt.dosage.toLowerCase().includes(lowerSearch)) ||
+      (opt.category && opt.category.toLowerCase().includes(lowerSearch)) ||
+      (opt.strength && opt.strength.toLowerCase().includes(lowerSearch))
+    );
+    
+    setFilteredOptions(filtered.slice(0, 20)); // Limit to 20 results
+  }, [searchTerm, normalizedOptions]);
+
+  // Debounced search for external API
+  useEffect(() => {
+    if (searchTerm.length >= 2 && onSearch) {
+      // Clear previous timeout
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+      
+      // Set new timeout for debounced search
+      searchTimeoutRef.current = setTimeout(() => {
+        onSearch(searchTerm);
+      }, debounceDelay);
+    }
+    
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, [searchTerm, onSearch, debounceDelay]);
+
   const handleKeyDown = (e) => {
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      setIsOpen(true);
-      setActiveIndex(prev => (prev < displayedOptions.length - 1 ? prev + 1 : prev));
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      setActiveIndex(prev => (prev > 0 ? prev - 1 : prev));
-    } else if (e.key === 'Enter' && isOpen) {
-      e.preventDefault();
-      if (displayedOptions[activeIndex]) {
-        handleSelect(displayedOptions[activeIndex]);
-      }
-    } else if (e.key === 'Escape') {
-      setIsOpen(false);
-    } else if (e.key === 'Tab' && !isOpen) {
-      // If not found in list, allow custom input
-      if (searchTerm && !normalizedOptions.some(opt => opt.label.toLowerCase() === searchTerm.toLowerCase())) {
+    switch (e.key) {
+      case 'ArrowDown':
         e.preventDefault();
-        setShowCustomInput(true);
-        setCustomInput(searchTerm);
-      }
+        setIsOpen(true);
+        setActiveIndex(prev => 
+          prev < filteredOptions.length - 1 ? prev + 1 : prev
+        );
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setActiveIndex(prev => (prev > 0 ? prev - 1 : 0));
+        break;
+      case 'Enter':
+        e.preventDefault();
+        if (isOpen && filteredOptions[activeIndex]) {
+          handleSelect(filteredOptions[activeIndex]);
+        }
+        break;
+      case 'Escape':
+        setIsOpen(false);
+        break;
+      case 'Tab':
+        if (!isOpen && searchTerm && allowCustom) {
+          e.preventDefault();
+          const exactMatch = normalizedOptions.some(
+            opt => opt.label.toLowerCase() === searchTerm.toLowerCase()
+          );
+          if (!exactMatch) {
+            setShowCustomInput(true);
+            setCustomInput(searchTerm);
+          }
+        }
+        break;
     }
   };
 
   const handleSelect = (opt) => {
-    onChange({ target: { name: name || label.toLowerCase().replace(/\s/g, ''), value: opt.value } });
+    if (onChange) {
+      onChange({ 
+        target: { 
+          name: name || label.toLowerCase().replace(/\s/g, ''), 
+          value: opt.value 
+        } 
+      });
+    }
     setSearchTerm(opt.label);
     setIsOpen(false);
     setShowCustomInput(false);
+    // Keep focus on input after selection
+    setTimeout(() => {
+      if (inputRef.current) {
+        inputRef.current.focus();
+      }
+    }, 10);
   };
 
   const handleCustomInput = () => {
     if (customInput.trim()) {
-      onChange({ target: { name: name || label.toLowerCase().replace(/\s/g, ''), value: customInput } });
+      if (onChange) {
+        onChange({ 
+          target: { 
+            name: name || label.toLowerCase().replace(/\s/g, ''), 
+            value: customInput 
+          } 
+        });
+      }
       setSearchTerm(customInput);
       setShowCustomInput(false);
       if (onCustomInput) {
         onCustomInput(customInput);
       }
+      // Keep focus on input
+      setTimeout(() => {
+        if (inputRef.current) {
+          inputRef.current.focus();
+        }
+      }, 10);
     }
   };
 
-  const handleCustomInputChange = (e) => {
-    setCustomInput(e.target.value);
-  };
-
-  const handleCustomInputKeyDown = (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      handleCustomInput();
-    } else if (e.key === 'Escape') {
-      setShowCustomInput(false);
-      setCustomInput('');
-    }
-  };
-
-  // Handle search when user types
   const handleSearchChange = (e) => {
     const value = e.target.value;
     setSearchTerm(value);
     setActiveIndex(0);
-    setIsOpen(true);
-    setShowCustomInput(false);
     
-    // Trigger search callback if provided
-    if (onSearch) {
-      onSearch(value);
+    // Only open dropdown if there's text
+    if (value.trim()) {
+      setIsOpen(true);
+    }
+    
+    setShowCustomInput(false);
+  };
+
+  const handleInputFocus = () => {
+    if (searchTerm.trim() || normalizedOptions.length > 0) {
+      setIsOpen(true);
     }
   };
 
@@ -148,22 +206,18 @@ const SearchableFormSelect = ({
     const clickOutside = (e) => {
       if (wrapperRef.current && !wrapperRef.current.contains(e.target)) {
         setIsOpen(false);
-        if (searchTerm && !value && !showCustomInput) {
-          // If user typed something but didn't select, allow custom input
-          setShowCustomInput(true);
-          setCustomInput(searchTerm);
-        }
       }
     };
+    
     document.addEventListener("mousedown", clickOutside);
     return () => document.removeEventListener("mousedown", clickOutside);
-  }, [searchTerm, value, showCustomInput]);
+  }, []);
 
   // Get icon based on type
   const getIcon = () => {
-    if (type === "medicine") return <FaCapsules className="text-purple-500" />;
-    if (type === "procedure") return <FaProcedures className="text-blue-500" />;
-    return <FaSearch className="text-gray-400" />;
+    if (type === "medicine") return <FaCapsules className="text-purple-500 text-sm" />;
+    if (type === "procedure") return <FaProcedures className="text-blue-500 text-sm" />;
+    return <FaSearch className="text-gray-400 text-sm" />;
   };
 
   return (
@@ -175,14 +229,21 @@ const SearchableFormSelect = ({
       <div className="relative">
         <div className="relative">
           <input
+            ref={inputRef}
             type="text"
             value={searchTerm}
-            onFocus={() => setIsOpen(true)}
+            onFocus={handleInputFocus}
             onChange={handleSearchChange}
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
             disabled={disabled}
-            className={`block w-full px-4 py-3 bg-gray-50 border ${error ? 'border-red-300' : 'border-gray-200'} text-gray-900 text-sm rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all pl-10 ${loading ? 'pr-10' : ''}`}
+            className={`block w-full px-4 py-3 bg-gray-50 border ${
+              error ? 'border-red-300' : 'border-gray-200'
+            } text-gray-900 text-sm rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all pl-10 ${
+              loading ? 'pr-10' : ''
+            }`}
+            autoComplete="off"
+            spellCheck="false"
           />
           <div className="absolute left-3 top-1/2 transform -translate-y-1/2 flex items-center">
             {getIcon()}
@@ -194,44 +255,34 @@ const SearchableFormSelect = ({
           )}
         </div>
 
-        {isOpen && displayedOptions.length > 0 && (
+        {isOpen && filteredOptions.length > 0 && (
           <div className="absolute border border-gray-200 z-50 w-full mt-1 bg-white rounded-xl shadow-xl overflow-hidden max-h-60">
             <div className="overflow-y-auto">
-              {displayedOptions.map((opt, index) => (
+              {filteredOptions.map((opt, index) => (
                 <div
-                  key={index}
+                  key={`${opt.value}-${index}`}
                   onClick={() => handleSelect(opt)}
                   onMouseEnter={() => setActiveIndex(index)}
-                  className={`px-4 py-2 text-sm cursor-pointer transition-colors flex items-center justify-between border-b border-gray-50 last:border-0 ${
+                  className={`px-4 py-2 text-sm cursor-pointer transition-colors border-b border-gray-50 last:border-0 ${
                     index === activeIndex ? 'bg-emerald-50 text-emerald-900 font-semibold' : 'text-gray-700'
                   } ${opt.value === value ? 'bg-emerald-100/50 text-emerald-700' : ''}`}
                 >
                   <div className="flex-1">
                     <div className="font-medium">{opt.label}</div>
-                    {opt.dosage && (
-                      <div className="text-xs text-gray-500 mt-0.5">Form: {opt.dosage}</div>
-                    )}
-                    {opt.strength && (
-                      <div className="text-xs text-gray-500">Strength: {opt.strength}</div>
-                    )}
-                    {opt.category && (
-                      <div className="text-xs text-gray-500">Category: {opt.category}</div>
-                    )}
-                  </div>
-                  <div className="flex flex-col items-end ml-2">
-                    {opt.category && (
-                      <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full mb-1">
-                        {opt.category}
-                      </span>
-                    )}
-                    {opt.code && (
-                      <span className="text-xs text-gray-400">{opt.code}</span>
+                    {(opt.dosage || opt.strength || opt.category) && (
+                      <div className="text-xs text-gray-500 mt-0.5">
+                        {opt.dosage && <span>Form: {opt.dosage} </span>}
+                        {opt.strength && <span>• Strength: {opt.strength} </span>}
+                        {opt.category && <span>• Category: {opt.category}</span>}
+                      </div>
                     )}
                   </div>
                 </div>
               ))}
             </div>
-            {searchTerm && !displayedOptions.some(opt => opt.label.toLowerCase() === searchTerm.toLowerCase()) && (
+            {searchTerm && allowCustom && !filteredOptions.some(
+              opt => opt.label.toLowerCase() === searchTerm.toLowerCase()
+            ) && (
               <div 
                 className="px-4 py-3 text-sm border-t border-gray-100 bg-gray-50 text-gray-600 cursor-pointer hover:bg-gray-100"
                 onClick={() => {
@@ -242,7 +293,7 @@ const SearchableFormSelect = ({
               >
                 <div className="flex items-center justify-between">
                   <div>
-                    <span>Use custom value: </span>
+                    <span>Add custom: </span>
                     <strong className="text-amber-700">"{searchTerm}"</strong>
                   </div>
                   <span className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded">Custom</span>
@@ -252,17 +303,25 @@ const SearchableFormSelect = ({
           </div>
         )}
 
-        {showCustomInput && (
+        {showCustomInput && allowCustom && (
           <div className="absolute z-50 w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-xl p-4">
             <div className="mb-3">
-              <h4 className="font-semibold text-gray-700 mb-1">Custom {label}</h4>
-              <p className="text-xs text-gray-500">This value is not in our database. Please confirm:</p>
+              <h4 className="font-semibold text-gray-700 mb-1">Add Custom {label}</h4>
+              <p className="text-xs text-gray-500">This will be saved as a custom entry</p>
             </div>
             <input
               type="text"
               value={customInput}
-              onChange={handleCustomInputChange}
-              onKeyDown={handleCustomInputKeyDown}
+              onChange={(e) => setCustomInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleCustomInput();
+                } else if (e.key === 'Escape') {
+                  setShowCustomInput(false);
+                  setCustomInput('');
+                }
+              }}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg mb-3 focus:ring-2 focus:ring-amber-500 focus:border-transparent"
               placeholder={`Enter custom ${label.toLowerCase()}`}
               autoFocus
@@ -283,7 +342,7 @@ const SearchableFormSelect = ({
                 onClick={handleCustomInput}
                 className="px-3 py-1.5 text-sm bg-amber-500 text-white rounded-lg hover:bg-amber-600"
               >
-                Confirm
+                Add Custom
               </button>
             </div>
           </div>
@@ -748,24 +807,79 @@ const AppointmentDetails = () => {
     setMessage('');
   };
 
-  const handleMedicineChange = (index, e) => {
-    const { name, value } = e.target;
-    const newItems = [...prescription.items];
-    newItems[index][name] = value;
+  // Add debounce utility at the top of your file:
+const debounce = (func, wait) => {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+};
 
-    if (name === 'frequency' || name === 'duration') {
-      const frequency = name === 'frequency' ? value : newItems[index].frequency;
-      const duration = name === 'duration' ? value : newItems[index].duration;
-      const durationDays = parseInt(duration) || 0;
-      const calculatedQuantity = calculateQuantityFromFrequency(frequency, durationDays);
+// In your main component, update these handlers:
 
-      if (calculatedQuantity) {
-        newItems[index].quantity = calculatedQuantity.toString();
+// Handle medicine search - with debouncing
+const handleMedicineSearch = useCallback(
+  debounce(async (searchTerm) => {
+    if (searchTerm.length >= 2) {
+      setSearchingMedicines(true);
+      try {
+        await fetchMedicines(searchTerm);
+      } catch (error) {
+        console.error('Medicine search error:', error);
+      } finally {
+        setSearchingMedicines(false);
       }
     }
+  }, 500),
+  []
+);
 
-    setPrescription(prev => ({ ...prev, items: newItems }));
-  };
+// Handle procedure search - with debouncing
+const handleProcedureSearch = useCallback(
+  debounce(async (searchTerm) => {
+    if (searchTerm.length >= 2) {
+      setSearchingProcedures(true);
+      try {
+        await fetchProcedures(searchTerm);
+      } catch (error) {
+        console.error('Procedure search error:', error);
+      } finally {
+        setSearchingProcedures(false);
+      }
+    }
+  }, 500),
+  []
+);
+
+// Update your medicine change handler:
+const handleMedicineChange = (index, e) => {
+  const { name, value } = e.target;
+  const newItems = [...prescription.items];
+  newItems[index][name] = value;
+
+  // Clear medicineErrors when medicine is selected
+  if (name === 'medicine_name' && value) {
+    setMedicineErrors(prev => ({ ...prev, [index]: false }));
+  }
+
+  if (name === 'frequency' || name === 'duration') {
+    const frequency = name === 'frequency' ? value : newItems[index].frequency;
+    const duration = name === 'duration' ? value : newItems[index].duration;
+    const durationDays = parseInt(duration) || 0;
+    const calculatedQuantity = calculateQuantityFromFrequency(frequency, durationDays);
+
+    if (calculatedQuantity) {
+      newItems[index].quantity = calculatedQuantity.toString();
+    }
+  }
+
+  setPrescription(prev => ({ ...prev, items: newItems }));
+};
 
   const handleSubmitPrescription = async (e) => {
     e.preventDefault();
@@ -902,24 +1016,6 @@ const AppointmentDetails = () => {
       month: 'short',
       year: 'numeric'
     });
-  };
-
-  // Custom search handler for medicine search
-  const handleMedicineSearch = async (searchTerm, index) => {
-    if (searchTerm.length >= 2) {
-      setSearchingMedicines(true);
-      await fetchMedicines(searchTerm);
-      setSearchingMedicines(false);
-    }
-  };
-
-  // Custom search handler for procedure search
-  const handleProcedureSearch = async (searchTerm, index) => {
-    if (searchTerm.length >= 2) {
-      setSearchingProcedures(true);
-      await fetchProcedures(searchTerm);
-      setSearchingProcedures(false);
-    }
   };
 
   const PatientHistoryTabs = () => {
