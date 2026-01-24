@@ -25,7 +25,10 @@ const SearchableFormSelect = ({
   disabled,
   name,
   onCustomInput,
-  loading = false
+  loading = false,
+  type = "text", // "medicine" or "procedure"
+  error = false,
+  onSearch
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isOpen, setIsOpen] = useState(false);
@@ -48,7 +51,9 @@ const SearchableFormSelect = ({
     
     return normalizedOptions.filter(opt => 
       opt.label.toLowerCase().includes(lowerSearch) || 
-      opt.value.toLowerCase().includes(lowerSearch)
+      opt.value.toLowerCase().includes(lowerSearch) ||
+      (opt.dosage && opt.dosage.toLowerCase().includes(lowerSearch)) ||
+      (opt.category && opt.category.toLowerCase().includes(lowerSearch))
     );
   }, [searchTerm, normalizedOptions]);
 
@@ -125,6 +130,20 @@ const SearchableFormSelect = ({
     }
   };
 
+  // Handle search when user types
+  const handleSearchChange = (e) => {
+    const value = e.target.value;
+    setSearchTerm(value);
+    setActiveIndex(0);
+    setIsOpen(true);
+    setShowCustomInput(false);
+    
+    // Trigger search callback if provided
+    if (onSearch) {
+      onSearch(value);
+    }
+  };
+
   useEffect(() => {
     const clickOutside = (e) => {
       if (wrapperRef.current && !wrapperRef.current.contains(e.target)) {
@@ -140,6 +159,13 @@ const SearchableFormSelect = ({
     return () => document.removeEventListener("mousedown", clickOutside);
   }, [searchTerm, value, showCustomInput]);
 
+  // Get icon based on type
+  const getIcon = () => {
+    if (type === "medicine") return <FaCapsules className="text-purple-500" />;
+    if (type === "procedure") return <FaProcedures className="text-blue-500" />;
+    return <FaSearch className="text-gray-400" />;
+  };
+
   return (
     <div className={`mb-4 ${className} relative`} ref={wrapperRef}>
       <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide ml-1 mb-2">
@@ -152,18 +178,15 @@ const SearchableFormSelect = ({
             type="text"
             value={searchTerm}
             onFocus={() => setIsOpen(true)}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              setActiveIndex(0);
-              setIsOpen(true);
-              setShowCustomInput(false);
-            }}
+            onChange={handleSearchChange}
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
             disabled={disabled}
-            className="block w-full px-4 py-3 bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all pl-10"
+            className={`block w-full px-4 py-3 bg-gray-50 border ${error ? 'border-red-300' : 'border-gray-200'} text-gray-900 text-sm rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all pl-10 ${loading ? 'pr-10' : ''}`}
           />
-          <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm" />
+          <div className="absolute left-3 top-1/2 transform -translate-y-1/2 flex items-center">
+            {getIcon()}
+          </div>
           {loading && (
             <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-emerald-600"></div>
@@ -172,23 +195,39 @@ const SearchableFormSelect = ({
         </div>
 
         {isOpen && displayedOptions.length > 0 && (
-          <div className="absolute border border-gray-200 z-50 w-full mt-1 bg-white rounded-xl shadow-xl overflow-hidden">
-            <div className="overflow-y-auto max-h-[200px]">
+          <div className="absolute border border-gray-200 z-50 w-full mt-1 bg-white rounded-xl shadow-xl overflow-hidden max-h-60">
+            <div className="overflow-y-auto">
               {displayedOptions.map((opt, index) => (
                 <div
-                  key={opt.value}
+                  key={index}
                   onClick={() => handleSelect(opt)}
                   onMouseEnter={() => setActiveIndex(index)}
-                  className={`px-4 py-2 text-sm cursor-pointer transition-colors flex items-center justify-between ${
+                  className={`px-4 py-2 text-sm cursor-pointer transition-colors flex items-center justify-between border-b border-gray-50 last:border-0 ${
                     index === activeIndex ? 'bg-emerald-50 text-emerald-900 font-semibold' : 'text-gray-700'
                   } ${opt.value === value ? 'bg-emerald-100/50 text-emerald-700' : ''}`}
                 >
-                  <span>{opt.label}</span>
-                  {opt.category && (
-                    <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
-                      {opt.category}
-                    </span>
-                  )}
+                  <div className="flex-1">
+                    <div className="font-medium">{opt.label}</div>
+                    {opt.dosage && (
+                      <div className="text-xs text-gray-500 mt-0.5">Form: {opt.dosage}</div>
+                    )}
+                    {opt.strength && (
+                      <div className="text-xs text-gray-500">Strength: {opt.strength}</div>
+                    )}
+                    {opt.category && (
+                      <div className="text-xs text-gray-500">Category: {opt.category}</div>
+                    )}
+                  </div>
+                  <div className="flex flex-col items-end ml-2">
+                    {opt.category && (
+                      <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full mb-1">
+                        {opt.category}
+                      </span>
+                    )}
+                    {opt.code && (
+                      <span className="text-xs text-gray-400">{opt.code}</span>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -202,7 +241,10 @@ const SearchableFormSelect = ({
                 }}
               >
                 <div className="flex items-center justify-between">
-                  <span>Use custom value: <strong>"{searchTerm}"</strong></span>
+                  <div>
+                    <span>Use custom value: </span>
+                    <strong className="text-amber-700">"{searchTerm}"</strong>
+                  </div>
                   <span className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded">Custom</span>
                 </div>
               </div>
@@ -247,6 +289,7 @@ const SearchableFormSelect = ({
           </div>
         )}
       </div>
+      {error && <p className="text-xs text-red-500 mt-1 ml-1">Please select a valid option</p>}
     </div>
   );
 };
@@ -256,7 +299,7 @@ const AppointmentDetails = () => {
   const { state } = useLocation();
   const navigate = useNavigate();
   const [appointment, setAppointment] = useState(state?.appointment || null);
-  const [loading, setLoading] = useState(!state?.appointment);
+  const [loading, setLoading] = useState(!state?.appointment);  
   const [suggestions, setSuggestions] = useState([]);
   const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(null);
   const [showPrescriptionForm, setShowPrescriptionForm] = useState(false);
@@ -276,13 +319,13 @@ const AppointmentDetails = () => {
   const [medicineOptions, setMedicineOptions] = useState([]);
   const [loadingMedicines, setLoadingMedicines] = useState(false);
   const [searchingMedicines, setSearchingMedicines] = useState(false);
-  const [medicineSearchTerm, setMedicineSearchTerm] = useState('');
+  const [medicineErrors, setMedicineErrors] = useState({});
   
   // State for procedure search
   const [procedureOptions, setProcedureOptions] = useState([]);
   const [loadingProcedures, setLoadingProcedures] = useState(false);
   const [searchingProcedures, setSearchingProcedures] = useState(false);
-  const [procedureSearchTerm, setProcedureSearchTerm] = useState('');
+  const [procedureErrors, setProcedureErrors] = useState({});
 
   // Frequency options with common medical abbreviations
   const frequencyOptions = [
@@ -376,21 +419,21 @@ const AppointmentDetails = () => {
       const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/NLEMmedicines/search`, {
         params: { q: searchTerm, limit: 20 }
       });
-      
-      if (response.data && response.data.medicines) {
-        const medicineOpts = response.data.medicines.map(med => ({
-          label: med.medicine_name,
+      console.log(response.data)
+      if (response.data.data && response.data.data.medicines) {
+        const medicineOpts = response.data.data.medicines.map(med => ({
+          label: `${med.medicine_name}${med.strength ? ` - ${med.strength}` : ''}${med.dosage_form ? ` (${med.dosage_form})` : ''}`,
           value: med.medicine_name,
           dosage: med.dosage_form,
           strength: med.strength,
-          code: med.code,
-          healthcare_level: med.healthcare_level
+          code: med.nlem_code,
+          healthcare_level: med.healthcare_level,
+          therapeutic_category: med.therapeutic_category
         }));
         setMedicineOptions(medicineOpts);
       }
     } catch (error) {
       console.error('Error fetching medicines:', error);
-      // Fallback to empty array
       setMedicineOptions([]);
     } finally {
       setSearchingMedicines(false);
@@ -406,13 +449,14 @@ const AppointmentDetails = () => {
       const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/procedures/search`, {
         params: { q: searchTerm, limit: 20 }
       });
-      
-      if (response.data && response.data.procedures) {
-        const procedureOpts = response.data.procedures.map(proc => ({
+      console.log(response.data)
+      if (response.data.data && response.data.data.procedures) {
+        const procedureOpts = response.data.data.procedures.map(proc => ({
           label: `${proc.code} - ${proc.name}`,
           value: proc.code,
           name: proc.name,
-          category: proc.category
+          category: proc.category,
+          base_price: proc.base_price
         }));
         setProcedureOptions(procedureOpts);
       }
@@ -531,34 +575,6 @@ const AppointmentDetails = () => {
       setMessage('Failed to load prescriptions');
     } finally {
       setLoadingHistory(false);
-    }
-  };
-
-  const searchMedicines = async (query, index) => {
-    setActiveSuggestionIndex(index);
-    setMedicineSearchTerm(query);
-    
-    if (query.length < 2) {
-      setSuggestions([]);
-      return;
-    }
-
-    try {
-      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/NLEMmedicines/search`, {
-        params: { q: query, limit: 10 }
-      });
-      
-      if (response.data && response.data.medicines) {
-        const filteredMedicines = response.data.medicines.map(med => ({
-          label: med.medicine_name,
-          value: med.medicine_name,
-          dosage: med.dosage_form
-        }));
-        setSuggestions(filteredMedicines);
-      }
-    } catch (error) {
-      console.error('Error searching medicines:', error);
-      setSuggestions([]);
     }
   };
 
@@ -683,10 +699,15 @@ const AppointmentDetails = () => {
         newProcedures[index] = {
           ...newProcedures[index],
           procedure_code: value,
-          procedure_name: selectedProcedure.name || selectedProcedure.label.replace(`${value} - `, '')
+          procedure_name: selectedProcedure.name || selectedProcedure.label.replace(`${value} - `, ''),
+          notes: newProcedures[index].notes || ''
         };
       } else {
         newProcedures[index][name] = value;
+        // Clear procedure_name if code is cleared
+        if (!value) {
+          newProcedures[index].procedure_name = '';
+        }
       }
     } else {
       newProcedures[index][name] = value;
@@ -735,7 +756,8 @@ const AppointmentDetails = () => {
     if (name === 'frequency' || name === 'duration') {
       const frequency = name === 'frequency' ? value : newItems[index].frequency;
       const duration = name === 'duration' ? value : newItems[index].duration;
-      const calculatedQuantity = calculateQuantityFromFrequency(frequency, duration);
+      const durationDays = parseInt(duration) || 0;
+      const calculatedQuantity = calculateQuantityFromFrequency(frequency, durationDays);
 
       if (calculatedQuantity) {
         newItems[index].quantity = calculatedQuantity.toString();
@@ -743,35 +765,36 @@ const AppointmentDetails = () => {
     }
 
     setPrescription(prev => ({ ...prev, items: newItems }));
-
-    if (name === 'medicine_name') {
-      searchMedicines(value, index);
-    }
-  };
-
-  const handleSuggestionClick = (index, medicine) => {
-    const newItems = [...prescription.items];
-    newItems[index] = {
-      ...newItems[index],
-      medicine_name: medicine.label,
-      dosage: medicine.dosage || newItems[index].dosage
-    };
-    setPrescription(prev => ({ ...prev, items: newItems }));
-    setSuggestions([]);
-    setActiveSuggestionIndex(null);
-  };
-
-  const handleKeyDown = (e, index) => {
-    if (e.key === 'Enter' && suggestions.length > 0) {
-      e.preventDefault();
-      handleSuggestionClick(index, suggestions[0]);
-    }
   };
 
   const handleSubmitPrescription = async (e) => {
     e.preventDefault();
     setSubmitting(true);
     setMessage('');
+
+    // Validate medicines
+    const medicineErrors = {};
+    prescription.items.forEach((item, index) => {
+      if (!item.medicine_name.trim()) {
+        medicineErrors[index] = true;
+      }
+    });
+    setMedicineErrors(medicineErrors);
+
+    // Validate procedures
+    const procedureErrors = {};
+    prescription.recommendedProcedures.forEach((proc, index) => {
+      if (proc.procedure_code && !proc.procedure_name) {
+        procedureErrors[index] = true;
+      }
+    });
+    setProcedureErrors(procedureErrors);
+
+    if (Object.keys(medicineErrors).length > 0) {
+      setMessage('Please select valid medicines for all items');
+      setSubmitting(false);
+      return;
+    }
 
     try {
       if (!prescription.diagnosis.trim()) {
@@ -882,18 +905,20 @@ const AppointmentDetails = () => {
   };
 
   // Custom search handler for medicine search
-  const handleMedicineSearch = async (searchTerm) => {
-    setMedicineSearchTerm(searchTerm);
+  const handleMedicineSearch = async (searchTerm, index) => {
     if (searchTerm.length >= 2) {
+      setSearchingMedicines(true);
       await fetchMedicines(searchTerm);
+      setSearchingMedicines(false);
     }
   };
 
   // Custom search handler for procedure search
-  const handleProcedureSearch = async (searchTerm) => {
-    setProcedureSearchTerm(searchTerm);
+  const handleProcedureSearch = async (searchTerm, index) => {
     if (searchTerm.length >= 2) {
+      setSearchingProcedures(true);
       await fetchProcedures(searchTerm);
+      setSearchingProcedures(false);
     }
   };
 
@@ -901,7 +926,7 @@ const AppointmentDetails = () => {
     if (!appointment?.patient_id) return null;
 
     return (
-      <div className=" bg-white rounded-xl shadow-sm border border-slate-200">
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200">
         <div className="border-b border-slate-200">
           <nav className="flex space-x-1 px-4" aria-label="Tabs">
             <button
@@ -1244,7 +1269,7 @@ const AppointmentDetails = () => {
                                 <span className="text-lg font-bold capitalize">
                                   {apt.appointment_type || 'Consultation'}
                                 </span>
-                                <span className={`px-3 py-1 text-xs font-semibold rounded-full ${apt.status === 'Completed' ? 'bg-green-400 text-green-900' :
+                                <span className={`px-3 py-1 text-white text-xs font-semibold rounded-full ${apt.status === 'Completed' ? 'bg-green-400 text-green-900' :
                                   apt.status === 'Cancelled' ? 'bg-red-400 text-red-900' :
                                     'bg-slate-400 text-slate-900'
                                   }`}>
@@ -1263,7 +1288,7 @@ const AppointmentDetails = () => {
                               {apt.doctor_id && (
                                 <p className="text-sm">
                                   <span className="text-slate-600">Consulted with</span><br />
-                                  <span className="font-bold text-slate-900">Dr. {apt.doctor_id.firstName} {apt.doctor_id.lastName}</span>
+                                  <span className="font-bold text-slate-900">Dr. {apt.doctor_id.firstName} ${apt.doctor_id.lastName}</span>
                                 </p>
                               )}
                             </div>
@@ -1306,7 +1331,7 @@ const AppointmentDetails = () => {
                               <div>
                                 <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold block">Category</span>
                                 <div className="font-medium text-slate-700 mt-0.5 capitalize">
-                                  {apt.type || 'N/A'} <span className="text-slate-400">({apt.appointment_type || 'General'})</span>
+                                  {apt.type || 'N/A'} <span className="text-slate-400">(${apt.appointment_type || 'General'})</span>
                                 </div>
                               </div>
                             </div>
@@ -1686,38 +1711,24 @@ const AppointmentDetails = () => {
                                           </select>
                                         </div>
 
-                                        {/* Medicine Name with Search */}
-                                        <div className="md:col-span-3 relative">
-                                          <input
-                                            type="text"
-                                            name="medicine_name"
+                                        {/* Medicine Name with SearchableFormSelect */}
+                                        <div className="md:col-span-6">
+                                          <SearchableFormSelect
+                                            label="Medicine Name"
                                             value={item.medicine_name}
                                             onChange={(e) => handleMedicineChange(index, e)}
-                                            onKeyDown={(e) => handleKeyDown(e, index)} // <--- Added Enter Key Listener
-                                            className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-teal-500 outline-none"
-                                            placeholder="Medicine Name"
+                                            options={medicineOptions}
+                                            placeholder="Search medicine..."
                                             required
-                                            autoComplete="off" // <--- Prevents browser history interfering with your dropdown
+                                            type="medicine"
+                                            name="medicine_name"
+                                            loading={searchingMedicines}
+                                            error={medicineErrors[index]}
+                                            onSearch={(searchTerm) => handleMedicineSearch(searchTerm, index)}
                                           />
-
-                                          {/* Suggestions Dropdown */}
-                                          {activeSuggestionIndex === index && suggestions.length > 0 && (
-                                            <ul className="absolute z-50 w-full bg-white border border-slate-200 rounded-lg mt-1 max-h-48 overflow-y-auto shadow-xl">
-                                              {suggestions.map((med, i) => (
-                                                <li
-                                                  key={i}
-                                                  // Use onMouseDown instead of onClick to prevent input blur issues (optional but safer)
-                                                  onClick={() => handleSuggestionClick(index, med)}
-                                                  className="px-4 py-2 hover:bg-teal-50 cursor-pointer text-sm text-slate-700 hover:text-teal-700 border-b border-slate-50 last:border-none"
-                                                >
-                                                  {med}
-                                                </li>
-                                              ))}
-                                            </ul>
-                                          )}
                                         </div>
 
-                                        <div className="md:col-span-2">
+                                        <div className="md:col-span-3">
                                           <input
                                             type="text"
                                             name="dosage"
@@ -1759,7 +1770,6 @@ const AppointmentDetails = () => {
                                           </select>
                                         </div>
 
-
                                         {/* Frequency Dropdown */}
                                         <div className="md:col-span-3">
                                           <select
@@ -1779,7 +1789,7 @@ const AppointmentDetails = () => {
                                         </div>
 
                                         {/* Duration Dropdown */}
-                                        <div className="md:col-span-2">
+                                        <div className="md:col-span-3">
                                           <select
                                             name="duration"
                                             value={item.duration}
@@ -1830,7 +1840,83 @@ const AppointmentDetails = () => {
                                 </div>
                               </div>
 
-                              {/* Image Upload Section (moved after medicines) */}
+                              {/* Procedures Section */}
+                              <div>
+                                <div className="flex justify-between items-center mb-4">
+                                  <label className="text-sm font-semibold text-slate-700">Recommended Procedures</label>
+                                  <button
+                                    type="button"
+                                    onClick={addProcedure}
+                                    className="text-teal-600 text-sm font-semibold hover:text-teal-700 flex items-center"
+                                  >
+                                    <FaPlus className="mr-1" /> Add Procedure
+                                  </button>
+                                </div>
+
+                                {prescription.recommendedProcedures.length > 0 && (
+                                  <div className="space-y-4 mb-4">
+                                    {prescription.recommendedProcedures.map((proc, index) => (
+                                      <div key={index} className="bg-blue-50 rounded-lg border border-blue-200 p-4">
+                                        <div className="flex justify-between items-start mb-3">
+                                          <h4 className="text-xs font-bold text-blue-400 uppercase">Procedure #{index + 1}</h4>
+                                          <button onClick={() => removeProcedure(index)} className="text-blue-400 hover:text-red-500 transition-colors">
+                                            <FaTrash size={14} />
+                                          </button>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+                                          {/* Procedure Code with SearchableFormSelect */}
+                                          <div className="md:col-span-6">
+                                            <SearchableFormSelect
+                                              label="Procedure Code"
+                                              value={proc.procedure_code}
+                                              onChange={(e) => handleProcedureChange(index, e)}
+                                              options={procedureOptions}
+                                              placeholder="Search procedure..."
+                                              type="procedure"
+                                              name="procedure_code"
+                                              loading={searchingProcedures}
+                                              error={procedureErrors[index]}
+                                              onSearch={(searchTerm) => handleProcedureSearch(searchTerm, index)}
+                                            />
+                                          </div>
+
+                                          {/* Procedure Name (auto-filled) */}
+                                          <div className="md:col-span-6">
+                                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide ml-1 mb-2">
+                                              Procedure Name
+                                            </label>
+                                            <input
+                                              type="text"
+                                              value={proc.procedure_name || ''}
+                                              readOnly
+                                              className="w-full border border-blue-300 rounded px-3 py-2 text-sm bg-blue-50 text-blue-700"
+                                              placeholder="Will auto-fill when code selected"
+                                            />
+                                          </div>
+
+                                          {/* Notes */}
+                                          <div className="md:col-span-12">
+                                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide ml-1 mb-2">
+                                              Notes
+                                            </label>
+                                            <textarea
+                                              name="notes"
+                                              value={proc.notes || ''}
+                                              onChange={(e) => handleProcedureChange(index, e)}
+                                              className="w-full border border-blue-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-blue-500 outline-none"
+                                              rows="2"
+                                              placeholder="Additional notes for this procedure..."
+                                            />
+                                          </div>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Image Upload Section */}
                               <div className="bg-slate-50 rounded-lg border-2 border-dashed border-slate-300 p-6 text-center hover:bg-slate-100 transition-colors">
                                 {!prescription.prescriptionImage ? (
                                   <div className="relative">
