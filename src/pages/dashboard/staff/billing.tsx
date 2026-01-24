@@ -326,7 +326,7 @@ const overdue = data.filter(inv => inv.status === 'Pending').length;
     };
 
     return (
-      <Layout sidebarItems={staffSidebar} section="Staff">
+      <Layout sidebarItems={staffSidebar} section="Staff" resetProgress={() => {}}>
         <div className="bg-slate-50 min-h-screen p-6 font-sans">
 
           {/* Print Styles */}
@@ -683,11 +683,11 @@ const overdue = data.filter(inv => inv.status === 'Pending').length;
                 <tbody className="bg-white divide-y divide-slate-100">
                   {loading ? (
                     <tr>
-                      <td colSpan="6" className="text-center py-8 text-slate-500">Loading invoices...</td>
+                      <td className="text-center py-8 text-slate-500">Loading invoices...</td>
                     </tr>
                   ) : filteredInvoices.length === 0 ? (
                     <tr>
-                      <td colSpan="6" className="text-center py-8 text-slate-500">No invoices found.</td>
+                      <td className="text-center py-8 text-slate-500">No invoices found.</td>
                     </tr>
                   ) : (
                     filteredInvoices.map((invoice) => (

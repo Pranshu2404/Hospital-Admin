@@ -75,7 +75,6 @@ const DoctorAppointments = () => {
    const hasVitals = (appointment) => {
     if (!vitalsEnabled) return true; 
     if (appointment.vitals) {
-      console.log("Checking vitals in appointment.vitals:", appointment.vitals);
       const vitalFields = ['bp', 'weight', 'pulse', 'spo2', 'temperature', 
                           'respiratory_rate', 'random_blood_sugar', 'height'];
       
@@ -409,6 +408,15 @@ const DoctorAppointments = () => {
                               </button>
                             )}
                           </div>
+                          {appt.status === "In Progress" &&
+                          <button
+                              onClick={() => handleViewDetails(appt)}
+                              className="p-2 text-gray-400 hover:text-teal-600 hover:bg-teal-50 rounded-full transition-all"
+                              title="View Details"
+                            >
+                              <FaEye />
+                            </button>
+                  }
                         </td>
                       </tr>
                     );

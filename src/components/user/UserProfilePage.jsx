@@ -5,8 +5,9 @@ import SecurityTab from './SecurityTab';
 import NotificationTab from './NotificationTab';
 import ChargesDiscountTab from './ChargesDiscountTab';
 import VitalsTab from './VitalsTab';
+import ProcedureManagementTab from './ProcedureManagementTab'; // NEW
 import { PersonIcon, SettingsIcon, BellIcon, DollarIcon } from '../common/Icons';
-import { FaHeartbeat } from 'react-icons/fa';
+import { FaHeartbeat, FaProcedures } from 'react-icons/fa';
 
 const UserProfilePage = () => {
   const [activeTab, setActiveTab] = useState('personal');
@@ -17,7 +18,8 @@ const UserProfilePage = () => {
     { id: 'security', label: 'Security', icon: <SettingsIcon />, component: SecurityTab },
     { id: 'notifications', label: 'Notifications', icon: <BellIcon />, component: NotificationTab },
     { id: 'charges', label: 'Charges & Discounts', icon: <DollarIcon />, component: ChargesDiscountTab },
-    { id: 'vitals', label: 'Vitals', icon: <FaHeartbeat className="w-5 h-5" />, component: VitalsTab } // ✅ NEW
+    { id: 'vitals', label: 'Vitals', icon: <FaHeartbeat className="w-5 h-5" />, component: VitalsTab },
+    { id: 'procedures', label: 'Procedure Management', icon: <FaProcedures className="w-5 h-5" />, component: ProcedureManagementTab } // NEW
   ];
 
   useEffect(() => {
@@ -25,7 +27,7 @@ const UserProfilePage = () => {
       try {
         const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/hospitals`);
         if (res.data && res.data.length > 0) {
-          setHospitalData(res.data[0]); // Assuming single hospital per admin
+          setHospitalData(res.data[0]);
         }
       } catch (err) {
         console.error('Failed to fetch hospital data:', err);

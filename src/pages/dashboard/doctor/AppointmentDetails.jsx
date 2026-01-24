@@ -13,15 +13,19 @@ import { summarizePatientHistory } from '@/utils/geminiService';
 import Layout from '@/components/Layout';
 import { doctorSidebar } from '@/constants/sidebarItems/doctorSidebar';
 
-// Searchable Form Select Component
-// Searchable Form Select Component - Fixed Version
-const SearchableFormSelect = ({ 
-  label, 
-  value, 
-  onChange, 
-  options = [], 
-  required, 
-  className = "", 
+import {
+  FormInput,
+  FormSelect,
+  FormTextarea,
+} from '@/components/common/FormElements';
+
+const SearchableFormSelect = ({
+  label,
+  value,
+  onChange,
+  options = [],
+  required,
+  className = "",
   placeholder = "Search...",
   disabled,
   name,
@@ -45,7 +49,7 @@ const SearchableFormSelect = ({
 
   // Normalize options once
   const normalizedOptions = useMemo(() => {
-    return options.map(opt => 
+    return options.map(opt =>
       typeof opt === 'object' ? opt : { label: String(opt), value: String(opt) }
     );
   }, [options]);
@@ -68,16 +72,16 @@ const SearchableFormSelect = ({
       setFilteredOptions(normalizedOptions.slice(0, 20)); // Show first 20 when empty
       return;
     }
-    
+
     const lowerSearch = searchTerm.toLowerCase();
-    const filtered = normalizedOptions.filter(opt => 
-      opt.label.toLowerCase().includes(lowerSearch) || 
+    const filtered = normalizedOptions.filter(opt =>
+      opt.label.toLowerCase().includes(lowerSearch) ||
       opt.value.toLowerCase().includes(lowerSearch) ||
       (opt.dosage && opt.dosage.toLowerCase().includes(lowerSearch)) ||
       (opt.category && opt.category.toLowerCase().includes(lowerSearch)) ||
       (opt.strength && opt.strength.toLowerCase().includes(lowerSearch))
     );
-    
+
     setFilteredOptions(filtered.slice(0, 20)); // Limit to 20 results
   }, [searchTerm, normalizedOptions]);
 
@@ -88,13 +92,13 @@ const SearchableFormSelect = ({
       if (searchTimeoutRef.current) {
         clearTimeout(searchTimeoutRef.current);
       }
-      
+
       // Set new timeout for debounced search
       searchTimeoutRef.current = setTimeout(() => {
         onSearch(searchTerm);
       }, debounceDelay);
     }
-    
+
     return () => {
       if (searchTimeoutRef.current) {
         clearTimeout(searchTimeoutRef.current);
@@ -107,7 +111,7 @@ const SearchableFormSelect = ({
       case 'ArrowDown':
         e.preventDefault();
         setIsOpen(true);
-        setActiveIndex(prev => 
+        setActiveIndex(prev =>
           prev < filteredOptions.length - 1 ? prev + 1 : prev
         );
         break;
@@ -141,11 +145,11 @@ const SearchableFormSelect = ({
 
   const handleSelect = (opt) => {
     if (onChange) {
-      onChange({ 
-        target: { 
-          name: name || label.toLowerCase().replace(/\s/g, ''), 
-          value: opt.value 
-        } 
+      onChange({
+        target: {
+          name: name || label.toLowerCase().replace(/\s/g, ''),
+          value: opt.value
+        }
       });
     }
     setSearchTerm(opt.label);
@@ -162,11 +166,11 @@ const SearchableFormSelect = ({
   const handleCustomInput = () => {
     if (customInput.trim()) {
       if (onChange) {
-        onChange({ 
-          target: { 
-            name: name || label.toLowerCase().replace(/\s/g, ''), 
-            value: customInput 
-          } 
+        onChange({
+          target: {
+            name: name || label.toLowerCase().replace(/\s/g, ''),
+            value: customInput
+          }
         });
       }
       setSearchTerm(customInput);
@@ -187,12 +191,12 @@ const SearchableFormSelect = ({
     const value = e.target.value;
     setSearchTerm(value);
     setActiveIndex(0);
-    
+
     // Only open dropdown if there's text
     if (value.trim()) {
       setIsOpen(true);
     }
-    
+
     setShowCustomInput(false);
   };
 
@@ -208,7 +212,7 @@ const SearchableFormSelect = ({
         setIsOpen(false);
       }
     };
-    
+
     document.addEventListener("mousedown", clickOutside);
     return () => document.removeEventListener("mousedown", clickOutside);
   }, []);
@@ -237,11 +241,9 @@ const SearchableFormSelect = ({
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
             disabled={disabled}
-            className={`block w-full px-4 py-3 bg-gray-50 border ${
-              error ? 'border-red-300' : 'border-gray-200'
-            } text-gray-900 text-sm rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all pl-10 ${
-              loading ? 'pr-10' : ''
-            }`}
+            className={`block w-full px-4 py-3 bg-gray-50 border ${error ? 'border-red-300' : 'border-gray-200'
+              } text-gray-900 text-sm rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all pl-10 ${loading ? 'pr-10' : ''
+              }`}
             autoComplete="off"
             spellCheck="false"
           />
@@ -263,9 +265,8 @@ const SearchableFormSelect = ({
                   key={`${opt.value}-${index}`}
                   onClick={() => handleSelect(opt)}
                   onMouseEnter={() => setActiveIndex(index)}
-                  className={`px-4 py-2 text-sm cursor-pointer transition-colors border-b border-gray-50 last:border-0 ${
-                    index === activeIndex ? 'bg-emerald-50 text-emerald-900 font-semibold' : 'text-gray-700'
-                  } ${opt.value === value ? 'bg-emerald-100/50 text-emerald-700' : ''}`}
+                  className={`px-4 py-2 text-sm cursor-pointer transition-colors border-b border-gray-50 last:border-0 ${index === activeIndex ? 'bg-emerald-50 text-emerald-900 font-semibold' : 'text-gray-700'
+                    } ${opt.value === value ? 'bg-emerald-100/50 text-emerald-700' : ''}`}
                 >
                   <div className="flex-1">
                     <div className="font-medium">{opt.label}</div>
@@ -280,7 +281,7 @@ const SearchableFormSelect = ({
                 </div>
               ))}
             </div>
-            {searchTerm && allowCustom && !filteredOptions.some(
+            {/* {searchTerm && allowCustom && !filteredOptions.some(
               opt => opt.label.toLowerCase() === searchTerm.toLowerCase()
             ) && (
               <div 
@@ -299,10 +300,10 @@ const SearchableFormSelect = ({
                   <span className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded">Custom</span>
                 </div>
               </div>
-            )}
+            )} */}
           </div>
         )}
-
+        {/* 
         {showCustomInput && allowCustom && (
           <div className="absolute z-50 w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-xl p-4">
             <div className="mb-3">
@@ -346,9 +347,8 @@ const SearchableFormSelect = ({
               </button>
             </div>
           </div>
-        )}
+        )} */}
       </div>
-      {error && <p className="text-xs text-red-500 mt-1 ml-1">Please select a valid option</p>}
     </div>
   );
 };
@@ -358,7 +358,7 @@ const AppointmentDetails = () => {
   const { state } = useLocation();
   const navigate = useNavigate();
   const [appointment, setAppointment] = useState(state?.appointment || null);
-  const [loading, setLoading] = useState(!state?.appointment);  
+  const [loading, setLoading] = useState(!state?.appointment);
   const [suggestions, setSuggestions] = useState([]);
   const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(null);
   const [showPrescriptionForm, setShowPrescriptionForm] = useState(false);
@@ -373,13 +373,13 @@ const AppointmentDetails = () => {
   const [activeTab, setActiveTab] = useState('current');
   const [expandedPrescription, setExpandedPrescription] = useState(null);
   const [currentDoctorDept, setCurrentDoctorDept] = useState(null);
-  
+
   // State for medicine search
   const [medicineOptions, setMedicineOptions] = useState([]);
   const [loadingMedicines, setLoadingMedicines] = useState(false);
   const [searchingMedicines, setSearchingMedicines] = useState(false);
   const [medicineErrors, setMedicineErrors] = useState({});
-  
+
   // State for procedure search
   const [procedureOptions, setProcedureOptions] = useState([]);
   const [loadingProcedures, setLoadingProcedures] = useState(false);
@@ -416,34 +416,34 @@ const AppointmentDetails = () => {
 
   // Route of administration options
   const routeOptions = [
-    "Oral",
-    "Sublingual",
-    "Intramuscular Injection",
-    "Intravenous Injection",
-    "Subcutaneous Injection",
-    "Topical Application",
-    "Inhalation",
-    "Nasal",
-    "Eye Drops",
-    "Ear Drops",
-    "Rectal",
-    "Other"
+    { value: "Oral", label: "Oral" },
+    { value: "Sublingual", label: "Sublingual" },
+    { value: "Intramuscular Injection", label: "Intramuscular Injection" },
+    { value: "Intravenous Injection", label: "Intravenous Injection" },
+    { value: "Subcutaneous Injection", label: "Subcutaneous Injection" },
+    { value: "Topical Application", label: "Topical Application" },
+    { value: "Inhalation", label: "Inhalation" },
+    { value: "Nasal", label: "Nasal" },
+    { value: "Eye Drops", label: "Eye Drops" },
+    { value: "Ear Drops", label: "Ear Drops" },
+    { value: "Rectal", label: "Rectal" },
+    { value: "Other", label: "Other" }
   ];
 
   // Medicine type options
   const medicineTypeOptions = [
-    "Tablet",
-    "Capsule",
-    "Syrup",
-    "Injection",
-    "Ointment",
-    "Drops",
-    "Inhaler",
-    "Suppository",
-    "Powder",
-    "Cream",
-    "Lotion",
-    "Other"
+    { value: "Tablet", label: "Tablet" },
+    { value: "Capsule", label: "Capsule" },
+    { value: "Syrup", label: "Syrup" },
+    { value: "Injection", label: "Injection" },
+    { value: "Ointment", label: "Ointment" },
+    { value: "Drops", label: "Drops" },
+    { value: "Inhaler", label: "Inhaler" },
+    { value: "Suppository", label: "Suppository" },
+    { value: "Powder", label: "Powder" },
+    { value: "Cream", label: "Cream" },
+    { value: "Lotion", label: "Lotion" },
+    { value: "Other", label: "Other" }
   ];
 
   const [prescription, setPrescription] = useState({
@@ -456,7 +456,7 @@ const AppointmentDetails = () => {
       dosage: '',
       medicine_type: '',
       route_of_administration: '',
-      duration: '7 days',
+      duration: '',
       frequency: 'BD',
       instructions: '',
       quantity: ''
@@ -472,7 +472,7 @@ const AppointmentDetails = () => {
   // Fetch medicines from backend
   const fetchMedicines = async (searchTerm = '') => {
     if (searchTerm.length < 2 && searchTerm !== '') return;
-    
+
     setSearchingMedicines(true);
     try {
       const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/NLEMmedicines/search`, {
@@ -499,40 +499,12 @@ const AppointmentDetails = () => {
     }
   };
 
-  // Fetch procedures from backend
-  const fetchProcedures = async (searchTerm = '') => {
-    if (searchTerm.length < 2 && searchTerm !== '') return;
-    
-    setSearchingProcedures(true);
-    try {
-      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/procedures/search`, {
-        params: { q: searchTerm, limit: 20 }
-      });
-      console.log(response.data)
-      if (response.data.data && response.data.data.procedures) {
-        const procedureOpts = response.data.data.procedures.map(proc => ({
-          label: `${proc.code} - ${proc.name}`,
-          value: proc.code,
-          name: proc.name,
-          category: proc.category,
-          base_price: proc.base_price
-        }));
-        setProcedureOptions(procedureOpts);
-      }
-    } catch (error) {
-      console.error('Error fetching procedures:', error);
-      setProcedureOptions([]);
-    } finally {
-      setSearchingProcedures(false);
-    }
-  };
-
   // Load initial medicines and procedures
   useEffect(() => {
     const loadInitialData = async () => {
       setLoadingMedicines(true);
       setLoadingProcedures(true);
-      
+
       try {
         // Fetch initial medicines (empty search to get popular ones)
         await fetchMedicines('');
@@ -748,10 +720,11 @@ const AppointmentDetails = () => {
     setPrescription(prev => ({ ...prev, recommendedProcedures: newProcedures }));
   };
 
+  // Update the handleProcedureChange function
   const handleProcedureChange = (index, e) => {
     const { name, value } = e.target;
     const newProcedures = [...prescription.recommendedProcedures];
-    
+
     if (name === 'procedure_code') {
       const selectedProcedure = procedureOptions.find(proc => proc.value === value);
       if (selectedProcedure) {
@@ -759,6 +732,8 @@ const AppointmentDetails = () => {
           ...newProcedures[index],
           procedure_code: value,
           procedure_name: selectedProcedure.name || selectedProcedure.label.replace(`${value} - `, ''),
+          base_price: selectedProcedure.base_price || 0, // Store base price from options
+          category: selectedProcedure.category,
           notes: newProcedures[index].notes || ''
         };
       } else {
@@ -766,13 +741,44 @@ const AppointmentDetails = () => {
         // Clear procedure_name if code is cleared
         if (!value) {
           newProcedures[index].procedure_name = '';
+          newProcedures[index].base_price = 0;
         }
       }
     } else {
       newProcedures[index][name] = value;
     }
-    
+
     setPrescription(prev => ({ ...prev, recommendedProcedures: newProcedures }));
+  };
+
+  // Update procedure options fetching to include base_price
+  const fetchProcedures = async (searchTerm = '') => {
+    if (searchTerm.length < 2 && searchTerm !== '') return;
+
+    setSearchingProcedures(true);
+    try {
+      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/procedures/search`, {
+        params: { q: searchTerm, limit: 20 }
+      });
+
+      if (response.data.data && response.data.data.procedures) {
+        const procedureOpts = response.data.data.procedures.map(proc => ({
+          label: `${proc.code} - ${proc.name} (₹${proc.base_price || 0})`,
+          value: proc.code,
+          name: proc.name,
+          category: proc.category,
+          base_price: proc.base_price,
+          duration_minutes: proc.duration_minutes,
+          insurance_coverage: proc.insurance_coverage
+        }));
+        setProcedureOptions(procedureOpts);
+      }
+    } catch (error) {
+      console.error('Error fetching procedures:', error);
+      setProcedureOptions([]);
+    } finally {
+      setSearchingProcedures(false);
+    }
   };
 
   const handleImageUpload = async (e) => {
@@ -808,170 +814,498 @@ const AppointmentDetails = () => {
   };
 
   // Add debounce utility at the top of your file:
-const debounce = (func, wait) => {
-  let timeout;
-  return function executedFunction(...args) {
-    const later = () => {
+  const debounce = (func, wait) => {
+    let timeout;
+    return function executedFunction(...args) {
+      const later = () => {
+        clearTimeout(timeout);
+        func(...args);
+      };
       clearTimeout(timeout);
-      func(...args);
+      timeout = setTimeout(later, wait);
     };
-    clearTimeout(timeout);
-    timeout = setTimeout(later, wait);
   };
-};
 
-// In your main component, update these handlers:
+  // In your main component, update these handlers:
 
-// Handle medicine search - with debouncing
-const handleMedicineSearch = useCallback(
-  debounce(async (searchTerm) => {
-    if (searchTerm.length >= 2) {
-      setSearchingMedicines(true);
-      try {
-        await fetchMedicines(searchTerm);
-      } catch (error) {
-        console.error('Medicine search error:', error);
-      } finally {
-        setSearchingMedicines(false);
+  // Handle medicine search - with debouncing
+  const handleMedicineSearch = useCallback(
+    debounce(async (searchTerm) => {
+      if (searchTerm.length >= 2) {
+        setSearchingMedicines(true);
+        try {
+          await fetchMedicines(searchTerm);
+        } catch (error) {
+          console.error('Medicine search error:', error);
+        } finally {
+          setSearchingMedicines(false);
+        }
+      }
+    }, 500),
+    []
+  );
+
+  // Handle procedure search - with debouncing
+  const handleProcedureSearch = useCallback(
+    debounce(async (searchTerm) => {
+      if (searchTerm.length >= 2) {
+        setSearchingProcedures(true);
+        try {
+          await fetchProcedures(searchTerm);
+        } catch (error) {
+          console.error('Procedure search error:', error);
+        } finally {
+          setSearchingProcedures(false);
+        }
+      }
+    }, 500),
+    []
+  );
+
+  // Update your medicine change handler:
+  const handleMedicineChange = (index, e) => {
+    const { name, value, _customData } = e.target; // Get custom data if available
+    const newItems = [...prescription.items];
+    newItems[index][name] = value;
+
+    if (name === 'medicine_name' && value) {
+      setMedicineErrors(prev => ({ ...prev, [index]: false }));
+
+      // Use the custom data if available, otherwise find from options
+      const selectedMedicine = _customData || medicineOptions.find(
+        med => med.label === value || med.value === value
+      );
+
+      if (selectedMedicine) {
+        // Auto-fill medicine type based on dosage form
+        if (selectedMedicine.dosage) {
+          // Enhanced dosage form to medicine type mapping
+          const dosageToTypeMap = {
+            'Tablet': 'Tablet',
+            'Capsule': 'Capsule',
+            'Syrup': 'Syrup',
+            'Injection': 'Injection',
+            'Ointment': 'Ointment',
+            'Cream': 'Cream',
+            'Lotion': 'Lotion',
+            'Drops': 'Drops',
+            'Eye Drops': 'Drops',
+            'Ear Drops': 'Drops',
+            'Nasal Drops': 'Drops',
+            'Inhaler': 'Inhaler',
+            'Suppository': 'Suppository',
+            'Powder': 'Powder',
+            'Suspension': 'Suspension',
+            'Solution': 'Solution',
+            'Gel': 'Gel',
+            'Spray': 'Spray',
+            'Patch': 'Patch',
+            'Implants': 'Implants',
+            'Liquid for inhalation': 'Inhalation',
+            'Granules': 'Powder',
+            'Pessary': 'Suppository',
+            'Foam': 'Spray'
+          };
+
+          newItems[index].medicine_type = dosageToTypeMap[selectedMedicine.dosage] || selectedMedicine.dosage;
+        }
+
+        // Auto-fill dosage from strength
+        if (selectedMedicine.strength) {
+          newItems[index].dosage = selectedMedicine.strength;
+        } else if (selectedMedicine.dosage) {
+          // If no strength, use dosage form as hint
+          const defaultDosageMap = {
+            'Tablet': '1 tab',
+            'Capsule': '1 cap',
+            'Syrup': '5ml',
+            'Injection': '1 amp',
+            'Ointment': 'Apply thinly',
+            'Cream': 'Apply thinly',
+            'Lotion': 'Apply thinly',
+            'Drops': '2 drops',
+            'Inhaler': '2 puffs',
+            'Suppository': '1 suppository',
+            'Powder': '1 sachet'
+          };
+
+          newItems[index].dosage = defaultDosageMap[selectedMedicine.dosage] || '';
+        }
+
+        // Auto-fill route of administration based on dosage form
+        if (selectedMedicine.dosage) {
+          const dosageToRouteMap = {
+            'Tablet': 'Oral',
+            'Capsule': 'Oral',
+            'Syrup': 'Oral',
+            'Suspension': 'Oral',
+            'Solution': 'Oral',
+            'Powder': 'Oral',
+            'Granules': 'Oral',
+            'Injection': 'Intravenous Injection',
+            'Intravenous Injection': 'Intravenous Injection',
+            'Intramuscular Injection': 'Intramuscular Injection',
+            'Subcutaneous Injection': 'Subcutaneous Injection',
+            'Ointment': 'Topical Application',
+            'Cream': 'Topical Application',
+            'Lotion': 'Topical Application',
+            'Gel': 'Topical Application',
+            'Eye Drops': 'Eye Drops',
+            'Ear Drops': 'Ear Drops',
+            'Nasal Drops': 'Nasal',
+            'Drops': 'Oral',
+            'Inhaler': 'Inhalation',
+            'Liquid for inhalation': 'Inhalation',
+            'Spray': 'Nasal',
+            'Patch': 'Transdermal',
+            'Suppository': 'Rectal',
+            'Pessary': 'Vaginal',
+            'Foam': 'Topical Application'
+          };
+
+          newItems[index].route_of_administration = dosageToRouteMap[selectedMedicine.dosage] || 'Oral';
+        }
+
+        // Auto-fill instructions based on medicine type
+        if (selectedMedicine.dosage) {
+          const dosageToInstructionsMap = {
+            'Tablet': 'After food with water',
+            'Capsule': 'After food with water',
+            'Syrup': 'After food',
+            'Injection': 'As directed by healthcare professional',
+            'Ointment': 'Apply to affected area twice daily',
+            'Cream': 'Apply to affected area twice daily',
+            'Lotion': 'Apply to affected area twice daily',
+            'Eye Drops': '1-2 drops in affected eye',
+            'Ear Drops': '2-3 drops in affected ear',
+            'Inhaler': 'Shake well before use',
+            'Suppository': 'Insert as directed'
+          };
+
+          newItems[index].instructions = dosageToInstructionsMap[selectedMedicine.dosage] || 'As directed';
+        }
       }
     }
-  }, 500),
-  []
-);
 
-// Handle procedure search - with debouncing
-const handleProcedureSearch = useCallback(
-  debounce(async (searchTerm) => {
-    if (searchTerm.length >= 2) {
-      setSearchingProcedures(true);
-      try {
-        await fetchProcedures(searchTerm);
-      } catch (error) {
-        console.error('Procedure search error:', error);
-      } finally {
-        setSearchingProcedures(false);
+    if (name === 'frequency' || name === 'duration') {
+      const frequency = name === 'frequency' ? value : newItems[index].frequency;
+      const duration = name === 'duration' ? value : newItems[index].duration;
+      const durationDays = parseInt(duration) || 0;
+      const calculatedQuantity = calculateQuantityFromFrequency(frequency, durationDays);
+
+      if (calculatedQuantity) {
+        newItems[index].quantity = calculatedQuantity.toString();
       }
     }
-  }, 500),
-  []
-);
 
-// Update your medicine change handler:
-const handleMedicineChange = (index, e) => {
-  const { name, value } = e.target;
-  const newItems = [...prescription.items];
-  newItems[index][name] = value;
-
-  // Clear medicineErrors when medicine is selected
-  if (name === 'medicine_name' && value) {
-    setMedicineErrors(prev => ({ ...prev, [index]: false }));
-  }
-
-  if (name === 'frequency' || name === 'duration') {
-    const frequency = name === 'frequency' ? value : newItems[index].frequency;
-    const duration = name === 'duration' ? value : newItems[index].duration;
-    const durationDays = parseInt(duration) || 0;
-    const calculatedQuantity = calculateQuantityFromFrequency(frequency, durationDays);
-
-    if (calculatedQuantity) {
-      newItems[index].quantity = calculatedQuantity.toString();
-    }
-  }
-
-  setPrescription(prev => ({ ...prev, items: newItems }));
-};
+    setPrescription(prev => ({ ...prev, items: newItems }));
+  };
 
   const handleSubmitPrescription = async (e) => {
     e.preventDefault();
     setSubmitting(true);
     setMessage('');
 
+    // Reset all errors
+    setMedicineErrors({});
+    setProcedureErrors({});
+
+    // Validate required fields
+    if (!prescription.diagnosis.trim()) {
+      setMessage('Diagnosis is required');
+      setSubmitting(false);
+      return;
+    }
+
     // Validate medicines
     const medicineErrors = {};
+    let hasMedicineErrors = false;
     prescription.items.forEach((item, index) => {
+      const errors = [];
+
       if (!item.medicine_name.trim()) {
-        medicineErrors[index] = true;
+        errors.push('Medicine name is required');
+      }
+
+      if (!item.dosage.trim()) {
+        errors.push('Dosage is required');
+      }
+
+      if (!item.frequency) {
+        errors.push('Frequency is required');
+      }
+
+      if (!item.duration) {
+        errors.push('Duration is required');
+      }
+
+      if (errors.length > 0) {
+        medicineErrors[index] = errors;
+        hasMedicineErrors = true;
       }
     });
+
     setMedicineErrors(medicineErrors);
 
     // Validate procedures
     const procedureErrors = {};
+    let hasProcedureErrors = false;
     prescription.recommendedProcedures.forEach((proc, index) => {
+      const errors = [];
+
       if (proc.procedure_code && !proc.procedure_name) {
-        procedureErrors[index] = true;
+        errors.push('Procedure name is required when code is selected');
+      }
+
+      // Ensure procedure is selected from the list (not custom input)
+      // if (proc.procedure_code) {
+      //   const selectedProcedure = procedureOptions.find(p => p.value === proc.procedure_code);
+      //   if (!selectedProcedure) {
+      //     errors.push('Please select a valid procedure from the list');
+      //   }
+      // }
+
+      if (errors.length > 0) {
+        procedureErrors[index] = errors;
+        hasProcedureErrors = true;
       }
     });
+
     setProcedureErrors(procedureErrors);
 
-    if (Object.keys(medicineErrors).length > 0) {
-      setMessage('Please select valid medicines for all items');
+    if (hasMedicineErrors || hasProcedureErrors) {
+      setMessage('Please fix all validation errors before submitting');
       setSubmitting(false);
       return;
     }
 
     try {
-      if (!prescription.diagnosis.trim()) {
-        throw new Error('Diagnosis is required');
-      }
-
+      // Filter out empty medicine items
       const validItems = prescription.items.filter(item =>
         item.medicine_name.trim() && item.dosage.trim()
       );
 
       if (validItems.length === 0) {
-        throw new Error('At least one valid medicine is required');
+        setMessage('At least one valid medicine is required');
+        setSubmitting(false);
+        return;
       }
 
+const proceduresWithCosts = await Promise.all(
+  prescription.recommendedProcedures
+    .filter(proc => proc.procedure_code && proc.procedure_name)
+    .map(async (proc) => {
+      try {
+        const procedureResponse = await axios.get(
+          `${import.meta.env.VITE_BACKEND_URL}/procedures/${proc.procedure_code}`
+        );
+        console.log(procedureResponse.data)
+        const procedureData = procedureResponse.data.data || procedureResponse.data;
+
+        // Increment procedure usage count
+        await axios.post(
+          `${import.meta.env.VITE_BACKEND_URL}/procedures/${proc.procedure_code}/increment-usage`
+        );
+
+        return {
+          procedure_code: proc.procedure_code,
+          procedure_name: proc.procedure_name,
+          notes: proc.notes?.trim() || '',
+          status: 'Pending',
+          cost: procedureData.base_price || 0,
+          base_price: procedureData.base_price || 0,
+          category: procedureData.category,
+          duration_minutes: procedureData.duration_minutes,
+          insurance_coverage: procedureData.insurance_coverage,
+          is_billed: false
+        };
+      } catch (error) {
+        console.warn(`Could not fetch procedure ${proc.procedure_code}:`, error);
+        // Use default cost if procedure not found
+        return {
+          procedure_code: proc.procedure_code,
+          procedure_name: proc.procedure_name,
+          notes: proc.notes?.trim() || '',
+          status: 'Pending',
+          cost: 0,
+          base_price: 0,
+          category: 'Other',
+          duration_minutes: 30,
+          insurance_coverage: 'Partial',
+          is_billed: false
+        };
+      }
+    })
+);
+
+      // Prepare prescription data
       const prescriptionData = {
         patient_id: appointment.patient_id?._id || appointment.patient_id,
         doctor_id: appointment.doctor_id?._id || appointment.doctor_id,
         appointment_id: appointment._id,
-        diagnosis: prescription.diagnosis,
-        notes: prescription.notes,
-        investigation: prescription.investigation,
-        recommendedProcedures: prescription.recommendedProcedures.filter(proc => 
-          proc.procedure_code || proc.procedure_name
-        ),
+        diagnosis: prescription.diagnosis.trim(),
+        symptoms: prescription.symptoms?.trim() || '',
+        notes: prescription.notes?.trim() || '',
+        investigation: prescription.investigation?.trim() || '',
+        recommendedProcedures: proceduresWithCosts,
         items: validItems.map(item => ({
-          ...item,
-          quantity: parseInt(item.quantity) || 0
+          medicine_name: item.medicine_name.trim(),
+          dosage: item.dosage.trim(),
+          medicine_type: item.medicine_type || '',
+          route_of_administration: item.route_of_administration || '',
+          frequency: item.frequency,
+          duration: item.duration,
+          quantity: parseInt(item.quantity) || 0,
+          instructions: item.instructions?.trim() || '',
+          timing: item.timing || ''
         })),
-        prescription_image: prescription.prescriptionImage
+        prescription_image: prescription.prescriptionImage,
+        follow_up_date: prescription.followUpDate || null,
+        is_repeatable: prescription.isRepeatable || false,
+        repeat_count: prescription.repeatCount || 0,
+        has_procedures: proceduresWithCosts.length > 0,
+        procedures_status: proceduresWithCosts.length > 0 ? 'Pending' : 'None'
       };
 
-      await axios.post(`${import.meta.env.VITE_BACKEND_URL}/prescriptions`, prescriptionData);
-      await axios.put(`${import.meta.env.VITE_BACKEND_URL}/appointments/${appointment._id}/complete`);
+      // Submit prescription
+      const prescriptionResponse = await axios.post(
+        `${import.meta.env.VITE_BACKEND_URL}/prescriptions`,
+        prescriptionData,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        }
+      );
 
+      const savedPrescription = prescriptionResponse.data;
+
+      // Note about procedures needing billing
+      const proceduresWithPrice = proceduresWithCosts.filter(proc => proc.cost > 0);
+      let procedureBillingNote = '';
+
+      if (proceduresWithPrice.length > 0) {
+        const totalProcedureCost = proceduresWithPrice.reduce((sum, proc) => sum + proc.cost, 0);
+        procedureBillingNote = ` ${proceduresWithPrice.length} procedure(s) added with total cost: ₹${totalProcedureCost}. `;
+        procedureBillingNote += `These procedures will need to be billed separately by the billing department.`;
+      }
+
+      // Complete the appointment
+      await axios.put(
+        `${import.meta.env.VITE_BACKEND_URL}/appointments/${appointment._id}/complete`
+      );
+
+      // Calculate doctor's salary (appointment fee only, procedures will be billed separately)
       setCalculatingSalary(true);
+      let salaryInfo = null;
       try {
         const salaryResponse = await axios.post(
           `${import.meta.env.VITE_BACKEND_URL}/salaries/calculate-appointment/${appointment._id}`
         );
-        if (salaryResponse.data) {
-          setSalaryInfo(salaryResponse.data);
-          setMessage('Success! Prescription saved & Salary credited.');
-        } else {
-          setMessage('Prescription saved successfully.');
-        }
+        salaryInfo = salaryResponse.data;
       } catch (salaryError) {
-        setMessage('Prescription saved, but salary calculation failed.');
+        console.warn('Salary calculation failed:', salaryError);
+        // Continue even if salary calculation fails
       } finally {
         setCalculatingSalary(false);
       }
 
+      // Prepare comprehensive success message
+      let successMessage = 'Prescription saved successfully. ';
+
+      // Add procedure details to message
+      if (procedureBillingNote) {
+        successMessage += procedureBillingNote;
+      }
+
+      // Add medicine count
+      successMessage += ` ${validItems.length} medicine(s) prescribed.`;
+
+      if (salaryInfo) {
+        successMessage += ` Appointment salary credited: ₹${salaryInfo.amount}.`;
+        setSalaryInfo(salaryInfo);
+      }
+
+      successMessage += ' Appointment completed successfully.';
+      setMessage(successMessage);
+
+      // Clear form and show success state
+      setPrescription({
+        diagnosis: '',
+        notes: '',
+        investigation: '',
+        recommendedProcedures: [],
+        items: [{
+          medicine_name: '',
+          dosage: '',
+          medicine_type: '',
+          route_of_administration: '',
+          duration: '7 days',
+          frequency: 'BD',
+          instructions: '',
+          quantity: ''
+        }],
+        prescriptionImage: null
+      });
+
+      // Show success notification and redirect
       setTimeout(() => {
         navigate('/dashboard/doctor/appointments', {
-          state: { message: 'Appointment completed successfully.' }
+          state: {
+            message: 'Appointment completed and prescription saved successfully.',
+            prescriptionId: savedPrescription._id,
+            prescriptionNumber: savedPrescription.prescription_number,
+            hasProcedures: proceduresWithPrice.length > 0,
+            proceduresCount: proceduresWithPrice.length,
+            totalProcedureCost: proceduresWithPrice.reduce((sum, proc) => sum + proc.cost, 0),
+            medicineCount: validItems.length,
+            salaryCredited: !!salaryInfo
+          }
         });
-      }, 2500);
+      }, 3000);
 
     } catch (err) {
       console.error('Error submitting prescription:', err);
-      setMessage(err.response?.data?.error || err.message || 'Error submitting prescription.');
+
+      // Enhanced error handling
+      let errorMessage = 'Error submitting prescription.';
+
+      if (err.response) {
+        // Server responded with error
+        if (err.response.data?.error) {
+          errorMessage = err.response.data.error;
+        } else if (err.response.data?.message) {
+          errorMessage = err.response.data.message;
+        } else if (err.response.status === 400) {
+          errorMessage = 'Validation error. Please check your inputs.';
+        } else if (err.response.status === 401) {
+          errorMessage = 'Authentication required. Please login again.';
+        } else if (err.response.status === 403) {
+          errorMessage = 'You do not have permission to create prescriptions.';
+        } else if (err.response.status === 404) {
+          errorMessage = 'Appointment not found.';
+        } else if (err.response.status === 422) {
+          errorMessage = 'Invalid procedure selection. Please try again.';
+        } else if (err.response.status >= 500) {
+          errorMessage = 'Server error. Please try again later.';
+        }
+      } else if (err.request) {
+        // Request made but no response
+        errorMessage = 'Network error. Please check your connection.';
+      } else {
+        // Other errors
+        errorMessage = err.message || 'Unknown error occurred.';
+      }
+
+      setMessage(errorMessage);
       setSubmitting(false);
+
+      // Scroll to error message
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
+
+
 
   const handleSummarizeHistory = async () => {
     if (!pastPrescriptions || pastPrescriptions.length === 0) {
@@ -1720,43 +2054,51 @@ const handleMedicineChange = (index, e) => {
 
                             <div className="p-6 space-y-6 flex-grow">
 
-                              {/* Clinical Notes (moved to top) */}
-                              <div>
-                                <label className="block text-sm font-semibold text-slate-700 mb-2">Clinical Notes</label>
+                              {/* Clinical Notes - Using FormTextarea */}
+
+                              <div className="mb-4">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                  Clinical Notes
+                                </label>
                                 <textarea
                                   name="notes"
                                   value={prescription.notes}
                                   onChange={handleInputChange}
-                                  className="w-full border border-slate-300 rounded-lg px-4 py-2 text-md focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none transition-all"
-                                  rows="3"
                                   placeholder="Any additional observations..."
+                                  rows={3}
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
                                 />
                               </div>
 
-                              {/* Diagnosis Section (after notes) */}
-                              <div>
-                                <label className="block text-sm font-semibold text-slate-700 mb-2">Diagnosis / Provisional Diagnosis <span className="text-red-500">*</span></label>
+                              {/* Diagnosis Section - Using FormInput */}
+                              <div className="mb-4">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                  Diagnosis / Provisional Diagnosis <span className="text-red-500">*</span>
+                                </label>
                                 <input
                                   type="text"
                                   name="diagnosis"
                                   value={prescription.diagnosis}
                                   onChange={handleInputChange}
-                                  className="w-full border border-slate-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none transition-all"
                                   placeholder="e.g. Acute Viral Fever"
-                                  required
+                                  required={true}
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
                                 />
                               </div>
 
+                              {/* Investigation Field - Using FormTextarea */}
                               {/* Investigation Field */}
-                              <div>
-                                <label className="block text-sm font-semibold text-slate-700 mb-2">Investigation (Lab tests / Reports)</label>
+                              <div className="mb-4">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                  Investigation (Lab tests / Reports)
+                                </label>
                                 <textarea
                                   name="investigation"
                                   value={prescription.investigation}
                                   onChange={handleInputChange}
-                                  className="w-full border border-slate-300 rounded-lg px-4 py-2 text-md focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none transition-all"
-                                  rows="2"
                                   placeholder="Write any lab tests or report requests here..."
+                                  rows={2}
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
                                 />
                               </div>
 
@@ -1787,31 +2129,24 @@ const handleMedicineChange = (index, e) => {
 
                                       <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
 
-                                        {/* Medicine Type Dropdown */}
+                                        {/* Medicine Type - Using FormSelect */}
                                         <div className="md:col-span-3">
-                                          <select
-                                            name="medicine_type"
+                                          <SearchableFormSelect
+                                            label="Medicine Type"
                                             value={item.medicine_type || ''}
                                             onChange={(e) => handleMedicineChange(index, e)}
-                                            className="w-full border border-slate-300 rounded px-2 py-2 text-sm focus:ring-1 focus:ring-teal-500 outline-none bg-white"
-                                          >
-                                            <option value="">Medicine Type</option>
-                                            <option value="Tablet">Tablet</option>
-                                            <option value="Capsule">Capsule</option>
-                                            <option value="Syrup">Syrup</option>
-                                            <option value="Injection">Injection</option>
-                                            <option value="Ointment">Ointment</option>
-                                            <option value="Drops">Drops</option>
-                                            <option value="Inhaler">Inhaler</option>
-                                            <option value="Other">Other</option>
-                                          </select>
+                                            options={medicineTypeOptions}
+                                            placeholder="Select type"
+                                            name="medicine_type"
+                                          />
                                         </div>
 
                                         {/* Medicine Name with SearchableFormSelect */}
                                         <div className="md:col-span-6">
                                           <SearchableFormSelect
+                                            key={`medicine-${index}-${prescription.items[index].medicine_name}`}
                                             label="Medicine Name"
-                                            value={item.medicine_name}
+                                            value={prescription.items[index].medicine_name}
                                             onChange={(e) => handleMedicineChange(index, e)}
                                             options={medicineOptions}
                                             placeholder="Search medicine..."
@@ -1820,115 +2155,107 @@ const handleMedicineChange = (index, e) => {
                                             name="medicine_name"
                                             loading={searchingMedicines}
                                             error={medicineErrors[index]}
-                                            onSearch={(searchTerm) => handleMedicineSearch(searchTerm, index)}
+                                            onSearch={(searchTerm) => {
+                                              if (searchTerm !== prescription.items[index].medicine_name) {
+                                                handleMedicineSearch(searchTerm, index);
+                                              }
+                                            }}
+                                            debounceDelay={800}
                                           />
                                         </div>
 
+                                        {/* Dosage - Using FormInput */}
                                         <div className="md:col-span-3">
-                                          <input
-                                            type="text"
-                                            name="dosage"
-                                            value={item.dosage}
-                                            onChange={(e) => handleMedicineChange(index, e)}
-                                            className="w-full border border-slate-300 rounded px-1 py-2 text-sm focus:ring-1 focus:ring-teal-500 outline-none"
-                                            placeholder="Dosage(500mg)"
-                                            required
-                                          />
-                                        </div>
-
-                                        {/* Route of Administration Dropdown */}
-                                        <div className="md:col-span-3">
-                                          <select
-                                            name="route_of_administration"
-                                            value={item.route_of_administration || ""}
-                                            onChange={(e) => handleMedicineChange(index, e)}
-                                            className="w-full border border-slate-300 rounded px-2 py-2 text-sm focus:ring-1 focus:ring-teal-500 outline-none bg-white"
-                                          >
-                                            <option value="">Medicine Route</option>
-                                            {[
-                                              "Oral",
-                                              "Sublingual",
-                                              "Intramuscular Injection",
-                                              "Intravenous Injection",
-                                              "Subcutaneous Injection",
-                                              "Topical Application",
-                                              "Inhalation",
-                                              "Nasal",
-                                              "Eye Drops",
-                                              "Ear Drops",
-                                              "Rectal",
-                                              "Other"
-                                            ].map((route) => (
-                                              <option key={route} value={route}>
-                                                {route}
-                                              </option>
-                                            ))}
-                                          </select>
-                                        </div>
-
-                                        {/* Frequency Dropdown */}
-                                        <div className="md:col-span-3">
-                                          <select
-                                            name="frequency"
-                                            value={item.frequency}
-                                            onChange={(e) => handleMedicineChange(index, e)}
-                                            className="w-full border border-slate-300 rounded px-1 py-2 text-sm focus:ring-1 focus:ring-teal-500 outline-none bg-white"
-                                            required
-                                          >
-                                            <option value="">Frequency</option>
-                                            {frequencyOptions.map(opt => (
-                                              <option key={opt.value} value={opt.value}>
-                                                {opt.label}
-                                              </option>
-                                            ))}
-                                          </select>
-                                        </div>
-
-                                        {/* Duration Dropdown */}
-                                        <div className="md:col-span-3">
-                                          <select
-                                            name="duration"
-                                            value={item.duration}
-                                            onChange={(e) => handleMedicineChange(index, e)}
-                                            className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-teal-500 outline-none bg-white"
-                                            required
-                                          >
-                                            <option value="">Duration</option>
-                                            {durationOptions.map(opt => (
-                                              <option key={opt.value} value={opt.value}>
-                                                {opt.label}
-                                              </option>
-                                            ))}
-                                          </select>
-                                        </div>
-
-                                        {/* Auto-calculated Quantity */}
-                                        <div className="md:col-span-3">
-                                          <input
-                                            type="text"
-                                            name="quantity"
-                                            value={item.quantity}
-                                            onChange={(e) => handleMedicineChange(index, e)}
-                                            className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-teal-500 outline-none"
-                                            placeholder="Auto-calculated"
-                                            readOnly
-                                          />
-                                          <div className="text-xs text-slate-500 mt-1">
-                                            {item.frequency && item.duration ?
-                                              `Based on ${item.frequency} for ${item.duration}` :
-                                              'Set freq & duration'}
+                                          {/* Dosage */}
+                                          <div className="mb-4 md:col-span-3">
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                              Dosage <span className="text-red-500">*</span>
+                                            </label>
+                                            <input
+                                              type="text"
+                                              name="dosage"
+                                              value={item.dosage}
+                                              onChange={(e) => handleMedicineChange(index, e)}
+                                              placeholder="500mg"
+                                              required={true}
+                                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
+                                            />
                                           </div>
                                         </div>
 
-                                        <div className="md:col-span-12">
-                                          <input
-                                            type="text"
-                                            name="instructions"
-                                            value={item.instructions}
+                                        {/* Route of Administration - Using FormSelect */}
+                                        <div className="md:col-span-3">
+                                          <SearchableFormSelect
+                                            label="Route"
+                                            value={item.route_of_administration || ""}
                                             onChange={(e) => handleMedicineChange(index, e)}
-                                            className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-teal-500 outline-none"
-                                            placeholder="Special Instructions (e.g. After food)"
+                                            options={routeOptions}
+                                            placeholder="Select route"
+                                            name="route_of_administration"
                                           />
+                                        </div>
+
+                                        {/* Frequency - Using FormSelect */}
+                                        <div className="md:col-span-3">
+                                          <SearchableFormSelect
+                                            label="Frequency"
+                                            value={item.frequency}
+                                            onChange={(e) => handleMedicineChange(index, e)}
+                                            options={frequencyOptions}
+                                            placeholder="Select frequency"
+                                            name="frequency"
+                                            required={true}
+                                          />
+                                        </div>
+
+                                        {/* Duration - Using FormSelect */}
+                                        <div className="md:col-span-3">
+                                          <SearchableFormSelect
+                                            label="Duration"
+                                            value={item.duration}
+                                            onChange={(e) => handleMedicineChange(index, e)}
+                                            options={durationOptions}
+                                            placeholder="Select duration"
+                                            name="duration"
+                                            required={true}
+                                          />
+                                        </div>
+
+                                        {/* Auto-calculated Quantity - Using FormInput */}
+                                        <div className="md:col-span-3">
+                                          {/* Auto-calculated Quantity */}
+                                          <div className="mb-4 md:col-span-3">
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                              Quantity
+                                            </label>
+                                            <input
+                                              type="text"
+                                              name="quantity"
+                                              value={item.quantity}
+                                              onChange={(e) => handleMedicineChange(index, e)}
+                                              placeholder="Auto-calculated"
+                                              readOnly={true}
+                                              className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
+                                            />
+                                          </div>
+                                        </div>
+
+                                        {/* Instructions - Using FormInput */}
+                                        <div className="md:col-span-12">
+                                          {/* Instructions */}
+                                          <div className="mb-4 md:col-span-12">
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                              Special Instructions
+                                            </label>
+                                            <input
+                                              type="text"
+                                              name="instructions"
+                                              value={item.instructions}
+                                              onChange={(e) => handleMedicineChange(index, e)}
+                                              placeholder="e.g. After food with water"
+                                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
+                                            />
+                                          </div>
                                         </div>
                                       </div>
                                     </div>
@@ -1964,8 +2291,9 @@ const handleMedicineChange = (index, e) => {
                                           {/* Procedure Code with SearchableFormSelect */}
                                           <div className="md:col-span-6">
                                             <SearchableFormSelect
+                                              key={`procedure-${index}-${prescription.recommendedProcedures[index].procedure_code}`}
                                               label="Procedure Code"
-                                              value={proc.procedure_code}
+                                              value={prescription.recommendedProcedures[index].procedure_code}
                                               onChange={(e) => handleProcedureChange(index, e)}
                                               options={procedureOptions}
                                               placeholder="Search procedure..."
@@ -1973,37 +2301,48 @@ const handleMedicineChange = (index, e) => {
                                               name="procedure_code"
                                               loading={searchingProcedures}
                                               error={procedureErrors[index]}
-                                              onSearch={(searchTerm) => handleProcedureSearch(searchTerm, index)}
+                                              onSearch={(searchTerm) => {
+                                                if (searchTerm !== prescription.recommendedProcedures[index].procedure_code) {
+                                                  handleProcedureSearch(searchTerm, index);
+                                                }
+                                              }}
+                                              debounceDelay={800}
                                             />
                                           </div>
 
-                                          {/* Procedure Name (auto-filled) */}
+                                          {/* Procedure Name (auto-filled) - Using FormInput */}
                                           <div className="md:col-span-6">
-                                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide ml-1 mb-2">
-                                              Procedure Name
-                                            </label>
-                                            <input
-                                              type="text"
-                                              value={proc.procedure_name || ''}
-                                              readOnly
-                                              className="w-full border border-blue-300 rounded px-3 py-2 text-sm bg-blue-50 text-blue-700"
-                                              placeholder="Will auto-fill when code selected"
-                                            />
+                                            {/* Procedure Name (auto-filled) */}
+                                            <div className="mb-4 md:col-span-6">
+                                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                Procedure Name
+                                              </label>
+                                              <input
+                                                type="text"
+                                                value={proc.procedure_name || ''}
+                                                readOnly={true}
+                                                placeholder="Will auto-fill when code selected"
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
+                                              />
+                                            </div>
                                           </div>
 
-                                          {/* Notes */}
+                                          {/* Notes - Using FormTextarea */}
                                           <div className="md:col-span-12">
-                                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide ml-1 mb-2">
-                                              Notes
-                                            </label>
-                                            <textarea
-                                              name="notes"
-                                              value={proc.notes || ''}
-                                              onChange={(e) => handleProcedureChange(index, e)}
-                                              className="w-full border border-blue-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-blue-500 outline-none"
-                                              rows="2"
-                                              placeholder="Additional notes for this procedure..."
-                                            />
+                                            {/* Notes */}
+                                            <div className="mb-4 md:col-span-12">
+                                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                Notes
+                                              </label>
+                                              <textarea
+                                                name="notes"
+                                                value={proc.notes || ''}
+                                                onChange={(e) => handleProcedureChange(index, e)}
+                                                placeholder="Additional notes for this procedure..."
+                                                rows={2}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
+                                              />
+                                            </div>
                                           </div>
                                         </div>
                                       </div>

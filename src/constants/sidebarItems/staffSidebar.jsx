@@ -8,6 +8,7 @@ import {
   FaFileInvoiceDollar, // Billing
   FaSignOutAlt,     // Discharges
   FaUserCog,
+  FaProcedures,
 } from 'react-icons/fa';
 
 export const staffSidebar = [
@@ -33,6 +34,11 @@ export const staffSidebar = [
       { label: 'Add Patient', path: '/dashboard/staff/add-patient', icon: FaFileMedical },
       { label: 'Patient List', path: '/dashboard/staff/patient-list', icon: FaListAlt },
     ],
+  },
+  {
+    label: 'Procedures',
+    icon: FaProcedures,
+    path: '/dashboard/staff/procedure',
   },
   {
     label: 'Billing',

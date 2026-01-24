@@ -166,9 +166,7 @@ export const adminSidebar = [
   {
     label: 'Department',
     icon: DepartmentIcon,
-    // This path will handle the navigation on click
-    path: '/dashboard/admin/DepartmentList',
-    // This submenu will create the dropdown
+    path: '/dashboard/admin/add-department',
     submenu: [
       { label: 'Add Department', path: '/dashboard/admin/add-department' },
       { label: 'Add HOD', path: '/dashboard/admin/add-hod-main' },
