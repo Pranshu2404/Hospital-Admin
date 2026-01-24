@@ -206,6 +206,11 @@ const AddStaffForm = () => {
       { value: 'Graduate', label: 'Graduate in Any Stream' },
       { value: 'Computer Knowledge', label: 'Basic Computer Knowledge' }
     ],
+    Receptionist: [
+      { value: 'Diploma in Hospital Management', label: 'Diploma in Hospital Management' },
+      { value: 'Graduate', label: 'Graduate in Any Stream' },
+      { value: 'Computer Knowledge', label: 'Basic Computer Knowledge' }
+    ],
     'Ambulance Driver': [
       { value: 'Valid Driving License', label: 'Valid Driving License' },
       { value: 'First Aid Certification', label: 'First Aid Certification' }
@@ -408,12 +413,10 @@ const AddStaffForm = () => {
 
           {/* Qualification Details */}
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Qualification Details {qualificationOptionsByRole[formData.role] && <span className="text-red-500">*</span>}
-            </label>
             {qualificationOptionsByRole[formData.role] ? (
               <SearchableFormSelect
                 value={formData.qualificationDetails}
+                label="Qualification Details"
                 onChange={(e) => handleInputChange('qualificationDetails', e.target.value)}
                 options={qualificationOptionsByRole[formData.role]}
                 placeholder="Select qualification"
@@ -423,6 +426,7 @@ const AddStaffForm = () => {
               <FormTextarea
                 value={formData.qualificationDetails}
                 onChange={(e) => handleInputChange('qualificationDetails', e.target.value)}
+                label="Qualification Details"
                 placeholder="Enter qualifications, certifications, training details, etc."
                 rows={3}
               />
