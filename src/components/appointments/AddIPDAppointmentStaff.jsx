@@ -139,6 +139,8 @@ const isToday = (dateString) => {
 
 const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false, onClose = () => { }, onSuccess }) => {
   const navigate = useNavigate();
+  const formContainerRef = useRef(null); // Ref for scrolling to top
+  
   // Helper to get local YYYY-MM-DD date string (avoids timezone-shift issues)
   const getLocalDateString = () => {
     const t = new Date();
@@ -148,7 +150,8 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
     return `${yyyy}-${mm}-${dd}`;
   };
 
-  const [formData, setFormData] = useState({
+  // Initial form data
+  const initialFormData = {
     patientId: '',
     doctorId: fixedDoctorId || '',
     department: '',
@@ -161,9 +164,9 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
     notes: '',
     paymentMethod: 'Cash',
     roomId: ''
-  });
+  };
 
-  const [formData2, setFormData2] = useState({
+  const initialFormData2 = {
     salutation: '',
     firstName: '',
     lastName: '',
@@ -181,7 +184,10 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
     tehsil: '',
     patient_image: '',
     aadhaarNumber: ''
-  });
+  };
+
+  const [formData, setFormData] = useState(initialFormData);
+  const [formData2, setFormData2] = useState(initialFormData2);
 
   const hospitalId = localStorage.getItem('hospitalId');
 
@@ -202,7 +208,7 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
   const [doctorWorkingHours, setDoctorWorkingHours] = useState([]);
   const [autoAssignedTime, setAutoAssignedTime] = useState(null);
   const [showErrors, setShowErrors] = useState(false);
-  const [slipModal, setSlipModal] = useState(false); // CHANGED FROM true TO false
+  const [slipModal, setSlipModal] = useState(false);
   const [hospitalInfo, setHospitalInfo] = useState(null);
   const [submitDetails, setSubmitDetails] = useState(null);
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
@@ -227,6 +233,59 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
     headers: {
       "X-CSCAPI-KEY": import.meta.env.VITE_CSC_API_KEY,
     },
+  };
+
+  // Function to scroll to top
+  const scrollToTop = () => {
+    if (formContainerRef.current) {
+      formContainerRef.current.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'start' 
+      });
+    } else {
+      // Fallback to window scroll
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  // Function to reset form for next appointment
+  const resetFormForNextAppointment = () => {
+    setFormData({
+      ...initialFormData,
+      doctorId: fixedDoctorId || '',
+      date: getLocalDateString(),
+    });
+    setFormData2(initialFormData2);
+    setShowFields(false);
+    setIncludeRegistrationFee(true);
+    setStatus('Pending');
+    setTotalAmount(0);
+    setChargesSummary([]);
+    setShowErrors(false);
+    setAutoAssignedTime(null);
+    setAutoSwitchMessage('');
+    setNewPatientData(null);
+    
+    // Scroll to top after reset
+    setTimeout(() => {
+      scrollToTop();
+    }, 100);
+  };
+
+  // Function to reset after new patient added
+  const resetAfterNewPatient = () => {
+    setFormData(prev => ({
+      ...prev,
+      patientId: newPatientData?._id || ''
+    }));
+    setFormData2(initialFormData2);
+    setShowFields(false);
+    setNewPatientData(null);
+    
+    // Scroll to top
+    setTimeout(() => {
+      scrollToTop();
+    }, 100);
   };
 
   const handleImageUpload = async (e) => {
@@ -274,27 +333,27 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
   };
 
   // Add this helper function near the top (after other helper functions):
-const convertUTCTimeToLocalForDate = (utcTimeString, targetDateString) => {
-  if (!utcTimeString) return null;
-  
-  // Create a date object in UTC
-  const utcDate = new Date(utcTimeString);
-  
-  // Get the target date in local timezone
-  const targetDate = new Date(targetDateString + 'T00:00:00');
-  
-  // Combine target date with UTC time components
-  const localDate = new Date(
-    targetDate.getFullYear(),
-    targetDate.getMonth(),
-    targetDate.getDate(),
-    utcDate.getUTCHours(),
-    utcDate.getUTCMinutes(),
-    utcDate.getUTCSeconds()
-  );
-  
-  return localDate;
-};
+  const convertUTCTimeToLocalForDate = (utcTimeString, targetDateString) => {
+    if (!utcTimeString) return null;
+    
+    // Create a date object in UTC
+    const utcDate = new Date(utcTimeString);
+    
+    // Get the target date in local timezone
+    const targetDate = new Date(targetDateString + 'T00:00:00');
+    
+    // Combine target date with UTC time components
+    const localDate = new Date(
+      targetDate.getFullYear(),
+      targetDate.getMonth(),
+      targetDate.getDate(),
+      utcDate.getUTCHours(),
+      utcDate.getUTCMinutes(),
+      utcDate.getUTCSeconds()
+    );
+    
+    return localDate;
+  };
 
   // Fetch States on component mount
   useEffect(() => {
@@ -736,24 +795,24 @@ const convertUTCTimeToLocalForDate = (utcTimeString, targetDateString) => {
           }
 
           const hasConflict = sortedAppointments.some(appt => {
-  // Convert UTC appointment times to local time for the selected date
-  const apptStartLocal = convertUTCTimeToLocalForDate(appt.startTime, formData.date);
-  const apptEndLocal = convertUTCTimeToLocalForDate(appt.endTime, formData.date);
-  
-  if (!apptStartLocal || !apptEndLocal) return false;
-  
-  // Create local time for proposed appointment
-  const newStart = new Date(today);
-  newStart.setHours(currentTime.getHours(), currentTime.getMinutes());
-  const newEnd = new Date(today);
-  newEnd.setHours(proposedEndH, proposedEndM);
+            // Convert UTC appointment times to local time for the selected date
+            const apptStartLocal = convertUTCTimeToLocalForDate(appt.startTime, formData.date);
+            const apptEndLocal = convertUTCTimeToLocalForDate(appt.endTime, formData.date);
+            
+            if (!apptStartLocal || !apptEndLocal) return false;
+            
+            // Create local time for proposed appointment
+            const newStart = new Date(today);
+            newStart.setHours(currentTime.getHours(), currentTime.getMinutes());
+            const newEnd = new Date(today);
+            newEnd.setHours(proposedEndH, proposedEndM);
 
-  return (
-    (newStart >= apptStartLocal && newStart < apptEndLocal) ||
-    (newEnd > apptStartLocal && newEnd <= apptEndLocal) ||
-    (newStart <= apptStartLocal && newEnd >= apptEndLocal)
-  );
-});
+            return (
+              (newStart >= apptStartLocal && newStart < apptEndLocal) ||
+              (newEnd > apptStartLocal && newEnd <= apptEndLocal) ||
+              (newStart <= apptStartLocal && newEnd >= apptEndLocal)
+            );
+          });
 
           if (!hasConflict) {
             proposedTime = proposedStart;
@@ -966,42 +1025,42 @@ const convertUTCTimeToLocalForDate = (utcTimeString, targetDateString) => {
   const displayEndTime = formData.start_time ? calculateEndTime(formData.start_time, formData.duration) : null;
   const isFormValid = Object.keys(errors).length === 0;
 
- const checkTimeSlotAvailability = (proposedStart, proposedEnd) => {
-  if (!proposedStart || !proposedEnd) return false;
+  const checkTimeSlotAvailability = (proposedStart, proposedEnd) => {
+    if (!proposedStart || !proposedEnd) return false;
 
-  const [startH, startM] = proposedStart.split(':').map(Number);
-  const [endH, endM] = proposedEnd.split(':').map(Number);
-  const proposedStartMin = startH * 60 + startM;
-  const proposedEndMin = endH * 60 + endM;
+    const [startH, startM] = proposedStart.split(':').map(Number);
+    const [endH, endM] = proposedEnd.split(':').map(Number);
+    const proposedStartMin = startH * 60 + startM;
+    const proposedEndMin = endH * 60 + endM;
 
-  for (const appt of existingAppointments) {
-    if (!appt.startTime || !appt.endTime) continue;
+    for (const appt of existingAppointments) {
+      if (!appt.startTime || !appt.endTime) continue;
 
-    // Convert UTC appointment times to local time for comparison
-    const apptStartLocal = convertUTCTimeToLocalForDate(appt.startTime, formData.date);
-    const apptEndLocal = convertUTCTimeToLocalForDate(appt.endTime, formData.date);
-    
-    if (!apptStartLocal || !apptEndLocal) continue;
-    
-    const apptStartHour = apptStartLocal.getHours();
-    const apptStartMinute = apptStartLocal.getMinutes();
-    const apptEndHour = apptEndLocal.getHours();
-    const apptEndMinute = apptEndLocal.getMinutes();
-    
-    const apptStartMin = apptStartHour * 60 + apptStartMinute;
-    const apptEndMin = apptEndHour * 60 + apptEndMinute;
+      // Convert UTC appointment times to local time for comparison
+      const apptStartLocal = convertUTCTimeToLocalForDate(appt.startTime, formData.date);
+      const apptEndLocal = convertUTCTimeToLocalForDate(appt.endTime, formData.date);
+      
+      if (!apptStartLocal || !apptEndLocal) continue;
+      
+      const apptStartHour = apptStartLocal.getHours();
+      const apptStartMinute = apptStartLocal.getMinutes();
+      const apptEndHour = apptEndLocal.getHours();
+      const apptEndMinute = apptEndLocal.getMinutes();
+      
+      const apptStartMin = apptStartHour * 60 + apptStartMinute;
+      const apptEndMin = apptEndHour * 60 + apptEndMinute;
 
-    if (
-      (proposedStartMin >= apptStartMin && proposedStartMin < apptEndMin) ||
-      (proposedEndMin > apptStartMin && proposedEndMin <= apptEndMin) ||
-      (proposedStartMin <= apptStartMin && proposedEndMin >= apptEndMin)
-    ) {
-      return false;
+      if (
+        (proposedStartMin >= apptStartMin && proposedStartMin < apptEndMin) ||
+        (proposedEndMin > apptStartMin && proposedEndMin <= apptEndMin) ||
+        (proposedStartMin <= apptStartMin && proposedEndMin >= apptEndMin)
+      ) {
+        return false;
+      }
     }
-  }
 
-  return true;
-};
+    return true;
+  };
 
   const stopPolling = () => {
     if (pollingIntervalId) {
@@ -1132,6 +1191,11 @@ const convertUTCTimeToLocalForDate = (utcTimeString, targetDateString) => {
       setShowSuccessModal(true);
       setShowFields(false);
 
+      // Scroll to top after patient added
+      setTimeout(() => {
+        scrollToTop();
+      }, 300);
+
     } catch (err) {
       console.error('Error adding patient:', err);
       alert(err.response?.data?.error || 'Failed to add patient.');
@@ -1145,25 +1209,7 @@ const convertUTCTimeToLocalForDate = (utcTimeString, targetDateString) => {
       setNewPatientData(null);
 
       // Reset patient form
-      setFormData2({
-        salutation: '',
-        firstName: '',
-        lastName: '',
-        email: '',
-        phone: '',
-        gender: '',
-        bloodGroup: '',
-        age: '',
-        address: '',
-        city: '',
-        state: '',
-        zipCode: '',
-        village: '',
-        district: '',
-        tehsil: '',
-        patient_image: '',
-        aadhaarNumber: ''
-      });
+      resetAfterNewPatient();
     }
   };
 
@@ -1216,24 +1262,24 @@ const convertUTCTimeToLocalForDate = (utcTimeString, targetDateString) => {
       };
 
       if (formData.type === 'time-based') {
-  // Store times as UTC without timezone conversion
-  // If user selects 9 PM, store as 21:00 UTC
-  appointmentData.start_time = `${formData.date}T${formData.start_time}:00+00:00`;
-  
-  // Calculate end time in 24-hour format
-  const [hours, minutes] = formData.start_time.split(':').map(Number);
-  const totalMinutes = hours * 60 + minutes + parseInt(formData.duration);
-  const endHours = Math.floor(totalMinutes / 60) % 24;
-  const endMinutes = totalMinutes % 60;
-  const endTimeFormatted = `${String(endHours).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')}`;
-  
-  appointmentData.end_time = `${formData.date}T${endTimeFormatted}:00+00:00`;
-  
-  console.log('Storing times as UTC:', {
-    start: appointmentData.start_time,
-    end: appointmentData.end_time
-  });
-}else {
+        // Store times as UTC without timezone conversion
+        // If user selects 9 PM, store as 21:00 UTC
+        appointmentData.start_time = `${formData.date}T${formData.start_time}:00+00:00`;
+        
+        // Calculate end time in 24-hour format
+        const [hours, minutes] = formData.start_time.split(':').map(Number);
+        const totalMinutes = hours * 60 + minutes + parseInt(formData.duration);
+        const endHours = Math.floor(totalMinutes / 60) % 24;
+        const endMinutes = totalMinutes % 60;
+        const endTimeFormatted = `${String(endHours).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')}`;
+        
+        appointmentData.end_time = `${formData.date}T${endTimeFormatted}:00+00:00`;
+        
+        console.log('Storing times as UTC:', {
+          start: appointmentData.start_time,
+          end: appointmentData.end_time
+        });
+      } else {
         const lastSerial = existingPatients.length > 0
           ? Math.max(...existingPatients.map(p => p.serialNumber))
           : 0;
@@ -1284,6 +1330,9 @@ const convertUTCTimeToLocalForDate = (utcTimeString, targetDateString) => {
       setTimeout(() => {
         setShowSuccessModal(false);
         setSlipModal(true); // Show slip modal
+        
+        // Reset form for next appointment
+        resetFormForNextAppointment();
       }, 2000);
 
     } catch (err) {
@@ -1310,46 +1359,47 @@ const convertUTCTimeToLocalForDate = (utcTimeString, targetDateString) => {
   return (
     <>
       <style>{`
+        .fixed-calendar {
+          position: fixed;
+          top: 50%;
+          right: 20px;
+          transform: translateY(-50%);
+          width: 350px;
+          max-height: 80vh;
+          overflow-y: auto;
+          z-index: 40;
+          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+          border-radius: 12px;
+        }
+        
+        @media (max-width: 1200px) {
           .fixed-calendar {
-            position: fixed;
-            top: 50%;
-            right: 20px;
-            transform: translateY(-50%);
-            width: 350px;
-            max-height: 80vh;
-            overflow-y: auto;
-            z-index: 40;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-            border-radius: 12px;
+            position: relative;
+            top: auto;
+            right: auto;
+            transform: none;
+            width: 100%;
+            margin-top: 20px;
           }
-          
-          @media (max-width: 1200px) {
-            .fixed-calendar {
-              position: relative;
-              top: auto;
-              right: auto;
-              transform: none;
-              width: 100%;
-              margin-top: 20px;
-            }
-          }
-          
-          .patient-added-popup {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: white;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
-            z-index: 100;
-            max-width: 500px;
-            width: 90%;
-          }
-        `}</style>
+        }
+        
+        .patient-added-popup {
+          position: fixed;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          background: white;
+          padding: 30px;
+          border-radius: 12px;
+          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+          z-index: 100;
+          max-width: 500px;
+          width: 90%;
+        }
+      `}</style>
 
-      <div className="min-h-screen">
+      {/* Add ref for scrolling */}
+      <div ref={formContainerRef} className="min-h-screen">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
           <div className="flex flex-col md:flex-row md:items-center items-center w-full justify-between mb-8">
@@ -1381,7 +1431,10 @@ const convertUTCTimeToLocalForDate = (utcTimeString, targetDateString) => {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => setShowFields(false)}
+                          onClick={() => {
+                            setShowFields(false);
+                            scrollToTop();
+                          }}
                           className="flex items-center"
                         >
                           <FaArrowLeft className="mr-2" />
@@ -1391,7 +1444,10 @@ const convertUTCTimeToLocalForDate = (utcTimeString, targetDateString) => {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => setShowFields(true)}
+                          onClick={() => {
+                            setShowFields(true);
+                            scrollToTop();
+                          }}
                           className="flex items-center"
                         >
                           <FaUserPlus className="mr-2" />
@@ -1861,7 +1917,10 @@ const convertUTCTimeToLocalForDate = (utcTimeString, targetDateString) => {
                           <Button
                             variant="secondary"
                             type="button"
-                            onClick={() => setShowFields(false)}
+                            onClick={() => {
+                              setShowFields(false);
+                              scrollToTop();
+                            }}
                           >
                             Cancel
                           </Button>
@@ -1940,34 +1999,34 @@ const convertUTCTimeToLocalForDate = (utcTimeString, targetDateString) => {
                           <h4 className="font-medium text-gray-900 mb-2">Booked Appointments</h4>
                           <div className="space-y-2 max-h-60 overflow-y-auto">
                             {existingAppointments.map((appt, index) => {
-  // Convert UTC times to local time for display
-  const startTimeLocal = convertUTCTimeToLocalForDate(appt.startTime, formData.date);
-  const endTimeLocal = convertUTCTimeToLocalForDate(appt.endTime, formData.date);
-  
-  const startTime = startTimeLocal ? startTimeLocal.toLocaleTimeString([], {
-    hour: '2-digit', minute: '2-digit'
-  }) : 'N/A';
-  
-  const endTime = endTimeLocal ? endTimeLocal.toLocaleTimeString([], {
-    hour: '2-digit', minute: '2-digit'
-  }) : 'N/A';
+                              // Convert UTC times to local time for display
+                              const startTimeLocal = convertUTCTimeToLocalForDate(appt.startTime, formData.date);
+                              const endTimeLocal = convertUTCTimeToLocalForDate(appt.endTime, formData.date);
+                              
+                              const startTime = startTimeLocal ? startTimeLocal.toLocaleTimeString([], {
+                                hour: '2-digit', minute: '2-digit'
+                              }) : 'N/A';
+                              
+                              const endTime = endTimeLocal ? endTimeLocal.toLocaleTimeString([], {
+                                hour: '2-digit', minute: '2-digit'
+                              }) : 'N/A';
 
-  return (
-    <div key={index} className="bg-white border border-gray-100 p-3 rounded-lg shadow-sm">
-      <div className="flex justify-between items-center">
-        <span className="font-medium text-sm">
-          {startTime} - {endTime}
-        </span>
-        <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
-          {appt.duration} min
-        </span>
-      </div>
-      <div className="text-xs text-gray-500 mt-1 truncate">
-        {appt.patient?.first_name} {appt.patient?.last_name}
-      </div>
-    </div>
-  );
-})}
+                              return (
+                                <div key={index} className="bg-white border border-gray-100 p-3 rounded-lg shadow-sm">
+                                  <div className="flex justify-between items-center">
+                                    <span className="font-medium text-sm">
+                                      {startTime} - {endTime}
+                                    </span>
+                                    <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
+                                      {appt.duration} min
+                                    </span>
+                                  </div>
+                                  <div className="text-xs text-gray-500 mt-1 truncate">
+                                    {appt.patient?.first_name} {appt.patient?.last_name}
+                                  </div>
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
                       )}
@@ -2023,10 +2082,6 @@ const convertUTCTimeToLocalForDate = (utcTimeString, targetDateString) => {
           isOpen={showSuccessModal}
           onClose={() => {
             setShowSuccessModal(false);
-            // Optionally show slip modal here if user wants to see it immediately
-            // if (!newPatientData) {
-            //   setSlipModal(true);
-            // }
           }}
           message={successMessage}
           patientName={newPatientData ?
@@ -2049,7 +2104,7 @@ const convertUTCTimeToLocalForDate = (utcTimeString, targetDateString) => {
         />
       )}
 
-      {/* Appointment Slip Modal - This will now render independently via React Portal */}
+      {/* Appointment Slip Modal */}
       {slipModal && submitDetails && (
         <AppointmentSlipModal
           isOpen={slipModal}

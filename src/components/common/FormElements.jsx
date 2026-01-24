@@ -151,7 +151,7 @@ export const SearchableFormSelect = ({
 
   return (
     <div className={`mb-4 ${className} relative`} ref={wrapperRef}>
-      <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide ml-1">
+      <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide ml-1 mb-2">
         {label} {required && <span className="text-red-500">*</span>}
       </label>
 

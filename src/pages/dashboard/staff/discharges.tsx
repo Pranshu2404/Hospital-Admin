@@ -89,7 +89,7 @@ function Discharges() {
   );
 
   return (
-    <Layout sidebarItems={staffSidebar} section="Staff">
+    <Layout sidebarItems={staffSidebar} section="Staff" resetProgress={() =>{}}>
       <div className="bg-slate-50 min-h-screen p-6">
         {/* Header */}
         <div className="mb-8">

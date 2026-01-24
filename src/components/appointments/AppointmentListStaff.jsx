@@ -322,6 +322,7 @@ const AppointmentListStaff = () => {
                           >
                             <Eye size={20} />
                           </button>
+                          {appointment.status === "Completed" &&
                           <button
                             onClick={(e) => handleCompleteClick(appointment, e)}
                             className={`p-2 rounded-lg transition-colors ${appointment.status === 'Completed'
@@ -332,6 +333,7 @@ const AppointmentListStaff = () => {
                           >
                             <CheckCircle size={20} />
                           </button>
+                          }
                           {/* <button className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Edit">
                             <Edit2 size={16} />
                           </button>

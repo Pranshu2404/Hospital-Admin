@@ -376,7 +376,7 @@ const DoctorDashboard = () => {
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <StatCard title="My Patients" value={stats.patients} icon={FaUsers} color="indigo" />
-        <StatCard title="Consultations" value={stats.consultations} icon={FaUserInjured} color="blue" />
+        <StatCard title="Today's Completed Consultations" value={stats.consultations} icon={FaUserInjured} color="blue" />
         <StatCard title="Procedures" value={stats.procedures} icon={FaTooth} color="rose" />
         <StatCard title="Today's Visits" value={stats.todayAppointments} icon={FaClock} color="teal" />
       </div>

@@ -329,7 +329,7 @@ const DoctorAppointments = () => {
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Date & Time</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Type</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -392,8 +392,8 @@ const DoctorAppointments = () => {
                         <td className="px-6 py-4 whitespace-nowrap">
                           <StatusBadge status={appt.status} />
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <div className="flex items-center justify-end space-x-3 opacity-80 group-hover:opacity-100 transition-opacity">
+                        <td className="px-6 py-4 whitespace-nowrap text-left text-sm font-medium">
+                          <div className="flex items-center space-x-3 opacity-80 group-hover:opacity-100 transition-opacity">
                             {isScheduled && (
                               <button
                                 onClick={() => handleStartAppointment(appt)}
@@ -408,13 +408,6 @@ const DoctorAppointments = () => {
                                 {vitalsEnabled && !hasVitalsData ? 'NEEDS VITALS' : 'START'}
                               </button>
                             )}
-                            <button
-                              onClick={() => handleViewDetails(appt)}
-                              className="p-2 text-gray-400 hover:text-teal-600 hover:bg-teal-50 rounded-full transition-all"
-                              title="View Details"
-                            >
-                              <FaEye />
-                            </button>
                           </div>
                         </td>
                       </tr>

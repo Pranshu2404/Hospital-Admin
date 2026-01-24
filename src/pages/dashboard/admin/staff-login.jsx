@@ -88,7 +88,6 @@ const StaffLoginPage = () => {
             setDetails({ email: '', department: '', name: '', phone: '' });
             return;
         }
-
         const person = list.find(item => item._id === selectedId);
         if (person) {
             let name = person.name || person.fullName || person.full_name;
