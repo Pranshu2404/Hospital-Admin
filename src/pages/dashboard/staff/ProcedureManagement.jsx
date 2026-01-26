@@ -371,7 +371,7 @@ function ProcedureManagement() {
           discount: 0,
           tax_amount: 0,
           payment_method: completeProcedureData.payment_method,
-          status: 'Generated',
+          status: 'Paid',
           notes: `Bill for procedure ${selectedProcedure.procedure_name}. ${completeProcedureData.notes}`
         });
 

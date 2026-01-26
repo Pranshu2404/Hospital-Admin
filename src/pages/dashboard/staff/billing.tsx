@@ -86,8 +86,8 @@ function Billing() {
       try {
         setLoading(true);
         const res = await apiClient.get('/billing');
-        // Sort by latest date first
-        const sortedData = res.data.sort((a, b) => new Date(b.generated_at).getTime() - new Date(a.generated_at).getTime());
+        console.log(res.data.bills)
+        const sortedData = res.data.bills.sort((a, b) => new Date(b.generated_at).getTime() - new Date(a.generated_at).getTime());
         setInvoices(sortedData);
         calculateStats(sortedData);
       } catch (err) {
