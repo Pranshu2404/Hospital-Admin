@@ -27,7 +27,7 @@ const SearchableFormSelect = ({
   type = "text",
   error = false,
   onSearch,
-  debounceDelay = 2000, 
+  debounceDelay = 2000,
   allowCustom = true,
   freeSolo = false,
   minSearchChars = 0, // Minimum characters before API call
@@ -115,7 +115,7 @@ const SearchableFormSelect = ({
 
       searchCacheRef.current.set(searchTerm, 'pending');
 
-      const rapidTypingDelay = Math.max(debounceDelay, 2000); 
+      const rapidTypingDelay = Math.max(debounceDelay, 2000);
 
       searchTimeoutRef.current = setTimeout(() => {
         onSearch(searchTerm);
@@ -123,7 +123,6 @@ const SearchableFormSelect = ({
     }
     // Clear results when input is empty AND focused
     else if (isFocused && searchTerm.length === 0) {
-      // Optional: Clear remote search results
       onSearch('');
     }
 
@@ -184,10 +183,10 @@ const SearchableFormSelect = ({
     setIsOpen(false);
     setActiveIndex(0);
     emitChange('', null);
-    
+
     // Clear cache for this field if needed
     // searchCacheRef.current.clear();
-    
+
     setTimeout(() => inputRef.current?.focus(), 0);
   };
 
@@ -238,7 +237,7 @@ const SearchableFormSelect = ({
         if (allowCustom && freeSolo && searchTerm.trim() && !hasExactMatch) {
           emitChange(searchTerm.trim(), null);
           setIsOpen(false);
-          
+
           // Cache the custom entry
           const customOption = {
             label: searchTerm.trim(),
@@ -246,7 +245,7 @@ const SearchableFormSelect = ({
             isCustom: true
           };
           searchCacheRef.current.set(searchTerm.trim(), [customOption]);
-          
+
           return;
         }
         break;
@@ -313,9 +312,8 @@ const SearchableFormSelect = ({
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
             disabled={disabled}
-            className={`block w-full px-4 py-3 bg-gray-50 border ${
-              error ? 'border-red-300' : 'border-gray-200'
-            } text-gray-900 text-sm rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all pl-10 pr-20`}
+            className={`block w-full px-2 py-3 bg-gray-50 border ${error ? 'border-red-300' : 'border-gray-200'
+              } text-gray-900 text-sm rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all pl-10 pr-10`}
             autoComplete="off"
             spellCheck="false"
           />
@@ -350,9 +348,8 @@ const SearchableFormSelect = ({
                   onMouseDown={(e) => e.preventDefault()} // prevent blur before click
                   onClick={() => handleSelect(opt)}
                   onMouseEnter={() => setActiveIndex(index)}
-                  className={`px-4 py-2 text-sm cursor-pointer transition-colors border-b border-gray-50 last:border-0 ${
-                    index === activeIndex ? 'bg-emerald-50 text-emerald-900 font-semibold' : 'text-gray-700'
-                  } ${opt.value === value ? 'bg-emerald-100/50 text-emerald-700' : ''}`}
+                  className={`px-4 py-2 text-sm cursor-pointer transition-colors border-b border-gray-50 last:border-0 ${index === activeIndex ? 'bg-emerald-50 text-emerald-900 font-semibold' : 'text-gray-700'
+                    } ${opt.value === value ? 'bg-emerald-100/50 text-emerald-700' : ''}`}
                 >
                   <div className="flex-1">
                     <div className="font-medium">
@@ -833,6 +830,9 @@ const AppointmentDetails = () => {
         item.dosage = '';
         item.route_of_administration = '';
         item.instructions = '';
+        item.frequency = '';
+        item.quantity = '';
+        item.duration = '';
         // keep frequency/duration; quantity depends on them
         newItems[index] = item;
         setPrescription(prev => ({ ...prev, items: newItems }));
@@ -1332,7 +1332,7 @@ const AppointmentDetails = () => {
               <span className="ml-2 text-slate-500">Loading history...</span>
             </div>
           ) : (
-                        <>
+            <>
               {activeTab === 'summary' && (
                 <div className="space-y-4">
                   <div className="mb-6">
@@ -1940,375 +1940,375 @@ const AppointmentDetails = () => {
                       </div>
                     ) : (
                       <>
-                  {!showPrescriptionForm ? (
-                    <div className="flex flex-col items-center justify-center h-full min-h-[400px] text-center p-8">
-                      <div className="h-24 w-24 bg-slate-50 rounded-full flex items-center justify-center mb-6 border border-slate-100">
-                        <FaNotesMedical className="text-4xl text-slate-300" />
-                      </div>
-                      <h3 className="text-xl font-semibold text-slate-800 mb-2">Start Consultation</h3>
-                      <p className="text-slate-500 max-w-sm mb-8">Begin the diagnosis process to prescribe medication and complete this appointment.</p>
-                      <button
-                        onClick={() => setShowPrescriptionForm(true)}
-                        className="bg-teal-600 hover:bg-teal-700 text-white font-medium py-3 px-8 rounded-lg shadow-lg shadow-teal-600/20 transition-all transform hover:-translate-y-1"
-                      >
-                        Create Prescription
-                      </button>
-                    </div>
-                  ) : (
-                    <form onSubmit={handleSubmitPrescription} className="flex flex-col h-full">
-                      <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                        <h3 className="font-bold text-slate-800 flex items-center">
-                          <FaFilePrescription className="mr-2 text-teal-600" /> New Prescription
-                        </h3>
-                      </div>
-
-                      <div className="p-6 space-y-6 flex-grow">
-                        <div className="mb-4">
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Clinical Notes
-                          </label>
-                          <textarea
-                            name="notes"
-                            value={prescription.notes}
-                            onChange={handleInputChange}
-                            placeholder="Any additional observations..."
-                            rows={3}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
-                          />
-                        </div>
-
-                        <div className="mb-4">
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Diagnosis / Provisional Diagnosis <span className="text-red-500">*</span>
-                          </label>
-                          <input
-                            type="text"
-                            name="diagnosis"
-                            value={prescription.diagnosis}
-                            onChange={handleInputChange}
-                            placeholder="e.g. Acute Viral Fever"
-                            required={true}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
-                          />
-                        </div>
-
-                        <div className="mb-4">
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Investigation (Lab tests / Reports)
-                          </label>
-                          <textarea
-                            name="investigation"
-                            value={prescription.investigation}
-                            onChange={handleInputChange}
-                            placeholder="Write any lab tests or report requests here..."
-                            rows={2}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
-                          />
-                        </div>
-
-                        {/* Medicines Section */}
-                        <div>
-                          <div className="flex justify-between items-center mb-4">
-                            <label className="text-sm font-semibold text-slate-700">Prescribed Medicines</label>
-                            <button
-                              type="button"
-                              onClick={addMedicine}
-                              className="text-teal-600 text-sm font-semibold hover:text-teal-700 flex items-center"
-                            >
-                              <FaPlus className="mr-1" /> Add Medicine
-                            </button>
-                          </div>
-
-                          <div className="space-y-4">
-                            {prescription.items.map((item, index) => (
-                              <div key={index} className="bg-slate-50 rounded-lg border border-slate-200 p-4 transition-all hover:shadow-md hover:border-teal-200 group">
-                                <div className="flex justify-between items-start mb-3">
-                                  <h4 className="text-xs font-bold text-slate-400 uppercase">Medicine #{index + 1}</h4>
-                                  {prescription.items.length > 1 && (
-                                    <button onClick={() => removeMedicine(index)} className="text-slate-400 hover:text-red-500 transition-colors">
-                                      <FaTrash size={14} />
-                                    </button>
-                                  )}
-                                </div>
-
-                                <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-                                  <div className="md:col-span-3">
-                                    <SearchableFormSelect
-                                      label="Medicine Type"
-                                      value={item.medicine_type || ''}
-                                      onChange={(e) => handleMedicineChange(index, e)}
-                                      options={medicineTypeOptions}
-                                      placeholder="Select type"
-                                      name="medicine_type"
-                                      allowCustom={false}
-                                      freeSolo={false}
-                                    />
-                                  </div>
-
-                                  <div className="md:col-span-6">
-                                    <SearchableFormSelect
-  label="Medicine Name"
-  value={item.medicine_name}
-  onChange={(e) => handleMedicineChange(index, e)}
-  options={medicineOptions}
-  placeholder="Search medicine..."
-  required
-  type="medicine"
-  name="medicine_name"
-  loading={searchingMedicines}
-  error={medicineErrors[index]}
-  onSearch={fetchMedicines}  // Will be called immediately on typing
-  debounceDelay={1000}  // Optional: can remove or set to 0
-  minSearchChars={0} // Wait for 2 characters before API call
-  allowCustom={true}
-  freeSolo={true}
-/>
-                                  </div>
-
-                                  <div className="md:col-span-3">
-                                    <div className="mb-4 md:col-span-3">
-                                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Dosage <span className="text-red-500">*</span>
-                                      </label>
-                                      <input
-                                        type="text"
-                                        name="dosage"
-                                        value={item.dosage}
-                                        onChange={(e) => handleMedicineChange(index, e)}
-                                        placeholder="500mg"
-                                        required={true}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
-                                      />
-                                    </div>
-                                  </div>
-
-                                  <div className="md:col-span-3">
-                                    <SearchableFormSelect
-                                      label="Route"
-                                      value={item.route_of_administration || ""}
-                                      onChange={(e) => handleMedicineChange(index, e)}
-                                      options={routeOptions}
-                                      placeholder="Select route"
-                                      name="route_of_administration"
-                                      allowCustom={false}
-                                      freeSolo={false}
-                                    />
-                                  </div>
-
-                                  <div className="md:col-span-3">
-                                    <SearchableFormSelect
-                                      label="Frequency"
-                                      value={item.frequency}
-                                      onChange={(e) => handleMedicineChange(index, e)}
-                                      options={frequencyOptions}
-                                      placeholder="Select frequency"
-                                      name="frequency"
-                                      required={true}
-                                      allowCustom={false}
-                                      freeSolo={false}
-                                    />
-                                  </div>
-
-                                  <div className="md:col-span-3">
-                                    <SearchableFormSelect
-                                      label="Duration"
-                                      value={item.duration}
-                                      onChange={(e) => handleMedicineChange(index, e)}
-                                      options={durationOptions}
-                                      placeholder="Select duration"
-                                      name="duration"
-                                      required={true}
-                                      allowCustom={false}
-                                      freeSolo={false}
-                                    />
-                                  </div>
-
-                                  <div className="md:col-span-3">
-                                    <div className="mb-4 md:col-span-3">
-                                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Quantity
-                                      </label>
-                                      <input
-                                        type="text"
-                                        name="quantity"
-                                        value={item.quantity}
-                                        onChange={(e) => handleMedicineChange(index, e)}
-                                        placeholder="Auto-calculated"
-                                        readOnly={true}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
-                                      />
-                                    </div>
-                                  </div>
-
-                                  <div className="md:col-span-12">
-                                    <div className="mb-4 md:col-span-12">
-                                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Special Instructions
-                                      </label>
-                                      <input
-                                        type="text"
-                                        name="instructions"
-                                        value={item.instructions}
-                                        onChange={(e) => handleMedicineChange(index, e)}
-                                        placeholder="e.g. After food with water"
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
-                                      />
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-
-                        {/* Procedures Section */}
-                        <div>
-                          <div className="flex justify-between items-center mb-4">
-                            <label className="text-sm font-semibold text-slate-700">Recommended Procedures</label>
-                            <button
-                              type="button"
-                              onClick={addProcedure}
-                              className="text-teal-600 text-sm font-semibold hover:text-teal-700 flex items-center"
-                            >
-                              <FaPlus className="mr-1" /> Add Procedure
-                            </button>
-                          </div>
-
-                          {prescription.recommendedProcedures.length > 0 && (
-                            <div className="space-y-4 mb-4">
-                              {prescription.recommendedProcedures.map((proc, index) => (
-                                <div key={index} className="bg-blue-50 rounded-lg border border-blue-200 p-4">
-                                  <div className="flex justify-between items-start mb-3">
-                                    <h4 className="text-xs font-bold text-blue-400 uppercase">Procedure #{index + 1}</h4>
-                                    <button onClick={() => removeProcedure(index)} className="text-blue-400 hover:text-red-500 transition-colors">
-                                      <FaTrash size={14} />
-                                    </button>
-                                  </div>
-
-                                  <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-                                    <div className="md:col-span-6">
-                                      <SearchableFormSelect
-  label="Procedure Code"
-  value={proc.procedure_code}
-  onChange={(e) => handleProcedureChange(index, e)}
-  options={procedureOptions}
-  placeholder="Search procedure..."
-  type="procedure"
-  name="procedure_code"
-  loading={searchingProcedures}
-  error={procedureErrors[index]}
-  onSearch={fetchProcedures}
-  debounceDelay={1000}
-  minSearchChars={0}
-  allowCustom={true}
-  freeSolo={true}
-/>
-                                    </div>
-
-                                    <div className="md:col-span-6">
-                                      <div className="mb-4 md:col-span-6">
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                                          Procedure Name
-                                        </label>
-                                        <input
-                                          type="text"
-                                          value={proc.procedure_name || ''}
-                                          readOnly={true}
-                                          placeholder="Will auto-fill when code selected"
-                                          className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
-                                        />
-                                      </div>
-                                    </div>
-
-                                    <div className="md:col-span-12">
-                                      <div className="mb-4 md:col-span-12">
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                                          Notes
-                                        </label>
-                                        <textarea
-                                          name="notes"
-                                          value={proc.notes || ''}
-                                          onChange={(e) => handleProcedureChange(index, e)}
-                                          placeholder="Additional notes for this procedure..."
-                                          rows={2}
-                                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
-                                        />
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                              ))}
+                        {!showPrescriptionForm ? (
+                          <div className="flex flex-col items-center justify-center h-full min-h-[400px] text-center p-8">
+                            <div className="h-24 w-24 bg-slate-50 rounded-full flex items-center justify-center mb-6 border border-slate-100">
+                              <FaNotesMedical className="text-4xl text-slate-300" />
                             </div>
-                          )}
-                        </div>
+                            <h3 className="text-xl font-semibold text-slate-800 mb-2">Start Consultation</h3>
+                            <p className="text-slate-500 max-w-sm mb-8">Begin the diagnosis process to prescribe medication and complete this appointment.</p>
+                            <button
+                              onClick={() => setShowPrescriptionForm(true)}
+                              className="bg-teal-600 hover:bg-teal-700 text-white font-medium py-3 px-8 rounded-lg shadow-lg shadow-teal-600/20 transition-all transform hover:-translate-y-1"
+                            >
+                              Create Prescription
+                            </button>
+                          </div>
+                        ) : (
+                          <form onSubmit={handleSubmitPrescription} className="flex flex-col h-full">
+                            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                              <h3 className="font-bold text-slate-800 flex items-center">
+                                <FaFilePrescription className="mr-2 text-teal-600" /> New Prescription
+                              </h3>
+                            </div>
 
-                        {/* Image Upload Section (unchanged) */}
-                        <div className="bg-slate-50 rounded-lg border-2 border-dashed border-slate-300 p-6 text-center hover:bg-slate-100 transition-colors">
-                          {!prescription.prescriptionImage ? (
-                            <div className="relative">
-                              <input
-                                type="file"
-                                accept="image/*"
-                                onChange={handleImageUpload}
-                                disabled={uploadingImage}
-                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                              />
-                              <div className="flex flex-col items-center">
-                                {uploadingImage ? (
-                                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600 mb-2"></div>
-                                ) : (
-                                  <FaCloudUploadAlt className="text-3xl text-slate-400 mb-2" />
+                            <div className="p-6 space-y-6 flex-grow">
+                              <div className="mb-4">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                  Clinical Notes
+                                </label>
+                                <textarea
+                                  name="notes"
+                                  value={prescription.notes}
+                                  onChange={handleInputChange}
+                                  placeholder="Any additional observations..."
+                                  rows={3}
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
+                                />
+                              </div>
+
+                              <div className="mb-4">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                  Diagnosis / Provisional Diagnosis <span className="text-red-500">*</span>
+                                </label>
+                                <input
+                                  type="text"
+                                  name="diagnosis"
+                                  value={prescription.diagnosis}
+                                  onChange={handleInputChange}
+                                  placeholder="e.g. Acute Viral Fever"
+                                  required={true}
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
+                                />
+                              </div>
+
+                              <div className="mb-4">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                  Investigation (Lab tests / Reports)
+                                </label>
+                                <textarea
+                                  name="investigation"
+                                  value={prescription.investigation}
+                                  onChange={handleInputChange}
+                                  placeholder="Write any lab tests or report requests here..."
+                                  rows={2}
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
+                                />
+                              </div>
+
+                              {/* Procedures Section */}
+                              <div>
+                                <div className="flex justify-between items-center mb-4">
+                                  <label className="text-sm font-semibold text-slate-700">Recommended Procedures</label>
+                                  <button
+                                    type="button"
+                                    onClick={addProcedure}
+                                    className="text-teal-600 text-sm font-semibold hover:text-teal-700 flex items-center"
+                                  >
+                                    <FaPlus className="mr-1" /> Add Procedure
+                                  </button>
+                                </div>
+
+                                {prescription.recommendedProcedures.length > 0 && (
+                                  <div className="space-y-4 mb-4">
+                                    {prescription.recommendedProcedures.map((proc, index) => (
+                                      <div key={index} className="bg-blue-50 rounded-lg border border-blue-200 p-4">
+                                        <div className="flex justify-between items-start mb-3">
+                                          <h4 className="text-xs font-bold text-blue-400 uppercase">Procedure #{index + 1}</h4>
+                                          <button onClick={() => removeProcedure(index)} className="text-blue-400 hover:text-red-500 transition-colors">
+                                            <FaTrash size={14} />
+                                          </button>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+                                          <div className="md:col-span-6">
+                                            <SearchableFormSelect
+                                              label="Procedure Name/Code"
+                                              value={proc.procedure_code}
+                                              onChange={(e) => handleProcedureChange(index, e)}
+                                              options={procedureOptions}
+                                              placeholder="Search procedure..."
+                                              type="procedure"
+                                              name="procedure_code"
+                                              loading={searchingProcedures}
+                                              error={procedureErrors[index]}
+                                              onSearch={fetchProcedures}
+                                              debounceDelay={1000}
+                                              minSearchChars={0}
+                                              allowCustom={true}
+                                              freeSolo={true}
+                                            />
+                                          </div>
+
+                                          <div className="md:col-span-6">
+                                            <div className="mb-4 md:col-span-6">
+                                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                Procedure Details
+                                              </label>
+                                              <input
+                                                type="text"
+                                                value={proc.procedure_name || ''}
+                                                readOnly={true}
+                                                placeholder="Will auto-fill when code selected"
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
+                                              />
+                                            </div>
+                                          </div>
+
+                                          <div className="md:col-span-12">
+                                            <div className="mb-4 md:col-span-12">
+                                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                Notes
+                                              </label>
+                                              <textarea
+                                                name="notes"
+                                                value={proc.notes || ''}
+                                                onChange={(e) => handleProcedureChange(index, e)}
+                                                placeholder="Additional notes for this procedure..."
+                                                rows={2}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
+                                              />
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
                                 )}
-                                <span className="text-sm font-medium text-slate-600">
-                                  {uploadingImage ? 'Uploading...' : 'Click to upload prescription image (Optional)'}
-                                </span>
-                                <span className="text-xs text-slate-400 mt-1">Supports JPG, PNG</span>
+                              </div>
+                              {/* Medicines Section */}
+                              <div>
+                                <div className="flex justify-between items-center mb-4">
+                                  <label className="text-sm font-semibold text-slate-700">Prescribed Medicines</label>
+                                  <button
+                                    type="button"
+                                    onClick={addMedicine}
+                                    className="text-teal-600 text-sm font-semibold hover:text-teal-700 flex items-center"
+                                  >
+                                    <FaPlus className="mr-1" /> Add Medicine
+                                  </button>
+                                </div>
+
+                                <div className="space-y-4">
+                                  {prescription.items.map((item, index) => (
+                                    <div key={index} className="bg-slate-50 rounded-lg border border-slate-200 p-4 transition-all hover:shadow-md hover:border-teal-200 group">
+                                      <div className="flex justify-between items-start mb-3">
+                                        <h4 className="text-xs font-bold text-slate-400 uppercase">Medicine #{index + 1}</h4>
+                                        {prescription.items.length > 1 && (
+                                          <button onClick={() => removeMedicine(index)} className="text-slate-400 hover:text-red-500 transition-colors">
+                                            <FaTrash size={14} />
+                                          </button>
+                                        )}
+                                      </div>
+
+                                      <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+
+                                        <div className="md:col-span-6">
+                                          <SearchableFormSelect
+                                            label="Medicine Name"
+                                            value={item.medicine_name}
+                                            onChange={(e) => handleMedicineChange(index, e)}
+                                            options={medicineOptions}
+                                            placeholder="Search medicine..."
+                                            required
+                                            type="medicine"
+                                            name="medicine_name"
+                                            loading={searchingMedicines}
+                                            error={medicineErrors[index]}
+                                            onSearch={fetchMedicines}  // Will be called immediately on typing
+                                            debounceDelay={1000}  // Optional: can remove or set to 0
+                                            minSearchChars={0} // Wait for 2 characters before API call
+                                            allowCustom={true}
+                                            freeSolo={true}
+                                          />
+                                        </div>
+                                        <div className="md:col-span-3">
+                                          <SearchableFormSelect
+                                            label="Medicine Type"
+                                            value={item.medicine_type || ''}
+                                            onChange={(e) => handleMedicineChange(index, e)}
+                                            options={medicineTypeOptions}
+                                            placeholder="Select type"
+                                            name="medicine_type"
+                                            allowCustom={false}
+                                            freeSolo={false}
+                                          />
+                                        </div>
+
+
+                                        <div className="md:col-span-3">
+                                          <div className="mb-4 md:col-span-3">
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                              Dosage <span className="text-red-500">*</span>
+                                            </label>
+                                            <input
+                                              type="text"
+                                              name="dosage"
+                                              value={item.dosage}
+                                              onChange={(e) => handleMedicineChange(index, e)}
+                                              placeholder="500mg"
+                                              required={true}
+                                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
+                                            />
+                                          </div>
+                                        </div>
+
+                                        <div className="md:col-span-3">
+                                          <SearchableFormSelect
+                                            label="Route"
+                                            value={item.route_of_administration || ""}
+                                            onChange={(e) => handleMedicineChange(index, e)}
+                                            options={routeOptions}
+                                            placeholder="Select route"
+                                            name="route_of_administration"
+                                            allowCustom={false}
+                                            freeSolo={false}
+                                          />
+                                        </div>
+
+                                        <div className="md:col-span-3">
+                                          <SearchableFormSelect
+                                            label="Frequency"
+                                            value={item.frequency}
+                                            onChange={(e) => handleMedicineChange(index, e)}
+                                            options={frequencyOptions}
+                                            placeholder="Select frequency"
+                                            name="frequency"
+                                            required={true}
+                                            allowCustom={false}
+                                            freeSolo={false}
+                                          />
+                                        </div>
+
+                                        <div className="md:col-span-3">
+                                          <SearchableFormSelect
+                                            label="Duration"
+                                            value={item.duration}
+                                            onChange={(e) => handleMedicineChange(index, e)}
+                                            options={durationOptions}
+                                            placeholder="Select duration"
+                                            name="duration"
+                                            required={true}
+                                            allowCustom={false}
+                                            freeSolo={false}
+                                          />
+                                        </div>
+
+                                        <div className="md:col-span-3">
+                                          <div className="mb-4 md:col-span-3">
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                              Quantity
+                                            </label>
+                                            <input
+                                              type="text"
+                                              name="quantity"
+                                              value={item.quantity}
+                                              onChange={(e) => handleMedicineChange(index, e)}
+                                              placeholder="Auto-calculated"
+                                              readOnly={true}
+                                              className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
+                                            />
+                                          </div>
+                                        </div>
+
+                                        <div className="md:col-span-12">
+                                          <div className="mb-4 md:col-span-12">
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                              Special Instructions
+                                            </label>
+                                            <input
+                                              type="text"
+                                              name="instructions"
+                                              value={item.instructions}
+                                              onChange={(e) => handleMedicineChange(index, e)}
+                                              placeholder="e.g. After food with water"
+                                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
+                                            />
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+
+                              {/* Image Upload Section (unchanged) */}
+                              <div className="bg-slate-50 rounded-lg border-2 border-dashed border-slate-300 p-6 text-center hover:bg-slate-100 transition-colors">
+                                {!prescription.prescriptionImage ? (
+                                  <div className="relative">
+                                    <input
+                                      type="file"
+                                      accept="image/*"
+                                      onChange={handleImageUpload}
+                                      disabled={uploadingImage}
+                                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                    />
+                                    <div className="flex flex-col items-center">
+                                      {uploadingImage ? (
+                                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600 mb-2"></div>
+                                      ) : (
+                                        <FaCloudUploadAlt className="text-3xl text-slate-400 mb-2" />
+                                      )}
+                                      <span className="text-sm font-medium text-slate-600">
+                                        {uploadingImage ? 'Uploading...' : 'Click to upload prescription image (Optional)'}
+                                      </span>
+                                      <span className="text-xs text-slate-400 mt-1">Supports JPG, PNG</span>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="relative group">
+                                    <img
+                                      src={prescription.prescriptionImage}
+                                      alt="Prescription Preview"
+                                      className="max-h-64 mx-auto rounded-lg shadow-sm border border-slate-200 object-contain"
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={removeImage}
+                                      className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                                    >
+                                      <FaTimes />
+                                    </button>
+                                    <p className="text-xs text-green-600 mt-2 font-medium flex items-center justify-center">
+                                      <FaCheckCircle className="mr-1" /> Image attached successfully
+                                    </p>
+                                  </div>
+                                )}
                               </div>
                             </div>
-                          ) : (
-                            <div className="relative group">
-                              <img
-                                src={prescription.prescriptionImage}
-                                alt="Prescription Preview"
-                                className="max-h-64 mx-auto rounded-lg shadow-sm border border-slate-200 object-contain"
-                              />
+
+                            <div className="p-6 bg-slate-50 border-t border-slate-200 flex justify-between items-center rounded-b-xl">
                               <button
                                 type="button"
-                                onClick={removeImage}
-                                className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                                onClick={() => setShowPrescriptionForm(false)}
+                                className="text-slate-500 hover:text-slate-700 font-medium px-4 py-2"
                               >
-                                <FaTimes />
+                                Cancel
                               </button>
-                              <p className="text-xs text-green-600 mt-2 font-medium flex items-center justify-center">
-                                <FaCheckCircle className="mr-1" /> Image attached successfully
-                              </p>
+                              <button
+                                type="submit"
+                                disabled={submitting || calculatingSalary}
+                                className="bg-teal-600 hover:bg-teal-700 text-white font-semibold py-2.5 px-6 rounded-lg shadow-md hover:shadow-lg transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center"
+                              >
+                                {submitting ? (
+                                  <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div> Saving...</>
+                                ) : (
+                                  <>Complete Consultation <FaCheckCircle className="ml-2" /></>
+                                )}
+                              </button>
                             </div>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="p-6 bg-slate-50 border-t border-slate-200 flex justify-between items-center rounded-b-xl">
-                        <button
-                          type="button"
-                          onClick={() => setShowPrescriptionForm(false)}
-                          className="text-slate-500 hover:text-slate-700 font-medium px-4 py-2"
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          type="submit"
-                          disabled={submitting || calculatingSalary}
-                          className="bg-teal-600 hover:bg-teal-700 text-white font-semibold py-2.5 px-6 rounded-lg shadow-md hover:shadow-lg transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center"
-                        >
-                          {submitting ? (
-                            <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div> Saving...</>
-                          ) : (
-                            <>Complete Consultation <FaCheckCircle className="ml-2" /></>
-                          )}
-                        </button>
-                      </div>
-                    </form>
-                     )}
+                          </form>
+                        )}
                       </>
                     )}
                   </div>

@@ -11,7 +11,9 @@ import {
   FaEye,
   FaCalendarAlt,
   FaHeartbeat,
-  FaExclamationTriangle
+  FaExclamationTriangle,
+  FaExclamationCircle,
+  FaTimes
 } from 'react-icons/fa';
 
 const DoctorAppointments = () => {
@@ -26,8 +28,60 @@ const DoctorAppointments = () => {
     return stored === null ? true : stored === 'true';
   });
   const [showWithoutVitals, setShowWithoutVitals] = useState(false);
+  const [selectedAppointment, setSelectedAppointment] = useState(null);
+  const [showTimeWarning, setShowTimeWarning] = useState(false);
+  const [timeDifference, setTimeDifference] = useState({ minutes: 0, isEarly: false });
   const navigate = useNavigate();
   const doctorId = localStorage.getItem("doctorId");
+
+  const formatStoredTime = (utcTimeString) => {
+    if (!utcTimeString) return 'N/A';
+    
+    try {
+      const date = new Date(utcTimeString);
+      
+      // Get UTC hours and minutes directly (since the time is stored in UTC but represents IST)
+      const hours = date.getUTCHours();
+      const minutes = date.getUTCMinutes();
+      
+      // Format as 12-hour time
+      const hour12 = hours % 12 || 12;
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      
+      return `${hour12}:${minutes.toString().padStart(2, '0')} ${ampm}`;
+    } catch (error) {
+      console.error('Error formatting time:', error);
+      return 'Invalid Time';
+    }
+  };
+
+  // Parse a UTC time string to Date object
+  const parseStoredTime = (utcTimeString) => {
+    if (!utcTimeString) return null;
+    
+    try {
+      return new Date(utcTimeString);
+    } catch (error) {
+      console.error('Error parsing time:', error);
+      return null;
+    }
+  };
+
+  // Check if appointment time is within 15 minutes
+  const checkAppointmentTime = (appointment) => {
+    const appointmentTime = parseStoredTime(appointment.start_time);
+    if (!appointmentTime) return { isValid: true, minutes: 0, isEarly: false }; // If no time, allow
+    
+    const now = new Date();
+    const timeDiff = appointmentTime.getTime() - now.getTime();
+    const minutesDiff = Math.round(timeDiff / (1000 * 60));
+    
+    return {
+      isValid: Math.abs(minutesDiff) <= 15,
+      minutes: Math.abs(minutesDiff),
+      isEarly: minutesDiff > 0
+    };
+  };
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -72,7 +126,7 @@ const DoctorAppointments = () => {
     }
   };
 
-   const hasVitals = (appointment) => {
+  const hasVitals = (appointment) => {
     if (!vitalsEnabled) return true; 
     if (appointment.vitals) {
       const vitalFields = ['bp', 'weight', 'pulse', 'spo2', 'temperature', 
@@ -139,7 +193,7 @@ const DoctorAppointments = () => {
     });
   };
 
-  const handleStartAppointment = async (appointment) => {
+  const handleStartClick = (appointment) => {
     // Check if vitals are required and not recorded
     const appointmentHasVitals = hasVitals(appointment);
     if (vitalsEnabled && !appointmentHasVitals) {
@@ -147,6 +201,24 @@ const DoctorAppointments = () => {
       return;
     }
 
+    // Check appointment time
+    const timeCheck = checkAppointmentTime(appointment);
+    
+    if (!timeCheck.isValid) {
+      // Show warning modal
+      setSelectedAppointment(appointment);
+      setTimeDifference({
+        minutes: timeCheck.minutes,
+        isEarly: timeCheck.isEarly
+      });
+      setShowTimeWarning(true);
+    } else {
+      // Start appointment directly if within 15 minutes
+      startAppointment(appointment);
+    }
+  };
+
+  const startAppointment = async (appointment) => {
     const appointmentId = appointment._id || appointment;
     try {
       await axios.put(`${import.meta.env.VITE_BACKEND_URL}/appointments/${appointmentId}`, {
@@ -160,6 +232,104 @@ const DoctorAppointments = () => {
       console.error('Error starting appointment:', err);
       alert("Failed to start appointment. Please check console.");
     }
+  };
+
+  const handleConfirmStart = () => {
+    if (selectedAppointment) {
+      startAppointment(selectedAppointment);
+    }
+    setShowTimeWarning(false);
+    setSelectedAppointment(null);
+  };
+
+  const handleCancelStart = () => {
+    setShowTimeWarning(false);
+    setSelectedAppointment(null);
+  };
+
+  // Custom Modal Component
+  const TimeWarningModal = () => {
+    if (!showTimeWarning) return null;
+
+    return (
+      <div className="fixed inset-0 z-50 overflow-y-auto">
+        {/* Backdrop */}
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
+          onClick={handleCancelStart}
+        />
+        
+        {/* Modal */}
+        <div className="flex min-h-full items-center justify-center p-4">
+          <div className="relative bg-white rounded-xl shadow-xl max-w-md w-full transform transition-all">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <div className="flex items-center text-amber-600">
+                <FaExclamationCircle className="mr-3 text-xl" />
+                <span className="font-semibold text-lg">Time Check Required</span>
+              </div>
+              <button
+                onClick={handleCancelStart}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <FaTimes className="text-lg" />
+              </button>
+            </div>
+            
+            {/* Body */}
+            <div className="p-6">
+              <div className="text-center">
+                <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-amber-100 mb-4">
+                  <FaClock className="h-8 w-8 text-amber-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-800 mb-2">
+                  {timeDifference.isEarly ? 'Starting Early' : 'Starting Late'}
+                </h3>
+                <p className="text-gray-600 mb-4">
+                  This appointment is scheduled for{' '}
+                  <span className="font-semibold">
+                    {selectedAppointment && formatStoredTime(selectedAppointment.start_time)}
+                  </span>
+                </p>
+                <div className={`text-2xl font-bold mb-4 ${timeDifference.isEarly ? 'text-blue-600' : 'text-red-600'}`}>
+                  {timeDifference.isEarly 
+                    ? `${TimeIndicator2(selectedAppointment)} minutes early`
+                    : `${TimeIndicator2(selectedAppointment)} minutes late`
+                  }
+                </div>
+                <p className="text-gray-500 text-sm">
+                  Are you sure you want to start this appointment now?
+                  <br />
+                  <span className="text-amber-600 font-medium">
+                    Recommended: Start within 15 minutes of scheduled time
+                  </span>
+                </p>
+              </div>
+            </div>
+            
+            {/* Footer */}
+            <div className="flex justify-end p-6 border-t border-gray-200 space-x-3">
+              <button
+                onClick={handleCancelStart}
+                className="px-5 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmStart}
+                className={`px-5 py-2.5 text-white rounded-lg font-medium transition-colors ${
+                  timeDifference.isEarly 
+                    ? 'bg-blue-600 hover:bg-blue-700' 
+                    : 'bg-red-600 hover:bg-red-700'
+                }`}
+              >
+                Start Appointment Anyway
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   // --- UI HELPER COMPONENTS ---
@@ -203,6 +373,71 @@ const DoctorAppointments = () => {
     );
   };
 
+    const TimeIndicator2 = (appointment) => {
+    const timeCheck = checkAppointmentTime(appointment);
+    
+    if (appointment.status !== 'Scheduled' || timeCheck.isValid) {
+      return null;
+    }
+
+    const appointmentTime = parseStoredTime(appointment.start_time);
+    if (!appointmentTime) return null;
+
+    const now = new Date();
+    const isPast = appointmentTime < now;
+    const timeDiff = Math.abs(appointmentTime.getTime() - now.getTime());
+    const minutesDiff = Math.round(timeDiff / (1000 * 60));
+    const hoursDiff = Math.floor(minutesDiff / 60);
+    const remainingMinutes = minutesDiff % 60;
+
+    let timeText = '';
+    if (hoursDiff > 0) {
+      timeText = `${hoursDiff}h ${remainingMinutes}m`;
+    } else {
+      timeText = `${minutesDiff}m`;
+    }
+
+    return timeText;
+  };
+
+  const TimeIndicator = ({ appointment }) => {
+    const timeCheck = checkAppointmentTime(appointment);
+    
+    if (appointment.status !== 'Scheduled' || timeCheck.isValid) {
+      return null;
+    }
+
+    const appointmentTime = parseStoredTime(appointment.start_time);
+    if (!appointmentTime) return null;
+
+    const now = new Date();
+    const isPast = appointmentTime < now;
+    const timeDiff = Math.abs(appointmentTime.getTime() - now.getTime());
+    const minutesDiff = Math.round(timeDiff / (1000 * 60));
+    const hoursDiff = Math.floor(minutesDiff / 60);
+    const remainingMinutes = minutesDiff % 60;
+
+    let timeText = '';
+    if (hoursDiff > 0) {
+      timeText = `${hoursDiff}h ${remainingMinutes}m`;
+    } else {
+      timeText = `${minutesDiff}m`;
+    }
+
+    return (
+      <div className="flex items-center mt-1">
+        <span className={`text-xs px-2 py-0.5 rounded-full flex items-center ${
+          isPast 
+            ? 'bg-red-50 text-red-600'
+            : 'bg-blue-50 text-blue-600'
+        }`}>
+          <FaExclamationCircle className="mr-1 h-2 w-2" />
+          {isPast ? `Started ${timeText} ago` : `Starts in ${timeText}`}
+        </span>
+      </div>
+    );
+  };
+
   const TabButton = ({ label, value, current, onClick }) => (
     <button
       onClick={() => onClick(value)}
@@ -229,6 +464,9 @@ const DoctorAppointments = () => {
 
   return (
     <div className="min-h-screen bg-gray-50/50 p-6 md:p-2 font-sans">
+      {/* Custom Time Warning Modal */}
+      <TimeWarningModal />
+
       <div className="max-w-7xl mx-auto">
 
         {/* Page Header */}
@@ -338,6 +576,7 @@ const DoctorAppointments = () => {
                     const apptDate = new Date(appt.appointment_date);
                     const hasVitalsData = hasVitals(appt);
                     const isScheduled = appt.status === 'Scheduled';
+                    const timeCheck = checkAppointmentTime(appt);
 
                     return (
                       <tr 
@@ -366,6 +605,7 @@ const DoctorAppointments = () => {
                                   `${new Date().getFullYear() - new Date(appt.patient_id.dob).getFullYear()} yrs` : 'Age N/A'}
                               </div>
                               <VitalsIndicator appointment={appt} />
+                              <TimeIndicator appointment={appt} />
                             </div>
                           </div>
                         </td>
@@ -375,7 +615,7 @@ const DoctorAppointments = () => {
                             {apptDate.toLocaleDateString()}
                           </div>
                           <div className="text-xs text-gray-500 mt-1 ml-5">
-                            {appt.start_time ? new Date(appt.start_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'Time not set'}
+                            {formatStoredTime(appt.start_time)}
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -395,28 +635,35 @@ const DoctorAppointments = () => {
                           <div className="flex items-center space-x-3 opacity-80 group-hover:opacity-100 transition-opacity">
                             {isScheduled && (
                               <button
-                                onClick={() => handleStartAppointment(appt)}
+                                onClick={() => handleStartClick(appt)}
                                 className={`flex items-center px-3 py-1.5 rounded-md transition-colors shadow-sm text-xs font-semibold tracking-wide ${
                                   vitalsEnabled && !hasVitalsData
                                     ? 'bg-amber-100 text-amber-700 hover:bg-amber-200 cursor-not-allowed'
+                                    : !timeCheck.isValid
+                                    ? 'bg-purple-600 text-white hover:bg-purple-700'
                                     : 'bg-teal-600 text-white hover:bg-teal-700'
                                 }`}
-                                title={vitalsEnabled && !hasVitalsData ? "Vitals required before starting" : "Start appointment"}
+                                title={
+                                  vitalsEnabled && !hasVitalsData ? "Vitals required before starting" :
+                                  !timeCheck.isValid ? `Appointment ${timeCheck.isEarly ? 'starts' : 'started'} ${timeCheck.minutes} minutes ${timeCheck.isEarly ? 'later' : 'ago'}` :
+                                  "Start appointment"
+                                }
                               >
                                 <FaPlay className="mr-1.5 h-2.5 w-2.5" /> 
-                                {vitalsEnabled && !hasVitalsData ? 'NEEDS VITALS' : 'START'}
+                                {vitalsEnabled && !hasVitalsData ? 'NEEDS VITALS' : 
+                                 !timeCheck.isValid ? 'START' : 'START'}
+                              </button>
+                            )}
+                            {(appt.status === "In Progress" || appt.status === "Completed") && (
+                              <button
+                                onClick={() => handleViewDetails(appt)}
+                                className="p-2 text-gray-400 hover:text-teal-600 hover:bg-teal-50 rounded-full transition-all"
+                                title="View Details"
+                              >
+                                <FaEye />
                               </button>
                             )}
                           </div>
-                          {appt.status === "In Progress" &&
-                          <button
-                              onClick={() => handleViewDetails(appt)}
-                              className="p-2 text-gray-400 hover:text-teal-600 hover:bg-teal-50 rounded-full transition-all"
-                              title="View Details"
-                            >
-                              <FaEye />
-                            </button>
-                  }
                         </td>
                       </tr>
                     );

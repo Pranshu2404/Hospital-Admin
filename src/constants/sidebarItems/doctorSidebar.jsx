@@ -29,7 +29,7 @@ export const doctorSidebar = [
   { label: 'My Patients', path: '/dashboard/doctor/patients', icon: FaUserFriends },
   { label: 'My Department', path: '/dashboard/doctor/department', icon: DepartmentIcon },
   { label: 'Reports & Tests', path: '/dashboard/doctor/reports', icon: FaUsers },
-  { label: 'Salary', path:'/dashboard/doctor/salary', icon: FaMoneyBill},
+  { label: 'Fees & Collections', path:'/dashboard/doctor/salary', icon: FaMoneyBill},
   { label: 'Profile', path: '/dashboard/doctor/profile', icon: FaUserCircle },
   { label: 'Forgot Password', path: '/forgot-password', icon: FaLock }
 ];

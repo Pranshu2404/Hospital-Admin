@@ -62,6 +62,27 @@ const DoctorDashboard = () => {
     return stored === null ? true : stored === 'true';
   });
 
+  const formatStoredTime = (utcTimeString) => {
+    if (!utcTimeString) return 'N/A';
+    
+    try {
+      const date = new Date(utcTimeString);
+      
+      // Get UTC hours and minutes directly (since the time is stored in UTC but represents IST)
+      const hours = date.getUTCHours();
+      const minutes = date.getUTCMinutes();
+      
+      // Format as 12-hour time
+      const hour12 = hours % 12 || 12;
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      
+      return `${hour12}:${minutes.toString().padStart(2, '0')} ${ampm}`;
+    } catch (error) {
+      console.error('Error formatting time:', error);
+      return 'Invalid Time';
+    }
+  };
+
   const doctorId = localStorage.getItem("doctorId");
   const navigate = useNavigate();
 
@@ -126,7 +147,7 @@ const DoctorDashboard = () => {
 
     const formatApptTime = (appt) => {
       if (!appt) return null;
-      if (appt.start_time) return new Date(appt.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      if (appt.start_time) return formatStoredTime(appt.start_time);
       if (appt.time) return String(appt.time);
       if (appt.time_slot) return String(appt.time_slot).split('-')[0].trim();
       return null;

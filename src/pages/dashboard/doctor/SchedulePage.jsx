@@ -44,6 +44,53 @@ const SchedulePage = () => {
 
   const doctorId = localStorage.getItem("doctorId");
 
+  // Format time from UTC string to 12-hour format
+  const formatStoredTime = (utcTimeString) => {
+    if (!utcTimeString) return 'N/A';
+    
+    try {
+      const date = new Date(utcTimeString);
+      
+      // Get UTC hours and minutes directly (since the time is stored in UTC but represents IST)
+      const hours = date.getUTCHours();
+      const minutes = date.getUTCMinutes();
+      
+      // Format as 12-hour time
+      const hour12 = hours % 12 || 12;
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      
+      return `${hour12}:${minutes.toString().padStart(2, '0')} ${ampm}`;
+    } catch (error) {
+      console.error('Error formatting time:', error);
+      return 'Invalid Time';
+    }
+  };
+
+  // Parse a UTC time string to Date object
+  const parseStoredTime = (utcTimeString) => {
+    if (!utcTimeString) return null;
+    
+    try {
+      return new Date(utcTimeString);
+    } catch (error) {
+      console.error('Error parsing time:', error);
+      return null;
+    }
+  };
+
+  // Format date from UTC string to readable format
+  const formatStoredDate = (utcTimeString) => {
+    if (!utcTimeString) return 'N/A';
+    
+    try {
+      const date = new Date(utcTimeString);
+      return dayjs(date).format('MMM D, YYYY');
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return 'Invalid Date';
+    }
+  };
+
   // Custom Toolbar Component
   const CustomToolbar = (toolbar) => {
     const goToBack = () => {
@@ -125,32 +172,45 @@ const SchedulePage = () => {
 
         if (Array.isArray(appointmentsRes.data)) {
           const appts = appointmentsRes.data;
+          const now = new Date();
 
           const parseEventTimes = (appt) => {
             try {
-              // ... (Keep existing complex parsing logic)
-              const apptDate = appt.appointment_date 
-                ? new Date(appt.appointment_date) 
-                : (appt.created_at ? new Date(appt.created_at) : null);
+              let start = null;
+              let end = null;
 
-              const parseTimeSlot = (slotStr, which = 'start') => {
-                if (!slotStr) return null;
-                const parts = slotStr.split('-').map(s => s.trim());
-                const timePart = which === 'start' ? parts[0] : (parts[1] || null);
-                if (!timePart) return null;
-                const [h, m] = timePart.split(':').map(x => parseInt(x, 10));
-                if (isNaN(h)) return null;
-                const dt = apptDate ? new Date(apptDate) : new Date();
-                dt.setHours(h, isNaN(m) ? 0 : m, 0, 0);
-                return dt;
-              };
+              // Parse start time from various possible fields
+              if (appt.start_time) {
+                start = parseStoredTime(appt.start_time);
+              } else if (appt.startTime) {
+                start = parseStoredTime(appt.startTime);
+              } else if (appt.time_slot) {
+                // Fallback for time_slot format
+                const timeStr = appt.time_slot.split('-')[0]?.trim();
+                if (timeStr && appt.appointment_date) {
+                  const dateStr = appt.appointment_date.split('T')[0];
+                  const combinedStr = `${dateStr}T${timeStr}:00Z`;
+                  start = parseStoredTime(combinedStr);
+                }
+              }
 
-              let start = appt.start_time ? new Date(appt.start_time) : (appt.startTime ? new Date(appt.startTime) : null);
-              if (!start && appt.time_slot) start = parseTimeSlot(appt.time_slot, 'start');
-              
-              let end = appt.end_time ? new Date(appt.end_time) : (appt.endTime ? new Date(appt.endTime) : null);
-              if (!end && appt.time_slot) end = parseTimeSlot(appt.time_slot, 'end');
-              if (!end && start) {
+              // Parse end time from various possible fields
+              if (appt.end_time) {
+                end = parseStoredTime(appt.end_time);
+              } else if (appt.endTime) {
+                end = parseStoredTime(appt.endTime);
+              } else if (appt.time_slot) {
+                // Fallback for time_slot format
+                const timeStr = appt.time_slot.split('-')[1]?.trim();
+                if (timeStr && appt.appointment_date) {
+                  const dateStr = appt.appointment_date.split('T')[0];
+                  const combinedStr = `${dateStr}T${timeStr}:00Z`;
+                  end = parseStoredTime(combinedStr);
+                }
+              }
+
+              // If we have start but no end, calculate based on duration
+              if (start && !end) {
                 const dur = appt.duration || 30;
                 end = new Date(start.getTime() + (dur * 60 * 1000));
               }
@@ -164,27 +224,36 @@ const SchedulePage = () => {
 
           const events = [];
           const upcoming = [];
-          const today = dayjs();
 
           appts.forEach(appt => {
             const { start, end } = parseEventTimes(appt);
-            if (!start || !end) return;
+            
+            // Skip if we don't have valid start time
+            if (!start) return;
 
-            events.push({
-              title: `${appt.patient_id?.first_name || 'Patient'} - ${appt.type || 'Visit'}`,
-              start,
-              end,
-              allDay: false,
-              resource: appt,
-              status: appt.status
-            });
+            // Check if appointment is in the future and not completed
+            const isFutureAppointment = start > now;
+            const isNotCompleted = appt.status !== 'Completed' && appt.status !== 'Cancelled';
 
-            if (dayjs(start).isAfter(today) && appt.status !== 'Cancelled') {
+            // Only add to events if it meets criteria
+            if (isFutureAppointment && isNotCompleted) {
+              events.push({
+                title: `${appt.patient_id?.first_name || 'Patient'} - ${appt.type || 'Visit'}`,
+                start,
+                end: end || new Date(start.getTime() + (appt.duration || 30) * 60 * 1000),
+                allDay: false,
+                resource: appt,
+                status: appt.status
+              });
+            }
+
+            // Add to upcoming appointments if it meets criteria (future and not completed/cancelled)
+            if (start > now && appt.status !== 'Completed' && appt.status !== 'Cancelled') {
               upcoming.push({
                 id: appt._id,
                 patient: `${appt.patient_id?.first_name || 'Unknown'} ${appt.patient_id?.last_name || ''}`.trim(),
-                date: dayjs(start).format('MMM D, YYYY'), // Better format
-                time: dayjs(start).format('h:mm A'), // Better format
+                date: formatStoredDate(appt.start_time || appt.startTime || appt.appointment_date),
+                time: formatStoredTime(appt.start_time || appt.startTime || (appt.time_slot ? `${appt.appointment_date?.split('T')[0]}T${appt.time_slot.split('-')[0]?.trim()}:00Z` : null)),
                 rawDate: start,
                 status: appt.status,
                 type: appt.type
@@ -194,14 +263,13 @@ const SchedulePage = () => {
 
           setCalendarEvents(events);
           setUpcomingAppointments(upcoming.sort((a, b) => new Date(a.rawDate) - new Date(b.rawDate)));
-
-          // Simplified Weekly Schedule Logic for Demo
-          // In a real app, this should probably come from a separate 'Doctor Availability' endpoint
+          
           const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
           const schedule = daysOfWeek.map(day => {
-            // Check if there are appointments on this day name to simulate availability
-            // Or just hardcode a standard schedule if backend data isn't specifically for "Availability settings"
-            const hasAppts = appts.some(a => dayjs(a.appointment_date).format('dddd') === day);
+            const hasAppts = appts.some(a => {
+              const apptDate = a.appointment_date ? parseStoredTime(a.appointment_date) : null;
+              return apptDate ? dayjs(apptDate).format('dddd') === day : false;
+            });
             return {
               day,
               time: day === 'Sunday' ? 'Off' : '09:00 AM - 05:00 PM',
@@ -331,6 +399,7 @@ const SchedulePage = () => {
                 {upcomingAppointments.length}
               </span>
             </h2>
+            <p className="text-sm text-slate-500">Showing future appointments only</p>
           </div>
           
           {upcomingAppointments.length > 0 ? (
@@ -365,6 +434,7 @@ const SchedulePage = () => {
             <div className="flex flex-col items-center justify-center h-48 bg-slate-50 rounded-xl border border-dashed border-slate-200">
               <FaUser className="text-slate-300 text-3xl mb-2" />
               <p className="text-slate-500 text-sm font-medium">No upcoming appointments</p>
+              <p className="text-slate-400 text-xs mt-1">Future appointments will appear here</p>
             </div>
           )}
         </div>
