@@ -490,7 +490,12 @@ const AppointmentDetails = () => {
     diagnosis: '',
     notes: '',
     investigation: '',
-    recommendedProcedures: [],
+    // Add one default procedure box open by default
+    recommendedProcedures: [{
+      procedure_code: '',
+      procedure_name: '',
+      notes: ''
+    }],
     items: [{
       medicine_name: '',
       dosage: '',
