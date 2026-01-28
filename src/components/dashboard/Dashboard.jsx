@@ -43,6 +43,21 @@ const Icons = {
     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
     </svg>
+  ),
+  DollarSign: () => (
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  ),
+  TrendingUp: () => (
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8L5.257 19.743M5 7h8m0 0V5m0 2L19 5" />
+    </svg>
+  ),
+  FileText: () => (
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+    </svg>
   )
 };
 
@@ -53,11 +68,88 @@ const Dashboard = () => {
   const [recentActivities, setRecentActivities] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [currentTime, setCurrentTime] = useState(dayjs());
+  const [financeStats, setFinanceStats] = useState({
+    dailyIncome: 0,
+    weeklyIncome: 0,
+    monthlyIncome: 0
+  });
+  const [recentInvoices, setRecentInvoices] = useState([]);
+  const [loadingFinance, setLoadingFinance] = useState(false);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(dayjs()), 1000);
     return () => clearInterval(timer);
   }, []);
+
+  const fetchFinanceData = async () => {
+    setLoadingFinance(true);
+    try {
+      const baseUrl = import.meta.env.VITE_BACKEND_URL;
+      const today = dayjs();
+      const startOfWeek = today.startOf('week');
+      const startOfMonth = today.startOf('month');
+
+      // Fetch daily revenue
+      const dailyRes = await axios.get(`${baseUrl}/revenue/daily`, {
+        params: { date: today.format('YYYY-MM-DD') }
+      });
+      const dailyIncome = dailyRes.data?.revenue?.total || dailyRes.data?.net || 0;
+
+      // Fetch weekly revenue (from start of week to today)
+      const weeklyRes = await axios.get(`${baseUrl}/revenue`, {
+        params: {
+          startDate: startOfWeek.format('YYYY-MM-DD'),
+          endDate: today.format('YYYY-MM-DD')
+        }
+      });
+      const weeklyIncome = weeklyRes.data?.revenue?.gross || 0;
+
+      // Fetch monthly revenue
+      const monthlyRes = await axios.get(`${baseUrl}/revenue/monthly`, {
+        params: {
+          year: today.year(),
+          month: today.month() + 1
+        }
+      });
+      const monthlyIncome = monthlyRes.data?.totalRevenue || 0;
+
+      // Fetch recent invoices
+      const invoicesRes = await axios.get(`${baseUrl}/invoices`, {
+        params: { limit: 5, page: 1 }
+      });
+      const invoices = (invoicesRes.data?.invoices || invoicesRes.data || []).map(inv => ({
+        id: inv._id,
+        invoiceNumber: inv.invoice_number || inv.number || '#' + inv._id.slice(-4),
+        patientName: inv.patient_id?.first_name || inv.patientName || 'Unknown',
+        amount: inv.total_amount || inv.amount || 0,
+        status: inv.status || 'Pending',
+        date: dayjs(inv.created_at || inv.createdAt).format('MMM DD, YYYY'),
+        dueDate: inv.due_date || inv.dueDate ? dayjs(inv.due_date || inv.dueDate).format('MMM DD, YYYY') : 'N/A'
+      }));
+
+      console.log('Daily Income:', dailyIncome);
+      console.log('Weekly Income:', weeklyIncome);
+      console.log('Monthly Income:', monthlyIncome);
+
+      setFinanceStats({
+        dailyIncome,
+        weeklyIncome,
+        monthlyIncome
+      });
+      setRecentInvoices(invoices);
+    } catch (err) {
+      console.error('Finance data fetch error:', err);
+      // Fallback with zero values
+      setFinanceStats({
+        dailyIncome: 0,
+        weeklyIncome: 0,
+        monthlyIncome: 0
+      });
+      setRecentInvoices([]);
+    } finally {
+      setLoadingFinance(false);
+    }
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -150,6 +242,8 @@ const Dashboard = () => {
         }
         setRecentActivities(activities);
 
+        // Fetch finance data
+        await fetchFinanceData();
       } catch (err) {
         console.error('Data fetch error:', err);
       } finally {
@@ -169,6 +263,14 @@ const Dashboard = () => {
       Cancelled: 'bg-red-50 text-red-700 border-red-200 ring-red-500/30',
     };
     return `inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ring-1 ring-inset ${styles[status] || styles.Completed}`;
+  };
+
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      minimumFractionDigits: 0
+    }).format(amount || 0);
   };
 
   if (isLoading) return <div className="flex h-screen items-center justify-center text-slate-400 font-medium">Loading Dashboard...</div>;
@@ -221,6 +323,120 @@ const Dashboard = () => {
           </div>
         ))}
       </div>
+
+      {/* --- Finance Income Cards --- */}
+      <div className="mb-10">
+        <h2 className="text-lg font-bold text-slate-900 mb-5">Financial Overview</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+          {/* Daily Income */}
+          <div 
+            onClick={() => navigate('/dashboard/admin/income')}
+            className="relative overflow-hidden rounded-3xl p-6 cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-xl bg-gradient-to-br from-green-50 to-green-100 border border-white/50 shadow-sm group"
+          >
+            <div className="flex items-start justify-between relative z-10">
+              <div>
+                <p className="text-sm font-bold opacity-70 mb-1 text-green-900">Daily Income</p>
+                <h3 className="text-3xl font-extrabold text-green-900">{formatCurrency(financeStats.dailyIncome)}</h3>
+                <p className="text-xs text-green-700 mt-2">{dayjs().format('MMM DD')}</p>
+              </div>
+              <div className="p-3 rounded-2xl bg-green-600 text-white shadow-md bg-opacity-90 group-hover:scale-110 transition-transform duration-300">
+                <Icons.DollarSign />
+              </div>
+            </div>
+            <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-white/20 rounded-full blur-2xl group-hover:bg-white/30 transition-colors"></div>
+          </div>
+
+          {/* Weekly Income */}
+          <div 
+            onClick={() => navigate('/dashboard/admin/income')}
+            className="relative overflow-hidden rounded-3xl p-6 cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-xl bg-gradient-to-br from-blue-50 to-blue-100 border border-white/50 shadow-sm group"
+          >
+            <div className="flex items-start justify-between relative z-10">
+              <div>
+                <p className="text-sm font-bold opacity-70 mb-1 text-blue-900">Weekly Income</p>
+                <h3 className="text-3xl font-extrabold text-blue-900">{formatCurrency(financeStats.weeklyIncome)}</h3>
+                <p className="text-xs text-blue-700 mt-2">This week</p>
+              </div>
+              <div className="p-3 rounded-2xl bg-blue-600 text-white shadow-md bg-opacity-90 group-hover:scale-110 transition-transform duration-300">
+                <Icons.TrendingUp />
+              </div>
+            </div>
+            <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-white/20 rounded-full blur-2xl group-hover:bg-white/30 transition-colors"></div>
+          </div>
+
+          {/* Monthly Income */}
+          <div 
+            onClick={() => navigate('/dashboard/admin/income')}
+            className="relative overflow-hidden rounded-3xl p-6 cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-xl bg-gradient-to-br from-purple-50 to-purple-100 border border-white/50 shadow-sm group"
+          >
+            <div className="flex items-start justify-between relative z-10">
+              <div>
+                <p className="text-sm font-bold opacity-70 mb-1 text-purple-900">Monthly Income</p>
+                <h3 className="text-3xl font-extrabold text-purple-900">{formatCurrency(financeStats.monthlyIncome)}</h3>
+                <p className="text-xs text-purple-700 mt-2">{dayjs().format('MMMM YYYY')}</p>
+              </div>
+              <div className="p-3 rounded-2xl bg-purple-600 text-white shadow-md bg-opacity-90 group-hover:scale-110 transition-transform duration-300">
+                <Icons.FileText />
+              </div>
+            </div>
+            <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-white/20 rounded-full blur-2xl group-hover:bg-white/30 transition-colors"></div>
+          </div>
+        </div>
+      </div>
+
+      {/* --- Recent Invoices Section --- */}
+      {/* <div className="mb-10">
+        <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+          <div className="px-8 py-6 border-b border-slate-100 flex items-center justify-between bg-white">
+            <h3 className="text-lg font-bold text-slate-800">Recent Invoices</h3>
+            <button 
+              onClick={() => navigate('/dashboard/admin/invoices')}
+              className="text-sm font-semibold text-teal-600 hover:text-teal-700 hover:bg-teal-50 px-3 py-1 rounded-lg transition-colors"
+            >
+              View All
+            </button>
+          </div>
+          
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm text-slate-600">
+              <thead className="bg-slate-50/50 text-xs uppercase font-bold text-slate-400">
+                <tr>
+                  <th className="px-8 py-4">Invoice #</th>
+                  <th className="px-8 py-4">Patient Name</th>
+                  <th className="px-8 py-4">Amount</th>
+                  <th className="px-8 py-4">Date</th>
+                  <th className="px-8 py-4">Due Date</th>
+                  <th className="px-8 py-4 text-right">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {recentInvoices.length > 0 ? (
+                  recentInvoices.map((invoice) => (
+                    <tr key={invoice.id} className="hover:bg-slate-50/80 transition-colors group cursor-pointer" onClick={() => navigate('/dashboard/admin/invoices')}>
+                      <td className="px-8 py-4">
+                        <span className="font-bold text-slate-900">#{invoice.invoiceNumber}</span>
+                      </td>
+                      <td className="px-8 py-4">
+                        <span className="font-medium text-slate-700">{invoice.patientName}</span>
+                      </td>
+                      <td className="px-8 py-4">
+                        <span className="font-semibold text-slate-900">{formatCurrency(invoice.amount)}</span>
+                      </td>
+                      <td className="px-8 py-4 text-slate-600">{invoice.date}</td>
+                      <td className="px-8 py-4 text-slate-600">{invoice.dueDate}</td>
+                      <td className="px-8 py-4 text-right">
+                        <span className={getStatusBadge(invoice.status)}>{invoice.status}</span>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr><td colSpan="6" className="px-8 py-10 text-center text-slate-400 italic">No invoices found.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div> */}
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
         
