@@ -1,0 +1,916 @@
+code,medicine,level_of_healthcare,dosage_form,strength
+1.1.1,Halothane,"S,T",Liquid for inhalation,
+1.1.2,Isoflurane,"S,T",Liquid for inhalation,
+1.1.3,Ketamine,"P,S,T",Injection,10 mg/mL
+1.1.3,Ketamine,"P,S,T",Injection,50 mg/mL
+1.1.4,Nitrous oxide,"P,S,T",As licensed for medical purpose,
+1.1.5,Oxygen,"P,S,T",As licensed for medical purpose,
+1.1.6,Propofol,"P,S,T",Injection,10 mg/mL
+1.1.7,Sevoflurane,"S,T",Liquid for inhalation,
+1.1.8,Thiopentone,"P,S,T",Powder for injection,0.5 g
+1.1.8,Thiopentone,"P,S,T",Powder for injection,1 g
+1.2.1,Bupivacaine,"S,T",Injection,0.25 %
+1.2.1,Bupivacaine,"S,T",Injection,0.5 %
+1.2.1,Bupivacaine,"S,T",Injection,0.5 % with 7.5 % glucose
+1.2.2,Lignocaine,"P,S,T",Topical forms,2-5 %
+1.2.2,Lignocaine,"P,S,T",Injection,1 %
+1.2.2,Lignocaine,"P,S,T",Injection,2 %
+1.2.2,Lignocaine,"P,S,T",Injection,5 % with 7.5 % glucose
+1.2.3,Lignocaine (A) + Adrenaline (B),"P,S,T",Injection,1 % (A) + 1:200000 (5 mcg/mL) (B)
+1.2.3,Lignocaine (A) + Adrenaline (B),"P,S,T",Injection,2 % (A) + 1:200000 (5 mcg/mL) (B)
+1.3.1,Atropine,"P,S,T",Injection,0.6 mg/mL
+1.3.2,Glycopyrrolate,"S,T",Injection,0.2 mg/mL
+1.3.3,Midazolam,"P,S,T",Tablet,7.5 mg
+1.3.3,Midazolam,"P,S,T",Tablet,15 mg
+1.3.3,Midazolam,"P,S,T",Nasal Spray,0.5 mg/actuation
+1.3.3,Midazolam,"P,S,T",Nasal Spray,1.25 mg/actuation
+1.3.3,Midazolam,"P,S,T",Injection,1 mg/mL
+1.3.3,Midazolam,"P,S,T",Injection,5 mg/mL
+1.3.4,Morphine,"P,S,T",Injection,10 mg/mL
+1.3.4,Morphine,"P,S,T",Injection,15 mg/mL
+1.4.1,Atracurium,"S,T",Injection,10 mg/mL
+1.4.2,Baclofen,"S,T",Tablet,5 mg
+1.4.2,Baclofen,"S,T",Tablet,10 mg
+1.4.2,Baclofen,"S,T",Tablet,20 mg
+1.4.3,Neostigmine,"S,T",Injection,0.5 mg/mL
+1.4.4,Succinylcholine,"S,T",Injection,50 mg/mL
+1.4.5,Vecuronium,"S,T",Powder for injection,4 mg
+1.4.5,Vecuronium,"S,T",Powder for injection,10 mg
+2.1.1,Acetylsalicylic acid,"P,S,T",Tablet,300 mg to 500 mg
+2.1.1,Acetylsalicylic acid,"P,S,T",Effervescent/Dispersible/Enteric coated Tablet,300 mg to 500 mg
+2.1.2,Diclofenac,"P,S,T",Tablet,50 mg
+2.1.2,Diclofenac,"P,S,T",Injection,25 mg/mL
+2.1.3,Ibuprofen,"P,S,T",Tablet,200 mg
+2.1.3,Ibuprofen,"P,S,T",Tablet,400 mg
+2.1.3,Ibuprofen,"P,S,T",Oral liquid,100 mg/5 mL (p)
+2.1.4,Mefenamic acid,"P,S,T",Tablet,250 mg
+2.1.4,Mefenamic acid,"P,S,T",Oral liquid,100 mg/5 mL (p)
+2.1.5,Paracetamol,"P,S,T",Tablet,500 mg
+2.1.5,Paracetamol,"P,S,T",Tablet,650 mg
+2.1.5,Paracetamol,"P,S,T",Oral liquid,120 mg/5 mL (p)
+2.1.5,Paracetamol,"P,S,T",Oral Liquid,125 mg/5 mL (p)
+2.1.5,Paracetamol,"P,S,T",Oral Liquid,250 mg/5 mL (p)
+2.1.5,Paracetamol,"P,S,T",Injection,150 mg/mL
+2.1.5,Paracetamol,"P,S,T",Suppository,80 mg
+2.1.5,Paracetamol,"P,S,T",Suppository,170 mg
+2.2.1,Fentanyl,"S,T",Injection,50 mcg/mL
+2.2.2,Morphine,"P,S,T",Tablet,10 mg
+2.2.2,Morphine,"P,S,T",Injection,10 mg/mL
+2.2.2,Morphine,"P,S,T",Injection,15 mg/mL
+2.2.3,Tramadol,"S,T",Capsule,50 mg
+2.2.3,Tramadol,"S,T",Capsule,100 mg
+2.2.3,Tramadol,"S,T",Injection,50 mg/mL
+2.3.1,Allopurinol,"P,S,T",Tablet,100 mg
+2.3.1,Allopurinol,"P,S,T",Tablet,300 mg
+2.3.2,Colchicine,"P,S,T",Tablet,0.5 mg
+2.4.1,Azathioprine,"S,T",Tablet,25 mg (p)
+2.4.1,Azathioprine,"S,T",Tablet,50 mg
+2.4.2,Hydroxychloroquine,"P,S,T",Tablet,200 mg
+2.4.2,Hydroxychloroquine,"P,S,T",Tablet,400 mg
+2.4.3,Methotrexate,"P,S,T",Tablet,2.5 mg
+2.4.3,Methotrexate,"P,S,T",Tablet,5 mg
+2.4.3,Methotrexate,"P,S,T",Tablet,10 mg
+2.4.4,Sulfasalazine,"S,T",Tablet,500 mg
+3.3,Dexamethasone,"P,S,T",Tablet,0.5 mg
+3.3,Dexamethasone,"P,S,T",Tablet,2 mg
+3.3,Dexamethasone,"P,S,T",Tablet,4 mg
+3.3,Dexamethasone,"P,S,T",Oral liquid,0.5 mg/5 mL (p)
+3.3,Dexamethasone,"P,S,T",Injection,4 mg/mL
+3.4,Hydrocortisone,"P,S,T",Tablet,5 mg
+3.4,Hydrocortisone,"P,S,T",Tablet,10 mg
+3.4,Hydrocortisone,"P,S,T",Powder for Injection,100 mg
+3.4,Hydrocortisone,"P,S,T",Powder for Injection,200 mg
+3.5,Pheniramine,"P,S,T",Injection,22.75 mg/mL
+3.6,Prednisolone,"P,S,T",Tablet,5 mg
+3.6,Prednisolone,"P,S,T",Tablet,10 mg
+3.6,Prednisolone,"P,S,T",Tablet,20 mg
+3.6,Prednisolone,"P,S,T",Oral liquid,5 mg/5 mL (p)
+3.6,Prednisolone,"P,S,T",Oral liquid,15 mg/5 mL (p)
+4.1.1,Activated Charcoal,"P,S,T",Powder,(as licensed)
+4.2.1,Atropine,"P,S,T",Injection,0.6 mg/mL
+4.2.2,Calcium gluconate,"P,S,T",Injection,100 mg/mL
+4.2.3,D-Penicillamine,"P,S,T",Capsule,150 mg (p)
+4.2.3,D-Penicillamine,"P,S,T",Capsule,250 mg
+4.2.4,Desferrioxamine,"S,T",Powder for injection,500 mg
+4.2.5,Methylthioninium chloride (Methylene blue),"S,T",Injection,10 mg/mL
+4.2.6,N-acetylcysteine,"P,S,T",Injection,200 mg/mL
+4.2.7,Naloxone,"P,S,T",Injection,0.4 mg/mL
+4.2.8,Neostigmine,"P,S,T",Injection,0.5 mg/mL
+4.2.9,Pralidoxime chloride (2-PAM),"P,S,T",Injection,25 mg/mL
+4.2.10,Snake venom antiserum,"P,S,T",Soluble/liquid polyvalent,As licensed
+4.2.10,Snake venom antiserum,"P,S,T",Lyophilized polyvalent,As licensed
+4.2.11,Sodium nitrite,"S,T",Injection,30 mg/mL
+4.2.12,Sodium thiosulphate,"S,T",Injection,250 mg/mL
+5.1.1,Carbamazepine,"P,S,T",Tablet,100 mg
+5.1.1,Carbamazepine,"P,S,T",Tablet,200 mg
+5.1.1,Carbamazepine,"P,S,T",Tablet,400 mg
+5.1.1,Carbamazepine,"P,S,T",Modified Release Tablet,200 mg
+5.1.1,Carbamazepine,"P,S,T",Modified Release Tablet,400 mg
+5.1.1,Carbamazepine,"P,S,T",Oral liquid,100 mg/5 mL (p)
+5.1.2,Clobazam,"S,T",Tablet,5 mg
+5.1.2,Clobazam,"S,T",Tablet,10 mg
+5.1.3,Diazepam,"P,S,T",Oral liquid,2 mg/5 mL (p)
+5.1.3,Diazepam,"P,S,T",Injection,5 mg/mL
+5.1.3,Diazepam,"P,S,T",Suppository,5 mg
+5.1.4,Levetiracetam,"S,T",Tablet,250 mg
+5.1.4,Levetiracetam,"S,T",Tablet,500 mg
+5.1.4,Levetiracetam,"S,T",Tablet,750 mg
+5.1.4,Levetiracetam,"S,T",Modified Release Tablet,750 mg
+5.1.4,Levetiracetam,"S,T",Oral liquid,100 mg/mL (p)
+5.1.4,Levetiracetam,"S,T",Injection,100 mg/mL
+5.1.5,Lorazepam,"P,S,T",Tablet,1 mg
+5.1.5,Lorazepam,"P,S,T",Tablet,2 mg
+5.1.5,Lorazepam,"P,S,T",Injection,2 mg/mL
+5.1.5,Lorazepam,"P,S,T",Injection,4 mg/mL
+5.1.6,Magnesium sulphate,"S,T",Injection,500 mg/mL
+5.1.7,Midazolam,"P,S,T",Tablet,7.5 mg
+5.1.7,Midazolam,"P,S,T",Tablet,15 mg
+5.1.7,Midazolam,"P,S,T",Nasal Spray,0.5 mg/actuation
+5.1.7,Midazolam,"P,S,T",Nasal Spray,1.25 mg/actuation
+5.1.7,Midazolam,"P,S,T",Injection,1 mg/mL
+5.1.7,Midazolam,"P,S,T",Injection,5 mg/mL
+5.1.8,Phenobarbitone,"P,S,T",Tablet,30 mg
+5.1.8,Phenobarbitone,"P,S,T",Tablet,60 mg
+5.1.8,Phenobarbitone,"P,S,T",Oral liquid,20 mg/5 mL (p)
+5.1.8,Phenobarbitone,"S,T",Injection,200 mg/mL
+5.1.9,Phenytoin,"P,S,T",Tablet,50 mg
+5.1.9,Phenytoin,"P,S,T",Tablet,100 mg
+5.1.9,Phenytoin,"P,S,T",Tablet,300 mg
+5.1.9,Phenytoin,"P,S,T",Modified Release Tablet,300 mg
+5.1.9,Phenytoin,"P,S,T",Oral liquid,30 mg/5 mL (p)
+5.1.9,Phenytoin,"P,S,T",Oral liquid,125 mg/5 mL (p)
+5.1.9,Phenytoin,"P,S,T",Injection,25 mg/mL
+5.1.9,Phenytoin,"P,S,T",Injection,50 mg/mL
+5.1.10,Sodium Valproate,"P,S,T",Tablet,200 mg
+5.1.10,Sodium Valproate,"P,S,T",Tablet,300 mg
+5.1.10,Sodium Valproate,"P,S,T",Tablet,500 mg
+5.1.10,Sodium Valproate,"P,S,T",Modified Release Tablet,300 mg
+5.1.10,Sodium Valproate,"P,S,T",Modified Release Tablet,500 mg
+5.1.10,Sodium Valproate,"P,S,T",Oral liquid,200 mg/5 mL (p)
+5.1.10,Sodium Valproate,"S,T",Injection,100 mg/mL
+5.2.1,Acetylsalicylic acid,"P,S,T",Tablet,300 mg to 500 mg
+5.2.1,Acetylsalicylic acid,"P,S,T",Effervescent/Dispersible/Enteric coated Tablet,300 mg to 500 mg
+5.2.2,Ibuprofen,"P,S,T",Tablet,400 mg
+5.2.2,Ibuprofen,"P,S,T",Oral liquid,100 mg/5 mL (p)
+5.2.3,Paracetamol,"P,S,T",Tablet,500 mg
+5.2.3,Paracetamol,"P,S,T",Tablet,650 mg
+5.2.3,Paracetamol,"P,S,T",Oral liquid,120 mg/5 mL (p)
+5.2.3,Paracetamol,"P,S,T",Oral Liquid,125 mg/5 mL (p)
+5.2.3,Paracetamol,"P,S,T",Oral Liquid,250 mg/5 mL (p)
+5.2.4,Sumatriptan,"P,S,T",Tablet,25 mg
+5.2.4,Sumatriptan,"P,S,T",Tablet,50 mg
+5.2.1.1,Amitriptyline,"P,S,T",Tablet,10 mg
+5.2.1.1,Amitriptyline,"P,S,T",Tablet,25 mg
+5.2.1.1,Amitriptyline,"P,S,T",Tablet,75 mg
+5.2.1.2,Flunarizine,"P,S,T",Tablet,5 mg
+5.2.1.2,Flunarizine,"P,S,T",Tablet,10 mg
+5.2.1.3,Propranolol,"P,S,T",Tablet,10 mg
+5.2.1.3,Propranolol,"P,S,T",Tablet,20 mg
+5.2.1.3,Propranolol,"P,S,T",Tablet,40 mg
+5.3.1,Levodopa (A) + Carbidopa (B),"P,S,T",Tablet,100 mg (A) + 10 mg (B)
+5.3.1,Levodopa (A) + Carbidopa (B),"P,S,T",Tablet,100 mg (A) + 25 mg (B)
+5.3.1,Levodopa (A) + Carbidopa (B),"P,S,T",Tablet,250 mg (A) + 25 mg (B)
+5.3.1,Levodopa (A) + Carbidopa (B),"P,S,T",Modified Release Tablet,100 mg (A) + 25 mg (B)
+5.3.1,Levodopa (A) + Carbidopa (B),"P,S,T",Modified Release Tablet,200 mg (A) + 50 mg (B)
+5.3.2,Trihexyphenidyl,"P,S,T",Tablet,2 mg
+5.4.1,Donepezil,"S,T",Tablet,5 mg
+5.4.1,Donepezil,"S,T",Tablet,10 mg
+6.1.1.1,Albendazole,"P,S,T",Tablet,400 mg
+6.1.1.1,Albendazole,"P,S,T",Chewable Tablet,400 mg
+6.1.1.1,Albendazole,"P,S,T",Oral liquid,200 mg/5 mL (p)
+6.1.1.2,Mebendazole,"P,S,T",Tablet,100 mg
+6.1.1.2,Mebendazole,"P,S,T",Oral liquid,100 mg/5 mL (p)
+6.1.2.1,Albendazole,"P,S,T",Tablet,400 mg
+6.1.2.1,Albendazole,"P,S,T",Chewable Tablet,400 mg
+6.1.2.1,Albendazole,"P,S,T",Oral liquid,200 mg/5 mL (p)
+6.1.2.2,Diethylcarbamazine (DEC),"P,S,T",Tablet,50 mg
+6.1.2.2,Diethylcarbamazine (DEC),"P,S,T",Tablet,100 mg
+6.1.2.2,Diethylcarbamazine (DEC),"P,S,T",Oral liquid,120 mg/5 mL (p)
+6.1.2.3,Ivermectin,"P,S,T",Tablet,6 mg
+6.1.2.3,Ivermectin,"P,S,T",Tablet,12 mg
+6.1.3.1,Praziquantel,"S,T",Tablet,600 mg
+6.2.1.1,Amoxicillin,"P,S,T",Capsule,250 mg
+6.2.1.1,Amoxicillin,"P,S,T",Capsule,500 mg
+6.2.1.1,Amoxicillin,"P,S,T",Oral liquid,125 mg/5 mL (p)
+6.2.1.1,Amoxicillin,"P,S,T",Oral liquid,250 mg/5 mL (p)
+6.2.1.1,Amoxicillin,"P,S,T",Powder for Injection,250 mg
+6.2.1.1,Amoxicillin,"P,S,T",Powder for Injection,500 mg
+6.2.1.1,Amoxicillin,"P,S,T",Powder for injection,1000 mg
+6.2.1.2,Amoxicillin (A) + Clavulanic acid (B),"P,S,T",Tablet,500 mg (A) + 125 mg (B)
+6.2.1.2,Amoxicillin (A) + Clavulanic acid (B),"P,S,T",Oral liquid,200 mg (A) + 28.5 mg (B)/5 mL (p)
+6.2.1.2,Amoxicillin (A) + Clavulanic acid (B),"P,S,T",Dry Syrup,125 mg (A) + 31.25 (B)/5 mL (p)
+6.2.1.2,Amoxicillin (A) + Clavulanic acid (B),"S,T",Powder for Injection,500 mg (A) + 100 mg (B)
+6.2.1.2,Amoxicillin (A) + Clavulanic acid (B),"S,T",Powder for Injection,1 g (A) + 200 mg (B)
+6.2.1.3,Ampicillin,"P,S,T",Powder for Injection,500 mg
+6.2.1.3,Ampicillin,"P,S,T",Powder for Injection,1000 mg
+6.2.1.4,Benzathine benzylpenicillin,"P,S,T",Powder for Injection,6 lac units
+6.2.1.4,Benzathine benzylpenicillin,"P,S,T",Powder for Injection,12 lac units
+6.2.1.4,Benzathine benzylpenicillin,"P,S,T",Powder for injection,24 lac units
+6.2.1.5,Benzylpenicillin,"P,S,T",Powder for injection,5 lac units
+6.2.1.5,Benzylpenicillin,"P,S,T",Powder for injection,10 lac units
+6.2.1.6,Cefadroxil,"P,S,T",Tablet,500 mg
+6.2.1.6,Cefadroxil,"P,S,T",Tablet,100 mg
+6.2.1.6,Cefadroxil,"P,S,T",Oral liquid,125 mg/5 mL (p)
+6.2.1.7,Cefazolin,"P,S,T",Powder for Injection,500 mg
+6.2.1.7,Cefazolin,"P,S,T",Powder for Injection,1000 mg
+6.2.1.8,Cefixime,"S,T",Tablet,200 mg
+6.2.1.8,Cefixime,"S,T",Tablet,400 mg
+6.2.1.8,Cefixime,"S,T",Oral liquid,50 mg/5 mL (p)
+6.2.1.8,Cefixime,"S,T",Oral liquid,100 mg/5 mL (p)
+6.2.1.9,Cefotaxime,"S,T",Powder for Injection,250 mg
+6.2.1.9,Cefotaxime,"S,T",Powder for Injection,500 mg
+6.2.1.9,Cefotaxime,"S,T",Powder for Injection,1000 mg
+6.2.1.10,Ceftazidime,"S,T",Powder for Injection,250 mg
+6.2.1.10,Ceftazidime,"S,T",Powder for Injection,1000 mg
+6.2.1.11,Ceftriaxone,"S,T",Powder for Injection,250 mg
+6.2.1.11,Ceftriaxone,"S,T",Powder for Injection,500 mg
+6.2.1.11,Ceftriaxone,"S,T",Powder for Injection,1000 mg
+6.2.1.11,Ceftriaxone,"S,T",Powder for Injection,2000 mg
+6.2.1.12,Cloxacillin,"P,S,T",Capsule,250 mg
+6.2.1.12,Cloxacillin,"P,S,T",Capsule,500 mg
+6.2.1.12,Cloxacillin,"P,S,T",Oral Liquid,125 mg/5 mL (p)
+6.2.1.12,Cloxacillin,"P,S,T",Powder for Injection,250 mg
+6.2.1.13,Piperacillin (A) + Tazobactam (B),"T",Powder for Injection,1000 mg (A) + 125 mg (B)
+6.2.1.13,Piperacillin (A) + Tazobactam (B),"T",Powder for Injection,2000 mg (A) + 250 mg (B)
+6.2.1.13,Piperacillin (A) + Tazobactam (B),"T",Powder for Injection,4000 mg (A) + 500 mg (B)
+6.2.1.14,Meropenem,"T",Powder for Injection,500 mg (as trihydrate)
+6.2.1.14,Meropenem,"T",Powder for Injection,1000 mg (as trihydrate)
+6.2.2.1,Azithromycin,"P,S,T",Tablet,250 mg
+6.2.2.1,Azithromycin,"P,S,T",Tablet,500 mg
+6.2.2.1,Azithromycin,"P,S,T",Oral liquid,200 mg/5 mL (p)
+6.2.2.1,Azithromycin,"P,S,T",Powder for Injection,500 mg
+6.2.2.2,Cefuroxime,"P,S,T",Tablet,500 mg
+6.2.2.2,Cefuroxime,"P,S,T",Oral liquid,125 mg/5 mL (p)
+6.2.2.2,Cefuroxime,"P,S,T",Injection,1500 mg
+6.2.2.3,Ciprofloxacin,"P,S,T",Tablet,250 mg
+6.2.2.3,Ciprofloxacin,"P,S,T",Tablet,500 mg
+6.2.2.3,Ciprofloxacin,"P,S,T",Oral liquid,250 mg/5 mL (p)
+6.2.2.3,Ciprofloxacin,"P,S,T",Injection,200 mg/100 mL
+6.2.2.4,Clarithromycin,"S,T",Tablet,250 mg
+6.2.2.4,Clarithromycin,"S,T",Tablet,500 mg
+6.2.2.4,Clarithromycin,"S,T",Oral liquid,125 mg/5 mL (p)
+6.2.2.5,Clindamycin,"P,S,T",Capsule,150 mg
+6.2.2.5,Clindamycin,"P,S,T",Capsule,300 mg
+6.2.2.5,Clindamycin,"P,S,T",Injection,150 mg/mL
+6.2.2.6,Co-trimoxazole [Sulphamethoxazole (A) + Trimethoprim (B)],"P,S,T",Tablet,400 mg (A) + 80 mg (B)
+6.2.2.6,Co-trimoxazole [Sulphamethoxazole (A) + Trimethoprim (B)],"P,S,T",Tablet,800 mg (A) + 160 mg (B)
+6.2.2.6,Co-trimoxazole [Sulphamethoxazole (A) + Trimethoprim (B)],"P,S,T",Oral liquid,200 mg (A) + 40 mg (B)/5 mL (p)
+6.2.2.7,Doxycycline,"P,S,T",Capsule,100 mg
+6.2.2.7,Doxycycline,"P,S,T",Dry Syrup,50 mg/5 mL (p)
+6.2.2.7,Doxycycline,"P,S,T",Power for Injection,100 mg
+6.2.2.8,Gentamicin,"P,S,T",Injection,10 mg/mL
+6.2.2.8,Gentamicin,"P,S,T",Injection,40 mg/mL
+6.2.2.9,Metronidazole,"P,S,T",Tablet,200 mg
+6.2.2.9,Metronidazole,"P,S,T",Tablet,400 mg
+6.2.2.9,Metronidazole,"P,S,T",Oral liquid,200 mg/5 mL (p)
+6.2.2.9,Metronidazole,"P,S,T",Injection,500 mg/100 mL
+6.2.2.10,Nitrofurantoin,"P,S,T",Tablet,100 mg
+6.2.2.10,Nitrofurantoin,"P,S,T",Oral liquid,25 mg/5 mL (p)
+6.2.2.11,Phenoxymethyl penicillin,"P,S,T",Tablet,250 mg
+6.2.2.12,Procaine Benzylpenicillin,"P,S,T",Powder for injection,1000 mg (=1 million IU)
+6.2.2.12,Procaine Benzylpenicillin,"P,S,T",Capsule,125 mg
+6.2.2.12,Procaine Benzylpenicillin,"P,S,T",Capsule,250 mg
+6.2.2.13,Vancomycin,"S,T",Powder for Injection,250 mg
+6.2.2.13,Vancomycin,"S,T",Powder for Injection,500 mg
+6.2.2.13,Vancomycin,"S,T",Powder for Injection,1000 mg
+6.3.1,Clofazimine,"P,S,T",Capsule,50 mg
+6.3.1,Clofazimine,"P,S,T",Capsule,100 mg
+6.3.2,Dapsone,"P,S,T",Tablet,50 mg
+6.3.2,Dapsone,"P,S,T",Tablet,100 mg
+6.3.3,Rifampicin,"P,S,T",Capsule,150 mg
+6.3.3,Rifampicin,"P,S,T",Capsule,300 mg
+6.4.1,Amikacin,"S,T",Injection,100 mg/mL
+6.4.1,Amikacin,"S,T",Injection,250 mg/mL
+6.4.1,Amikacin,"S,T",Injection,500 mg/mL
+6.4.2,Bedaquiline,"T",Tablet,100 mg
+6.4.3,Clarithromycin,"S,T",Tablet,250 mg
+6.4.3,Clarithromycin,"S,T",Tablet,500 mg
+6.4.3,Clarithromycin,"S,T",Tablet,750 mg
+6.4.4,Clofazimine,"S,T",Capsule,50 mg
+6.4.4,Clofazimine,"S,T",Capsule,100 mg
+6.4.5,Cycloserine,"S,T",Capsule,125 mg
+6.4.5,Cycloserine,"S,T",Capsule,250 mg
+6.4.6,Delamanid,"T",Tablet,50 mg
+6.4.7,Ethambutol,"P,S,T",Tablet,200 mg
+6.4.7,Ethambutol,"P,S,T",Tablet,400 mg
+6.4.7,Ethambutol,"P,S,T",Tablet,600 mg
+6.4.7,Ethambutol,"P,S,T",Tablet,800 mg
+6.4.8,Ethionamide,"S,T",Tablet,125 mg
+6.4.8,Ethionamide,"S,T",Tablet,250 mg
+6.4.9,Isoniazid,"P,S,T",Tablet,100 mg
+6.4.9,Isoniazid,"P,S,T",Tablet,300 mg
+6.4.9,Isoniazid,"P,S,T",Oral Liquid,50 mg/5 mL (p)
+6.4.10,Levofloxacin,"P,S,T",Tablet,250 mg
+6.4.10,Levofloxacin,"P,S,T",Tablet,500 mg
+6.4.10,Levofloxacin,"P,S,T",Tablet,750 mg
+6.4.11,Linezolid,"P,S,T",Tablet,300 mg
+6.4.11,Linezolid,"P,S,T",Tablet,600 mg
+6.4.12,Moxifloxacin,"P,S,T",Tablet,400 mg
+6.4.13,Para-aminosalicylic acid,"S,T",Granules,(As licensed)
+6.4.14,Pyrazinamide,"P,S,T",Tablet,500 mg
+6.4.14,Pyrazinamide,"P,S,T",Tablet,750 mg
+6.4.14,Pyrazinamide,"P,S,T",Tablet,1000 mg
+6.4.14,Pyrazinamide,"P,S,T",Tablet,1500 mg
+6.4.14,Pyrazinamide,"P,S,T",Oral liquid,250 mg/5 mL (p)
+6.4.15,Rifampicin,"P,S,T",Capsule,150 mg
+6.4.15,Rifampicin,"P,S,T",Capsule,300 mg
+6.4.15,Rifampicin,"P,S,T",Capsule,450 mg
+6.4.15,Rifampicin,"P,S,T",Capsule,600 mg
+6.4.15,Rifampicin,"P,S,T",Oral liquid,100 mg/5 mL (p)
+6.4.16,Streptomycin,"P,S,T",Powder for Injection,750 mg
+6.4.16,Streptomycin,"P,S,T",Powder for Injection,1000 mg
+6.5.1,Amphotericin B,"S,T",Injection,50 mg/vial
+6.5.2,Clotrimazole,"P,S,T",Pessary,100 mg
+6.5.3,Fluconazole,"P,S,T",Tablet,50 mg
+6.5.3,Fluconazole,"P,S,T",Tablet,100 mg
+6.5.3,Fluconazole,"P,S,T",Tablet,150 mg
+6.5.3,Fluconazole,"P,S,T",Tablet,200 mg
+6.5.3,Fluconazole,"P,S,T",Tablet,400 mg
+6.5.3,Fluconazole,"P,S,T",Oral liquid,50 mg/5 mL (p)
+6.5.3,Fluconazole,"S,T",Injection,200 mg/100 mL
+6.5.4,Griseofulvin,"P,S,T",Tablet,125 mg
+6.5.4,Griseofulvin,"P,S,T",Tablet,250 mg
+6.5.4,Griseofulvin,"P,S,T",Tablet,375 mg
+6.5.5,Itraconazole,"S,T",Capsule,100 mg
+6.5.5,Itraconazole,"S,T",Capsule,200 mg
+6.5.5,Itraconazole,"S,T",Oral liquid,10 mg/mL
+6.5.6,Mupirocin,"P,S,T",Ointment,2%
+6.5.7,Nystatin,"S,T",Pessary,1 Lac IU
+6.5.7,Nystatin,"S,T",Oral Liquid,1 Lac IU/mL (p)
+6.5.8,Terbinafine,"P,S,T",Cream,1%
+6.6.1.1,Acyclovir,"P,S,T",Tablet,200 mg
+6.6.1.1,Acyclovir,"P,S,T",Tablet,400 mg
+6.6.1.1,Acyclovir,"P,S,T",Tablet,800 mg
+6.6.1.1,Acyclovir,"P,S,T",Powder for Injection,250 mg
+6.6.1.1,Acyclovir,"P,S,T",Powder for Injection,500 mg
+6.6.1.1,Acyclovir,"P,S,T",Oral liquid,400 mg/5 mL (p)
+6.6.2.1,Valganciclovir,"S,T",Tablet,450 mg
+6.6.2.1,Valganciclovir,"S,T",Powder for oral solution,50 mg/mL
+6.7.1.1,Abacavir,"S,T",Tablet,60 mg (p)
+6.7.1.1,Abacavir,"S,T",Tablet,300 mg
+6.7.1.2,Abacavir (A)+ Lamivudine (B),"S,T",Tablet,60 mg (A)+30 mg (B) (p)
+6.7.1.2,Abacavir (A)+ Lamivudine (B),"S,T",Tablet,600 mg (A)+300 mg (B)
+6.7.1.3,Lamivudine,"S,T",Tablet,100 mg
+6.7.1.3,Lamivudine,"S,T",Tablet,150 mg
+6.7.1.4,Tenofovir Disproxil Fumarate (TDF),"S,T",Tablet,300 mg
+6.7.1.5,Tenofovir Disproxil Fumarate (A)+ Lamivudine (B),"S,T",Tablet,300 mg (A)+300 mg (B)
+6.7.1.6,Tenofovir Disproxil Fumarate (A)+ Lamivudine (B)+ Dolutegravir (C),"P,S,T",Tablet,300 mg (A)+300 mg (B) +50 mg (C)
+6.7.1.7,Tenofovir Disproxil Fumarate (A)+ Lamivudine (B)+ Efavirenz (C),"S,T",Tablet,300 mg (A)+300 mg (B) +600 mg (C)
+6.7.1.8,Zidovudine,"S,T",Tablet,300 mg
+6.7.1.8,Zidovudine,"S,T",Oral liquid,50 mg/5 mL (p)
+6.7.1.9,Zidovudine (A)+ Lamivudine (B),"S,T",Tablet,60 mg (A)+30 mg (B) (p)
+6.7.1.9,Zidovudine (A)+ Lamivudine (B),"S,T",Tablet,300 mg (A)+150 mg (B)
+6.7.1.10,Zidovudine (A) + Lamivudine (B) + Nevirapine (C),"S,T",Tablet,60 mg (A) + 30 mg (B) + 50 mg (C) (p)
+6.7.1.10,Zidovudine (A) + Lamivudine (B) + Nevirapine (C),"S,T",Tablet,300 mg (A) + 150 mg (B) + 200 mg (C)
+6.7.3.1,Dolutegravir,"S,T",Tablet,50 mg
+6.7.3.2,Raltegravir,"S,T",Tablet,400 mg
+6.7.4.1,Atazanavir (A) + Ritonavir (B),"S,T",Tablet,300 mg (A) + Tablet,100 mg (B)
+6.7.4.2,Darunavir,"S,T",Tablet,600 mg
+6.7.4.3,Darunavir (A) + Ritonavir (B),"S,T",Tablet,600 mg (A) + Tablet,100 mg (B)
+6.7.4.4,Lopinavir (A) + Ritonavir (B),"S,T",Tablet,100 mg (A) + 25 mg (B)
+6.7.4.4,Lopinavir (A) + Ritonavir (B),"S,T",Tablet,200 mg (A) + 50 mg (B)
+6.7.4.4,Lopinavir (A) + Ritonavir (B),"S,T",Oral Liquid,80 mg (A) + 20 mg (B)/mL (p)
+6.7.4.4,Lopinavir (A) + Ritonavir (B),"S,T",Capsule/Sachet (containing pellets/granules),40 mg (A) + 10 mg (B) (p)
+6.7.4.5,Ritonavir,"S,T",Tablet,100 mg
+6.7.5.1,Acyclovir,"P,S,T",Injection,250 mg
+6.7.5.2,Cefotaxime,"P,S,T",Injection,1000 mg
+6.7.5.3,Clindamycin,"P,S,T",Tablet,300 mg
+6.7.5.4,Clotrimazole,"P,S,T",Ointment,1 %
+6.7.5.5,Valganciclovir,"S,T",Tablet/Capsule,450 mg
+6.7.6.1,Azithromycin,"P,S,T",Tablet,1000 mg
+6.8.1,Daclatasvir,"S,T",Tablet,30 mg
+6.8.1,Daclatasvir,"S,T",Tablet,60 mg
+6.8.2,Entecavir,"S,T",Tablet,0.5 mg
+6.8.2,Entecavir,"S,T",Tablet,1 mg
+6.8.2,Entecavir,"S,T",Oral liquid,0.05 mg/mL (p)
+6.8.3,Ribavirin,"S,T",Capsule,200 mg
+6.8.4,Sofosbuvir,"S,T",Tablet,400 mg
+6.8.5,Tenofovir Alafenamide Fumarate (TAF),"S,T",Tablet,25 mg
+6.8.6,Tenofovir Disproxil Fumarate (TDF),"S,T",Tablet,300 mg
+6.9.1.1,Metronidazole,"P,S,T",Tablet,200 mg
+6.9.1.1,Metronidazole,"P,S,T",Tablet,400 mg
+6.9.1.1,Metronidazole,"P,S,T",Injection,500 mg/100 mL
+6.9.1.1,Metronidazole,"P,S,T",Oral liquid,200 mg/5 mL (p)
+6.9.2.1,Amphotericin B,"S,T",Injection,50 mg
+6.9.2.2,Miltefosine,"P,S,T",Capsule,50 mg
+6.9.2.3,Paromomycin,"P,S,T",Injection,375 mg/mL
+6.9.3.1,Clindamycin,"P,S,T",Capsule,150 mg
+6.9.3.1,Clindamycin,"P,S,T",Capsule,300 mg
+6.9.3.2,Co-trimoxazole [Sulphamethoxazole (A) + Trimethoprim (B)],"P,S,T",Tablet,400 mg (A) + 80 mg (B)
+6.9.3.2,Co-trimoxazole [Sulphamethoxazole (A) + Trimethoprim (B)],"P,S,T",Tablet,800 mg (A) + 160 mg (B)
+6.9.3.2,Co-trimoxazole [Sulphamethoxazole (A) + Trimethoprim (B)],"P,S,T",Oral liquid,200 mg (A) + 40 mg (B)/5 mL (p)
+6.10.1.1,Artemether (A) + Lumefantrine (B),"P,S,T",Tablet,20 mg (A) + 120 mg (B)
+6.10.1.1,Artemether (A) + Lumefantrine (B),"P,S,T",Tablet,40 mg (A) + 240 mg (B)
+6.10.1.1,Artemether (A) + Lumefantrine (B),"P,S,T",Tablet,80 mg (A) + 480 mg (B)
+6.10.1.2,Artesunate,"P,S,T",Powder for Injection,60 mg
+6.10.1.2,Artesunate,"P,S,T",Powder for Injection,120 mg
+6.10.1.3,Artesunate (A) + Sulphadoxine - Pyrimethamine (B),"P,S,T",Combi pack,1 Tablet 25 mg (A) + 1 Tablet (250 mg + 12.5 mg) (B)
+6.10.1.3,Artesunate (A) + Sulphadoxine - Pyrimethamine (B),"P,S,T",Combi pack,1 Tablet 50 mg (A) + 1 Tablet (500 mg + 25 mg) (B)
+6.10.1.3,Artesunate (A) + Sulphadoxine - Pyrimethamine (B),"P,S,T",Combi pack,1 Tablet 100 mg (A) + 1 Tablet (750 mg + 37.5 mg) (B)
+6.10.1.3,Artesunate (A) + Sulphadoxine - Pyrimethamine (B),"P,S,T",Combi pack,1 Tablet 150 mg (A) + 2 Tablet (500 mg + 25 mg) (B)
+6.10.1.3,Artesunate (A) + Sulphadoxine - Pyrimethamine (B),"P,S,T",Combi pack,1 Tablet 200 mg (A) + 2 Tablet (750 mg + 37.5 mg) (B)
+6.10.1.4,Chloroquine,"P,S,T",Tablet,150 mg
+6.10.1.4,Chloroquine,"P,S,T",Oral liquid,50 mg/5 mL
+6.10.1.5,Clindamycin,"P,S,T",Capsule,150 mg
+6.10.1.5,Clindamycin,"P,S,T",Capsule,300 mg
+6.10.1.6,Primaquine,"P,S,T",Tablet,2.5 mg
+6.10.1.6,Primaquine,"P,S,T",Tablet,7.5 mg
+6.10.1.6,Primaquine,"P,S,T",Tablet,15 mg
+6.10.1.7,Quinine,"P,S,T",Tablet,300 mg
+6.10.1.7,Quinine,"P,S,T",Injection,300 mg/mL
+6.10.2.1,Doxycycline,"P,S,T",Capsule,100 mg
+6.10.2.1,Doxycycline,"P,S,T",Oral liquid,50 mg/5 mL
+6.10.2.2,Mefloquine,"T",Tablet,250 mg
+7.1.1,5-Fluorouracil,"T",Injection,250 mg/5 mL
+7.1.2,6-Mercaptopurine,"T",Tablet,50 mg
+7.1.3,Actinomycin D,"T",Powder for Injection,0.5 mg
+7.1.4,All-trans retinoic acid,"T",Capsule,10 mg
+7.1.5,Arsenic trioxide,"T",Injection,1 mg/mL
+7.1.6,Bendamustine hydrochloride,"T",Injection,25 mg/vial
+7.1.6,Bendamustine hydrochloride,"T",Injection,100 mg/vial
+7.1.7,Bleomycin,"T",Powder for Injection,15 units
+7.1.8,Bortezomib,"T",Powder for Injection,2 mg
+7.1.9,Calcium folinate,"T",Tablet,15 mg
+7.1.9,Calcium folinate,"T",Injection,3 mg/mL
+7.1.10,Capecitabine,"T",Tablet,500 mg
+7.1.11,Carboplatin,"T",Injection,10 mg/mL
+7.1.12,Chlorambucil,"T",Tablet,2 mg
+7.1.12,Chlorambucil,"T",Tablet,5 mg
+7.1.13,Cisplatin,"T",Injection,1 mg/mL
+7.1.14,Cyclophosphamide,"T",Tablet,50 mg
+7.1.14,Cyclophosphamide,"T",Powder for Injection,500 mg
+7.1.15,Cytosine arabinoside,"T",Injection,100 mg/vial
+7.1.15,Cytosine arabinoside,"T",Injection,500 mg/vial
+7.1.15,Cytosine arabinoside,"T",Injection,1000 mg/vial
+7.1.16,Dacarbazine,"T",Powder for Injection,200 mg
+7.1.16,Dacarbazine,"T",Powder for Injection,500 mg
+7.1.17,Daunorubicin,"T",Injection,5 mg/mL
+7.1.18,Docetaxel,"T",Powder for Injection,20 mg
+7.1.18,Docetaxel,"T",Powder for Injection,80 mg
+7.1.19,Doxorubicin,"T",Injection,2 mg/mL
+7.1.20,Etoposide,"T",Capsule,50 mg
+7.1.20,Etoposide,"T",Injection,20 mg/mL
+7.1.21,Gefitinib,"T",Tablet,250 mg
+7.1.22,Gemcitabine,"T",Powder for Injection,200 mg
+7.1.22,Gemcitabine,"T",Powder for Injection,1000 mg
+7.1.23,Hydroxyurea,"T",Capsule,500 mg
+7.1.23,Hydroxyurea,"T",Powder for Injection,1000 mg
+7.1.24,Ifosfamide,"T",Powder for Injection,2000 mg
+7.1.24,Ifosfamide,"T",Tablet,100 mg
+7.1.25,Imatinib,"T",Tablet,400 mg
+7.1.26,Irinotecan HCl trihydrate,"T",Solution for injection,20 mg/mL
+7.1.27,L-Asparaginase,"T",Powder for Injection,5000 KU
+7.1.27,L-Asparaginase,"T",Powder for Injection,10000 KU
+7.1.28,Lenalidomide,"T",Capsule,5 mg
+7.1.28,Lenalidomide,"T",Capsule,25 mg
+7.1.29,Melphalan,"T",Tablet,2 mg
+7.1.29,Melphalan,"T",Tablet,5 mg
+7.1.30,Methotrexate,"S,T",Tablet,2.5 mg
+7.1.30,Methotrexate,"S,T",Tablet,5 mg
+7.1.30,Methotrexate,"S,T",Tablet,10 mg
+7.1.30,Methotrexate,"S,T",Injection,50 mg/mL
+7.1.31,Oxaliplatin,"T",Injection,5 mg/mL in 10 mL vial
+7.1.31,Oxaliplatin,"T",Injection,5 mg/mL in 20 mL vial
+7.1.32,Paclitaxel,"T",Injection,30 mg/5 mL
+7.1.32,Paclitaxel,"T",Injection,100 mg/16.7 mL
+7.1.33,Rituximab,"T",Injection,10 mg/mL
+7.1.34,Temozolomide,"T",Capsule,20 mg
+7.1.34,Temozolomide,"T",Capsule,100 mg
+7.1.34,Temozolomide,"T",Capsule,250 mg
+7.1.35,Thalidomide,"T",Capsule,50 mg
+7.1.35,Thalidomide,"T",Capsule,100 mg
+7.1.36,Trastuzumab,"T",Injection,440 mg/50 mL
+7.1.37,Vinblastine,"T",Injection,1 mg/mL
+7.1.38,Vincristine,"T",Injection,1 mg/mL
+7.2.1,Bicalutamide,"T",Tablet,50 mg
+7.2.2,Letrozole,"T",Tablet,2.5 mg
+7.2.3,Leuprolide acetate,"T",Powder for injection,3.75 mg
+7.2.3,Leuprolide acetate,"T",Powder for injection,11.25 mg
+7.2.3,Leuprolide acetate,"T",Powder for injection,22.5 mg
+7.2.4,Prednisolone,"S,T",Tablet,10 mg
+7.2.4,Prednisolone,"S,T",Tablet,20 mg
+7.2.4,Prednisolone,"S,T",Tablet,40 mg
+7.2.4,Prednisolone,"S,T",Oral liquid,5 mg/5 mL (p)
+7.2.4,Prednisolone,"S,T",Oral liquid,15 mg/5 mL (p)
+7.2.4,Prednisolone,"S,T",Injection,20 mg/2 mL
+7.2.5,Tamoxifen,"T",Tablet,10 mg
+7.2.5,Tamoxifen,"T",Tablet,20 mg
+7.3.1,Azathioprine,"T",Tablet,50 mg
+7.3.2,Cyclosporine,"T",Capsule,25 mg
+7.3.2,Cyclosporine,"T",Capsule,50 mg
+7.3.2,Cyclosporine,"T",Capsule,100 mg
+7.3.2,Cyclosporine,"T",Oral liquid,100 mg/mL (p)
+7.3.2,Cyclosporine,"T",Injection,50 mg/mL
+7.3.3,Mycophenolate mofetil,"T",Tablet,250 mg
+7.3.3,Mycophenolate mofetil,"T",Tablet,500 mg
+7.3.4,Tacrolimus,"T",Capsule,0.5 mg
+7.3.4,Tacrolimus,"T",Capsule,1 mg
+7.3.4,Tacrolimus,"T",Capsule,2 mg
+7.4.1,Allopurinol,"S,T",Tablet,100 mg
+7.4.2,Amitriptyline,"S,T",Tablet,10 mg
+7.4.2,Amitriptyline,"S,T",Tablet,25 mg
+7.4.3,Dexamethasone,"S,T",Tablet,0.5 mg
+7.4.3,Dexamethasone,"S,T",Tablet,4 mg
+7.4.3,Dexamethasone,"S,T",Injection,4 mg/mL
+7.4.4,Diazepam,"S,T",Tablet,5 mg
+7.4.4,Diazepam,"S,T",Injection,5 mg/mL
+7.4.5,Filgrastim,"T",Injection,300 mcg
+7.4.6,Fluoxetine,"S,T",Capsule,20 mg
+7.4.7,Haloperidol,"S,T",Tablet,1.5 mg
+7.4.7,Haloperidol,"S,T",Injection,5 mg/mL
+7.4.8,Lactulose,"S,T",Oral liquid,10 g/15 mL
+7.4.9,Loperamide,"S,T",Tablet,2 mg
+7.4.10,Metoclopramide,"S,T",Oral liquid,5 mg/5 mL (p)
+7.4.10,Metoclopramide,"S,T",Injection,5 mg/mL
+7.4.11,Mesna,"T",Injection,100 mg/mL
+7.4.12,Midazolam,"S,T",Injection,1 mg/mL
+7.4.13,Morphine,"S,T",Tablet,10 mg
+7.4.13,Morphine,"S,T",Modified Release Tablet,30 mg
+7.4.14,Ondansetron,"S,T",Tablet,4 mg
+7.4.14,Ondansetron,"S,T",Tablet,8 mg
+7.4.14,Ondansetron,"S,T",Oral liquid,2 mg/5 mL (p)
+7.4.14,Ondansetron,"S,T",Injection,2 mg/mL
+7.4.15,Tramadol,"S,T",Capsule,50 mg
+7.4.15,Tramadol,"S,T",Capsule,100 mg
+7.4.15,Tramadol,"S,T",Injection,50 mg/mL
+7.4.16,Zoledronic acid,"T",Powder for Injection,4 mg
+8.1.4,Folic Acid,"P,S,T",Tablet,1 mg
+8.1.4,Folic Acid,"P,S,T",Tablet,5 mg
+8.1.5,Hydroxocobalamin,"P,S,T",Injection,1 mg/mL
+8.1.6,Hydroxyurea,"S,T",Capsule,500 mg
+8.1.7,Iron sucrose,"S,T",Injection,20 mg/mL
+8.2.1,Enoxaparin,"S,T",Injection,40 mg/0.4 mL
+8.2.1,Enoxaparin,"S,T",Injection,60 mg/0.6 mL
+8.2.2,Heparin,"S,T",Injection,1000 IU/mL
+8.2.2,Heparin,"S,T",Injection,5000 IU/mL
+8.2.3,Phytomenadione (Vitamin K1),"P,S,T",Tablet,10 mg
+8.2.3,Phytomenadione (Vitamin K1),"P,S,T",Injection,10 mg/mL
+8.2.4,Protamine Sulphate,"S,T",Injection,10 mg/mL
+8.2.5,Tranexamic acid,"P,S,T",Tablet,500 mg
+8.2.5,Tranexamic acid,"P,S,T",Injection,100 mg/mL
+8.2.6,Warfarin,"S,T",Tablet,1 mg
+8.2.6,Warfarin,"S,T",Tablet,2 mg
+8.2.6,Warfarin,"S,T",Tablet,3 mg
+8.2.6,Warfarin,"S,T",Tablet,5 mg
+9.1.1,Fresh frozen plasma,"S,T",As licensed,
+9.1.2,Platelet rich plasma/Platelet concentrates,"S,T",As licensed,
+9.1.3,Red blood cells/Packed RBCs,"S,T",As licensed,
+9.1.4,Whole blood,"S,T",As licensed,
+9.2.1,Dextran-40,"S,T",Injection,10 %
+9.3.1,Coagulation factor IX,"S,T",Powder for Injection,600 IU
+9.3.2,Coagulation factor VIII,"S,T",Powder for Injection,250 IU
+9.3.2,Coagulation factor VIII,"S,T",Powder for Injection,500 IU
+9.3.3,Cryoprecipitate,"S,T",As licensed,
+10.1.1,Diltiazem,"P,S,T",Tablet,30 mg
+10.1.1,Diltiazem,"P,S,T",Tablet,60 mg
+10.1.1,Diltiazem,"P,S,T",Modified Release Tablet,180 mg
+10.1.1,Diltiazem,"S,T",Injection,5 mg/mL
+10.1.2,Glyceryl trinitrate,"P,S,T",Sublingual Tablet,0.5 mg
+10.1.2,Glyceryl trinitrate,"S,T",Injection,5 mg/mL
+10.1.3,Isosorbide dinitrate,"P,S,T",Tablet,5 mg
+10.1.3,Isosorbide dinitrate,"P,S,T",Tablet,10 mg
+10.1.4,Metoprolol,"P,S,T",Tablet,25 mg
+10.1.4,Metoprolol,"P,S,T",Tablet,50 mg
+10.1.4,Metoprolol,"P,S,T",Tablet,100 mg
+10.1.4,Metoprolol,"P,S,T",Modified Release Tablet,100 mg
+10.1.4,Metoprolol,"S,T",Injection,1 mg/mL
+10.2.1,Adenosine,"S,T",Injection,3 mg/mL
+10.2.2,Amiodarone,"S,T",Tablet,100 mg
+10.2.2,Amiodarone,"S,T",Tablet,200 mg
+10.2.2,Amiodarone,"S,T",Injection,50 mg/mL
+10.2.3,Digoxin,"S,T",Tablet,0.25 mg
+10.2.3,Digoxin,"S,T",Oral liquid,0.05 mg/mL
+10.2.3,Digoxin,"S,T",Injection,0.25 mg/mL
+10.2.4,Esmolol,"S,T",Injection,10 mg/mL
+10.2.5,Lignocaine,"S,T",Injection,2%
+10.2.6,Verapamil,"S,T",Tablet,40 mg
+10.2.6,Verapamil,"S,T",Tablet,80 mg
+10.2.6,Verapamil,"S,T",Injection,2.5 mg/mL
+10.3.1,Amlodipine,"P,S,T",Tablet,2.5 mg
+10.3.1,Amlodipine,"P,S,T",Tablet,5 mg
+10.3.1,Amlodipine,"P,S,T",Tablet,10 mg
+10.3.2,Enalapril,"P,S,T",Tablet,2.5 mg
+10.3.2,Enalapril,"P,S,T",Tablet,5 mg
+10.3.3,Hydrochlorothiazide,"P,S,T",Tablet,12.5 mg
+10.3.3,Hydrochlorothiazide,"P,S,T",Tablet,25 mg
+10.3.4,Labetalol,"P,S,T",Tablet,50 mg
+10.3.4,Labetalol,"P,S,T",Tablet,100 mg
+10.3.4,Labetalol,"P,S,T",Injection,5 mg/mL
+10.3.5,Ramipril,"P,S,T",Tablet,2.5 mg
+10.3.5,Ramipril,"P,S,T",Tablet,5 mg
+10.3.6,Sodium nitroprusside,"S,T",Injection,10 mg/mL
+10.3.7,Telmisartan,"P,S,T",Tablet,20 mg
+10.3.7,Telmisartan,"P,S,T",Tablet,40 mg
+10.3.7,Telmisartan,"P,S,T",Tablet,80 mg
+10.4.1,Digoxin,"S,T",Tablet,0.25 mg
+10.4.1,Digoxin,"S,T",Oral liquid,0.05 mg/mL
+10.4.1,Digoxin,"S,T",Injection,0.25 mg/mL
+10.4.2,Dobutamine,"S,T",Injection,50 mg/mL
+10.4.3,Dopamine,"S,T",Injection,40 mg/mL
+10.4.4,Noradrenaline,"S,T",Injection,2 mg/mL
+10.4.5,Spironolactone,"P,S,T",Tablet,25 mg
+10.4.5,Spironolactone,"P,S,T",Tablet,50 mg
+10.5.1,Acetylsalicylic acid,"P,S,T",Conventional/Effervescent/Dispersible/Enteric coated Tablets,150 mg
+10.5.1,Acetylsalicylic acid,"P,S,T",Conventional/Effervescent/Dispersible/Enteric coated Tablet,325 mg
+10.5.1,Acetylsalicylic acid,"P,S,T",Enteric coated Tablet,75 mg
+10.5.1,Acetylsalicylic acid,"P,S,T",Enteric coated Tablet,100 mg
+10.5.2,Clopidogrel,"P,S,T",Tablet,75 mg
+10.5.2,Clopidogrel,"P,S,T",Tablet,150 mg
+10.5.3,Dabigatran,"S,T",Tablet,110 mg
+10.5.3,Dabigatran,"S,T",Tablet,150 mg
+10.5.4,Enoxaparin,"S,T",Injection,40 mg/0.4 mL
+10.5.4,Enoxaparin,"S,T",Injection,60 mg/0.6 mL
+10.5.5,Heparin,"S,T",Injection,1000 IU/mL
+10.5.5,Heparin,"S,T",Injection,5000 IU/mL
+10.5.6,Streptokinase,"S,T",Injection,750,000 IU
+10.5.6,Streptokinase,"S,T",Injection,15,00,000 IU
+10.5.7,Tenecteplase,"S,T",Injection,30 mg/vial
+10.5.7,Tenecteplase,"S,T",Injection,40 mg/vial
+10.6.1,Atorvastatin,"P,S,T",Tablet,10 mg
+10.6.1,Atorvastatin,"P,S,T",Tablet,20 mg
+10.6.1,Atorvastatin,"P,S,T",Tablet,40 mg
+10.6.1,Atorvastatin,"P,S,T",Tablet,80 mg
+11.1.1,Clotrimazole,"P,S,T",Cream,1 %
+11.1.1,Clotrimazole,"P,S,T",Lotion,1 %
+11.2.1,Framycetin,"P,S,T",Cream,1 %
+11.2.2,Fusidic acid,"P,S,T",Cream,2 %
+11.2.3,Silver sulphadiazine,"P,S,T",Cream,1 %
+11.3.1,Betamethasone valerate,"P,S,T",Cream,0.05 %
+11.3.1,Betamethasone valerate,"P,S,T",Cream,0.1 %
+11.3.2,Calamine,"P,S,T",Lotion,(As per IP)
+11.4.1,Benzoyl peroxide,"P,S,T",Gel,2.5 % - 5 %
+11.4.2,Coal tar (A) + Salicylic Acid (B),"P,S,T",Solution,1 % (A) + 3 % (B)
+11.4.3,Podophyllin resin,"S,T",Solution,20 %
+11.4.4,Salicylic acid,"P,S,T",Ointment,3-6 %
+11.5.1,Permethrin,"P,S,T",Lotion,1 %
+11.5.1,Permethrin,"P,S,T",Cream,5 %
+11.6.1,Glycerin/glycerol (as mentioned in IP),"P,S,T",Topical,
+12.1.1,Fluorescein,"S,T",Ophthalmic Strips,
+12.1.2,Proparacaine,"S,T",Eye Drops,0.5%
+12.1.3,Tropicamide,"S,T",Eye drop,1 %
+12.2.1,Barium sulphate,"S,T",Oral Liquid,95% w/v
+12.2.2,Gadobenate dimeglumine,"T",Injection,529 mg/mL
+12.2.3,Iohexol,"S,T",Injection,140 to 350 mg iodine/mL
+12.2.4,Meglumine diatrizoate,"S,T",Injection,60 % w/v
+12.2.4,Meglumine diatrizoate,"S,T",Injection,76 % w/v
+13.1,Haemodialysis fluid,"S,T",As licensed,
+13.2,Peritoneal dialysis solution,"S,T",As licensed,
+14.1.1,Chlorhexidine,"P,S,T",Solution,5% (Concentrate)
+14.1.2,Ethyl alcohol (Denatured),"P,S,T",Solution,70%
+14.1.3,Hydrogen peroxide,"P,S,T",Solution,6%
+14.1.4,Methylrosanilinium chloride (Gentian Violet),"P,S,T",Topical preparation,0.25% to 2%
+14.1.5,Povidone iodine,"P,S,T",Solution,4% to 10%
+14.2.1,Glutaraldehyde,"S,T",As Licensed,
+14.2.2,Potassium permanganate,"P,S,T",Crystals for topical solution,
+15.1,Furosemide,"P,S,T",Tablet,40 mg
+15.1,Furosemide,"P,S,T",Oral liquid,10 mg/mL
+15.1,Furosemide,"P,S,T",Injection,10 mg/mL
+15.2,Hydrochlorothiazide,"P,S,T",Tablet,25 mg
+15.2,Hydrochlorothiazide,"P,S,T",Tablet,50 mg
+15.3,Mannitol,"P,S,T",Injection,10 %
+15.3,Mannitol,"P,S,T",Injection,20 %
+15.4,Spironolactone,"P,S,T",Tablet,25 mg
+15.4,Spironolactone,"P,S,T",Tablet,50 mg
+16.1,Budesonide,"P,S,T",Nasal Spray,50 mcg/dose
+16.1,Budesonide,"P,S,T",Nasal Spray,100 mcg/dose
+16.2,Ciprofloxacin,"P,S,T",Drops,0.3 %
+16.3,Clotrimazole,"P,S,T",Drops,1 %
+16.4,Xylometazoline,"P,S,T",Nasal drops,0.05 %
+16.4,Xylometazoline,"P,S,T",Nasal drops,0.1 %
+17.1.1,Omeprazole,"P,S,T",Capsule,10 mg
+17.1.1,Omeprazole,"P,S,T",Capsule,20 mg
+17.1.1,Omeprazole,"P,S,T",Capsule,40 mg
+17.1.1,Omeprazole,"P,S,T",Powder for oral liquid,20 mg
+17.1.2,Pantoprazole,"S,T",Injection,40 mg
+17.2.1,Domperidone,"P,S,T",Tablet,10 mg
+17.2.1,Domperidone,"P,S,T",Oral Liquid,1 mg/mL
+17.2.2,Metoclopramide,"P,S,T",Tablet,10 mg
+17.2.2,Metoclopramide,"P,S,T",Injection,5 mg/mL
+17.2.3,Ondansetron,"S,T",Tablet,4 mg
+17.2.3,Ondansetron,"S,T",Oral Liquid,2 mg/5 mL (p)
+17.2.3,Ondansetron,"S,T",Injection,2 mg/mL
+17.3.1,5-aminosalicylic acid (Mesalazine/Mesalaine),"S,T",Tablet,400 mg
+17.3.1,5-aminosalicylic acid (Mesalazine/Mesalaine),"S,T",Suppository,500 mg
+17.3.1,5-aminosalicylic acid (Mesalazine/Mesalaine),"S,T",Retention Enema,
+17.4.1,Dicyclomine,"P,S,T",Tablet,10 mg
+17.4.1,Dicyclomine,"P,S,T",Oral Solution,10 mg/5 mL
+17.4.1,Dicyclomine,"P,S,T",Injection,10 mg/mL
+17.4.2,Hyoscine butyl bromide,"P,S,T",Tablet,100 mg
+17.4.2,Hyoscine butyl bromide,"P,S,T",Injection,20 mg/mL
+17.5.1,Bisacodyl,"P,S,T",Tablet,5 mg
+17.5.1,Bisacodyl,"P,S,T",Suppository,5 mg
+17.5.2,Ispaghula,"P,S,T",Granules/Husk/Powder,
+17.5.3,Lactulose,"S,T",Oral Liquid,10 g/15 mL
+17.6.1,Oral rehydration salts,"P,S,T",As licensed,
+17.6.2,Zinc Sulphate,"P,S,T",Dispersible Tablet,20 mg
+17.7.1,Somatostatin,"T",Powder for Injection,3 mg
+18.1.1,Dexamethasone,"S,T",Tablet,0.5 mg
+18.1.1,Dexamethasone,"S,T",Injection,4 mg/mL
+18.1.2,Fludrocortisone,"S,T",Tablet,0.1 mg
+18.1.3,Hydrocortisone,"P,S,T",Tablet,5 mg
+18.1.3,Hydrocortisone,"P,S,T",Tablet,10 mg
+18.1.3,Hydrocortisone,"P,S,T",Tablet,20 mg
+18.1.3,Hydrocortisone,"P,S,T",Powder for Injection,100 mg
+18.1.4,Methylprednisolone,"S,T",Injection,40 mg/mL
+18.1.5,Prednisolone,"P,S,T",Tablet,5 mg
+18.1.5,Prednisolone,"P,S,T",Tablet,10 mg
+18.1.5,Prednisolone,"P,S,T",Tablet,20 mg
+18.1.5,Prednisolone,"P,S,T",Oral liquid,5 mg/5 mL (p)
+18.1.5,Prednisolone,"P,S,T",Oral liquid,15 mg/5 mL (p)
+18.2.1.1,Ethinylestradiol (A)+ Levonorgestrel (B),"P,S,T",Tablet,0.03 mg (A)+ Tablet,0.15 mg (B)
+18.2.1.2,Levonorgestrel,"P,S,T",Tablet,0.75 mg
+18.2.1.2,Levonorgestrel,"P,S,T",Tablet,1.5 mg
+18.2.1.3,Ormeloxifene (Centchroman),"P,S,T",Tablet,30 mg
+18.2.2.1,Hormone releasing IUD,"T",Contains 52 mg of Levonorgestrel,
+18.2.2.2,IUD containing Copper,"P,S,T",As licensed,
+18.2.3.1,Condom,"P,S,T",As Licensed,
+18.3.1.1,Glimepiride,"P,S,T",Tablet,1 mg
+18.3.1.1,Glimepiride,"P,S,T",Tablet,2 mg
+18.3.1.2,Insulin (Soluble),"P,S,T",Injection,40 IU/mL
+18.3.1.3,Insulin Intermediate Acting (NPH),"P,S,T",Injection,40 IU/mL
+18.3.1.4,Insulin Glargine,"P,S,T",Injection,100 IU/mL
+18.3.1.5,Insulin Premix Injection 30:70 (Regular : NPH),"P,S,T",Injection,40 IU/mL
+18.3.1.6,Metformin,"P,S,T",Tablet,500 mg
+18.3.1.6,Metformin,"P,S,T",Tablet,1000 mg
+18.3.1.6,Metformin,"P,S,T",Modified release Tablet,1000 mg
+18.3.1.7,Teneligliptin,"P,S,T",Tablet,20 mg
+18.3.2.1,Glucose,"P,S,T",Injection,25 %
+18.4.1,Clomiphene citrate,"T",Tablet,50 mg
+18.4.1,Clomiphene citrate,"T",Tablet,100 mg
+18.4.2,Human chorionic gonadotropin,"S,T",Injection,2000 IU
+18.4.2,Human chorionic gonadotropin,"S,T",Injection,5000 IU
+18.4.2,Human chorionic gonadotropin,"S,T",Injection,10000 IU
+18.5.1,Medroxyprogesterone acetate,"P,S,T",Tablet,5 mg
+18.5.1,Medroxyprogesterone acetate,"P,S,T",Tablet,10 mg
+18.5.1,Medroxyprogesterone acetate,"P,S,T",Injection,150 mg/mL
+18.5.2,Norethisterone,"P,S,T",Tablet,5 mg
+18.6.1,Carbimazole,"P,S,T",Tablet,5 mg
+18.6.1,Carbimazole,"P,S,T",Tablet,10 mg
+18.6.1,Carbimazole,"P,S,T",Tablet,20 mg
+18.6.2,Levothyroxine,"P,S,T",Tablet,12.5 mcg to 150 mcg,
+19.1.1,Tuberculin, Purified Protein derivative,"P,S,T",As Licensed,
+19.2.1,Anti-rabies immunoglobulin,"P,S,T",As Licensed,
+19.2.2,Anti-tetanus immunoglobulin,"P,S,T",As Licensed,
+19.2.3,Anti-D immunoglobulin,"S,T",As Licensed,
+19.2.4,Diphtheria antitoxin,"P,S,T",As Licensed,
+19.2.5,Hepatitis B immunoglobulin,"S,T",As Licensed,
+19.2.6,Human normal immunoglobulin,"T",As Licensed,
+19.2.7,Snake Venom Antiserum,"P,S,T",Soluble/liquid polyvalent,As Licensed
+19.2.7,Snake Venom Antiserum,"P,S,T",Lyophilized polyvalent,As Licensed
+19.3.1,BCG vaccine,"P,S,T",As licensed,
+19.3.2,DPT+Hib+Hep B vaccine,"P,S,T",As licensed,
+19.3.3,DPT vaccine,"P,S,T",As licensed,
+19.3.4,Hepatitis B vaccine,"P,S,T",As licensed,
+19.3.5,Japanese encephalitis vaccine,"P,S,T",As licensed,
+19.3.6,Measles vaccine,"P,S,T",As licensed,
+19.3.7,Oral poliomyelitis vaccine,"P,S,T",As licensed,
+19.3.8,Rotavirus vaccine,"P,S,T",As licensed,
+19.3.9,Tetanus toxoid,"P,S,T",As licensed,
+19.4.1,Rabies vaccine,"P,S,T",As licensed,
+20.1,Alprostadil,"S,T",Injection,0.5 mg/mL
+20.2,Caffeine,"S,T",Oral liquid,20 mg/mL
+20.2,Caffeine,"S,T",Injection,20 mg/mL
+20.3,Surfactant,"S,T",Suspension for intratracheal instillation,(As licensed)
+21.1.1,Acyclovir,"P,S,T",Ointment,3%
+21.1.2,Ciprofloxacin,"P,S,T",Drops,0.3%
+21.1.2,Ciprofloxacin,"P,S,T",Ointment,0.3%
+21.1.3,Natamycin,"P,S,T",Drops,5%
+21.1.4,Povidone iodine,"P,S,T",Drops,5%
+21.2.1,Prednisolone,"P,S,T",Drops,1%
+21.3.1,Proparacaine,"P,S,T",Drops,0.5 %
+21.4.1,Acetazolamide,"P,S,T",Tablet,250 mg
+21.4.2,Latanoprost,"P,S,T",Drops,0.005 %
+21.4.3,Pilocarpine,"P,S,T",Drops,2 %
+21.4.3,Pilocarpine,"P,S,T",Drops,4 %
+21.4.4,Timolol,"P,S,T",Drops,0.25 %
+21.4.4,Timolol,"P,S,T",Drops,0.5 %
+21.5.1,Atropine,"P,S,T",Drops,1%
+21.5.1,Atropine,"P,S,T",Ointment,1%
+21.5.2,Homatropine,"P,S,T",Drops,2%
+21.5.3,Phenylephrine,"P,S,T",Drops,5 %
+21.5.3,Phenylephrine,"P,S,T",Drops,10 %
+21.5.4,Tropicamide,"P,S,T",Drops,1 %
+21.6.1,Carboxymethyl cellulose,"P,S,T",Drops,0.5%
+21.6.1,Carboxymethyl cellulose,"P,S,T",Drops,1%
+21.6.2,Hydroxypropyl methylcellulose,"T",Injection,2%
+22.1.1,Dinoprostone,"S,T",Tablet,0.5 mg
+22.1.1,Dinoprostone,"S,T",Gel,0.5 mg
+22.1.2,Methylergometrine,"P,S,T",Tablet,0.125 mg
+22.1.2,Methylergometrine,"P,S,T",Injection,0.2 mg/mL
+22.1.3,Mifepristone,"P,S,T",Tablet,200 mg
+22.1.4,Misoprostol,"P,S,T",Tablet,100 mcg
+22.1.4,Misoprostol,"P,S,T",Tablet,200 mcg
+22.1.5,Oxytocin,"P,S,T",Injection,5 IU/mL
+22.1.5,Oxytocin,"P,S,T",Injection,10 IU/mL
+22.2.1,Betamethasone,"P,S,T",Injection,4 mg/mL
+22.2.2,Nifedipine,"S,T",Tablet,10 mg
+23.1.1,Clozapine,"T",Tablet,25 mg
+23.1.1,Clozapine,"T",Tablet,50 mg
+23.1.1,Clozapine,"T",Tablet,100 mg
+23.1.2,Fluphenazine,"P,S,T",Injection,25 mg/mL
+23.1.3,Haloperidol,"S,T",Tablet,2 mg
+23.1.3,Haloperidol,"S,T",Tablet,5 mg
+23.1.3,Haloperidol,"S,T",Tablet,10 mg
+23.1.3,Haloperidol,"S,T",Tablet,20 mg
+23.1.3,Haloperidol,"S,T",Oral liquid,2 mg/5 mL
+23.1.3,Haloperidol,"S,T",Injection,5 mg/mL
+23.1.4,Risperidone,"P,S,T",Tablet,1 mg
+23.1.4,Risperidone,"P,S,T",Tablet,2 mg
+23.1.4,Risperidone,"P,S,T",Tablet,4 mg
+23.1.4,Risperidone,"P,S,T",Oral liquid,1 mg/mL
+23.1.4,Risperidone,"P,S,T",Injection (Long acting),25 mg
+23.1.4,Risperidone,"P,S,T",Injection (Long acting),37.5 mg
+23.2.1.1,Amitriptyline,"P,S,T",Tablet,10 mg
+23.2.1.1,Amitriptyline,"P,S,T",Tablet,25 mg
+23.2.1.1,Amitriptyline,"P,S,T",Tablet,50 mg
+23.2.1.1,Amitriptyline,"P,S,T",Tablet,75 mg
+23.2.1.2,Escitalopram,"P,S,T",Tablet,5 mg
+23.2.1.2,Escitalopram,"P,S,T",Tablet,10 mg
+23.2.1.2,Escitalopram,"P,S,T",Tablet,20 mg
+23.2.1.3,Fluoxetine,"P,S,T",Capsule,10 mg
+23.2.1.3,Fluoxetine,"P,S,T",Capsule,20 mg
+23.2.1.3,Fluoxetine,"P,S,T",Capsule,40 mg
+23.2.1.3,Fluoxetine,"P,S,T",Capsule,60 mg
+23.2.2.1,Lithium,"S,T",Tablet,300 mg
+23.2.2.2,Sodium valproate,"P,S,T",Tablet,200 mg
+23.2.2.2,Sodium valproate,"P,S,T",Tablet,300 mg
+23.2.2.2,Sodium valproate,"P,S,T",Tablet,500 mg
+23.2.2.2,Sodium valproate,"P,S,T",Modified Release Tablet,300 mg
+23.2.2.2,Sodium valproate,"P,S,T",Modified Release Tablet,500 mg
+23.2.2.3,Carbamazepine,"P,S,T",Tablet,100 mg
+23.2.2.3,Carbamazepine,"P,S,T",Tablet,200 mg
+23.2.2.3,Carbamazepine,"P,S,T",Tablet,400 mg
+23.2.2.3,Carbamazepine,"P,S,T",Modified Release Tablet,200 mg
+23.2.2.3,Carbamazepine,"P,S,T",Modified Release Tablet,400 mg
+23.2.2.3,Carbamazepine,"P,S,T",Oral liquid,100 mg/5 mL (p)
+23.3.1,Clonazepam,"P,S,T",Tablet,0.25 mg
+23.3.1,Clonazepam,"P,S,T",Tablet,0.5 mg
+23.3.1,Clonazepam,"P,S,T",Tablet,1 mg
+23.3.2,Zolpidem,"P,S,T",Tablet,5 mg
+23.3.2,Zolpidem,"P,S,T",Tablet,10 mg
+23.4.1,Clomipramine,"P,S,T",Capsule,10 mg
+23.4.1,Clomipramine,"P,S,T",Capsule,25 mg
+23.4.1,Clomipramine,"P,S,T",Capsule,75 mg
+23.4.2,Fluoxetine,"S,T",Capsule,10 mg
+23.4.2,Fluoxetine,"S,T",Capsule,20 mg
+23.4.2,Fluoxetine,"S,T",Capsule,40 mg
+23.4.2,Fluoxetine,"S,T",Capsule,60 mg
+23.5.1,Buprenorphine,"P,S,T",Tablet (Sub-lingual),0.4 mg
+23.5.2,Buprenorphine (A) + Naloxone (B),"P,S,T",Tablet (Sub-lingual),0.4 mg (A) + 0.1 mg (B)
+23.5.2,Buprenorphine (A) + Naloxone (B),"P,S,T",Tablet (Sub-lingual),2 mg (A) + 0.5 mg (B)
+23.5.3,Nicotine (for nicotine replacement therapy),"P,S,T",Oral Dosage forms,2 mg
+23.5.3,Nicotine (for nicotine replacement therapy),"P,S,T",Oral Dosage forms,4 mg
+24.1.1,Budesonide,"P,S,T",Inhalation (MDI/DPI),100 mcg/dose
+24.1.1,Budesonide,"P,S,T",Inhalation (MDI/DPI),200 mcg/dose
+24.1.1,Budesonide,"P,S,T",Respirator solution for use in nebulizer,0.5 mg/mL
+24.1.1,Budesonide,"P,S,T",Respirator solution for use in nebulizer,1 mg/mL
+24.1.2,Budesonide (A) + Formoterol (B),"P,S,T",Inhalation (MDI/DPI),
+24.1.3,Hydrocortisone,"P,S,T",Injection,
+24.1.4,Ipratropium,"P,S,T",Inhalation (MDI/DPI),
+24.1.5,Montelukast,"S,T",Tablet,4 mg
+24.1.5,Montelukast,"S,T",Tablet,5 mg (including chewable tablets)
+24.1.5,Montelukast,"S,T",Tablet,10 mg
+24.1.6,Salbutamol,"P,S,T",Inhalation (MDI/DPI),
+24.1.7,Tiotropium,"P,S,T",Inhalation (MDI),9 mcg/dose
+24.1.7,Tiotropium,"P,S,T",Inhalation (DPI),18 mcg/dose
+25.1.1,Glucose,"P,S,T",Injection,5 %
+25.1.1,Glucose,"P,S,T",Injection,10 %
+25.1.1,Glucose,"P,S,T",Injection,25 %
+25.1.1,Glucose,"P,S,T",Injection,50 %
+25.1.2,Glucose(A) + Sodium chloride (B),"P,S,T",Injection,5% (A) + 0.9 % (B)
+25.1.3,Oral rehydration salts,"P,S,T",As licensed,
+25.1.4,Potassium chloride,"P,S,T",Oral liquid,500 mg/5 mL
+25.1.4,Potassium chloride,"S,T",Injection,150 mg/mL
+25.1.5,Ringer lactate,"P,S,T",Injection,(as per IP)
+25.1.6,Sodium bicarbonate,"P,S,T",Injection,(as per IP)
+25.1.7,Sodium chloride,"P,S,T",Injection,0.9%
+25.1.7,Sodium chloride,"S,T",Injection,3%
+25.2.1,Water for Injection,"P,S,T",Injection,
+26.1,Ascorbic acid (Vitamin C),"P,S,T",Tablet,100 mg
+26.1,Ascorbic acid (Vitamin C),"P,S,T",Tablet,500 mg
+26.2,Calcium carbonate,"P,S,T",Tablet,625 mg (equivalent to elemental calcium 250 mg)
+26.2,Calcium carbonate,"P,S,T",Tablet,1250 mg (equivalent to elemental calcium 500 mg)
+26.3,Calcium gluconate,"P,S,T",Injection,100 mg/mL
+26.4,Cholecalciferol,"P,S,T",Solid oral dosage form,1000 IU
+26.4,Cholecalciferol,"P,S,T",Solid oral dosage form,60000 IU
+26.4,Cholecalciferol,"P,S,T",Oral liquid,400 IU/mL
+26.5,Pyridoxine,"P,S,T",Tablet,10 mg
+26.5,Pyridoxine,"P,S,T",Tablet,50 mg
+26.5,Pyridoxine,"P,S,T",Tablet,100 mg
+26.6,Riboflavin,"P,S,T",Tablet,10 mg
+26.7,Thiamine,"P,S,T",Tablet,100 mg
+26.7,Thiamine,"P,S,T",Injection,100 mg/mL
+26.8,Vitamin A,"P,S,T",Capsule/Tablet,50000 IU (including Chewable Tablet)
+26.8,Vitamin A,"P,S,T",Oral liquid,100000 IU/mL
+26.8,Vitamin A,"P,S,T",Injection,50000 IU/mL
+27.1,Dexamethasone,"P,S,T",Tablet,0.5 mg
+27.1,Dexamethasone,"P,S,T",Injection,4 mg/mL
+27.2,Enoxaparin,"S,T",Injection,40 mg/0.4 mL
+27.2,Enoxaparin,"S,T",Injection,60 mg/0.6 mL
+27.3,Methylprednisolone,"S,T",Injection,40 mg/mL
+27.4,Paracetamol,"P,S,T",Tablet,500 mg
+27.4,Paracetamol,"P,S,T",Tablet,650 mg
+27.4,Paracetamol,"P,S,T",Oral liquid,120 mg/5 mL (p)
+27.4,Paracetamol,"P,S,T",Oral Liquid,125 mg/5 mL (p)
+27.4,Paracetamol,"P,S,T",Oral Liquid,250 mg/5 mL (p)
+27.5,Oxygen,"P,S,T",As licensed for medical purpose,

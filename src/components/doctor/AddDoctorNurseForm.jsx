@@ -24,6 +24,9 @@ const AddDoctorNurseForm = () => {
   const [states, setStates] = useState([]);
   const [cities, setCities] = useState([]);
   const navigate = useNavigate();
+  
+  // Add validation errors state
+  const [validationErrors, setValidationErrors] = useState({});
 
   const [formData, setFormData] = useState({
     firstName: '', lastName: '', email: '', phone: '', dateOfBirth: '', gender: '',
@@ -98,6 +101,15 @@ const AddDoctorNurseForm = () => {
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+    
+    // Clear validation error for this field when user starts typing
+    if (validationErrors[field]) {
+      setValidationErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[field];
+        return newErrors;
+      });
+    }
 
     if (field === 'state') {
       fetchCities(value);
@@ -146,22 +158,127 @@ const AddDoctorNurseForm = () => {
     });
   };
 
+  // Prevent form submission on Enter key press
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && step < totalSteps) {
+      e.preventDefault(); // Prevent form submission
+      nextStep(); // Move to next step instead
+    }
+  };
+
+  // Step validation functions
+  const validateStep1 = () => {
+    const errors = {};
+    
+    // Required fields for step 1
+    if (!formData.firstName.trim()) errors.firstName = 'First name is required';
+    if (!formData.email.trim()) errors.email = 'Email is required';
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) errors.email = 'Invalid email format';
+    
+    if (!formData.phone.trim()) errors.phone = 'Phone is required';
+    else if (!/^[6-9]\d{9}$/.test(formData.phone)) errors.phone = 'Invalid Indian mobile number (10 digits starting with 6-9)';
+    
+    if (!formData.dateOfBirth) errors.dateOfBirth = 'Date of birth is required';
+    
+    if (formData.aadharNumber && formData.aadharNumber.length !== 12) {
+      errors.aadharNumber = 'Aadhar must be 12 digits';
+    }
+    
+    if (formData.emergencyPhone && !/^[6-9]\d{9}$/.test(formData.emergencyPhone)) {
+      errors.emergencyPhone = 'Invalid Indian mobile number';
+    }
+    
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const validateStep2 = () => {
+    const errors = {};
+    
+    // Required fields for step 2
+    if (!formData.department) errors.department = 'Department is required';
+    if (!formData.specialization.trim()) errors.specialization = 'Specialization is required';
+    if (!formData.licenseNumber.trim()) errors.licenseNumber = 'License number is required';
+    if (!formData.education) errors.education = 'Highest qualification is required';
+    
+    // Experience validation
+    if (!formData.experience) errors.experience = 'Experience is required';
+    else if (isNaN(formData.experience) || parseInt(formData.experience) < 0) {
+      errors.experience = 'Experience must be a positive number';
+    }
+    
+    // PAN validation (if provided)
+    if (formData.panNumber && !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(formData.panNumber)) {
+      errors.panNumber = 'Invalid PAN format (e.g., ABCDE1234F)';
+    }
+    
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const validateStep3 = () => {
+    const errors = {};
+    
+    // Required fields for step 3
+    if (!formData.startDate) errors.startDate = 'Joining date is required';
+    
+    if (formData.isFullTime) {
+      // Full-time validation
+      if (!formData.shift) errors.shift = 'Shift is required for full-time employees';
+      if (!formData.amount) errors.amount = 'Salary amount is required';
+      else if (isNaN(formData.amount) || parseFloat(formData.amount) <= 0) {
+        errors.amount = 'Salary must be a positive number';
+      }
+    } else {
+      // Part-time validation
+      if (!formData.paymentType) errors.paymentType = 'Payment model is required';
+      if (!formData.amount) errors.amount = 'Rate/Amount is required';
+      else if (isNaN(formData.amount) || parseFloat(formData.amount) <= 0) {
+        errors.amount = 'Rate must be a positive number';
+      }
+      
+      if (!formData.contractStartDate) errors.contractStartDate = 'Contract start date is required';
+      if (!formData.contractEndDate) errors.contractEndDate = 'Contract end date is required';
+      
+      // Validate contract dates
+      if (formData.contractStartDate && formData.contractEndDate) {
+        const start = new Date(formData.contractStartDate);
+        const end = new Date(formData.contractEndDate);
+        if (end <= start) {
+          errors.contractEndDate = 'Contract end date must be after start date';
+        }
+      }
+      
+      // Validate time slots
+      if (!formData.timeSlots || formData.timeSlots.length === 0) {
+        errors.timeSlots = 'At least one time slot is required';
+      } else {
+        // Validate each time slot
+        formData.timeSlots.forEach((slot, index) => {
+          if (!slot.start || !slot.end) {
+            errors.timeSlots = 'All time slots must have both start and end times';
+          } else if (slot.start >= slot.end) {
+            errors.timeSlots = 'End time must be after start time in each slot';
+          }
+        });
+      }
+    }
+    
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Final validation before submission
+    if (!validateStep3()) {
+      alert('Please fix the validation errors before submitting.');
+      return;
+    }
+    
     setIsLoading(true);
     try {
-      // Validate phone numbers (Indian 10-digit mobile starting with 6-9)
-      if (formData.phone && !/^[6-9]\d{9}$/.test(formData.phone)) {
-        alert('Please enter a valid 10-digit Indian mobile number for Phone (starts with 6-9).');
-        setIsLoading(false);
-        return;
-      }
-      if (formData.emergencyPhone && !/^[6-9]\d{9}$/.test(formData.emergencyPhone)) {
-        alert('Please enter a valid 10-digit Indian mobile number for Emergency Phone (starts with 6-9).');
-        setIsLoading(false);
-        return;
-      }
-
       // Get hospital ID from localStorage
       const hospitalId = localStorage.getItem('hospitalId');
       if (!hospitalId) {
@@ -191,8 +308,31 @@ const AddDoctorNurseForm = () => {
     }
   };
 
-  const nextStep = () => setStep(prev => Math.min(prev + 1, totalSteps));
-  const prevStep = () => setStep(prev => Math.max(prev - 1, 1));
+  const nextStep = () => {
+    let isValid = false;
+    
+    // Validate current step before proceeding
+    if (step === 1) {
+      isValid = validateStep1();
+    } else if (step === 2) {
+      isValid = validateStep2();
+    }
+    
+    if (isValid) {
+      setStep(prev => Math.min(prev + 1, totalSteps));
+      // Clear validation errors when moving to next step
+      setValidationErrors({});
+    } else {
+      // Scroll to top to show validation errors
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const prevStep = () => {
+    setStep(prev => Math.max(prev - 1, 1));
+    // Clear validation errors when going back
+    setValidationErrors({});
+  };
 
   const stateOptions = states.map(state => ({
     value: state.iso2,
@@ -204,12 +344,23 @@ const AddDoctorNurseForm = () => {
     label: city.name
   }));
 
-    const getLocalDateString = () => {
+  const getLocalDateString = () => {
     const t = new Date();
     const yyyy = t.getFullYear();
     const mm = String(t.getMonth() + 1).padStart(2, '0');
     const dd = String(t.getDate()).padStart(2, '0');
     return `${yyyy}-${mm}-${dd}`;
+  };
+
+  // Error display component
+  const ErrorMessage = ({ field }) => {
+    if (!validationErrors[field]) return null;
+    
+    return (
+      <div className="mt-1.5 text-xs text-rose-600 font-medium animate-fade-in">
+        {validationErrors[field]}
+      </div>
+    );
   };
 
   // --- Step Indicator ---
@@ -283,23 +434,108 @@ const AddDoctorNurseForm = () => {
         </div>
 
         <div className="p-8 pt-12 flex-grow overflow-y-auto">
-          <form onSubmit={handleSubmit} className="h-full flex flex-col justify-between">
+          {/* Show validation errors summary at top if any */}
+          {Object.keys(validationErrors).length > 0 && (
+            <div className="mb-6 p-4 bg-rose-50 border border-rose-200 rounded-xl animate-fade-in">
+              <h3 className="text-sm font-bold text-rose-700 mb-2 flex items-center gap-2">
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" /></svg>
+                Please fix the following errors:
+              </h3>
+              <ul className="text-sm text-rose-600 list-disc pl-5 space-y-1">
+                {Object.entries(validationErrors).map(([field, error]) => (
+                  <li key={field}>{error}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} onKeyDown={handleKeyDown} className="h-full flex flex-col justify-between">
 
             {/* --- STEP 1: PERSONAL DETAILS --- */}
             {step === 1 && (
               <div className="space-y-8 animate-fade-in-right">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-                  <FormInput label="First Name" value={formData.firstName} onChange={(e) => handleInputChange('firstName', e.target.value)} required placeholder="e.g. John" />
-                  <FormInput label="Last Name" value={formData.lastName} onChange={(e) => handleInputChange('lastName', e.target.value)} placeholder="e.g. Doe" />
+                  <div>
+                    <FormInput 
+                      label="First Name" 
+                      value={formData.firstName} 
+                      onChange={(e) => handleInputChange('firstName', e.target.value)} 
+                      required 
+                      placeholder="e.g. John"
+                      error={!!validationErrors.firstName}
+                    />
+                    <ErrorMessage field="firstName" />
+                  </div>
+                  
+                  <div>
+                    <FormInput 
+                      label="Last Name" 
+                      value={formData.lastName} 
+                      onChange={(e) => handleInputChange('lastName', e.target.value)} 
+                      placeholder="e.g. Doe"
+                    />
+                  </div>
 
-                  <FormInput label="Email Address" type="email" value={formData.email} onChange={(e) => handleInputChange('email', e.target.value)} required placeholder="doctor@hospital.com" />
-                  <FormInput label="Phone Number" type="tel" value={formData.phone} onChange={(e) => handleInputChange('phone', e.target.value.replace(/[^0-9]/g, '').slice(0, 10))} required placeholder="e.g. 9876543210" maxLength={10} />
+                  <div>
+                    <FormInput 
+                      label="Email Address" 
+                      type="email" 
+                      value={formData.email} 
+                      onChange={(e) => handleInputChange('email', e.target.value)} 
+                      required 
+                      placeholder="doctor@hospital.com"
+                      error={!!validationErrors.email}
+                    />
+                    <ErrorMessage field="email" />
+                  </div>
+                  
+                  <div>
+                    <FormInput 
+                      label="Phone Number" 
+                      type="tel" 
+                      value={formData.phone} 
+                      onChange={(e) => handleInputChange('phone', e.target.value.replace(/[^0-9]/g, '').slice(0, 10))} 
+                      required 
+                      placeholder="e.g. 9876543210" 
+                      maxLength={10}
+                      error={!!validationErrors.phone}
+                    />
+                    <ErrorMessage field="phone" />
+                  </div>
 
+                  <div>
+                    <FormInput 
+                      label="Date of Birth" 
+                      type="date" 
+                      value={formData.dateOfBirth} 
+                      onChange={(e) => handleInputChange('dateOfBirth', e.target.value)} 
+                      required 
+                      max={getLocalDateString()}
+                      error={!!validationErrors.dateOfBirth}
+                    />
+                    <ErrorMessage field="dateOfBirth" />
+                  </div>
 
-                  <FormInput label="Date of Birth" type="date" value={formData.dateOfBirth} onChange={(e) => handleInputChange('dateOfBirth', e.target.value)} required max={getLocalDateString()}/>
-
-                  <SearchableFormSelect label="Gender" value={formData.gender} onChange={(e) => handleInputChange('gender', e.target.value)} options={[{ value: 'male', label: 'Male' }, { value: 'female', label: 'Female' }, { value: 'other', label: 'Other' }]} />
-                  <FormInput label="Aadhar Number" value={formData.aadharNumber} onChange={(e) => handleInputChange('aadharNumber', e.target.value.replace(/[^0-9]/g, '').slice(0, 12))} maxLength={12} placeholder="12-digit UID" />
+                  <div>
+                    <SearchableFormSelect 
+                      label="Gender" 
+                      value={formData.gender} 
+                      onChange={(e) => handleInputChange('gender', e.target.value)} 
+                      options={[{ value: 'male', label: 'Male' }, { value: 'female', label: 'Female' }, { value: 'other', label: 'Other' }]} 
+                    />
+                  </div>
+                  
+                  <div>
+                    <FormInput 
+                      label="Aadhar Number" 
+                      value={formData.aadharNumber} 
+                      onChange={(e) => handleInputChange('aadharNumber', e.target.value.replace(/[^0-9]/g, '').slice(0, 12))} 
+                      maxLength={12} 
+                      placeholder="12-digit UID"
+                      error={!!validationErrors.aadharNumber}
+                    />
+                    <ErrorMessage field="aadharNumber" />
+                  </div>
                 </div>
 
                 <div className="pt-6 border-t border-slate-100">
@@ -317,14 +553,25 @@ const AddDoctorNurseForm = () => {
                         placeholder="Street, Apartment, etc."
                       ></textarea>
                     </div>
-                    {/* Modified City and State inputs to SearchableFormSelect */}
+                    
                     <SearchableFormSelect label="State" value={formData.state} onChange={(e) => handleInputChange('state', e.target.value)} options={stateOptions} />
                     <SearchableFormSelect label="City" value={formData.city} onChange={(e) => handleInputChange('city', e.target.value)} options={cityOptions} disabled={!formData.state} />
                     <FormInput label="ZIP Code" value={formData.zipCode} onChange={(e) => handleInputChange('zipCode', e.target.value)} />
 
                     <FormInput label="Emergency Contact Name" value={formData.emergencyContact} onChange={(e) => handleInputChange('emergencyContact', e.target.value)} />
-                    <FormInput label="Emergency Contact Phone" type="tel" value={formData.emergencyPhone} onChange={(e) => handleInputChange('emergencyPhone', e.target.value.replace(/[^0-9]/g, '').slice(0, 10))} placeholder="e.g. 9876543210" maxLength={10} />
-
+                    
+                    <div>
+                      <FormInput 
+                        label="Emergency Contact Phone" 
+                        type="tel" 
+                        value={formData.emergencyPhone} 
+                        onChange={(e) => handleInputChange('emergencyPhone', e.target.value.replace(/[^0-9]/g, '').slice(0, 10))} 
+                        placeholder="e.g. 9876543210" 
+                        maxLength={10}
+                        error={!!validationErrors.emergencyPhone}
+                      />
+                      <ErrorMessage field="emergencyPhone" />
+                    </div>
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide ml-1 mb-1.5 mt-5">Additional Notes</label>
@@ -345,20 +592,78 @@ const AddDoctorNurseForm = () => {
               <div className="space-y-8 animate-fade-in-right">
                 <div className="bg-slate-50/50 p-6 rounded-2xl border border-slate-100">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-                    <SearchableFormSelect label="Department" value={formData.department} onChange={(e) => handleInputChange('department', e.target.value)} options={departmentOptions} required icon={<Icons.Briefcase />} />
-                    <FormInput label="Specialization" value={formData.specialization} onChange={(e) => handleInputChange('specialization', e.target.value)} required placeholder="e.g. Cardiology" />
+                    <div>
+                      <SearchableFormSelect 
+                        label="Department" 
+                        value={formData.department} 
+                        onChange={(e) => handleInputChange('department', e.target.value)} 
+                        options={departmentOptions} 
+                        required 
+                        icon={<Icons.Briefcase />}
+                        error={!!validationErrors.department}
+                      />
+                      <ErrorMessage field="department" />
+                    </div>
+                    
+                    <div>
+                      <FormInput 
+                        label="Specialization" 
+                        value={formData.specialization} 
+                        onChange={(e) => handleInputChange('specialization', e.target.value)} 
+                        required 
+                        placeholder="e.g. Cardiology"
+                        error={!!validationErrors.specialization}
+                      />
+                      <ErrorMessage field="specialization" />
+                    </div>
 
-                    <FormInput label="License / Registration No." value={formData.licenseNumber} onChange={(e) => handleInputChange('licenseNumber', e.target.value)} required placeholder="MED-12345" />
-                    <SearchableFormSelect
-                      label="Highest Qualification"
-                      value={formData.education}
-                      onChange={(e) => handleInputChange('education', e.target.value)}
-                      options={['MBBS', 'MD', 'MS', 'BDS', 'PhD', 'Fellowship'].map(v => ({ value: v, label: v }))}
-                      required
-                    />
+                    <div>
+                      <FormInput 
+                        label="License / Registration No." 
+                        value={formData.licenseNumber} 
+                        onChange={(e) => handleInputChange('licenseNumber', e.target.value)} 
+                        required 
+                        placeholder="MED-12345"
+                        error={!!validationErrors.licenseNumber}
+                      />
+                      <ErrorMessage field="licenseNumber" />
+                    </div>
+                    
+                    <div>
+                      <SearchableFormSelect
+                        label="Highest Qualification"
+                        value={formData.education}
+                        onChange={(e) => handleInputChange('education', e.target.value)}
+                        options={['MBBS', 'MD', 'MS', 'BDS', 'PhD', 'Fellowship'].map(v => ({ value: v, label: v }))}
+                        required
+                        error={!!validationErrors.education}
+                      />
+                      <ErrorMessage field="education" />
+                    </div>
 
-                    <FormInput label="Years of Experience" type="number" value={formData.experience} onChange={(e) => handleInputChange('experience', e.target.value)} placeholder="e.g. 5" />
-                    <FormInput label="PAN Number" value={formData.panNumber} onChange={(e) => handleInputChange('panNumber', e.target.value)} maxLength={10} placeholder="ABCDE1234F" />
+                    <div>
+                      <FormInput 
+                        label="Years of Experience" 
+                        type="number" 
+                        value={formData.experience} 
+                        onChange={(e) => handleInputChange('experience', e.target.value)} 
+                        placeholder="e.g. 5"
+                        error={!!validationErrors.experience}
+                      />
+                      <ErrorMessage field="experience" />
+                    </div>
+                    
+                    <div>
+                      <FormInput 
+                        label="PAN Number" 
+                        value={formData.panNumber} 
+                        onChange={(e) => handleInputChange('panNumber', e.target.value)} 
+                        maxLength={10} 
+                        placeholder="ABCDE1234F"
+                        error={!!validationErrors.panNumber}
+                      />
+                      <ErrorMessage field="panNumber" />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -368,7 +673,18 @@ const AddDoctorNurseForm = () => {
             {step === 3 && (
               <div className="space-y-8 animate-fade-in-right">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <FormInput label="Joining Date" type="date" value={formData.startDate} onChange={(e) => handleInputChange('startDate', e.target.value)} required />
+                  <div>
+                    <FormInput 
+                      label="Joining Date" 
+                      type="date" 
+                      value={formData.startDate} 
+                      onChange={(e) => handleInputChange('startDate', e.target.value)} 
+                      required
+                      error={!!validationErrors.startDate}
+                    />
+                    <ErrorMessage field="startDate" />
+                  </div>
+                  
                   <SearchableFormSelect
                     label="Employment Type"
                     value={formData.isFullTime ? 'Full-time' : 'Part-time'}
@@ -386,14 +702,29 @@ const AddDoctorNurseForm = () => {
                       <Icons.Clock /> Shift Configuration
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <SearchableFormSelect
-                        label="Select Shift"
-                        value={formData.shift}
-                        onChange={(e) => handleShiftChange(e.target.value)}
-                        options={['Morning', 'Evening', 'Night', 'Rotating'].map(v => ({ value: v, label: v }))}
-                        required
-                      />
-                      <FormInput label="Annual Salary (₹)" type="number" value={formData.amount} onChange={(e) => handleInputChange('amount', e.target.value)} placeholder="e.g. 1200000" />
+                      <div>
+                        <SearchableFormSelect
+                          label="Select Shift"
+                          value={formData.shift}
+                          onChange={(e) => handleShiftChange(e.target.value)}
+                          options={['Morning', 'Evening', 'Night', 'Rotating'].map(v => ({ value: v, label: v }))}
+                          required
+                          error={!!validationErrors.shift}
+                        />
+                        <ErrorMessage field="shift" />
+                      </div>
+                      
+                      <div>
+                        <FormInput 
+                          label="Annual Salary (₹)" 
+                          type="number" 
+                          value={formData.amount} 
+                          onChange={(e) => handleInputChange('amount', e.target.value)} 
+                          placeholder="e.g. 1200000"
+                          error={!!validationErrors.amount}
+                        />
+                        <ErrorMessage field="amount" />
+                      </div>
                     </div>
                     {formData.shift && (
                       <div className="mt-6 p-4 bg-white rounded-xl border border-emerald-100 shadow-sm">
@@ -414,14 +745,62 @@ const AddDoctorNurseForm = () => {
                       <Icons.Briefcase /> Consultant Configuration
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                      <SearchableFormSelect label="Payment Model" value={formData.paymentType} onChange={(e) => handleInputChange('paymentType', e.target.value)} options={[{ value: 'Fee per Visit', label: 'Fee per Visit' }, { value: 'Per Hour', label: 'Per Hour' }]} required/>
-                      <FormInput label="Rate / Amount (₹)" type="number" value={formData.amount} onChange={(e) => handleInputChange('amount', e.target.value)} required/>
-                      <FormInput label="Contract Start" type="date" value={formData.contractStartDate} onChange={(e) => handleInputChange('contractStartDate', e.target.value)} required/>
-                      <FormInput label="Contract End" type="date" value={formData.contractEndDate} onChange={(e) => handleInputChange('contractEndDate', e.target.value)} required/>
+                      <div>
+                        <SearchableFormSelect 
+                          label="Payment Model" 
+                          value={formData.paymentType} 
+                          onChange={(e) => handleInputChange('paymentType', e.target.value)} 
+                          options={[{ value: 'Fee per Visit', label: 'Fee per Visit' }, { value: 'Per Hour', label: 'Per Hour' }]} 
+                          required
+                          error={!!validationErrors.paymentType}
+                        />
+                        <ErrorMessage field="paymentType" />
+                      </div>
+                      
+                      <div>
+                        <FormInput 
+                          label="Rate / Amount (₹)" 
+                          type="number" 
+                          value={formData.amount} 
+                          onChange={(e) => handleInputChange('amount', e.target.value)} 
+                          required
+                          error={!!validationErrors.amount}
+                        />
+                        <ErrorMessage field="amount" />
+                      </div>
+                      
+                      <div>
+                        <FormInput 
+                          label="Contract Start" 
+                          type="date" 
+                          value={formData.contractStartDate} 
+                          onChange={(e) => handleInputChange('contractStartDate', e.target.value)} 
+                          required
+                          error={!!validationErrors.contractStartDate}
+                        />
+                        <ErrorMessage field="contractStartDate" />
+                      </div>
+                      
+                      <div>
+                        <FormInput 
+                          label="Contract End" 
+                          type="date" 
+                          value={formData.contractEndDate} 
+                          onChange={(e) => handleInputChange('contractEndDate', e.target.value)} 
+                          required
+                          error={!!validationErrors.contractEndDate}
+                        />
+                        <ErrorMessage field="contractEndDate" />
+                      </div>
                     </div>
 
                     <div>
                       <label className="block text-xs font-bold text-blue-700 uppercase mb-3">Available Time Slots</label>
+                      {validationErrors.timeSlots && (
+                        <div className="mb-3 text-sm text-rose-600">
+                          {validationErrors.timeSlots}
+                        </div>
+                      )}
                       <div className="space-y-3">
                         {(formData.timeSlots || []).map((slot, i) => (
                           <div key={i} className="grid grid-cols-3 gap-3 items-center">

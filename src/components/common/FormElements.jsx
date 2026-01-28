@@ -173,7 +173,7 @@ export const SearchableFormSelect = ({
 
         {isOpen && displayedOptions.length > 0 && (
           <div className="absolute border border-gray-200 z-50 w-full mt-1 bg-white rounded-xl shadow-xl overflow-hidden">
-            <div className="overflow-y-auto max-h-[200px]">
+            <div className="overflow-y-scroll max-h-[200px]">
               {displayedOptions.map((opt, index) => (
                 <div
                   key={opt.value}

@@ -1,0 +1,75 @@
+Procedure_Code,Procedure_Name,Category
+D0120,Periodic oral evaluation,Diagnostic
+D0140,Limited oral evaluation,Diagnostic
+D0150,Comprehensive oral evaluation,Diagnostic
+D0160,Detailed and extensive oral evaluation,Diagnostic
+D0170,Re-evaluation,Diagnostic
+D0180,Comprehensive periodontal evaluation,Diagnostic
+D0210,Intraoral complete series of radiographs,Diagnostic
+D0220,Intraoral periapical – first image,Diagnostic
+D0230,Intraoral periapical – additional image,Diagnostic
+D0240,Intraoral occlusal radiograph,Diagnostic
+D0272,Bitewings – two images,Diagnostic
+D0274,Bitewings – four images,Diagnostic
+D0330,Panoramic radiograph,Diagnostic
+D0367,CBCT – limited field,Diagnostic
+D0368,CBCT – full field,Diagnostic
+D1110,Prophylaxis – adult,Preventive
+D1120,Prophylaxis – child,Preventive
+D1206,Topical fluoride varnish,Preventive
+D1208,Topical fluoride gel,Preventive
+D1310,Nutritional counseling,Preventive
+D1320,Tobacco counseling,Preventive
+D1351,Sealant,Preventive
+D1354,Caries arresting medicament,Preventive
+D1510,Space maintainer – fixed,Preventive
+D1516,Space maintainer – removable,Preventive
+D2140,Amalgam – one surface,Restorative
+D2150,Amalgam – two surfaces,Restorative
+D2160,Amalgam – three surfaces,Restorative
+D2161,Amalgam – four surfaces,Restorative
+D2330,Composite – one surface anterior,Restorative
+D2331,Composite – two surfaces anterior,Restorative
+D2332,Composite – three surfaces anterior,Restorative
+D2391,Composite – one surface posterior,Restorative
+D2392,Composite – two surfaces posterior,Restorative
+D2393,Composite – three surfaces posterior,Restorative
+D2394,Composite – four surfaces posterior,Restorative
+D3310,Root canal – anterior,Endodontics
+D3320,Root canal – premolar,Endodontics
+D3330,Root canal – molar,Endodontics
+D3346,Retreatment – anterior,Endodontics
+D3347,Retreatment – premolar,Endodontics
+D3348,Retreatment – molar,Endodontics
+D3351,Apexification,Endodontics
+D3355,Pulp cap – direct,Endodontics
+D4210,Gingivectomy,Periodontics
+D4240,Gingival flap surgery,Periodontics
+D4260,Osseous surgery,Periodontics
+D4341,Scaling and root planing – 1–3 teeth,Periodontics
+D4342,Scaling and root planing – 4+ teeth,Periodontics
+D4910,Periodontal maintenance,Periodontics
+D2710,Crown – full metal,Prosthodontics
+D2740,Crown – ceramic,Prosthodontics
+D2750,Crown – porcelain fused metal,Prosthodontics
+D5110,Complete denture – maxillary,Prosthodontics
+D5120,Complete denture – mandibular,Prosthodontics
+D5211,Partial denture – maxillary,Prosthodontics
+D5212,Partial denture – mandibular,Prosthodontics
+D6010,Surgical placement of implant,Implant
+D6056,Implant abutment,Implant
+D6058,Implant crown,Implant
+D6104,Bone graft at implant site,Implant
+D7140,Extraction – erupted tooth,Oral Surgery
+D7210,Extraction – impacted tooth,Oral Surgery
+D7240,Removal of impacted tooth – complete bony,Oral Surgery
+D7250,Surgical removal of residual roots,Oral Surgery
+D7280,Biopsy of oral tissue,Oral Surgery
+D8010,Limited orthodontic treatment,Orthodontics
+D8080,Comprehensive orthodontic treatment,Orthodontics
+D8670,Periodic orthodontic adjustment,Orthodontics
+D9110,Emergency treatment of dental pain,Adjunctive
+D9215,Local anesthesia,Adjunctive
+D9310,Consultation,Adjunctive
+D9944,Occlusal guard – hard,Adjunctive
+D9945,Occlusal guard – soft,Adjunctive

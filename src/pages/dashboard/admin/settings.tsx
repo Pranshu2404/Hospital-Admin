@@ -5,7 +5,7 @@ import { adminSidebar } from '../../../constants/sidebarItems/adminSidebar';
 
 const Settings = () => {
   return (
-    <Layout sidebarItems={adminSidebar}>
+    <Layout sidebarItems={adminSidebar} section={adminSidebar} resetProgress={() => {}}>
       <SettingsPage />
     </Layout>
   );

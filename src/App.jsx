@@ -126,6 +126,7 @@ import StaffLoginPage from './pages/dashboard/admin/staff-login';
 // Nurse Pages
 import NurseDashboard from './pages/dashboard/nurse/index';
 import NursePrescriptions from './pages/dashboard/nurse/prescriptions';
+import ProcedureManagement from './pages/dashboard/staff/ProcedureManagement';
 
 // Custom Layout Wrappers
 const AdminLayout = ({ children }) => (
@@ -865,6 +866,16 @@ export default function App() {
               <ProtectedRoute role="staff">
                 <StaffLayout>
                   <StaffProfilePage1 />
+                </StaffLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/staff/procedure"
+            element={
+              <ProtectedRoute role="staff">
+                <StaffLayout>
+                  <ProcedureManagement />
                 </StaffLayout>
               </ProtectedRoute>
             }

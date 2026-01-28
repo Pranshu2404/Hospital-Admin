@@ -2,31 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../../api/apiClient';
 import { 
-  FaClipboardList, 
-  FaSearch, 
   FaFilter,
-  FaClock,
-  FaUser,
-  FaUserMd,
-  FaCalendarAlt,
-  FaExclamationTriangle,
-  FaEye,
-  FaPrescription,
-  FaHistory,
-  FaRedo,
-  FaSortAmountDown,
   FaTimes,
-  FaCheck,
-  FaCalendarCheck,
-  FaPrint,
-  FaPhone,
-  FaEnvelope,
-  FaIdCard,
-  FaInfoCircle,
-  FaArrowRight,
   FaBoxOpen,
-  FaHourglassHalf,
-  FaShieldAlt
 } from 'react-icons/fa';
 import {
   ClipboardList,
@@ -47,24 +25,11 @@ import {
   CalendarCheck,
   Printer,
   Phone,
-  Mail,
-  CreditCard,
   Info,
   ArrowRight,
-  Package,
   Hourglass,
   Shield,
-  TrendingUp,
   AlertCircle,
-  ChevronRight,
-  BarChart3,
-  Download,
-  FileText,
-  Activity,
-  Tag,
-  Star,
-  Bell,
-  ExternalLink
 } from 'lucide-react';
 import { PrescriptionIcon } from '../common/Icons';
 
