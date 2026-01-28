@@ -4,7 +4,8 @@ import {
   Search, Plus, Calendar, Clock, Filter,
   Eye, Edit2, Trash2, User, Stethoscope,
   CheckCircle, AlertCircle, X, ChevronDown,
-  Activity, Building
+  Activity, Building, CheckSquare, Clock as ClockIcon,
+  ChevronUp, ChevronRight, ArrowUp, ArrowDown
 } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import AddIPDAppointment from './AddIPDAppointment';
@@ -22,6 +23,7 @@ const AppointmentListStaff = () => {
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterDate, setFilterDate] = useState('');
   const [appointmentType, setAppointmentType] = useState(null);
+  const [completedCollapsed, setCompletedCollapsed] = useState(false);
 
   // Modal States
   const [chooserOpen, setChooserOpen] = useState(false);
@@ -61,6 +63,42 @@ const AppointmentListStaff = () => {
     }
   };
 
+  // Get time in minutes from start_time string
+  const getTimeInMinutes = (startTimeString) => {
+    if (!startTimeString) return 0;
+    
+    try {
+      const date = new Date(startTimeString);
+      const hours = date.getUTCHours(); // Using UTC hours since time is stored as UTC
+      const minutes = date.getUTCMinutes();
+      return hours * 60 + minutes;
+    } catch (error) {
+      console.error('Error getting time in minutes:', error);
+      return 0;
+    }
+  };
+
+  // Check if appointment is upcoming (not completed and date/time is in future)
+  const isAppointmentUpcoming = (appointment) => {
+    if (appointment.status === 'Completed' || appointment.status === 'Cancelled') {
+      return false;
+    }
+    
+    const now = new Date();
+    const appointmentDate = new Date(appointment.appointment_date);
+    
+    // Set current time to compare with appointment time
+    const nowHours = now.getHours();
+    const nowMinutes = now.getMinutes();
+    appointmentDate.setHours(nowHours, nowMinutes, 0, 0);
+    
+    const appointmentTime = getTimeInMinutes(appointment.start_time);
+    const appointmentDateTime = new Date(appointment.appointment_date);
+    appointmentDateTime.setHours(Math.floor(appointmentTime / 60), appointmentTime % 60, 0, 0);
+    
+    return appointmentDateTime > now;
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -71,27 +109,38 @@ const AppointmentListStaff = () => {
         ]);
 
         // Add enriched data for display
-        const enriched = appointmentRes.data.map((appt) => ({
-          ...appt,
-          patientName: `${appt.patient_id?.first_name || ''} ${appt.patient_id?.last_name || ''}`.trim(),
-          patientImage: appt.patient_id?.patient_image || null,
-          doctorName: `Dr. ${appt.doctor_id?.firstName || ''} ${appt.doctor_id?.lastName || ''}`.trim(),
-          departmentName: appt.department_id?.name || 'N/A',
-          date: new Date(appt.appointment_date).toLocaleDateString('en-US', { 
-            month: 'short', 
-            day: 'numeric', 
-            year: 'numeric' 
-          }),
-          rawDate: appt.appointment_date,
-          // Use the formatStoredTime helper for proper time display
-          time: formatStoredTime(appt.start_time),
-          patientId: appt.patient_id?.patientId,
-          // Fallback type if not present
-          type: appt.type || 'Consultation'
-        }));
-
-        // Sort by date descending
-        enriched.sort((a, b) => new Date(b.rawDate) - new Date(a.rawDate));
+        const enriched = appointmentRes.data.map((appt) => {
+          const timeInMinutes = getTimeInMinutes(appt.start_time);
+          const appointmentDate = new Date(appt.appointment_date);
+          
+          return {
+            ...appt,
+            patientName: `${appt.patient_id?.first_name || ''} ${appt.patient_id?.last_name || ''}`.trim(),
+            patientImage: appt.patient_id?.patient_image || null,
+            doctorName: `Dr. ${appt.doctor_id?.firstName || ''} ${appt.doctor_id?.lastName || ''}`.trim(),
+            departmentName: appt.department_id?.name || 'N/A',
+            date: appointmentDate.toLocaleDateString('en-US', { 
+              month: 'short', 
+              day: 'numeric', 
+              year: 'numeric' 
+            }),
+            rawDate: appt.appointment_date,
+            // Use the formatStoredTime helper for proper time display
+            time: formatStoredTime(appt.start_time),
+            patientId: appt.patient_id?.patientId,
+            // Fallback type if not present
+            type: appt.type || 'Consultation',
+            // Store time in minutes for sorting
+            timeInMinutes: timeInMinutes,
+            // Create a proper datetime for sorting
+            datetime: new Date(appointmentDate.setHours(
+              Math.floor(timeInMinutes / 60),
+              timeInMinutes % 60,
+              0,
+              0
+            ))
+          };
+        });
 
         setAppointments(enriched);
         setHospitalInfo(hospitalRes.data[0]);
@@ -105,6 +154,53 @@ const AppointmentListStaff = () => {
     fetchData();
   }, []);
 
+  // Separate appointments into completed and upcoming
+  const separateAppointments = (appts) => {
+    const completed = [];
+    const upcoming = [];
+    
+    appts.forEach(appt => {
+      if (appt.status === 'Completed' || appt.status === 'Cancelled') {
+        completed.push(appt);
+      } else if (isAppointmentUpcoming(appt)) {
+        upcoming.push(appt);
+      } else {
+        // For appointments that are not completed but also not upcoming (like past appointments with other statuses)
+        completed.push(appt);
+      }
+    });
+    
+    return { completed, upcoming };
+  };
+
+  // Sort upcoming appointments by increasing time (earliest first)
+  const sortUpcomingAppointments = (upcomingApps) => {
+    return [...upcomingApps].sort((a, b) => {
+      // First sort by date (earliest date first)
+      const dateA = new Date(a.rawDate);
+      const dateB = new Date(b.rawDate);
+      const dateDiff = dateA.getTime() - dateB.getTime();
+      if (dateDiff !== 0) return dateDiff;
+      
+      // If same date, sort by time (earliest time first)
+      return a.timeInMinutes - b.timeInMinutes;
+    });
+  };
+
+  // Sort completed appointments by decreasing time (most recent first)
+  const sortCompletedAppointments = (completedApps) => {
+    return [...completedApps].sort((a, b) => {
+      // First sort by date (most recent date first)
+      const dateA = new Date(a.rawDate);
+      const dateB = new Date(b.rawDate);
+      const dateDiff = dateB.getTime() - dateA.getTime();
+      if (dateDiff !== 0) return dateDiff;
+      
+      // If same date, sort by time (latest time first)
+      return b.timeInMinutes - a.timeInMinutes;
+    });
+  };
+
   const filteredAppointments = appointments.filter((appointment) => {
     const matchesSearch =
       appointment.patientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -114,11 +210,20 @@ const AppointmentListStaff = () => {
     return matchesSearch && matchesStatus && matchesDate;
   });
 
+  // Separate the filtered appointments
+  const { completed: filteredCompleted, upcoming: filteredUpcoming } = separateAppointments(filteredAppointments);
+
+  // Apply sorting
+  const sortedUpcoming = sortUpcomingAppointments(filteredUpcoming);
+  const sortedCompleted = sortCompletedAppointments(filteredCompleted);
+
   // Calculate quick stats
   const stats = {
     total: appointments.length,
     today: appointments.filter(a => new Date(a.rawDate).toDateString() === new Date().toDateString()).length,
-    pending: appointments.filter(a => a.status === 'Scheduled').length
+    pending: appointments.filter(a => a.status === 'Scheduled').length,
+    upcoming: filteredUpcoming.length,
+    completed: filteredCompleted.length
   };
 
   const getStatusBadge = (status) => {
@@ -178,6 +283,78 @@ const AppointmentListStaff = () => {
     }
   };
 
+  // Updated renderAppointmentRow function to accept index parameter
+  const renderAppointmentRow = (appointment, isUpcoming = false, index = 0) => (
+    <tr key={appointment._id} className="hover:bg-slate-50/80 transition-colors group">
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="flex items-center">
+          <div className="h-10 w-10 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs border border-indigo-100 mr-3 overflow-hidden">
+            {appointment.patientImage ? (
+              <img src={appointment.patientImage} alt={appointment.patientName} className="h-full w-full object-cover" />
+            ) : (
+              getInitials(appointment.patientName)
+            )}
+          </div>
+          <div>
+            <div className="text-sm font-bold text-slate-800">{appointment.patientName}</div>
+            <div className="text-xs text-slate-500 font-mono">ID: {appointment.patientId || 'N/A'}</div>
+          </div>
+        </div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="flex items-center">
+          <div className="mr-2 text-slate-400"><Stethoscope size={14} /></div>
+          <span className="text-sm text-slate-700 font-medium">{appointment.doctorName}</span>
+        </div>
+        <div className="text-xs text-slate-400 ml-6">{appointment.departmentName}</div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="flex flex-col">
+          <span className="text-sm font-medium text-slate-700 flex items-center gap-2">
+            <Calendar size={12} className="text-slate-400" /> {appointment.date}
+          </span>
+          <span className="text-xs text-slate-500 flex items-center gap-2 mt-0.5">
+            <Clock size={12} className="text-slate-400" /> {appointment.time}
+            {isUpcoming && index === 0 && (
+              <span className="inline-flex items-center gap-0.5 bg-teal-50 text-teal-600 text-xs px-1.5 py-0.5 rounded border border-teal-100">
+                <ArrowUp size={10} /> Next
+              </span>
+            )}
+          </span>
+        </div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200 capitalize">
+          {appointment.type}
+        </span>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        {getStatusBadge(appointment.status)}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+        <div className="flex justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
+          <button
+            onClick={() => handleViewClick(appointment)}
+            className="p-2 text-slate-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-colors"
+            title="View Slip"
+          >
+            <Eye size={20} />
+          </button>
+          <button
+            onClick={(e) => handleCompleteClick(appointment, e)}
+            className={`p-2 rounded-lg transition-colors ${appointment.status === 'Completed'
+              ? 'text-green-600 bg-green-50 hover:bg-green-100'
+              : 'text-slate-400 hover:text-green-600 hover:bg-green-50'
+              }`}
+            title={appointment.status === 'Completed' ? "View Completion Slip" : "Complete Appointment"}
+          >
+            <CheckCircle size={20} />
+          </button>
+        </div>
+      </td>
+    </tr>
+  );
+
   return (
     <div className="p-2 bg-slate-50 min-h-screen font-sans">
       <div className="max-w-[1600px] mx-auto space-y-6">
@@ -189,7 +366,7 @@ const AppointmentListStaff = () => {
             <p className="text-slate-500 mt-1">Track and manage patient visits efficiently.</p>
           </div>
 
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-3">
             <div className="bg-white px-4 py-2 rounded-lg shadow-sm border border-slate-200 flex items-center gap-3">
               <div className="p-1.5 bg-blue-50 text-blue-600 rounded-md"><Calendar size={16} /></div>
               <div>
@@ -198,10 +375,17 @@ const AppointmentListStaff = () => {
               </div>
             </div>
             <div className="bg-white px-4 py-2 rounded-lg shadow-sm border border-slate-200 flex items-center gap-3">
-              <div className="p-1.5 bg-teal-50 text-teal-600 rounded-md"><Clock size={16} /></div>
+              <div className="p-1.5 bg-teal-50 text-teal-600 rounded-md"><ClockIcon size={16} /></div>
               <div>
-                <p className="text-xs text-slate-500 uppercase font-bold">Today</p>
-                <p className="text-lg font-bold text-slate-800 leading-none">{stats.today}</p>
+                <p className="text-xs text-slate-500 uppercase font-bold">Upcoming</p>
+                <p className="text-lg font-bold text-slate-800 leading-none">{stats.upcoming}</p>
+              </div>
+            </div>
+            <div className="bg-white px-4 py-2 rounded-lg shadow-sm border border-slate-200 flex items-center gap-3">
+              <div className="p-1.5 bg-green-50 text-green-600 rounded-md"><CheckSquare size={16} /></div>
+              <div>
+                <p className="text-xs text-slate-500 uppercase font-bold">Completed</p>
+                <p className="text-lg font-bold text-slate-800 leading-none">{stats.completed}</p>
               </div>
             </div>
           </div>
@@ -232,7 +416,6 @@ const AppointmentListStaff = () => {
                 >
                   <option value="all">All Status</option>
                   <option value="Scheduled">Scheduled</option>
-                  {/* <option value="Confirmed">Confirmed</option> */}
                   <option value="Completed">Completed</option>
                   <option value="Cancelled">Cancelled</option>
                   <option value="In Progress">In Progress</option>
@@ -256,116 +439,164 @@ const AppointmentListStaff = () => {
             </button>
           </div>
 
-          {/* Table */}
+          {/* Table Container */}
           <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-slate-50 border-b border-slate-100">
-                <tr>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Patient Details</th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Doctor</th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Schedule</th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Type</th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-4 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {filteredAppointments.length > 0 ? (
-                  filteredAppointments.map((appointment) => (
-                    <tr key={appointment._id} className="hover:bg-slate-50/80 transition-colors group">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="h-10 w-10 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs border border-indigo-100 mr-3 overflow-hidden">
-                            {appointment.patientImage ? (
-                              <img src={appointment.patientImage} alt={appointment.patientName} className="h-full w-full object-cover" />
-                            ) : (
-                              getInitials(appointment.patientName)
-                            )}
-                          </div>
-                          <div>
-                            <div className="text-sm font-bold text-slate-800">{appointment.patientName}</div>
-                            <div className="text-xs text-slate-500 font-mono">ID: {appointment.patientId || 'N/A'}</div>
-                          </div>
+            {/* Section 1: Upcoming Appointments */}
+            {sortedUpcoming.length > 0 && (
+              <div className="border-b border-slate-100">
+                <div className="px-6 py-3 bg-teal-50/50 border-b border-teal-100">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <ClockIcon size={16} className="text-teal-600" />
+                      <h3 className="font-bold text-teal-700 text-sm uppercase tracking-wider">Upcoming Appointments ({sortedUpcoming.length})</h3>
+                    </div>
+                    <div className="flex items-center gap-2">
+                    </div>
+                  </div>
+                </div>
+                <table className="w-full">
+                  <thead className="bg-slate-50 border-b border-slate-100">
+                    <tr>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Patient Details</th>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Doctor</th>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">
+                        <div className="flex items-center gap-1">
+                          <Calendar size={12} /> Schedule
+                          <ArrowUp size={10} className="text-teal-500" />
                         </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="mr-2 text-slate-400"><Stethoscope size={14} /></div>
-                          <span className="text-sm text-slate-700 font-medium">{appointment.doctorName}</span>
-                        </div>
-                        <div className="text-xs text-slate-400 ml-6">{appointment.departmentName}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex flex-col">
-                          <span className="text-sm font-medium text-slate-700 flex items-center gap-2">
-                            <Calendar size={12} className="text-slate-400" /> {appointment.date}
-                          </span>
-                          <span className="text-xs text-slate-500 flex items-center gap-2 mt-0.5">
-                            <Clock size={12} className="text-slate-400" /> {appointment.time}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200 capitalize">
-                          {appointment.type}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {getStatusBadge(appointment.status)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <div className="flex justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
-                          <button
-                            onClick={() => handleViewClick(appointment)}
-                            className="p-2 text-slate-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-colors"
-                            title="View Slip"
-                          >
-                            <Eye size={20} />
-                          </button>
-                          {appointment.status === "Completed" &&
-                          <button
-                            onClick={(e) => handleCompleteClick(appointment, e)}
-                            className={`p-2 rounded-lg transition-colors ${appointment.status === 'Completed'
-                              ? 'text-green-600 bg-green-50 hover:bg-green-100'
-                              : 'text-slate-400 hover:text-green-600 hover:bg-green-50'
-                              }`}
-                            title={appointment.status === 'Completed' ? "View Completion Slip" : "Complete Appointment"}
-                          >
-                            <CheckCircle size={20} />
-                          </button>
-                          }
-                          {/* <button className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Edit">
-                            <Edit2 size={16} />
-                          </button>
-                          <button className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Delete">
-                            <Trash2 size={16} />
-                          </button> */}
-                        </div>
-                      </td>
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Type</th>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
+                      <th className="px-6 py-4 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">Actions</th>
                     </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan="6" className="px-6 py-16 text-center">
-                      <div className="flex flex-col items-center justify-center">
-                        <div className="bg-slate-50 p-4 rounded-full mb-3">
-                          <Calendar size={32} className="text-slate-300" />
-                        </div>
-                        <h3 className="text-slate-800 font-medium mb-1">No appointments found</h3>
-                        <p className="text-slate-500 text-sm">
-                          {searchTerm || filterDate ? 'Try adjusting your filters' : 'Get started by creating a new appointment'}
-                        </p>
-                      </div>
-                    </td>
-                  </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {sortedUpcoming.map((appointment, index) => (
+                      <React.Fragment key={appointment._id}>
+                        {renderAppointmentRow(appointment, true, index)}
+                        {index === 0 && sortedUpcoming.length > 1 && (
+                          <tr className="border-t-2 border-teal-100">
+                            <td colSpan="6" className="px-6 py-1 bg-teal-25">
+                              <div className="text-xs text-teal-500 font-medium">
+                                ↑ Earliest appointment today
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Section 2: Completed Appointments (Collapsible) */}
+            {sortedCompleted.length > 0 && (
+              <div>
+                <button
+                  onClick={() => setCompletedCollapsed(!completedCollapsed)}
+                  className="w-full px-6 py-3 bg-green-50/50 border-b border-green-100 hover:bg-green-50 transition-colors flex items-center justify-between group"
+                >
+                  <div className="flex items-center gap-2">
+                    <CheckSquare size={16} className="text-green-600" />
+                    <h3 className="font-bold text-green-700 text-sm uppercase tracking-wider">
+                      Past Appointments ({sortedCompleted.length})
+                    </h3>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {completedCollapsed ? (
+                      <ChevronRight size={20} className="text-green-500 group-hover:text-green-600 transition-colors ml-2" />
+                    ) : (
+                      <ChevronUp size={20} className="text-green-500 group-hover:text-green-600 transition-colors ml-2" />
+                    )}
+                  </div>
+                </button>
+                
+                {!completedCollapsed && (
+                  <>
+                    <table className="w-full">
+                      <thead className="bg-slate-50 border-b border-slate-100">
+                        <tr>
+                          <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Patient Details</th>
+                          <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Doctor</th>
+                          <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">
+                            <div className="flex items-center gap-1">
+                              <Calendar size={12} /> Schedule
+                              <ArrowDown size={10} className="text-green-500" />
+                            </div>
+                          </th>
+                          <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Type</th>
+                          <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
+                          <th className="px-6 py-4 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {sortedCompleted.map((appointment, index) => renderAppointmentRow(appointment, false, index))}
+                      </tbody>
+                    </table>
+                    
+                    {/* Collapse Footer */}
+                    <div className="px-6 py-2 border-t border-slate-100 bg-green-25 flex justify-center">
+                      <button
+                        onClick={() => setCompletedCollapsed(true)}
+                        className="text-xs text-green-500 hover:text-green-600 font-medium flex items-center gap-1 py-1"
+                      >
+                        <ChevronUp size={12} />
+                        Collapse Completed Appointments
+                      </button>
+                    </div>
+                  </>
                 )}
-              </tbody>
-            </table>
+              </div>
+            )}
+
+            {/* No Appointments Found */}
+            {sortedUpcoming.length === 0 && sortedCompleted.length === 0 && (
+              <div className="w-full">
+                <div className="px-6 py-16 text-center">
+                  <div className="flex flex-col items-center justify-center">
+                    <div className="bg-slate-50 p-4 rounded-full mb-3">
+                      <Calendar size={32} className="text-slate-300" />
+                    </div>
+                    <h3 className="text-slate-800 font-medium mb-1">No appointments found</h3>
+                    <p className="text-slate-500 text-sm">
+                      {searchTerm || filterDate ? 'Try adjusting your filters' : 'Get started by creating a new appointment'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* Only Completed Section is collapsed and no upcoming appointments */}
+            {sortedUpcoming.length === 0 && sortedCompleted.length > 0 && completedCollapsed && (
+              <div className="px-6 py-8 text-center">
+                <div className="flex flex-col items-center justify-center">
+                  <div className="bg-green-50 p-4 rounded-full mb-3">
+                    <CheckSquare size={32} className="text-green-300" />
+                  </div>
+                  <h3 className="text-slate-800 font-medium mb-1">Completed Appointments Collapsed</h3>
+                  <p className="text-slate-500 text-sm">
+                    Click on the "Completed Appointments" header above to expand and view {sortedCompleted.length} completed appointments
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Pagination Footer (Static for now) */}
+          {/* Pagination Footer */}
           <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between bg-slate-50/50">
-            <p className="text-xs text-slate-500">Showing <span className="font-bold text-slate-700">{filteredAppointments.length}</span> results</p>
+            <p className="text-xs text-slate-500">
+              Showing <span className="font-bold text-slate-700">{filteredAppointments.length}</span> results
+              {sortedUpcoming.length > 0 && sortedCompleted.length > 0 && (
+                <span className="ml-2">
+                  (<span className="text-teal-600">{sortedUpcoming.length} upcoming</span>, 
+                  <span className="text-green-600"> {sortedCompleted.length} completed</span>)
+                  {completedCollapsed && sortedCompleted.length > 0 && (
+                    <span className="text-green-400 ml-2"></span>
+                  )}
+                </span>
+              )}
+            </p>
             <div className="flex gap-2">
               <button disabled className="px-3 py-1 text-xs font-medium text-slate-400 bg-white border border-slate-200 rounded cursor-not-allowed">Previous</button>
               <button disabled className="px-3 py-1 text-xs font-medium text-slate-400 bg-white border border-slate-200 rounded cursor-not-allowed">Next</button>
