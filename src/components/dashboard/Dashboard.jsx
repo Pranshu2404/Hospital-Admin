@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
-import { adminSidebar } from '../../constants/sidebarItems/adminSidebar'; 
+import { adminSidebar } from '../../constants/sidebarItems/adminSidebar';
 
 dayjs.extend(relativeTime);
 
@@ -61,18 +61,25 @@ const Icons = {
   )
 };
 
+const toNumber = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
+
 const Dashboard = () => {
   const navigate = useNavigate();
+  const didFetch = useRef(false); // ✅ prevents double-fetch in React StrictMode dev
+
   const [stats, setStats] = useState([]);
   const [recentAppointments, setRecentAppointments] = useState([]);
   const [recentActivities, setRecentActivities] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [currentTime, setCurrentTime] = useState(dayjs());
+
+  // ✅ Finance computed from NEW revenue responses
   const [financeStats, setFinanceStats] = useState({
     dailyIncome: 0,
     weeklyIncome: 0,
     monthlyIncome: 0
   });
+
   const [recentInvoices, setRecentInvoices] = useState([]);
   const [loadingFinance, setLoadingFinance] = useState(false);
 
@@ -81,70 +88,61 @@ const Dashboard = () => {
     return () => clearInterval(timer);
   }, []);
 
+  // ✅ NEW: Revenue API integration based on your current response structure
+  // daily:  { date, summary: { totalRevenue, ... }, ... }
+  // weekly: { period: { start, end }, summary: { totalRevenue, ... }, ... }
+  // monthly:{ period: { year, month }, summary: { totalRevenue, ... }, ... }
   const fetchFinanceData = async () => {
     setLoadingFinance(true);
+    const baseUrl = import.meta.env.VITE_BACKEND_URL;
+
     try {
-      const baseUrl = import.meta.env.VITE_BACKEND_URL;
       const today = dayjs();
-      const startOfWeek = today.startOf('week');
+      const startOfWeek = today.startOf('week'); // if you want Monday-start, use isoWeek plugin
       const startOfMonth = today.startOf('month');
 
-      // Fetch daily revenue
-      const dailyRes = await axios.get(`${baseUrl}/revenue/daily`, {
-        params: { date: today.format('YYYY-MM-DD') }
-      });
-      const dailyIncome = dailyRes.data?.revenue?.total || dailyRes.data?.net || 0;
+      const [dailyRes, weeklyRes, monthlyRes, invoicesRes] = await Promise.all([
+        axios.get(`${baseUrl}/revenue/daily`, { params: { date: today.format('YYYY-MM-DD') } }),
+        axios.get(`${baseUrl}/revenue`, {
+          params: {
+            startDate: startOfWeek.format('YYYY-MM-DD'),
+            endDate: today.format('YYYY-MM-DD')
+          }
+        }),
+        axios.get(`${baseUrl}/revenue/monthly`, {
+          params: { year: today.year(), month: today.month() + 1 }
+        }),
+        axios.get(`${baseUrl}/invoices`, { params: { limit: 5, page: 1 } })
+      ]);
 
-      // Fetch weekly revenue (from start of week to today)
-      const weeklyRes = await axios.get(`${baseUrl}/revenue`, {
-        params: {
-          startDate: startOfWeek.format('YYYY-MM-DD'),
-          endDate: today.format('YYYY-MM-DD')
-        }
-      });
-      const weeklyIncome = weeklyRes.data?.revenue?.gross || 0;
+      const dailyData = dailyRes.data;
+      const weeklyData = weeklyRes.data;
+      const monthlyData = monthlyRes.data;
 
-      // Fetch monthly revenue
-      const monthlyRes = await axios.get(`${baseUrl}/revenue/monthly`, {
-        params: {
-          year: today.year(),
-          month: today.month() + 1
-        }
-      });
-      const monthlyIncome = monthlyRes.data?.totalRevenue || 0;
+      const dailyIncome = toNumber(dailyData?.summary?.totalRevenue);
+      const weeklyIncome = toNumber(weeklyData?.summary?.totalRevenue);
+      const monthlyIncome = toNumber(monthlyData?.summary?.totalRevenue);
 
-      // Fetch recent invoices
-      const invoicesRes = await axios.get(`${baseUrl}/invoices`, {
-        params: { limit: 5, page: 1 }
-      });
-      const invoices = (invoicesRes.data?.invoices || invoicesRes.data || []).map(inv => ({
+      const invoicePayload = invoicesRes.data;
+      const invoiceList = invoicePayload?.invoices || [];
+
+      const invoices = invoiceList.map((inv) => ({
         id: inv._id,
-        invoiceNumber: inv.invoice_number || inv.number || '#' + inv._id.slice(-4),
+        invoiceNumber: inv.invoice_number || inv.number || `#${String(inv._id || '').slice(-4)}`,
         patientName: inv.patient_id?.first_name || inv.patientName || 'Unknown',
-        amount: inv.total_amount || inv.amount || 0,
+        amount: inv.total || inv.total_amount || inv.amount || 0,
         status: inv.status || 'Pending',
-        date: dayjs(inv.created_at || inv.createdAt).format('MMM DD, YYYY'),
-        dueDate: inv.due_date || inv.dueDate ? dayjs(inv.due_date || inv.dueDate).format('MMM DD, YYYY') : 'N/A'
+        date: dayjs(inv.created_at || inv.createdAt || inv.issue_date).format('MMM DD, YYYY'),
+        dueDate: inv.due_date
+          ? dayjs(inv.due_date).format('MMM DD, YYYY')
+          : 'N/A'
       }));
 
-      console.log('Daily Income:', dailyIncome);
-      console.log('Weekly Income:', weeklyIncome);
-      console.log('Monthly Income:', monthlyIncome);
-
-      setFinanceStats({
-        dailyIncome,
-        weeklyIncome,
-        monthlyIncome
-      });
+      setFinanceStats({ dailyIncome, weeklyIncome, monthlyIncome });
       setRecentInvoices(invoices);
     } catch (err) {
       console.error('Finance data fetch error:', err);
-      // Fallback with zero values
-      setFinanceStats({
-        dailyIncome: 0,
-        weeklyIncome: 0,
-        monthlyIncome: 0
-      });
+      setFinanceStats({ dailyIncome: 0, weeklyIncome: 0, monthlyIncome: 0 });
       setRecentInvoices([]);
     } finally {
       setLoadingFinance(false);
@@ -152,65 +150,64 @@ const Dashboard = () => {
   };
 
   useEffect(() => {
+    if (didFetch.current) return;
+    didFetch.current = true;
+
     const fetchData = async () => {
       try {
+        const baseUrl = import.meta.env.VITE_BACKEND_URL;
+
         const [patientsRes, staffRes, appointmentsRes, doctorRes] = await Promise.all([
-          axios.get(`${import.meta.env.VITE_BACKEND_URL}/patients`),
-          axios.get(`${import.meta.env.VITE_BACKEND_URL}/staff`),
-          axios.get(`${import.meta.env.VITE_BACKEND_URL}/appointments`),
-          axios.get(`${import.meta.env.VITE_BACKEND_URL}/doctors`),
+          axios.get(`${baseUrl}/patients`),
+          axios.get(`${baseUrl}/staff`),
+          axios.get(`${baseUrl}/appointments`),
+          axios.get(`${baseUrl}/doctors`)
         ]);
 
-        const patients = patientsRes.data.patients || [];
-        const staff = staffRes.data || [];
-        const appointments = appointmentsRes.data || [];
-        const doctors = doctorRes.data || [];
+        const patients = patientsRes.data?.patients || [];
+        const staff = Array.isArray(staffRes.data) ? staffRes.data : (staffRes.data?.staff || []);
+        const appointments = Array.isArray(appointmentsRes.data) ? appointmentsRes.data : (appointmentsRes.data?.appointments || []);
+        const doctors = Array.isArray(doctorRes.data) ? doctorRes.data : (doctorRes.data?.doctors || doctorRes.data || []);
 
-        // --- 2. Beautiful Stats Data Construction ---
         setStats([
           {
             title: 'Total Patients',
             value: patients.length,
             icon: Icons.Patient,
-            // Blue Theme
             bgGradient: 'bg-gradient-to-br from-blue-50 to-blue-100',
             iconBg: 'bg-blue-600',
             textColor: 'text-blue-900',
-            route: '/dashboard/admin/patient-list',
+            route: '/dashboard/admin/patient-list'
           },
           {
             title: "Today's Visits",
-            value: appointments.filter(a => dayjs(a.appointment_date).isSame(dayjs(), 'day')).length,
+            value: appointments.filter((a) => dayjs(a.appointment_date).isSame(dayjs(), 'day')).length,
             icon: Icons.Calendar,
-            // Teal Theme
             bgGradient: 'bg-gradient-to-br from-teal-50 to-teal-100',
             iconBg: 'bg-teal-600',
             textColor: 'text-teal-900',
-            route: '/dashboard/admin/appointments',
+            route: '/dashboard/admin/appointments'
           },
           {
             title: 'Active Doctors',
             value: doctors.length,
             icon: Icons.Doctor,
-            // Violet Theme
             bgGradient: 'bg-gradient-to-br from-violet-50 to-violet-100',
             iconBg: 'bg-violet-600',
             textColor: 'text-violet-900',
-            route: '/dashboard/admin/doctor-list',
+            route: '/dashboard/admin/doctor-list'
           },
           {
             title: 'Hospital Staff',
             value: staff.length,
             icon: Icons.Staff,
-            // Amber Theme
             bgGradient: 'bg-gradient-to-br from-amber-50 to-amber-100',
             iconBg: 'bg-amber-500',
             textColor: 'text-amber-900',
-            route: '/dashboard/admin/staff-list',
-          },
+            route: '/dashboard/admin/staff-list'
+          }
         ]);
 
-        // Process Appointments
         const sortedAppointments = [...appointments]
           .sort((a, b) => new Date(b.appointment_date) - new Date(a.appointment_date))
           .slice(0, 5)
@@ -223,26 +220,40 @@ const Dashboard = () => {
             doctor: a.doctor_id?.firstName ? `Dr. ${a.doctor_id.firstName}` : 'Unassigned',
             status: a.status || 'Scheduled',
             initials: (a.patient_id?.first_name || 'U').substring(0, 2).toUpperCase(),
-            // Random color for avatar based on name length
-            avatarColor: ['bg-blue-100 text-blue-600', 'bg-teal-100 text-teal-600', 'bg-purple-100 text-purple-600', 'bg-amber-100 text-amber-600'][((a.patient_id?.first_name?.length || 0) % 4)]
+            avatarColor: ['bg-blue-100 text-blue-600', 'bg-teal-100 text-teal-600', 'bg-purple-100 text-purple-600', 'bg-amber-100 text-amber-600'][
+              ((a.patient_id?.first_name?.length || 0) % 4)
+            ]
           }));
         setRecentAppointments(sortedAppointments);
 
-        // Process Activities (Mock logic using existing data for demo)
+        // Simple activity feed
         const activities = [];
-        if(patients.length > 0) {
-           patients.slice(-2).reverse().forEach(p => activities.push({
-             id: `p-${p._id}`, type: 'create', user: 'Admin', action: 'registered new patient', target: p.first_name, time: dayjs(p.createdAt).fromNow()
-           }));
+        if (patients.length > 0) {
+          patients.slice(-2).reverse().forEach((p) =>
+            activities.push({
+              id: `p-${p._id}`,
+              type: 'create',
+              user: 'Admin',
+              action: 'registered new patient',
+              target: p.first_name,
+              time: dayjs(p.createdAt).fromNow()
+            })
+          );
         }
-        if(appointments.length > 0) {
-           appointments.slice(-3).reverse().forEach(a => activities.push({
-             id: `a-${a._id}`, type: 'complete', user: 'System', action: 'updated appointment for', target: a.patient_id?.first_name || 'Patient', time: dayjs(a.updatedAt).fromNow()
-           }));
+        if (appointments.length > 0) {
+          appointments.slice(-3).reverse().forEach((a) =>
+            activities.push({
+              id: `a-${a._id}`,
+              type: 'complete',
+              user: 'System',
+              action: 'updated appointment for',
+              target: a.patient_id?.first_name || 'Patient',
+              time: dayjs(a.updatedAt).fromNow()
+            })
+          );
         }
         setRecentActivities(activities);
 
-        // Fetch finance data
         await fetchFinanceData();
       } catch (err) {
         console.error('Data fetch error:', err);
@@ -252,6 +263,7 @@ const Dashboard = () => {
     };
 
     fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const getStatusBadge = (status) => {
@@ -260,9 +272,11 @@ const Dashboard = () => {
       Confirmed: 'bg-teal-50 text-teal-700 border-teal-200 ring-teal-500/30',
       'In Progress': 'bg-blue-50 text-blue-700 border-blue-200 ring-blue-500/30',
       Completed: 'bg-slate-100 text-slate-700 border-slate-200 ring-slate-500/30',
-      Cancelled: 'bg-red-50 text-red-700 border-red-200 ring-red-500/30',
+      Cancelled: 'bg-red-50 text-red-700 border-red-200 ring-red-500/30'
     };
-    return `inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ring-1 ring-inset ${styles[status] || styles.Completed}`;
+    return `inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ring-1 ring-inset ${
+      styles[status] || styles.Completed
+    }`;
   };
 
   const formatCurrency = (amount) => {
@@ -273,12 +287,17 @@ const Dashboard = () => {
     }).format(amount || 0);
   };
 
-  if (isLoading) return <div className="flex h-screen items-center justify-center text-slate-400 font-medium">Loading Dashboard...</div>;
+  if (isLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center text-slate-400 font-medium">
+        Loading Dashboard...
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 min-h-screen bg-slate-50/50 font-sans text-slate-800">
-      
-      {/* --- Header Section --- */}
+      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between mb-10">
         <div>
           <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Dashboard Overview</h1>
@@ -292,19 +311,19 @@ const Dashboard = () => {
             </div>
           </div>
         </div>
-        <button 
-            onClick={() => navigate('/dashboard/admin/appointments')}
-            className="mt-4 md:mt-0 bg-teal-600 hover:bg-teal-700 text-white px-5 py-2.5 rounded-xl text-sm font-semibold shadow-lg shadow-teal-600/20 transition-all flex items-center gap-2 transform active:scale-95"
+        <button
+          onClick={() => navigate('/dashboard/admin/appointments')}
+          className="mt-4 md:mt-0 bg-teal-600 hover:bg-teal-700 text-white px-5 py-2.5 rounded-xl text-sm font-semibold shadow-lg shadow-teal-600/20 transition-all flex items-center gap-2 transform active:scale-95"
         >
-            <Icons.Plus />
-            New Appointment
+          <Icons.Plus />
+          New Appointment
         </button>
       </div>
 
-      {/* --- 3. Beautiful Colored Stats Cards --- */}
+      {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
         {stats.map((stat, idx) => (
-          <div 
+          <div
             key={idx}
             onClick={() => navigate(stat.route)}
             className={`relative overflow-hidden rounded-3xl p-6 cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-xl ${stat.bgGradient} border border-white/50 shadow-sm group`}
@@ -318,25 +337,35 @@ const Dashboard = () => {
                 <stat.icon />
               </div>
             </div>
-            {/* Decorative background circle */}
             <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-white/20 rounded-full blur-2xl group-hover:bg-white/30 transition-colors"></div>
           </div>
         ))}
       </div>
 
-      {/* --- Finance Income Cards --- */}
+      {/* Finance Income Cards (now correctly reading summary.totalRevenue) */}
       <div className="mb-10">
-        <h2 className="text-lg font-bold text-slate-900 mb-5">Financial Overview</h2>
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="text-lg font-bold text-slate-900">Financial Overview</h2>
+          <button
+            onClick={fetchFinanceData}
+            className="text-sm font-semibold text-teal-600 hover:text-teal-700 hover:bg-teal-50 px-3 py-1 rounded-lg transition-colors"
+          >
+            {loadingFinance ? 'Refreshing...' : 'Refresh'}
+          </button>
+        </div>
+
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-          {/* Daily Income */}
-          <div 
+          {/* Daily */}
+          <div
             onClick={() => navigate('/dashboard/admin/income')}
             className="relative overflow-hidden rounded-3xl p-6 cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-xl bg-gradient-to-br from-green-50 to-green-100 border border-white/50 shadow-sm group"
           >
             <div className="flex items-start justify-between relative z-10">
               <div>
                 <p className="text-sm font-bold opacity-70 mb-1 text-green-900">Daily Income</p>
-                <h3 className="text-3xl font-extrabold text-green-900">{formatCurrency(financeStats.dailyIncome)}</h3>
+                <h3 className="text-3xl font-extrabold text-green-900">
+                  {formatCurrency(financeStats.dailyIncome)}
+                </h3>
                 <p className="text-xs text-green-700 mt-2">{dayjs().format('MMM DD')}</p>
               </div>
               <div className="p-3 rounded-2xl bg-green-600 text-white shadow-md bg-opacity-90 group-hover:scale-110 transition-transform duration-300">
@@ -346,15 +375,17 @@ const Dashboard = () => {
             <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-white/20 rounded-full blur-2xl group-hover:bg-white/30 transition-colors"></div>
           </div>
 
-          {/* Weekly Income */}
-          <div 
+          {/* Weekly */}
+          <div
             onClick={() => navigate('/dashboard/admin/income')}
             className="relative overflow-hidden rounded-3xl p-6 cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-xl bg-gradient-to-br from-blue-50 to-blue-100 border border-white/50 shadow-sm group"
           >
             <div className="flex items-start justify-between relative z-10">
               <div>
                 <p className="text-sm font-bold opacity-70 mb-1 text-blue-900">Weekly Income</p>
-                <h3 className="text-3xl font-extrabold text-blue-900">{formatCurrency(financeStats.weeklyIncome)}</h3>
+                <h3 className="text-3xl font-extrabold text-blue-900">
+                  {formatCurrency(financeStats.weeklyIncome)}
+                </h3>
                 <p className="text-xs text-blue-700 mt-2">This week</p>
               </div>
               <div className="p-3 rounded-2xl bg-blue-600 text-white shadow-md bg-opacity-90 group-hover:scale-110 transition-transform duration-300">
@@ -364,15 +395,17 @@ const Dashboard = () => {
             <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-white/20 rounded-full blur-2xl group-hover:bg-white/30 transition-colors"></div>
           </div>
 
-          {/* Monthly Income */}
-          <div 
+          {/* Monthly */}
+          <div
             onClick={() => navigate('/dashboard/admin/income')}
             className="relative overflow-hidden rounded-3xl p-6 cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-xl bg-gradient-to-br from-purple-50 to-purple-100 border border-white/50 shadow-sm group"
           >
             <div className="flex items-start justify-between relative z-10">
               <div>
                 <p className="text-sm font-bold opacity-70 mb-1 text-purple-900">Monthly Income</p>
-                <h3 className="text-3xl font-extrabold text-purple-900">{formatCurrency(financeStats.monthlyIncome)}</h3>
+                <h3 className="text-3xl font-extrabold text-purple-900">
+                  {formatCurrency(financeStats.monthlyIncome)}
+                </h3>
                 <p className="text-xs text-purple-700 mt-2">{dayjs().format('MMMM YYYY')}</p>
               </div>
               <div className="p-3 rounded-2xl bg-purple-600 text-white shadow-md bg-opacity-90 group-hover:scale-110 transition-transform duration-300">
@@ -384,118 +417,67 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* --- Recent Invoices Section --- */}
-      {/* <div className="mb-10">
-        <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-          <div className="px-8 py-6 border-b border-slate-100 flex items-center justify-between bg-white">
-            <h3 className="text-lg font-bold text-slate-800">Recent Invoices</h3>
-            <button 
-              onClick={() => navigate('/dashboard/admin/invoices')}
-              className="text-sm font-semibold text-teal-600 hover:text-teal-700 hover:bg-teal-50 px-3 py-1 rounded-lg transition-colors"
-            >
-              View All
-            </button>
-          </div>
-          
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm text-slate-600">
-              <thead className="bg-slate-50/50 text-xs uppercase font-bold text-slate-400">
-                <tr>
-                  <th className="px-8 py-4">Invoice #</th>
-                  <th className="px-8 py-4">Patient Name</th>
-                  <th className="px-8 py-4">Amount</th>
-                  <th className="px-8 py-4">Date</th>
-                  <th className="px-8 py-4">Due Date</th>
-                  <th className="px-8 py-4 text-right">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {recentInvoices.length > 0 ? (
-                  recentInvoices.map((invoice) => (
-                    <tr key={invoice.id} className="hover:bg-slate-50/80 transition-colors group cursor-pointer" onClick={() => navigate('/dashboard/admin/invoices')}>
-                      <td className="px-8 py-4">
-                        <span className="font-bold text-slate-900">#{invoice.invoiceNumber}</span>
-                      </td>
-                      <td className="px-8 py-4">
-                        <span className="font-medium text-slate-700">{invoice.patientName}</span>
-                      </td>
-                      <td className="px-8 py-4">
-                        <span className="font-semibold text-slate-900">{formatCurrency(invoice.amount)}</span>
-                      </td>
-                      <td className="px-8 py-4 text-slate-600">{invoice.date}</td>
-                      <td className="px-8 py-4 text-slate-600">{invoice.dueDate}</td>
-                      <td className="px-8 py-4 text-right">
-                        <span className={getStatusBadge(invoice.status)}>{invoice.status}</span>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr><td colSpan="6" className="px-8 py-10 text-center text-slate-400 italic">No invoices found.</td></tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div> */}
-
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-        
-        {/* --- 4. Recent Appointments Table --- */}
+        {/* Recent Appointments */}
         <div className="xl:col-span-2 space-y-6">
           <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
             <div className="px-8 py-6 border-b border-slate-100 flex items-center justify-between bg-white">
               <h3 className="text-lg font-bold text-slate-800">Recent Appointments</h3>
-              <button 
+              <button
                 onClick={() => navigate('/dashboard/admin/appointments')}
                 className="text-sm font-semibold text-teal-600 hover:text-teal-700 hover:bg-teal-50 px-3 py-1 rounded-lg transition-colors"
               >
                 View All
               </button>
             </div>
-            
+
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm text-slate-600">
                 <thead className="bg-slate-50/50 text-xs uppercase font-bold text-slate-400">
                   <tr>
-                    <th className="px-8 py-4">Patient</th>
-                    <th className="px-8 py-4">Service</th>
-                    <th className="px-8 py-4">Schedule</th>
-                    <th className="px-8 py-4">Doctor</th>
-                    <th className="px-8 py-4 text-right">Status</th>
+                    <th className="px-4 py-4">Patient</th>
+                    <th className="px-4 py-4">Service</th>
+                    <th className="px-4 py-4">Schedule</th>
+                    <th className="px-4 py-4">Doctor</th>
+                    <th className="px-4 py-4 text-right">Status</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {recentAppointments.length > 0 ? (
                     recentAppointments.map((appt) => (
-                    <tr key={appt.id} className="hover:bg-slate-50/80 transition-colors group">
-                      <td className="px-8 py-4">
-                        <div className="flex items-center gap-4">
-                          <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold ${appt.avatarColor}`}>
-                            {appt.initials}
+                      <tr key={appt.id} className="hover:bg-slate-50/80 transition-colors group">
+                        <td className="px-4 py-4">
+                          <div className="flex items-center gap-4">
+                            <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold ${appt.avatarColor}`}>
+                              {appt.initials}
+                            </div>
+                            <div>
+                              <p className="font-bold text-slate-900">{appt.patientName}</p>
+                              <p className="text-xs text-slate-400">ID: #{appt.id}</p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="font-bold text-slate-900">{appt.patientName}</p>
-                            <p className="text-xs text-slate-400">ID: #{appt.id.slice(-4)}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-8 py-4">
-                        <span className="inline-block bg-slate-100 text-slate-600 text-xs px-2 py-1 rounded font-medium">{appt.service}</span>
-                      </td>
-                      <td className="px-8 py-4">
-                        <div className="flex flex-col">
+                        </td>
+                        <td className="px-4 py-4">
+                          <span className="inline-block bg-slate-100 text-slate-600 text-xs px-2 py-1 rounded font-medium">{appt.service}</span>
+                        </td>
+                        <td className="px-4 py-4">
+                          <div className="flex flex-col">
                             <span className="font-bold text-slate-700">{appt.time}</span>
                             <span className="text-xs text-slate-400 font-medium">{appt.date}</span>
-                        </div>
-                      </td>
-                      <td className="px-8 py-4 font-medium text-slate-600">{appt.doctor}</td>
-                      <td className="px-8 py-4 text-right">
-                        <span className={getStatusBadge(appt.status)}>{appt.status}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-4 font-medium text-slate-600">{appt.doctor}</td>
+                        <td className="px-4 py-4 text-right">
+                          <span className={getStatusBadge(appt.status)}>{appt.status}</span>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan="5" className="px-8 py-10 text-center text-slate-400 italic">
+                        No appointments found.
                       </td>
                     </tr>
-                  ))
-                  ) : (
-                    <tr><td colSpan="5" className="px-8 py-10 text-center text-slate-400 italic">No appointments found.</td></tr>
                   )}
                 </tbody>
               </table>
@@ -503,15 +485,14 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* --- Right Column: Quick Actions & Activity --- */}
+        {/* Right Column */}
         <div className="space-y-8">
-          
           {/* Quick Actions */}
           <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-6">
-             <h3 className="text-lg font-bold text-slate-800 mb-5 px-2">Quick Actions</h3>
-             <div className="grid grid-cols-2 gap-4">
+            <h3 className="text-lg font-bold text-slate-800 mb-5 px-2">Quick Actions</h3>
+            <div className="grid grid-cols-2 gap-4">
               {adminSidebar
-                .filter(link => !link.submenu && link.label !== 'Dashboard')
+                .filter((link) => !link.submenu && link.label !== 'Dashboard')
                 .slice(0, 6)
                 .map((item) => (
                   <div
@@ -530,9 +511,9 @@ const Dashboard = () => {
 
           {/* Activity Timeline */}
           <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-6">
-             <h3 className="text-lg font-bold text-slate-800 mb-6 px-2">Live Activity</h3>
-             <div className="flow-root px-2">
-               <ul className="-mb-8">
+            <h3 className="text-lg font-bold text-slate-800 mb-6 px-2">Live Activity</h3>
+            <div className="flow-root px-2">
+              <ul className="-mb-8">
                 {recentActivities.map((activity, idx) => (
                   <li key={activity.id + idx}>
                     <div className="relative pb-8">
@@ -541,11 +522,12 @@ const Dashboard = () => {
                       )}
                       <div className="relative flex space-x-4">
                         <div className={`relative h-8 w-8 rounded-full flex items-center justify-center ring-4 ring-white ${activity.type === 'create' ? 'bg-teal-100' : 'bg-blue-100'}`}>
-                           {activity.type === 'create' ? <Icons.ActivityCreate className="text-teal-600" /> : <Icons.ActivityCheck className="text-blue-600" />}
+                          {activity.type === 'create' ? <Icons.ActivityCreate className="text-teal-600" /> : <Icons.ActivityCheck className="text-blue-600" />}
                         </div>
                         <div className="min-w-0 flex-1 pt-1">
                           <p className="text-sm text-slate-600 leading-snug">
-                            <span className="font-bold text-slate-900">{activity.user}</span> {activity.action} <span className="font-semibold text-slate-800">{activity.target}</span>
+                            <span className="font-bold text-slate-900">{activity.user}</span> {activity.action}{' '}
+                            <span className="font-semibold text-slate-800">{activity.target}</span>
                           </p>
                           <p className="text-xs text-slate-400 mt-1 font-medium">{activity.time}</p>
                         </div>
@@ -553,8 +535,11 @@ const Dashboard = () => {
                     </div>
                   </li>
                 ))}
-               </ul>
-             </div>
+                {recentActivities.length === 0 && (
+                  <li className="text-sm text-slate-400 italic px-2">No recent activity.</li>
+                )}
+              </ul>
+            </div>
           </div>
         </div>
       </div>
