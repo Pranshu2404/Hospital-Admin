@@ -208,6 +208,7 @@ const InvoiceListPage = ({ onViewDetails, defaultType }) => {
       }
 
       const response = await apiClient.get('/invoices', { params });
+      console.log(response.data)
       setInvoices(response.data.invoices);
       setTotalPages(response.data.totalPages);
       setTotalInvoices(response.data.total);
