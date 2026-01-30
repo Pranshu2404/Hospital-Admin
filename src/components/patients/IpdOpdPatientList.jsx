@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import Papa from 'papaparse';
 import { SearchInput, Button } from '../common/FormElements';
-import { EditIcon, DeleteIcon, UploadIcon, XIcon, PlusIcon } from '../common/Icons'; // Removed FilterIcon if not used
+import { EditIcon, DeleteIcon, UploadIcon, XIcon, PlusIcon, DownloadIcon } from '../common/Icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient, updatePatientBasePath = '/dashboard/admin/update-patient' }) => {
@@ -17,25 +17,31 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient, updatePatientBa
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
   const [patients, setPatients] = useState([]);
-  const [dateFilter, setDateFilter] = useState('all'); // 'all', 'today', 'week', 'month', 'custom'
+  const [dateFilter, setDateFilter] = useState('all');
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
 
-  // NEW: State for upload messages and a ref for the file input
+  // State for upload messages and a ref for the file input
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [uploadError, setUploadError] = useState('');
   const [uploadSuccess, setUploadSuccess] = useState('');
   const fileInputRef = useRef(null);
 
+  // NEW: State for export loading and dropdown
+  const [isExporting, setIsExporting] = useState(false);
+  const [showExportDropdown, setShowExportDropdown] = useState(false);
+  const exportDropdownRef = useRef(null);
+
   // Fetch patient data from API
   const fetchPatients = async () => {
     try {
-      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/patients?limit=1000`);
+      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/patients?limit=100`);
       const data = response.data;
       const patientArray = data.patients || [];
 
       const formatted = patientArray.map(p => ({
         id: p._id,
+        patientId: p.patientId || 'N/A',
         name: `${p.salutation ? p.salutation + ' ' : ''}${p.first_name} ${p.last_name}`,
         age: calculateAge(p.dob),
         gender: p.gender,
@@ -46,6 +52,9 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient, updatePatientBa
         lastVisit: p.registered_at ? new Date(p.registered_at).toISOString().split('T')[0] : 'N/A',
         status: 'Active',
         image: p.patient_image,
+        aadhaar_number: p.aadhaar_number || 'N/A',
+        address: p.address || 'N/A',
+        dob: p.dob ? new Date(p.dob).toISOString().split('T')[0] : 'N/A',
       }));
 
       setPatients(formatted);
@@ -59,7 +68,148 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient, updatePatientBa
     fetchPatients();
   }, []);
 
-  // --- UPDATED: FILE UPLOAD AND DEMO DOWNLOAD LOGIC ---
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (exportDropdownRef.current && !exportDropdownRef.current.contains(event.target)) {
+        setShowExportDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  // NEW: Export patients to CSV
+  const exportToCSV = () => {
+    setIsExporting(true);
+    setShowExportDropdown(false);
+    
+    try {
+      // Prepare data for export
+      const exportData = patients.map(patient => ({
+        'Patient ID': patient.patientId,
+        'Name': patient.name,
+        'Age': patient.age,
+        'Gender': patient.gender,
+        'Phone': patient.phone,
+        'Email': patient.email || 'N/A',
+        'Type': patient.type,
+        'Blood Group': patient.bloodGroup,
+        'Last Visit': patient.lastVisit,
+        'Aadhaar Number': patient.aadhaar_number,
+        'Date of Birth': patient.dob,
+        'Address': patient.address,
+        'Status': patient.status,
+      }));
+
+      // Create CSV content
+      const headers = [
+        'Patient ID', 'Name', 'Age', 'Gender', 'Phone', 'Email', 
+        'Type', 'Blood Group', 'Last Visit', 'Aadhaar Number',
+        'Date of Birth', 'Address', 'Status'
+      ];
+      
+      const csvRows = [
+        headers.join(','),
+        ...exportData.map(row => 
+          headers.map(header => {
+            const value = row[header];
+            // Handle values that might contain commas or quotes
+            if (typeof value === 'string' && (value.includes(',') || value.includes('"'))) {
+              return `"${value.replace(/"/g, '""')}"`;
+            }
+            return value;
+          }).join(',')
+        )
+      ];
+
+      const csvContent = csvRows.join('\n');
+      
+      // Create and download file
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const timestamp = new Date().toISOString().split('T')[0];
+      const fileName = `patients_export_${timestamp}.csv`;
+      
+      link.setAttribute('href', url);
+      link.setAttribute('download', fileName);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+    } catch (error) {
+      console.error('Error exporting CSV:', error);
+      alert('Failed to export patient list. Please try again.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  // NEW: Export patients to Excel (using CSV with .xlsx extension as fallback)
+  const exportToExcel = async () => {
+    setIsExporting(true);
+    setShowExportDropdown(false);
+    
+    try {
+      // For a proper Excel export, you would typically use a library like xlsx
+      // Here's a fallback using CSV with .xls extension
+      const exportData = patients.map(patient => ({
+        'Patient ID': patient.patientId,
+        'Name': patient.name,
+        'Age': patient.age,
+        'Gender': patient.gender,
+        'Phone': patient.phone,
+        'Email': patient.email || 'N/A',
+        'Type': patient.type,
+        'Blood Group': patient.bloodGroup,
+        'Last Visit': patient.lastVisit,
+        'Aadhaar Number': patient.aadhaar_number,
+        'Date of Birth': patient.dob,
+        'Address': patient.address,
+        'Status': patient.status,
+      }));
+
+      const headers = [
+        'Patient ID', 'Name', 'Age', 'Gender', 'Phone', 'Email', 
+        'Type', 'Blood Group', 'Last Visit', 'Aadhaar Number',
+        'Date of Birth', 'Address', 'Status'
+      ];
+      
+      const csvRows = [
+        headers.join('\t'), // Use tab delimiter for better Excel compatibility
+        ...exportData.map(row => 
+          headers.map(header => row[header]).join('\t')
+        )
+      ];
+
+      const content = csvRows.join('\n');
+      const blob = new Blob([content], { type: 'application/vnd.ms-excel;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const timestamp = new Date().toISOString().split('T')[0];
+      const fileName = `patients_export_${timestamp}.xls`;
+      
+      link.setAttribute('href', url);
+      link.setAttribute('download', fileName);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+    } catch (error) {
+      console.error('Error exporting Excel:', error);
+      alert('Failed to export patient list. Please try again.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  // File upload and demo download logic
   const handleFileUpload = (event) => {
     const file = event.target.files[0];
     if (!file) return;
@@ -72,7 +222,6 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient, updatePatientBa
       skipEmptyLines: true,
       complete: async (results) => {
         try {
-          // Log data to verify structure before sending
           console.log("Uploading data:", results.data);
           
           const response = await axios.post(
@@ -84,7 +233,7 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient, updatePatientBa
           setTimeout(() => {
             setIsModalOpen(false);
             setUploadSuccess(''); 
-          }, 2000); 
+          }, 2000);
         } catch (apiError) {
           console.error("Upload failed", apiError);
           setUploadError(apiError.response?.data?.message || 'An error occurred during upload.');
@@ -100,7 +249,6 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient, updatePatientBa
   };
 
   const downloadDemoCSV = () => {
-    // UPDATED: Headers match the new Mongoose Schema exactly
     const headers = [
       'salutation', 'first_name', 'middle_name', 'last_name', 'email', 'phone', 
       'gender', 'dob', 'patient_type', 'blood_group', 'address', 'city', 'state', 
@@ -160,6 +308,7 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient, updatePatientBa
   const filteredPatients = patients.filter((patient) => {
     const matchesSearch =
       patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      patient.patientId.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (patient.email && patient.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (patient.phone && patient.phone.includes(searchTerm)) ||
       (patient.type && patient.type.toLowerCase().includes(searchTerm.toLowerCase()));
@@ -199,6 +348,62 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient, updatePatientBa
               <p className="text-gray-600 mt-1">Manage all patient records</p>
             </div>
             <div className="flex items-center gap-2">
+              {/* FIXED: Export Dropdown with proper hover handling */}
+              <div className="relative" ref={exportDropdownRef}>
+                <Button
+                  variant="outline"
+                  disabled={isExporting}
+                  className="flex items-center gap-2"
+                  onClick={() => setShowExportDropdown(!showExportDropdown)}
+                  onMouseEnter={() => setShowExportDropdown(true)}
+                >
+                  <DownloadIcon />
+                  {isExporting ? 'Exporting...' : 'Export'}
+                </Button>
+                {showExportDropdown && (
+                  <div 
+                    className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-10"
+                    onMouseEnter={() => setShowExportDropdown(true)}
+                    onMouseLeave={() => setShowExportDropdown(false)}
+                  >
+                    <button
+                      onClick={exportToCSV}
+                      disabled={isExporting || patients.length === 0}
+                      className="block w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed border-b border-gray-100 last:border-b-0"
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="text-green-600">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                        </div>
+                        <div>
+                          <div className="font-medium">Export to CSV</div>
+                          <div className="text-xs text-gray-500">{patients.length} records</div>
+                        </div>
+                      </div>
+                    </button>
+                    <button
+                      onClick={exportToExcel}
+                      disabled={isExporting || patients.length === 0}
+                      className="block w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="text-blue-600">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                        </div>
+                        <div>
+                          <div className="font-medium">Export to Excel</div>
+                          <div className="text-xs text-gray-500">{patients.length} records</div>
+                        </div>
+                      </div>
+                    </button>
+                  </div>
+                )}
+              </div>
+
               <Button
                 variant="outline"
                 onClick={() => {
@@ -236,9 +441,18 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient, updatePatientBa
               <SearchInput
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search patients by name, email, or phone..."
+                placeholder="Search by Patient ID, name, email, or phone..."
                 className="flex-1"
               />
+              <select
+                value={filterType}
+                onChange={(e) => setFilterType(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+              >
+                <option value="all">All Types</option>
+                <option value="OPD">OPD</option>
+                <option value="IPD">IPD</option>
+              </select>
               <select
                 value={dateFilter}
                 onChange={(e) => setDateFilter(e.target.value)}
@@ -275,14 +489,15 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient, updatePatientBa
           </div>
         </div>
 
-        {/* Patient Table */}
+        {/* Patient Table with Patient ID Column */}
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50">
               <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Patient ID</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Patient</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
-                {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Blood Group</th> */}
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Visit</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
@@ -292,11 +507,16 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient, updatePatientBa
               {filteredPatients.map((patient) => (
                 <tr key={patient.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm font-medium text-gray-900 font-mono bg-gray-50 px-2 py-1 rounded border border-gray-200 inline-block">
+                      {patient.patientId}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       {patient.image ? (
-                        <img src={patient.image} alt={patient.name} className="w-10 h-10 rounded-full object-cover" />
+                        <img src={patient.image} alt={patient.name} className="w-10 h-10 rounded-full object-cover border border-gray-200" />
                       ) : (
-                        <div className="w-10 h-10 bg-teal-100 rounded-full flex items-center justify-center">
+                        <div className="w-10 h-10 bg-teal-100 rounded-full flex items-center justify-center border border-teal-200">
                           <span className="text-teal-600 font-medium text-sm">
                             {patient.name.replace(/(Mr\.|Mrs\.|Ms\.|Dr\.)/g, '').trim().split(' ').map(n => n[0]).join('').substring(0,2)}
                           </span>
@@ -312,11 +532,19 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient, updatePatientBa
                     <div className="text-sm text-gray-900">{patient.phone}</div>
                     <div className="text-sm text-gray-500">{patient.email}</div>
                   </td>
-                  {/* <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {patient.bloodGroup}
-                  </td> */}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                      patient.type === 'IPD' 
+                        ? 'bg-blue-100 text-blue-800 border border-blue-200' 
+                        : 'bg-green-100 text-green-800 border border-green-200'
+                    }`}>
+                      {patient.type}
+                    </span>
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {patient.lastVisit}
+                    <span className="bg-gray-50 px-2 py-1 rounded border border-gray-200">
+                      {patient.lastVisit}
+                    </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={getStatusBadge(patient.status)}>
@@ -325,9 +553,29 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient, updatePatientBa
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex space-x-2">
-                      <button onClick={() => handleViewPatient(patient)} className="text-teal-600 hover:text-teal-900 p-1 rounded">View</button>
-                      <button onClick={() => navigate(`${updatePatientBasePath}/${patient.id}`)} className="text-gray-400 hover:text-blue-600 p-1 rounded"><EditIcon /></button>
-                      <button className="text-red-400 hover:text-red-600 p-1 rounded"><DeleteIcon /></button>
+                      <button 
+                        onClick={() => handleViewPatient(patient)} 
+                        className="text-teal-600 hover:text-teal-900 hover:bg-teal-50 p-2 rounded transition-colors"
+                        title="View Patient"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                      </button>
+                      <button 
+                        onClick={() => navigate(`${updatePatientBasePath}/${patient.id}`)} 
+                        className="text-blue-600 hover:text-blue-900 hover:bg-blue-50 p-2 rounded transition-colors"
+                        title="Edit Patient"
+                      >
+                        <EditIcon />
+                      </button>
+                      <button 
+                        className="text-red-600 hover:text-red-900 hover:bg-red-50 p-2 rounded transition-colors"
+                        title="Delete Patient"
+                      >
+                        <DeleteIcon />
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -347,10 +595,31 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient, updatePatientBa
           </div>
         )}
 
-        {/* --- UPDATED BULK UPLOAD MODAL --- */}
+        {/* Patient Count Summary */}
+        <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
+          <div className="flex justify-between items-center">
+            <div className="text-sm text-gray-600">
+              Showing <span className="font-medium">{filteredPatients.length}</span> of <span className="font-medium">{patients.length}</span> patients
+            </div>
+            <div className="text-sm text-gray-600">
+              {filterType !== 'all' && (
+                <span className="mr-3">
+                  Type: <span className="font-medium">{filterType}</span>
+                </span>
+              )}
+              {dateFilter !== 'all' && (
+                <span>
+                  Date: <span className="font-medium">{dateFilter}</span>
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Bulk Upload Modal */}
         {isModalOpen && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-4xl"> {/* Increased width for more columns */}
+            <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-4xl">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-xl font-semibold">Bulk Upload Patients</h3>
                 <button onClick={() => setIsModalOpen(false)} className="text-gray-500 hover:text-gray-800">
@@ -366,7 +635,6 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient, updatePatientBa
                 <table className="text-xs">
                   <thead className="bg-gray-200">
                     <tr>
-                      {/* NEW HEADERS */}
                       {[
                         'salutation', 'first_name', 'middle_name', 'last_name', 'email', 'phone', 
                         'gender', 'dob', 'patient_type', 'blood_group', 'address', 'city', 'state', 
@@ -381,7 +649,6 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient, updatePatientBa
                   </thead>
                   <tbody>
                     <tr className="bg-white">
-                      {/* NEW SAMPLE DATA */}
                       {[
                         'Mr.', 'Amit', 'Kumar', 'Sharma', 'amit.s@ex.com', '9876543210', 
                         'male', '1990-05-15', 'opd', 'O+', '123 St', 'Kanpur', 'UP', 

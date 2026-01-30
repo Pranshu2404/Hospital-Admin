@@ -268,7 +268,7 @@ export const Button = ({
   disabled = false,
   className = ""
 }) => {
-  const baseClasses = "font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2";
+  const baseClasses = "font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 flex gap-2";
 
   const variants = {
     primary: "bg-teal-600 hover:bg-teal-700 text-white focus:ring-teal-500",

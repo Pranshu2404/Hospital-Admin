@@ -1,21 +1,25 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from 'react-router-dom';
 import {
   FaSearch, FaThLarge, FaList, FaUser, FaMars, FaVenus,
-  FaClock, FaTint, FaStethoscope, FaFilter, FaSortAlphaDown
+  FaClock, FaTint, FaStethoscope, FaFilter, FaSortAlphaDown,
+  FaDownload, FaFileCsv, FaFileExcel
 } from "react-icons/fa";
 import axios from "axios";
 import dayjs from "dayjs";
 
 const PatientListPage = () => {
   const [search, setSearch] = useState("");
-  const [activeTab, setActiveTab] = useState("active"); // 'active' or 'inactive'
-  const [viewType, setViewType] = useState("grid"); // 'grid' or 'list'
+  const [activeTab, setActiveTab] = useState("active");
+  const [viewType, setViewType] = useState("grid");
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isExporting, setIsExporting] = useState(false);
+  const [showExportDropdown, setShowExportDropdown] = useState(false);
   const navigate = useNavigate();
 
   const doctorId = localStorage.getItem("doctorId");
+  const exportDropdownRef = useRef(null);
 
   useEffect(() => {
     const fetchPatients = async () => {
@@ -36,8 +40,7 @@ const PatientListPage = () => {
           pastAppointments.forEach((appt) => {
             const patient = appt.patient_id;
             if (!patient) return;
-
-            const patientId = patient._id;
+            const patientId = patient.patientId;
 
             // Update if patient not in map OR this appointment is more recent
             if (
@@ -47,17 +50,32 @@ const PatientListPage = () => {
               )
             ) {
               patientMap[patientId] = {
-                id: patient.patient_id || patientId.slice(-6).toUpperCase(),
+                id: patient.patient_id || patientId,
+                patientId: patient.patient_id || patientId,
                 mongoId: patientId,
                 name: `${patient.first_name || ""} ${patient.last_name || ""}`.trim(),
+                firstName: patient.first_name || "",
+                lastName: patient.last_name || "",
                 age: patient.dob ? dayjs().diff(dayjs(patient.dob), "year") : "-",
+                dob: patient.dob ? dayjs(patient.dob).format("YYYY-MM-DD") : "N/A",
                 gender: patient.gender || "-",
                 bloodGroup: patient.blood_group || "-",
                 phone: patient.phone || "N/A",
+                email: patient.email || "N/A",
                 diagnosis: appt.diagnosis || "Regular Checkup",
                 lastVisit: dayjs(appt.appointment_date).format("MMM DD, YYYY"),
+                lastVisitDate: dayjs(appt.appointment_date).format("YYYY-MM-DD"),
                 lastVisitRaw: appt.appointment_date,
-                image: patient.profile_image
+                image: patient.profile_image,
+                address: patient.address || "N/A",
+                city: patient.city || "N/A",
+                state: patient.state || "N/A",
+                aadhaarNumber: patient.aadhaar_number || "N/A",
+                medicalHistory: patient.medical_history || "N/A",
+                allergies: patient.allergies || "N/A",
+                medications: patient.medications || "N/A",
+                patientType: patient.patient_type || "opd",
+                registeredDate: patient.registered_at ? dayjs(patient.registered_at).format("YYYY-MM-DD") : "N/A"
               };
             }
           });
@@ -76,8 +94,163 @@ const PatientListPage = () => {
     }
   }, [doctorId]);
 
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (exportDropdownRef.current && !exportDropdownRef.current.contains(event.target)) {
+        setShowExportDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  // Export to CSV function
+  const exportToCSV = () => {
+    setIsExporting(true);
+    setShowExportDropdown(false);
+    
+    try {
+      const exportData = patients.map(patient => ({
+        'Patient ID': patient.patientId,
+        'Name': patient.name,
+        'First Name': patient.firstName,
+        'Last Name': patient.lastName,
+        'Age': patient.age,
+        'Date of Birth': patient.dob,
+        'Gender': patient.gender,
+        'Blood Group': patient.bloodGroup,
+        'Phone': patient.phone,
+        'Email': patient.email,
+        'Last Visit': patient.lastVisitDate,
+        'Last Diagnosis': patient.diagnosis,
+        'Address': patient.address,
+        'City': patient.city,
+        'State': patient.state,
+        'Aadhaar Number': patient.aadhaarNumber,
+        'Medical History': patient.medicalHistory,
+        'Allergies': patient.allergies,
+        'Medications': patient.medications,
+        'Patient Type': patient.patientType.toUpperCase(),
+        'Registered Date': patient.registeredDate
+      }));
+
+      const headers = [
+        'Patient ID', 'Name', 'First Name', 'Last Name', 'Age', 'Date of Birth',
+        'Gender', 'Blood Group', 'Phone', 'Email', 'Last Visit', 'Last Diagnosis',
+        'Address', 'City', 'State', 'Aadhaar Number', 'Medical History',
+        'Allergies', 'Medications', 'Patient Type', 'Registered Date'
+      ];
+      
+      const csvRows = [
+        headers.join(','),
+        ...exportData.map(row => 
+          headers.map(header => {
+            const value = row[header];
+            if (typeof value === 'string' && (value.includes(',') || value.includes('"'))) {
+              return `"${value.replace(/"/g, '""')}"`;
+            }
+            return value;
+          }).join(',')
+        )
+      ];
+
+      const csvContent = csvRows.join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const timestamp = new Date().toISOString().split('T')[0];
+      const fileName = `my_patients_export_${timestamp}.csv`;
+      
+      link.setAttribute('href', url);
+      link.setAttribute('download', fileName);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+    } catch (error) {
+      console.error('Error exporting CSV:', error);
+      alert('Failed to export patient list. Please try again.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  // Export to Excel function
+  const exportToExcel = () => {
+    setIsExporting(true);
+    setShowExportDropdown(false);
+    
+    try {
+      const exportData = patients.map(patient => ({
+        'Patient ID': patient.patientId,
+        'Name': patient.name,
+        'First Name': patient.firstName,
+        'Last Name': patient.lastName,
+        'Age': patient.age,
+        'Date of Birth': patient.dob,
+        'Gender': patient.gender,
+        'Blood Group': patient.bloodGroup,
+        'Phone': patient.phone,
+        'Email': patient.email,
+        'Last Visit': patient.lastVisitDate,
+        'Last Diagnosis': patient.diagnosis,
+        'Address': patient.address,
+        'City': patient.city,
+        'State': patient.state,
+        'Aadhaar Number': patient.aadhaarNumber,
+        'Medical History': patient.medicalHistory,
+        'Allergies': patient.allergies,
+        'Medications': patient.medications,
+        'Patient Type': patient.patientType.toUpperCase(),
+        'Registered Date': patient.registeredDate
+      }));
+
+      const headers = [
+        'Patient ID', 'Name', 'First Name', 'Last Name', 'Age', 'Date of Birth',
+        'Gender', 'Blood Group', 'Phone', 'Email', 'Last Visit', 'Last Diagnosis',
+        'Address', 'City', 'State', 'Aadhaar Number', 'Medical History',
+        'Allergies', 'Medications', 'Patient Type', 'Registered Date'
+      ];
+      
+      const csvRows = [
+        headers.join('\t'),
+        ...exportData.map(row => 
+          headers.map(header => row[header]).join('\t')
+        )
+      ];
+
+      const content = csvRows.join('\n');
+      const blob = new Blob([content], { type: 'application/vnd.ms-excel;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const timestamp = new Date().toISOString().split('T')[0];
+      const fileName = `my_patients_export_${timestamp}.xls`;
+      
+      link.setAttribute('href', url);
+      link.setAttribute('download', fileName);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+    } catch (error) {
+      console.error('Error exporting Excel:', error);
+      alert('Failed to export patient list. Please try again.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   const filtered = patients.filter((p) =>
-    p.name.toLowerCase().includes(search.toLowerCase())
+    p.name.toLowerCase().includes(search.toLowerCase()) ||
+    p.patientId.toLowerCase().includes(search.toLowerCase()) ||
+    (p.email && p.email.toLowerCase().includes(search.toLowerCase())) ||
+    (p.phone && p.phone.includes(search))
   );
 
   // --- SUB-COMPONENTS ---
@@ -109,7 +282,7 @@ const PatientListPage = () => {
           <div>
             <h3 className="font-bold text-slate-800 text-lg leading-tight group-hover:text-teal-700 transition-colors">{p.name}</h3>
             <span className="text-xs font-mono text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100 mt-1 inline-block">
-              ID: {p.id}
+              ID: {p.patientId}
             </span>
           </div>
         </div>
@@ -163,15 +336,22 @@ const PatientListPage = () => {
         )}
       </div>
 
-      <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
+      <div className="flex-1 grid grid-cols-1 md:grid-cols-5 gap-4 items-center">
         <div>
           <h4 className="font-semibold text-slate-800 text-sm">{p.name}</h4>
-          <span className="text-xs text-slate-500">ID: {p.id}</span>
+          <span className="text-xs text-slate-500 font-mono">ID: {p.patientId}</span>
         </div>
 
         <div className="text-sm text-slate-600">
           <span className="md:hidden text-xs text-slate-400 mr-2">Info:</span>
           {p.age} yrs, {p.gender}
+        </div>
+
+        <div>
+          <div className="text-xs text-slate-400 mb-0.5 md:hidden">Blood Group</div>
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-50 text-red-700 border border-red-100">
+            <FaTint className="mr-1" size={10} /> {p.bloodGroup}
+          </span>
         </div>
 
         <div>
@@ -212,6 +392,57 @@ const PatientListPage = () => {
           <p className="text-slate-500 mt-1 text-sm">View and manage your patient history</p>
         </div>
         <div className="mt-4 md:mt-0 flex items-center gap-3">
+          {/* Export Dropdown */}
+          <div className="relative" ref={exportDropdownRef}>
+            <button
+              onClick={() => setShowExportDropdown(!showExportDropdown)}
+              disabled={isExporting || patients.length === 0}
+              className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg shadow-sm text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              onMouseEnter={() => setShowExportDropdown(true)}
+            >
+              <FaDownload className="text-slate-500" />
+              {isExporting ? 'Exporting...' : 'Export'}
+            </button>
+            {showExportDropdown && (
+              <div 
+                className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-slate-200 z-10"
+                onMouseEnter={() => setShowExportDropdown(true)}
+                onMouseLeave={() => setShowExportDropdown(false)}
+              >
+                <button
+                  onClick={exportToCSV}
+                  disabled={isExporting || patients.length === 0}
+                  className="block w-full text-left px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 hover:text-slate-900 disabled:opacity-50 disabled:cursor-not-allowed border-b border-slate-100 last:border-b-0"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="text-green-600">
+                      <FaFileCsv />
+                    </div>
+                    <div>
+                      <div className="font-medium">Export to CSV</div>
+                      <div className="text-xs text-slate-500">{patients.length} patient records</div>
+                    </div>
+                  </div>
+                </button>
+                <button
+                  onClick={exportToExcel}
+                  disabled={isExporting || patients.length === 0}
+                  className="block w-full text-left px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 hover:text-slate-900 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="text-blue-600">
+                      <FaFileExcel />
+                    </div>
+                    <div>
+                      <div className="font-medium">Export to Excel</div>
+                      <div className="text-xs text-slate-500">{patients.length} patient records</div>
+                    </div>
+                  </div>
+                </button>
+              </div>
+            )}
+          </div>
+
           <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-1 flex">
             <button
               onClick={() => setViewType("grid")}
@@ -259,7 +490,7 @@ const PatientListPage = () => {
             <input
               type="text"
               className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/50 transition-all"
-              placeholder="Search by name..."
+              placeholder="Search by name, ID, email, or phone..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -267,6 +498,35 @@ const PatientListPage = () => {
           <button className="p-2 border border-slate-200 rounded-lg text-slate-500 hover:bg-slate-50 transition-colors">
             <FaFilter />
           </button>
+        </div>
+      </div>
+
+      {/* Stats Summary */}
+      <div className="mb-6 grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+          <div className="text-sm text-slate-500 mb-1">Total Patients</div>
+          <div className="text-2xl font-bold text-slate-800">{patients.length}</div>
+        </div>
+        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+          <div className="text-sm text-slate-500 mb-1">Male Patients</div>
+          <div className="text-2xl font-bold text-blue-600">
+            {patients.filter(p => p.gender === 'male').length}
+          </div>
+        </div>
+        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+          <div className="text-sm text-slate-500 mb-1">Female Patients</div>
+          <div className="text-2xl font-bold text-pink-600">
+            {patients.filter(p => p.gender === 'female').length}
+          </div>
+        </div>
+        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+          <div className="text-sm text-slate-500 mb-1">Last 30 Days</div>
+          <div className="text-2xl font-bold text-teal-600">
+            {patients.filter(p => {
+              const lastVisit = dayjs(p.lastVisitDate);
+              return lastVisit.isAfter(dayjs().subtract(30, 'day'));
+            }).length}
+          </div>
         </div>
       </div>
 
@@ -282,9 +542,10 @@ const PatientListPage = () => {
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
             <div className="px-4 py-3 bg-slate-50/50 border-b border-slate-100 grid grid-cols-1 md:grid-cols-[48px_1fr] gap-4 text-xs font-bold text-slate-400 uppercase tracking-wider">
               <span className="hidden md:block"></span>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                 <span>Name / ID</span>
                 <span>Demographics</span>
+                <span>Blood Group</span>
                 <span>Latest Diagnosis</span>
                 <span>Last Visit</span>
               </div>
@@ -301,6 +562,21 @@ const PatientListPage = () => {
           </div>
           <h3 className="text-lg font-medium text-slate-700">No patients found</h3>
           <p className="text-slate-400 text-sm">Try adjusting your search query</p>
+        </div>
+      )}
+
+      {/* Footer Summary */}
+      {filtered.length > 0 && (
+        <div className="mt-6 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+          <div className="flex flex-col md:flex-row justify-between items-center">
+            <div className="text-sm text-slate-600 mb-2 md:mb-0">
+              Showing <span className="font-semibold text-slate-800">{filtered.length}</span> of <span className="font-semibold text-slate-800">{patients.length}</span> patients
+              {search && <span className="ml-2 text-teal-600">(filtered by: "{search}")</span>}
+            </div>
+            <div className="text-xs text-slate-500">
+              Data exported includes: Patient ID, Name, Demographics, Contact, Diagnosis, and Medical History
+            </div>
+          </div>
         </div>
       )}
     </div>
