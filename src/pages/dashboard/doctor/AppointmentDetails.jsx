@@ -602,6 +602,26 @@ const AppointmentDetails = () => {
     loadInitialData();
   }, []);
 
+  // ✅ Fetch current doctor's department (Added to fix history loading)
+  useEffect(() => {
+    const fetchCurrentDoctorDept = async () => {
+      const doctorId = localStorage.getItem('doctorId');
+      if (!doctorId) return;
+
+      try {
+        const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/doctors/${doctorId}`);
+        if (res.data) {
+          const dept = res.data.department?._id || res.data.department;
+          setCurrentDoctorDept(dept);
+        }
+      } catch (error) {
+        console.error("Error fetching current doctor details:", error);
+      }
+    };
+
+    fetchCurrentDoctorDept();
+  }, []);
+
   useEffect(() => {
     if (!state?.appointment || (state?.appointment && !state.appointment.vitals)) {
       if (id) fetchAppointment();
@@ -1514,6 +1534,29 @@ const AppointmentDetails = () => {
 
                         {expandedPrescription === rx._id && (
                           <div className="px-6 py-5 space-y-5">
+                            {rx.presenting_complaint && (
+                              <div className="bg-rose-50 rounded-lg p-4 border border-rose-200">
+                                <div className="flex items-start gap-3">
+                                  <FaNotesMedical className="text-rose-600 text-lg mt-1 flex-shrink-0" />
+                                  <div className="flex-1">
+                                    <h6 className="font-bold text-slate-800 mb-1">Presenting Complaint</h6>
+                                    <p className="text-slate-700 text-sm whitespace-pre-line">{rx.presenting_complaint}</p>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            {rx.history_of_presenting_complaint && (
+                              <div className="bg-orange-50 rounded-lg p-4 border border-orange-200">
+                                <div className="flex items-start gap-3">
+                                  <FaHistory className="text-orange-600 text-lg mt-1 flex-shrink-0" />
+                                  <div className="flex-1">
+                                    <h6 className="font-bold text-slate-800 mb-1">History of Presenting Complaint</h6>
+                                    <p className="text-slate-700 text-sm whitespace-pre-line">{rx.history_of_presenting_complaint}</p>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
                             {rx.notes && (
                               <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
                                 <div className="flex items-start gap-3">
@@ -2079,11 +2122,10 @@ const AppointmentDetails = () => {
                                       return (
                                         <div
                                           key={index}
-                                          className={`rounded-lg border transition-all ${
-                                            isExpanded
-                                              ? 'border-blue-200 bg-white shadow-md'
-                                              : 'border-blue-100 bg-blue-50 hover:border-blue-300'
-                                          }`}
+                                          className={`rounded-lg border transition-all ${isExpanded
+                                            ? 'border-blue-200 bg-white shadow-md'
+                                            : 'border-blue-100 bg-blue-50 hover:border-blue-300'
+                                            }`}
                                         >
                                           {/* Header - Always visible */}
                                           <div className="flex items-center justify-between">
@@ -2093,9 +2135,8 @@ const AppointmentDetails = () => {
                                               className="flex-1 px-4 py-3 flex justify-between items-center hover:bg-blue-100 rounded-lg transition-colors text-left"
                                             >
                                               <div className="flex items-center gap-3 flex-1">
-                                                <div className={`h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold ${
-                                                  isExpanded ? 'bg-blue-100 text-blue-600' : 'bg-slate-200 text-slate-600'
-                                                }`}>
+                                                <div className={`h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold ${isExpanded ? 'bg-blue-100 text-blue-600' : 'bg-slate-200 text-slate-600'
+                                                  }`}>
                                                   {index + 1}
                                                 </div>
                                                 {isExpanded ? (
@@ -2221,11 +2262,10 @@ const AppointmentDetails = () => {
                                     return (
                                       <div
                                         key={index}
-                                        className={`rounded-lg border transition-all ${
-                                          isExpanded
-                                            ? 'border-teal-200 bg-white shadow-md'
-                                            : 'border-slate-200 bg-slate-50 hover:border-teal-300'
-                                        }`}
+                                        className={`rounded-lg border transition-all ${isExpanded
+                                          ? 'border-teal-200 bg-white shadow-md'
+                                          : 'border-slate-200 bg-slate-50 hover:border-teal-300'
+                                          }`}
                                       >
                                         {/* Header - Always visible */}
                                         <div className="flex items-center justify-between">
@@ -2235,9 +2275,8 @@ const AppointmentDetails = () => {
                                             className="flex-1 px-4 py-3 flex justify-between items-center hover:bg-slate-100 rounded-lg transition-colors text-left"
                                           >
                                             <div className="flex items-center gap-3 flex-1">
-                                              <div className={`h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold ${
-                                                isExpanded ? 'bg-teal-100 text-teal-600' : 'bg-slate-200 text-slate-600'
-                                              }`}>
+                                              <div className={`h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold ${isExpanded ? 'bg-teal-100 text-teal-600' : 'bg-slate-200 text-slate-600'
+                                                }`}>
                                                 {index + 1}
                                               </div>
                                               {isExpanded ? (
