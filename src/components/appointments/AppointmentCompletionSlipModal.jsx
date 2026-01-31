@@ -52,6 +52,34 @@ const formatStoredDate = (utcDateString) => {
     }
 };
 
+// Frequency options mapping
+const FREQUENCY_OPTIONS = [
+    { value: 'OD', label: 'Once daily' },
+    { value: 'BD', label: 'Twice daily' },
+    { value: 'TDS', label: 'Three times daily' },
+    { value: 'QDS', label: 'Four times daily' },
+    { value: 'q4h', label: 'Every 4 hours' },
+    { value: 'q6h', label: 'Every 6 hours' },
+    { value: 'q8h', label: 'Every 8 hours' },
+    { value: 'q12h', label: 'Every 12 hours' },
+    { value: 'Mane', label: 'In the morning' },
+    { value: 'Nocte', label: 'At night' },
+    { value: 'q.a.m.', label: 'Every morning' },
+    { value: 'q.p.m.', label: 'Every evening' },
+    { value: 'AC', label: 'Before meals' },
+    { value: 'PC', label: 'After meals' },
+    { value: 'PRN', label: 'As needed' },
+    { value: 'SOS', label: 'When required' },
+    { value: 'Stat', label: 'Immediately' },
+    { value: 'q.o.d.', label: 'Every other day' }
+];
+
+// Helper function to get frequency label from value
+const getFrequencyLabel = (frequencyValue) => {
+    const frequency = FREQUENCY_OPTIONS.find(opt => opt.value === frequencyValue);
+    return frequency ? frequency.label : frequencyValue;
+};
+
 const AppointmentCompletionSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }) => {
     const [prescription, setPrescription] = useState(null);
     const [vitals, setVitals] = useState(null);
@@ -438,7 +466,7 @@ const AppointmentCompletionSlipModal = ({ isOpen, onClose, appointmentData, hosp
                                                     <tr key={idx}>
                                                         <td className="p-2 font-medium">{item.medicine_name}</td>
                                                         <td className="p-2">{item.dosage}</td>
-                                                        <td className="p-2">{item.frequency}</td>
+                                                        <td className="p-2">{getFrequencyLabel(item.frequency)}</td>
                                                         <td className="p-2">{item.duration}</td>
                                                         <td className="p-2 text-slate-500 text-sm">{item.instructions}</td>
                                                     </tr>
