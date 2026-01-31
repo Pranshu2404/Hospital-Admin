@@ -3,53 +3,19 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Layout from '../../../components/Layout';
-import { SearchableFormSelect } from '../../../components/common/FormElements';
 import { adminSidebar } from '../../../constants/sidebarItems/adminSidebar';
+import {
+  FaUserMd, FaEnvelope, FaPhone, FaMapMarkerAlt, FaStethoscope,
+  FaAward, FaBirthdayCake, FaVenusMars, FaBuilding, FaClock,
+  FaFileAlt, FaMoneyBillWave, FaIdCard, FaEdit, FaCheckCircle,
+  FaCalendarAlt, FaBriefcase, FaTimes, FaSave, FaExclamationCircle,
+  FaGraduationCap
+} from 'react-icons/fa';
 
-// --- Icons ---
-const Icons = {
-  ArrowLeft: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>,
-  Save: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" /></svg>
-};
-
-// --- Reusable Input Components (Consistent with Add Form) ---
-const FormInput = ({ label, type = "text", value, onChange, required, disabled }) => (
-  <div className="space-y-1">
-    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide ml-1">
-      {label} {required && <span className="text-red-500">*</span>}
-    </label>
-    <input
-      type={type}
-      value={value}
-      onChange={onChange}
-      required={required}
-      disabled={disabled}
-      className="block w-full px-4 py-3 bg-slate-50 border border-slate-200 text-slate-900 text-sm rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all disabled:bg-slate-100 disabled:text-slate-500"
-    />
-  </div>
-);
-
-const FormSelect = ({ label, value, onChange, options, required }) => (
-  <div className="space-y-1">
-    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide ml-1">
-      {label} {required && <span className="text-red-500">*</span>}
-    </label>
-    <div className="relative">
-      <select
-        value={value}
-        onChange={onChange}
-        required={required}
-        className="block w-full px-4 py-3 bg-slate-50 border border-slate-200 text-slate-900 text-sm rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all appearance-none cursor-pointer"
-      >
-        <option value="" disabled>Select Option</option>
-        {options.map((opt) => (
-          <option key={opt.value} value={opt.value}>{opt.label}</option>
-        ))}
-      </select>
-      <div className="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none text-slate-500">
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-      </div>
-    </div>
+const SectionTitle = ({ title, icon: Icon }) => (
+  <div className="flex items-center gap-2 mb-4 pb-2 border-b border-slate-100">
+    <Icon className="text-teal-600" />
+    <h3 className="text-lg font-bold text-slate-800">{title}</h3>
   </div>
 );
 
@@ -59,7 +25,8 @@ const EditDoctor = () => {
   const [formData, setFormData] = useState(null);
   const [departmentOptions, setDepartmentOptions] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState({ type: '', text: '' });
 
   useEffect(() => {
     const fetchData = async () => {
@@ -69,7 +36,6 @@ const EditDoctor = () => {
           axios.get(`${import.meta.env.VITE_BACKEND_URL}/departments`)
         ]);
 
-        // Ensure department is set correctly (handle populated object vs ID)
         const doctorData = doctorRes.data;
         if (doctorData.department && typeof doctorData.department === 'object') {
           doctorData.department = doctorData.department._id;
@@ -79,6 +45,7 @@ const EditDoctor = () => {
         setDepartmentOptions(deptRes.data.map(d => ({ value: d._id, label: d.name })));
       } catch (err) {
         console.error('Failed to load data', err);
+        setMessage({ type: 'error', text: 'Failed to load doctor data' });
       } finally {
         setLoading(false);
       }
@@ -86,8 +53,9 @@ const EditDoctor = () => {
     fetchData();
   }, [id]);
 
-  const handleInputChange = (field, value) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleShiftChange = (value) => {
@@ -117,242 +85,382 @@ const EditDoctor = () => {
     });
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setIsSaving(true);
+  const handleSubmit = async () => {
+    setSaving(true);
+    setMessage({ type: '', text: '' });
     try {
       await axios.put(`${import.meta.env.VITE_BACKEND_URL}/doctors/${id}`, formData);
-      navigate('/dashboard/admin/doctor-list');
+      setMessage({ type: 'success', text: 'Doctor profile updated successfully' });
+      setTimeout(() => navigate('/dashboard/admin/doctor-list'), 1500);
     } catch (err) {
       console.error('Failed to update doctor:', err);
-      alert('Failed to update. Please try again.');
+      setMessage({ type: 'error', text: err.response?.data?.message || err.message || 'Failed to update' });
     } finally {
-      setIsSaving(false);
+      setSaving(false);
     }
   };
 
-  if (loading) return (
-    <Layout sidebarItems={adminSidebar}>
-      <div className="flex h-screen items-center justify-center text-slate-400 font-medium">Loading Doctor Details...</div>
-    </Layout>
-  );
+  const fmtDate = (d) => {
+    try {
+      return d ? new Date(d).toLocaleDateString() : '-';
+    } catch {
+      return d || '-';
+    }
+  };
+
+  if (loading) {
+    return (
+      <Layout sidebarItems={adminSidebar}>
+        <div className="flex h-screen items-center justify-center text-slate-400 font-medium">Loading Doctor Details...</div>
+      </Layout>
+    );
+  }
 
   if (!formData) return <div className="p-8 text-center text-red-500">Doctor not found.</div>;
 
   return (
     <Layout sidebarItems={adminSidebar}>
-      <div className="p-8 min-h-screen bg-slate-50/50 font-sans text-slate-800 flex justify-center">
-        <div className="w-full max-w-5xl">
+      <div className="min-h-screen bg-slate-50/50 p-2 font-sans">
 
-          {/* Header */}
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => navigate(-1)}
-                className="p-2 rounded-xl bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-800 transition-colors shadow-sm"
-              >
-                <Icons.ArrowLeft />
-              </button>
-              <div>
-                <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Edit Profile</h2>
-                <p className="text-slate-500 text-sm">Update information for Dr. {formData.firstName} {formData.lastName}</p>
+        {/* Header Card */}
+        <div className="relative bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6">
+          <div className="h-28 bg-gradient-to-r from-teal-600 to-cyan-700 relative"></div>
+          <div className="px-6 pb-6">
+            <div className="flex flex-col md:flex-row items-start md:items-end -mt-10 mb-6">
+              <div className="relative">
+                <div className="w-28 h-28 rounded-2xl bg-white p-1 shadow-lg">
+                  <img
+                    src={`https://ui-avatars.com/api/?name=${formData.firstName}+${formData.lastName}&background=0d9488&color=fff&size=128`}
+                    alt="Doctor"
+                    className="w-full h-full object-cover rounded-xl bg-slate-100"
+                  />
+                </div>
+                <div className="absolute bottom-1 -right-1 bg-green-500 border-4 border-white w-5 h-5 rounded-full" title="Active"></div>
+              </div>
+
+              <div className="md:ml-6 mt-4 md:mt-0 flex-1">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div>
+                    <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+                      Dr. {formData.firstName} {formData.lastName}
+                      <FaCheckCircle className="text-blue-500 text-sm" title="Verified" />
+                    </h1>
+                    <div className="flex flex-wrap items-center gap-3 text-slate-500 mt-1">
+                      <span className="flex items-center gap-1 font-medium text-teal-700 bg-teal-50 px-2 py-0.5 rounded text-sm">
+                        <FaIdCard className="text-xs" /> {formData.doctorId || 'ID: --'}
+                      </span>
+                      <span className="text-sm border flex items-center gap-1 px-2 rounded-md bg-slate-50">
+                        <FaStethoscope className="text-xs text-slate-400" /> {formData.specialization || 'General'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => navigate(-1)}
+                      className="px-4 py-2 text-slate-600 font-semibold hover:text-slate-900 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleSubmit}
+                      disabled={saving}
+                      className="flex items-center gap-2 bg-teal-600 text-white px-6 py-2 rounded-lg hover:bg-teal-700 transition-all text-sm font-semibold shadow-md shadow-teal-500/20"
+                    >
+                      <FaSave /> {saving ? 'Saving...' : 'Save Changes'}
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
+
+            {/* Quick Stats */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-2">
+              <div className="p-3 rounded-lg bg-slate-50 border border-slate-100">
+                <p className="text-xs text-slate-500 font-bold uppercase">Experience</p>
+                <p className="text-xl font-bold text-slate-800">{formData.experience || 0} Years</p>
+              </div>
+              <div className="p-3 rounded-lg bg-slate-50 border border-slate-100">
+                <p className="text-xs text-slate-500 font-bold uppercase">Joined</p>
+                <p className="text-xl font-bold text-slate-800">{fmtDate(formData.startDate || formData.createdAt)}</p>
+              </div>
+              <div className="p-3 rounded-lg bg-slate-50 border border-slate-100">
+                <p className="text-xs text-slate-500 font-bold uppercase">Type</p>
+                <p className="text-xl font-bold text-slate-800">{formData.isFullTime ? 'Full-Time' : 'Part-Time'}</p>
+              </div>
+              {/* <div className="p-3 rounded-lg bg-slate-50 border border-slate-100">
+                <p className="text-xs text-slate-500 font-bold uppercase">Patients</p>
+                <p className="text-xl font-bold text-slate-800">--</p>
+              </div> */}
+            </div>
+          </div>
+        </div>
+
+        {message.text && (
+          <div className={`max-w-5xl mx-auto mb-4 p-4 rounded-lg border ${message.type === 'success' ? 'bg-green-50 border-green-200 text-green-700' : 'bg-red-50 border-red-200 text-red-700'}`}>
+            {message.type === 'success' ? <FaCheckCircle className="inline mr-2" /> : <FaExclamationCircle className="inline mr-2" />}
+            <span className="font-medium">{message.text}</span>
+          </div>
+        )}
+
+        {/* Main Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
+
+          {/* Left Column */}
+          <div className="space-y-6">
+
+            {/* Personal Details */}
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+              <SectionTitle title="Personal Details" icon={FaUserMd} />
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">First Name</label>
+                  <input name="firstName" value={formData.firstName || ''} onChange={handleInputChange} className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">Last Name</label>
+                  <input name="lastName" value={formData.lastName || ''} onChange={handleInputChange} className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">Email</label>
+                  <input name="email" type="email" value={formData.email || ''} onChange={handleInputChange} className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">Phone</label>
+                  <input name="phone" value={formData.phone || ''} onChange={handleInputChange} className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">Date of Birth</label>
+                  <input name="dateOfBirth" type="date" value={formData.dateOfBirth?.split('T')[0] || ''} onChange={handleInputChange} className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">Gender</label>
+                  <select name="gender" value={formData.gender || ''} onChange={handleInputChange} className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500">
+                    <option value="">Select</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Address */}
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+              <SectionTitle title="Address & Location" icon={FaMapMarkerAlt} />
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">Full Address</label>
+                  <textarea name="address" rows="2" value={formData.address || ''} onChange={handleInputChange} className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500" />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 mb-1">City</label>
+                    <input name="city" value={formData.city || ''} onChange={handleInputChange} className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 mb-1">State</label>
+                    <input name="state" value={formData.state || ''} onChange={handleInputChange} className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Emergency */}
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+              <SectionTitle title="Important IDs" icon={FaIdCard} />
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">Aadhar Number</label>
+                  <input name="aadharNumber" value={formData.aadharNumber || ''} onChange={handleInputChange} className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">PAN Number</label>
+                  <input name="panNumber" value={formData.panNumber || ''} onChange={handleInputChange} className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500" />
+                </div>
+              </div>
+            </div>
+
           </div>
 
-          <form onSubmit={handleSubmit} className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-            <div className="p-8 space-y-8">
+          {/* Right Column */}
+          <div className="lg:col-span-2 space-y-6">
 
-              {/* Personal Information Group */}
-              <div>
-                <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide border-b border-slate-100 pb-3 mb-6">Personal Information</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <FormInput label="First Name" value={formData.firstName} onChange={(e) => handleInputChange('firstName', e.target.value)} required />
-                  <FormInput label="Last Name" value={formData.lastName} onChange={(e) => handleInputChange('lastName', e.target.value)} />
-                  <FormInput label="Email" type="email" value={formData.email} onChange={(e) => handleInputChange('email', e.target.value)} required />
-                  <FormInput label="Phone" type="tel" value={formData.phone} onChange={(e) => handleInputChange('phone', e.target.value)} required />
-                  <FormInput label="Date of Birth" type="date" value={formData.dateOfBirth?.split('T')[0]} onChange={(e) => handleInputChange('dateOfBirth', e.target.value)} />
-                  <SearchableFormSelect
-                    label="Gender"
-                    value={formData.gender}
-                    onChange={(e) => handleInputChange('gender', e.target.value)}
-                    options={[{ value: 'male', label: 'Male' }, { value: 'female', label: 'Female' }, { value: 'other', label: 'Other' }]}
-                  />
-                  <FormInput label="Aadhar Number" value={formData.aadharNumber} onChange={(e) => handleInputChange('aadharNumber', e.target.value)} maxLength={12} />
-                  <FormInput label="Full Address" value={formData.address} onChange={(e) => handleInputChange('address', e.target.value)} />
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormInput label="City" value={formData.city} onChange={(e) => handleInputChange('city', e.target.value)} />
-                    <FormInput label="State" value={formData.state} onChange={(e) => handleInputChange('state', e.target.value)} />
-                  </div>
+            {/* Professional Info */}
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+              <SectionTitle title="Professional Details" icon={FaStethoscope} />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">Department</label>
+                  <select name="department" value={formData.department || ''} onChange={handleInputChange} className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500">
+                    <option value="">Select Department</option>
+                    {departmentOptions.map(opt => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">Specialization</label>
+                  <input name="specialization" value={formData.specialization || ''} onChange={handleInputChange} className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">License Number</label>
+                  <input name="licenseNumber" value={formData.licenseNumber || ''} onChange={handleInputChange} className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">Experience (Years)</label>
+                  <input name="experience" type="number" value={formData.experience || ''} onChange={handleInputChange} className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500" />
+                </div>
+                <div className="col-span-1 md:col-span-2">
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">Education</label>
+                  <textarea name="education" rows="3" value={formData.education || ''} onChange={handleInputChange} className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500" />
                 </div>
               </div>
+            </div>
 
-              {/* Professional Information Group */}
-              <div>
-                <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide border-b border-slate-100 pb-3 mb-6">Professional Details</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <SearchableFormSelect label="Department" value={formData.department} onChange={(e) => handleInputChange('department', e.target.value)} options={departmentOptions} required />
-                  <FormInput label="Specialization" value={formData.specialization} onChange={(e) => handleInputChange('specialization', e.target.value)} />
-                  <FormInput label="License Number" value={formData.licenseNumber} onChange={(e) => handleInputChange('licenseNumber', e.target.value)} required />
-                  <FormInput label="Experience (Years)" type="number" value={formData.experience} onChange={(e) => handleInputChange('experience', e.target.value)} />
-                  <FormInput label="PAN Number" value={formData.panNumber} onChange={(e) => handleInputChange('panNumber', e.target.value)} maxLength={10} />
+            {/* Employment & Financial */}
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+              <SectionTitle title="Employment & Compensation" icon={FaMoneyBillWave} />
 
-                  <div className="md:col-span-2">
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide ml-1 mb-1">Education / Qualifications</label>
-                    <textarea
-                      value={formData.education}
-                      onChange={(e) => handleInputChange('education', e.target.value)}
-                      rows={3}
-                      className="block w-full px-4 py-3 bg-slate-50 border border-slate-200 text-slate-900 text-sm rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all resize-none"
-                    ></textarea>
-                  </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">Joining Date</label>
+                  <input name="startDate" type="date" value={formData.startDate?.split('T')[0] || ''} onChange={handleInputChange} className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm" />
                 </div>
-              </div>
-
-              {/* Employment & Financial Details */}
-              <div>
-                <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide border-b border-slate-100 pb-3 mb-6">Employment & Financial Details</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                  <FormInput label="Joining Date" type="date" value={formData.startDate?.split('T')[0]} onChange={(e) => handleInputChange('startDate', e.target.value)} required />
-
-                  <SearchableFormSelect
-                    label="Employment Type"
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">Employment Type</label>
+                  <select
                     value={formData.isFullTime ? 'Full-time' : 'Part-time'}
                     onChange={(e) => {
                       const isFull = e.target.value === 'Full-time';
                       setFormData(prev => ({
                         ...prev,
                         isFullTime: isFull,
-                        shift: isFull ? prev.shift : '', // Clear shift if part-time
+                        shift: isFull ? prev.shift : '',
                         revenuePercentage: isFull ? 100 : prev.revenuePercentage
                       }));
                     }}
-                    options={[{ value: 'Full-time', label: 'Full-time (Salaried)' }, { value: 'Part-time', label: 'Part-time (Consultant)' }]}
-                  />
+                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-slate-50"
+                  >
+                    <option value="Full-time">Full-time (Salaried)</option>
+                    <option value="Part-time">Part-time (Consultant)</option>
+                  </select>
                 </div>
+              </div>
 
-                {formData.isFullTime ? (
-                  <div className="bg-emerald-50/50 rounded-2xl p-6 border border-emerald-100">
-                    <h4 className="text-sm font-bold text-emerald-800 mb-4 flex items-center gap-2">Shift Configuration</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <SearchableFormSelect
-                        label="Shift"
-                        value={formData.shift}
-                        onChange={(e) => handleShiftChange(e.target.value)}
-                        options={[{ value: 'Morning', label: 'Morning' }, { value: 'Evening', label: 'Evening' }, { value: 'Night', label: 'Night' }, { value: 'Rotating', label: 'Rotating' }]}
-                        required
-                      />
-                      <FormInput
-                        label="Annual Salary (₹)"
-                        type="number"
-                        value={formData.amount}
-                        onChange={(e) => handleInputChange('amount', e.target.value)}
-                      />
-                    </div>
-                    {formData.shift && formData.timeSlots && (
-                      <div className="mt-4 p-4 bg-white rounded-xl border border-emerald-100 shadow-sm">
-                        <label className="text-xs font-bold text-emerald-600 uppercase mb-2 block">Active Timings</label>
-                        <div className="flex flex-wrap gap-2">
-                          {formData.timeSlots.map((slot, i) => (
-                            <span key={i} className="inline-flex items-center px-3 py-1.5 bg-emerald-100 text-emerald-700 rounded-lg text-sm font-medium border border-emerald-200">
-                              {slot.start} - {slot.end}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="bg-blue-50/50 rounded-2xl p-6 border border-blue-100">
-                    <h4 className="text-sm font-bold text-blue-800 mb-4 flex items-center gap-2">Consultant Configuration</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                      <SearchableFormSelect
-                        label="Payment Model"
-                        value={formData.paymentType}
-                        onChange={(e) => handleInputChange('paymentType', e.target.value)}
-                        options={[{ value: 'Fee per Visit', label: 'Fee per Visit' }, { value: 'Per Hour', label: 'Per Hour' }]}
-                      />
-                      <FormInput
-                        label="Rate / Amount (₹)"
-                        type="number"
-                        value={formData.amount}
-                        onChange={(e) => handleInputChange('amount', e.target.value)}
-                      />
-                      <FormInput label="Contract Start" type="date" value={formData.contractStartDate?.split('T')[0]} onChange={(e) => handleInputChange('contractStartDate', e.target.value)} />
-                      <FormInput label="Contract End" type="date" value={formData.contractEndDate?.split('T')[0]} onChange={(e) => handleInputChange('contractEndDate', e.target.value)} />
-                    </div>
-
-                    {/* Revenue Percentage */}
-                    <div className="mb-6 p-4 bg-blue-100/50 rounded-xl border border-blue-200">
-                      <label className="block text-xs font-bold text-blue-700 uppercase mb-1">Doctor's Revenue Percentage: {formData.revenuePercentage}%</label>
-                      <input
-                        type="range"
-                        min="0"
-                        max="100"
-                        step="5"
-                        value={formData.revenuePercentage || 0}
-                        onChange={(e) => handleInputChange('revenuePercentage', parseInt(e.target.value))}
-                        className="w-full h-2 bg-blue-200 rounded-lg appearance-none cursor-pointer"
-                      />
-                    </div>
-
-                    {/* Time Slots Management */}
+              {formData.isFullTime ? (
+                <div className="border border-emerald-100 bg-emerald-50/50 rounded-xl p-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-bold text-blue-700 uppercase mb-3">Available Time Slots</label>
-                      <div className="space-y-3">
-                        {(formData.timeSlots || []).map((slot, i) => (
-                          <div key={i} className="grid grid-cols-3 gap-3 items-center">
-                            <input
-                              type="time"
-                              value={slot.start || ''}
-                              onChange={(e) => handleTimeSlotChange(i, 'start', e.target.value)}
-                              className="col-span-1 block w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm"
-                            />
-                            <input
-                              type="time"
-                              value={slot.end || ''}
-                              onChange={(e) => handleTimeSlotChange(i, 'end', e.target.value)}
-                              className="col-span-1 block w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm"
-                            />
-                            <button type="button" onClick={() => handleRemoveTimeSlot(i)} className="px-3 py-2 bg-rose-50 text-rose-600 border border-rose-100 rounded-lg text-sm">Remove</button>
-                          </div>
-                        ))}
-                        <button type="button" onClick={handleAddTimeSlot} className="px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm">Add Time Slot</button>
-                      </div>
+                      <label className="block text-xs font-semibold text-emerald-800 mb-1">Shift</label>
+                      <select name="shift" value={formData.shift || ''} onChange={(e) => handleShiftChange(e.target.value)} className="w-full border border-emerald-200 rounded-lg px-3 py-2 text-sm focus:ring-emerald-500">
+                        <option value="">Select Shift</option>
+                        <option value="Morning">Morning</option>
+                        <option value="Evening">Evening</option>
+                        <option value="Night">Night</option>
+                        <option value="Rotating">Rotating</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-emerald-800 mb-1">Annual Salary (₹)</label>
+                      <input name="amount" type="number" value={formData.amount || ''} onChange={handleInputChange} className="w-full border border-emerald-200 rounded-lg px-3 py-2 text-sm focus:ring-emerald-500" />
                     </div>
                   </div>
-                )}
-              </div>
+                  {/* Time Slots Display for Full Time */}
+                  {formData.timeSlots && formData.timeSlots.length > 0 && (
+                    <div className="mt-4 pt-3 border-t border-emerald-100">
+                      <p className="text-xs font-semibold text-emerald-700 mb-2">Shift Timings:</p>
+                      <div className="flex flex-wrap gap-2">
+                        {formData.timeSlots.map((slot, i) => (
+                          <span key={i} className="inline-flex items-center px-2 py-1 bg-white border border-emerald-100 text-emerald-600 rounded text-xs">
+                            <FaClock className="mr-1" /> {slot.start} - {slot.end}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="border border-blue-100 bg-blue-50/50 rounded-xl p-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-blue-800 mb-1">Payment Model</label>
+                      <select name="paymentType" value={formData.paymentType || ''} onChange={handleInputChange} className="w-full border border-blue-200 rounded-lg px-3 py-2 text-sm focus:ring-blue-500">
+                        <option value="Fee per Visit">Fee per Visit</option>
+                        <option value="Per Hour">Per Hour</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-blue-800 mb-1">Rate / Amount (₹)</label>
+                      <input name="amount" type="number" value={formData.amount || ''} onChange={handleInputChange} className="w-full border border-blue-200 rounded-lg px-3 py-2 text-sm focus:ring-blue-500" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-blue-800 mb-1">Contract Start</label>
+                      <input name="contractStartDate" type="date" value={formData.contractStartDate?.split('T')[0] || ''} onChange={handleInputChange} className="w-full border border-blue-200 rounded-lg px-3 py-2 text-sm focus:ring-blue-500" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-blue-800 mb-1">Contract End</label>
+                      <input name="contractEndDate" type="date" value={formData.contractEndDate?.split('T')[0] || ''} onChange={handleInputChange} className="w-full border border-blue-200 rounded-lg px-3 py-2 text-sm focus:ring-blue-500" />
+                    </div>
+                  </div>
 
-              {/* Emergency Contact Group */}
-              <div>
-                <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide border-b border-slate-100 pb-3 mb-6">Emergency Contact</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <FormInput label="Emergency Contact Name" value={formData.emergencyContact} onChange={(e) => handleInputChange('emergencyContact', e.target.value)} />
-                  <FormInput label="Emergency Phone" value={formData.emergencyPhone} onChange={(e) => handleInputChange('emergencyPhone', e.target.value)} />
+                  <div className="pt-4 border-t border-blue-100">
+                    <label className="block text-xs font-semibold text-blue-800 mb-1">Revenue Share Percentage ({formData.revenuePercentage}%)</label>
+                    <input
+                      type="range" min="0" max="100" step="5"
+                      value={formData.revenuePercentage || 0}
+                      name="revenuePercentage"
+                      onChange={handleInputChange}
+                      className="w-full h-2 bg-blue-200 rounded-lg appearance-none cursor-pointer"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Time Slots Management (Mainly for Part Time, but editable for all) */}
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+              <SectionTitle title="Schedule & Availability" icon={FaClock} />
+              <div className="space-y-3">
+                {(formData.timeSlots || []).map((slot, i) => (
+                  <div key={i} className="flex gap-2 items-center">
+                    <div className="flex-1">
+                      <label className="text-[10px] text-slate-500 font-bold uppercase mb-0.5 block">Start</label>
+                      <input type="time" value={slot.start || ''} onChange={(e) => handleTimeSlotChange(i, 'start', e.target.value)} className="w-full border border-slate-300 rounded px-2 py-1.5 text-sm" />
+                    </div>
+                    <div className="flex-1">
+                      <label className="text-[10px] text-slate-500 font-bold uppercase mb-0.5 block">End</label>
+                      <input type="time" value={slot.end || ''} onChange={(e) => handleTimeSlotChange(i, 'end', e.target.value)} className="w-full border border-slate-300 rounded px-2 py-1.5 text-sm" />
+                    </div>
+                    <div className="pt-4">
+                      <button type="button" onClick={() => handleRemoveTimeSlot(i)} className="text-red-500 hover:text-red-700 bg-red-50 p-2 rounded hover:bg-red-100">
+                        <FaTimes />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                <button type="button" onClick={handleAddTimeSlot} className="mt-2 text-sm text-teal-600 font-semibold hover:text-teal-700 flex items-center gap-1">
+                  + Add Time Slot
+                </button>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+              <SectionTitle title="Emergency Contact" icon={FaPhone} />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">Contact Name</label>
+                  <input name="emergencyContact" value={formData.emergencyContact || ''} onChange={handleInputChange} className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">Emergency Phone</label>
+                  <input name="emergencyPhone" value={formData.emergencyPhone || ''} onChange={handleInputChange} className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500" />
                 </div>
               </div>
-
             </div>
 
-            {/* Footer Actions */}
-            <div className="bg-slate-50 px-8 py-5 border-t border-slate-100 flex justify-end gap-4">
-              <button
-                type="button"
-                onClick={() => navigate(-1)}
-                className="px-6 py-2.5 rounded-xl border border-slate-300 text-slate-600 font-bold hover:bg-white hover:border-slate-400 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={isSaving}
-                className="px-8 py-2.5 rounded-xl bg-emerald-600 text-white font-bold hover:bg-emerald-700 shadow-lg shadow-emerald-500/20 transition-all flex items-center gap-2 transform active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed"
-              >
-                {isSaving ? 'Saving...' : 'Save Changes'}
-              </button>
-            </div>
-          </form>
+          </div>
         </div>
       </div>
     </Layout>

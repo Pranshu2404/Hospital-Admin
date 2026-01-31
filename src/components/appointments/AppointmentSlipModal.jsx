@@ -24,6 +24,7 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
   const [uploadingImage, setUploadingImage] = useState(false);
   const [submittingPrescription, setSubmittingPrescription] = useState(false);
   const [mounted, setMounted] = useState(false); // Added for portal
+  const [doctorDetails, setDoctorDetails] = useState(null);
 
   useEffect(() => {
     setMounted(true);
@@ -131,6 +132,29 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
           setBillingDetails(null);
         }
       };
+
+      if (appointmentData.doctor_id && typeof appointmentData.doctor_id === 'object') {
+        setDoctorDetails(appointmentData.doctor_id);
+      } else if (appointmentData.doctor_id) {
+        // If doctor_id is just an ID string, we might want to fetch details (optional, 
+        // but good practice if education not included in appointment lookups)
+        // For now, assume appointmentData often has populated doctor_id 
+        // or we rely on what's available.
+      } else {
+        // Try fetching appointment details again if needed, similar to CompletionSlip
+        // But here we might just rely on props or existing fetches.
+        // Let's add a small fetch if we really need it, or rely on what we have.
+        // The user provided snippets show we can fetch appt details.
+        const fetchApptDetails = async () => {
+          try {
+            const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/appointments/${appointmentData._id}`);
+            if (res.data && res.data.doctor_id && typeof res.data.doctor_id === 'object') {
+              setDoctorDetails(res.data.doctor_id);
+            }
+          } catch (e) { console.error(e); }
+        };
+        fetchApptDetails();
+      }
 
       fetchBillingDetails();
     }
@@ -267,6 +291,10 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
   const billingDept = billingDetails && billingDetails.department_id ? billingDetails.department_id : null;
   const departmentNameDisplay = appointmentData.departmentName || deptObj.name || deptObj.department || (billingDept ? (billingDept.name || billingDept.department) : 'N/A') || 'N/A';
 
+  const getDoctorEducation = () => {
+    return doctorDetails?.education || '';
+  };
+
   const handlePrint = () => {
     window.print();
   };
@@ -282,10 +310,10 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
       const d = new Date(s);
       // FIX: Added timeZone: 'UTC' to prevent conversion to local time (IST)
       if (!isNaN(d)) {
-        return d.toLocaleString('en-IN', { 
-          dateStyle: 'medium', 
-          timeStyle: 'short', 
-          timeZone: 'UTC' 
+        return d.toLocaleString('en-IN', {
+          dateStyle: 'medium',
+          timeStyle: 'short',
+          timeZone: 'UTC'
         });
       }
     }
@@ -293,7 +321,7 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
     // If we have an appointment_date (YYYY-MM-DD or ISO) and a time string
     const apptDateRaw = appointmentData.appointment_date || appointmentData.date;
     const timeRaw = appointmentData.time || appointmentData.start_time_local || appointmentData.time_slot;
-    
+
     if (apptDateRaw) {
       // parse as local date (avoid timezone shift)
       let dateObj;
@@ -306,7 +334,7 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
       } catch (e) {
         dateObj = null;
       }
-      
+
       // FIX: Ensure date string uses UTC logic if dateObj was created from UTC string, 
       // but usually the manual parsing above handles local time correctly. 
       // We keep the existing logic here but ensure locale is consistent.
@@ -513,7 +541,7 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
                 {hospitalInfo?.logo ? (
                   <img src={hospitalInfo.logo} alt="Logo" className="max-w-full max-h-full object-contain" />
                 ) : (
-                    <img src="/hospital-icon.jpg" alt="Logo" className="max-w-full max-h-full object-contain" />
+                  <img src="/hospital-icon.jpg" alt="Logo" className="max-w-full max-h-full object-contain" />
                 )}
               </div>
 
@@ -526,15 +554,15 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
                   <p>{hospitalInfo?.address || '123 Medical Lane, Health City, State, 123456'}</p>
                   <p className="mt-0.5">
                     <span className="font-bold">Phone:</span> {hospitalInfo?.contact || '9876543210'}
-                    {hospitalInfo?.email && <span> <br/> Email: {hospitalInfo.email}</span>}
+                    {hospitalInfo?.email && <span> <br /> Email: {hospitalInfo.email}</span>}
                   </p>
                 </div>
               </div>
             </div>
           </div>
-            <div className="mt-4 text-center">
-              <h2 className="text-xl font-bold text-gray-800 uppercase">Registration Cum Appointment Slip</h2>
-            </div>
+          <div className="mt-4 text-center">
+            <h2 className="text-xl font-bold text-gray-800 uppercase">Registration Cum Appointment Slip</h2>
+          </div>
 
           {/* Appointment Details */}
           <div className="slip-section">
@@ -581,6 +609,7 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
               <div>
                 <span className="text-gray-600 font-medium">Doctor:</span>{' '}
                 <strong className="text-green-700">{doctorNameDisplay}</strong>
+                {getDoctorEducation() && <span className="text-sm text-green-700 font-semibold ml-1">{getDoctorEducation()}</span>}
               </div>
 
               <div>

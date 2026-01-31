@@ -157,7 +157,7 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
     department: '',
     date: getLocalDateString(),
     start_time: '',
-    duration: '30',
+    duration: '10',
     type: 'time-based',
     appointment_type: 'consultation',
     priority: 'Normal',
@@ -1628,6 +1628,7 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
                             value={formData.duration}
                             onChange={(e) => handleInputChange('duration', e.target.value)}
                             options={[
+                              { value: '10', label: '10 minutes' },
                               { value: '15', label: '15 minutes' },
                               { value: '30', label: '30 minutes' },
                               { value: '45', label: '45 minutes' },

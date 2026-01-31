@@ -3,18 +3,32 @@ import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Layout from '../../../components/Layout';
 import { adminSidebar } from '../../../constants/sidebarItems/adminSidebar';
+import {
+  FaUserMd, FaEnvelope, FaPhone, FaMapMarkerAlt, FaStethoscope,
+  FaAward, FaBirthdayCake, FaVenusMars, FaBuilding, FaClock,
+  FaFileAlt, FaMoneyBillWave, FaIdCard, FaEdit, FaCheckCircle,
+  FaCalendarAlt, FaBriefcase, FaTimes, FaSave, FaExclamationCircle,
+  FaGraduationCap, FaArrowLeft
+} from 'react-icons/fa';
 
-// --- Icons ---
-const Icons = {
-  ArrowLeft: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>,
-  Mail: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>,
-  Phone: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>,
-  Briefcase: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>,
-  User: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>,
-  ShieldCheck: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>,
-  Calendar: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>,
-  Clock: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-};
+const SectionTitle = ({ title, icon: Icon }) => (
+  <div className="flex items-center gap-2 mb-4 pb-2 border-b border-slate-100">
+    <Icon className="text-teal-600" />
+    <h3 className="text-lg font-bold text-slate-800">{title}</h3>
+  </div>
+);
+
+const ProfileField = ({ icon: Icon, label, value, colorClass = 'text-slate-400' }) => (
+  <div className="flex items-start group p-2 rounded-lg hover:bg-slate-50 transition-colors">
+    <div className={`mt-1 mr-3 ${colorClass}`}>
+      <Icon size={16} />
+    </div>
+    <div>
+      <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-0.5">{label}</p>
+      <p className="text-slate-700 font-medium text-sm break-all">{value || <span className="text-slate-300 italic">Not provided</span>}</p>
+    </div>
+  </div>
+);
 
 const DoctorProfilePage = () => {
   const { id } = useParams();
@@ -36,10 +50,18 @@ const DoctorProfilePage = () => {
     fetchDoctor();
   }, [id]);
 
+  const fmtDate = (d) => {
+    try {
+      return d ? new Date(d).toLocaleDateString() : '-';
+    } catch {
+      return d || '-';
+    }
+  };
+
   if (loading) {
     return (
       <Layout sidebarItems={adminSidebar}>
-        <div className="flex items-center justify-center min-h-[600px] text-slate-400 font-medium">Loading Profile...</div>
+        <div className="flex h-screen items-center justify-center text-slate-400 font-medium">Loading Profile...</div>
       </Layout>
     );
   }
@@ -48,203 +70,221 @@ const DoctorProfilePage = () => {
     return (
       <Layout sidebarItems={adminSidebar}>
         <div className="p-8 text-center">
-            <h3 className="text-xl font-bold text-slate-800">Doctor not found</h3>
-            <button onClick={() => navigate(-1)} className="mt-4 text-emerald-600 hover:underline">Go Back</button>
+          <h3 className="text-xl font-bold text-slate-800">Doctor not found</h3>
+          <button onClick={() => navigate(-1)} className="mt-4 text-emerald-600 hover:underline">Go Back</button>
         </div>
       </Layout>
     );
   }
 
-  const getStatusBadge = (status) => {
-    const styles = {
-      'Active': 'bg-emerald-100 text-emerald-700 border-emerald-200',
-      'Inactive': 'bg-slate-100 text-slate-600 border-slate-200',
-      'On Leave': 'bg-amber-100 text-amber-700 border-amber-200'
-    };
-    return `inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold border ${styles[status] || styles['Active']}`;
-  };
-
-  const formatDate = (d) => {
-    if (!d) return '—';
-    try {
-      const dt = new Date(d);
-      if (Number.isNaN(dt.getTime())) return d;
-      return dt.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
-    } catch (e) {
-      return d;
-    }
-  };
-
-  const InfoRow = ({ label, value, icon: Icon }) => (
-    <div className="flex items-start gap-3 py-3 border-b border-slate-50 last:border-0">
-        {Icon && <div className="mt-0.5 text-slate-400"><Icon className="w-4 h-4" /></div>}
-        <div className="flex-1">
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{label}</p>
-            <p className="text-sm font-medium text-slate-900 mt-0.5 break-words">{value || '—'}</p>
-        </div>
-    </div>
-  );
-
   return (
     <Layout sidebarItems={adminSidebar}>
-      <div className="p-4 min-h-screen bg-slate-50/50 font-sans text-slate-800">
-        
-        {/* --- Header --- */}
-        <div className="mb-8">
-            <button 
-                onClick={() => navigate(-1)} 
-                className="flex items-center gap-2 text-slate-500 hover:text-slate-800 text-sm font-medium mb-4 transition-colors group"
-            >
-                <span className="group-hover:-translate-x-1 transition-transform"><Icons.ArrowLeft /></span>
-                Back to List
-            </button>
-            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Doctor Profile</h1>
+      <div className="min-h-screen bg-slate-50/50 p-2 font-sans">
+
+        {/* Header Card */}
+        <div className="relative bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6">
+          <div className="h-28 bg-gradient-to-r from-teal-600 to-cyan-700 relative"></div>
+          <div className="px-6 pb-6">
+            <div className="flex flex-col md:flex-row items-start md:items-end -mt-10 mb-6">
+              <div className="relative">
+                <div className="w-28 h-28 rounded-2xl bg-white p-1 shadow-lg">
+                  <img
+                    src={`https://ui-avatars.com/api/?name=${doctor.firstName}+${doctor.lastName}&background=0d9488&color=fff&size=128`}
+                    alt="Doctor"
+                    className="w-full h-full object-cover rounded-xl bg-slate-100"
+                  />
+                </div>
+                <div className="absolute bottom-1 -right-1 bg-green-500 border-4 border-white w-5 h-5 rounded-full" title="Active"></div>
+              </div>
+
+              <div className="md:ml-6 mt-4 md:mt-0 flex-1">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div>
+                    <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+                      Dr. {doctor.firstName} {doctor.lastName}
+                      <FaCheckCircle className="text-blue-500 text-sm" title="Verified" />
+                    </h1>
+                    <div className="flex flex-wrap items-center gap-3 text-slate-500 mt-1">
+                      <span className="flex items-center gap-1 font-medium text-teal-700 bg-teal-50 px-2 py-0.5 rounded text-sm">
+                        <FaIdCard className="text-xs" /> {doctor.doctorId || 'ID: --'}
+                      </span>
+                      <span className="text-sm border flex items-center gap-1 px-2 rounded-md bg-slate-50">
+                        <FaStethoscope className="text-xs text-slate-400" /> {doctor.specialization || 'General'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => navigate(-1)}
+                      className="flex items-center gap-2 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors font-semibold"
+                    >
+                      <FaArrowLeft /> Back
+                    </button>
+                    <button
+                      onClick={() => navigate(`/dashboard/admin/edit-doctor/${doctor._id}`)}
+                      className="flex items-center gap-2 bg-slate-800 text-white px-4 py-2 rounded-lg hover:bg-slate-700 transition-all text-sm font-semibold"
+                    >
+                      <FaEdit /> Edit Profile
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Stats */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-2">
+              <div className="p-3 rounded-lg bg-slate-50 border border-slate-100">
+                <p className="text-xs text-slate-500 font-bold uppercase">Experience</p>
+                <p className="text-xl font-bold text-slate-800">{doctor.experience || 0} Years</p>
+              </div>
+              <div className="p-3 rounded-lg bg-slate-50 border border-slate-100">
+                <p className="text-xs text-slate-500 font-bold uppercase">Joined</p>
+                <p className="text-xl font-bold text-slate-800">{fmtDate(doctor.startDate || doctor.createdAt)}</p>
+              </div>
+              <div className="p-3 rounded-lg bg-slate-50 border border-slate-100">
+                <p className="text-xs text-slate-500 font-bold uppercase">Type</p>
+                <p className="text-xl font-bold text-slate-800">{doctor.isFullTime ? 'Full-Time' : 'Part-Time'}</p>
+              </div>
+              {/* <div className="p-3 rounded-lg bg-slate-50 border border-slate-100">
+                <p className="text-xs text-slate-500 font-bold uppercase">Patients</p>
+                <p className="text-xl font-bold text-slate-800">--</p>
+              </div> */}
+            </div>
+          </div>
         </div>
 
-        {/* --- Main Grid --- */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            
-            {/* Left Column: Profile Card */}
-            <div className="lg:col-span-1 space-y-6">
-                <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-8 text-center relative overflow-hidden">
-                    <div className="absolute top-0 left-0 w-full h-24 bg-gradient-to-r from-emerald-500 to-teal-500"></div>
-                    <div className="relative z-10 -mt-12 mb-4">
-                        <div className="w-20 h-20 mx-auto bg-white rounded-full p-1 shadow-lg mt-6">
-                            <div className="w-full h-full bg-slate-100 rounded-full flex items-center justify-center text-3xl font-bold text-slate-400 border border-slate-200">
-                                {doctor.firstName?.[0]}{doctor.lastName?.[0]}
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <h2 className="text-xl font-bold text-slate-900">Dr. {doctor.firstName} {doctor.lastName}</h2>
-                    <p className="text-sm text-slate-500 font-medium mb-4">{doctor.specialization}</p>
-                    
-                    <div className="flex justify-center gap-2 mb-6">
-                        <span className={getStatusBadge(doctor.status || 'Active')}>{doctor.status || 'Active'}</span>
-                    </div>
+        {/* Main Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
 
-                    <div className="flex justify-center gap-3">
-                        <a href={`mailto:${doctor.email}`} className="p-2.5 rounded-full bg-slate-50 text-slate-500 hover:bg-emerald-50 hover:text-emerald-600 transition-colors border border-slate-100">
-                            <Icons.Mail />
-                        </a>
-                        <a href={`tel:${doctor.phone}`} className="p-2.5 rounded-full bg-slate-50 text-slate-500 hover:bg-blue-50 hover:text-blue-600 transition-colors border border-slate-100">
-                            <Icons.Phone />
-                        </a>
-                    </div>
-                </div>
+          {/* Left Column */}
+          <div className="space-y-6">
 
-                {/* Emergency Contact Card */}
-                <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-6">
-                    <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide mb-4 flex items-center gap-2">
-                        <Icons.ShieldCheck /> Emergency Contact
-                    </h3>
-                    <div className="space-y-1">
-                        <InfoRow label="Name" value={doctor.emergencyContact} />
-                        <InfoRow label="Phone" value={doctor.emergencyPhone} />
-                    </div>
-                </div>
+            {/* Personal Details */}
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+              <SectionTitle title="Personal Details" icon={FaUserMd} />
+              <div className="space-y-1">
+                <ProfileField icon={FaEnvelope} label="Email" value={doctor.email} />
+                <ProfileField icon={FaPhone} label="Phone" value={doctor.phone} />
+                <ProfileField icon={FaVenusMars} label="Gender" value={doctor.gender} />
+                <ProfileField icon={FaBirthdayCake} label="Date of Birth" value={fmtDate(doctor.dateOfBirth)} />
+              </div>
             </div>
 
-            {/* Right Column: Detailed Info */}
-            <div className="lg:col-span-2 space-y-6">
-                
-                {/* Personal & Professional Details */}
-                <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-8">
-                    <h3 className="text-lg font-bold text-slate-900 mb-6 pb-2 border-b border-slate-100 flex items-center gap-2">
-                        <Icons.User /> Personal & Professional Details
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2">
-                        <InfoRow label="Full Name" value={`Dr. ${doctor.firstName} ${doctor.lastName}`} />
-                        <InfoRow label="Gender" value={doctor.gender} />
-                        <InfoRow label="Date of Birth" value={formatDate(doctor.dateOfBirth)} />
-                        <InfoRow label="Email Address" value={doctor.email} />
-                        <InfoRow label="Phone Number" value={doctor.phone} />
-                        <InfoRow label="Address" value={`${doctor.address}, ${doctor.city}, ${doctor.state} ${doctor.zipCode}`} />
-                        
-                        <div className="col-span-1 md:col-span-2 mt-4 mb-2"><div className="h-px bg-slate-100"></div></div>
-                        
-                        <InfoRow label="Department" value={doctor.department?.name} />
-                        <InfoRow label="Specialization" value={doctor.specialization} />
-                        <InfoRow label="License Number" value={doctor.licenseNumber} />
-                        <InfoRow label="Experience" value={`${doctor.experience} Years`} />
-                        <InfoRow label="Education" value={doctor.education} />
-                    </div>
+            {/* Address */}
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+              <SectionTitle title="Address & Location" icon={FaMapMarkerAlt} />
+              <div className="space-y-1">
+                <ProfileField icon={FaMapMarkerAlt} label="Full Address" value={doctor.address} />
+                <div className="grid grid-cols-2 gap-2">
+                  <ProfileField icon={FaBuilding} label="City" value={doctor.city} />
+                  <ProfileField icon={FaBuilding} label="State" value={doctor.state} />
                 </div>
-
-                {/* Employment Details */}
-                <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-8">
-                    <h3 className="text-lg font-bold text-slate-900 mb-6 pb-2 border-b border-slate-100 flex items-center gap-2">
-                        <Icons.Briefcase /> Employment Information
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2">
-                        <InfoRow label="Employment Type" value={doctor.isFullTime ? 'Full-Time' : 'Part-Time'} />
-                        <InfoRow label="Joining Date" value={formatDate(doctor.startDate)} />
-                        
-                        {doctor.isFullTime ? (
-                            <>
-                                <InfoRow label="Shift" value={doctor.shift} />
-                                <InfoRow label="Salary" value={doctor.amount ? `₹${doctor.amount}` : '—'} />
-                            </>
-                        ) : (
-                            <>
-                                <InfoRow label="Payment Model" value={doctor.paymentType} />
-                                <InfoRow label="Rate / Amount" value={`₹${doctor.amount}`} />
-                                <InfoRow label="Visits / Week" value={doctor.visitsPerWeek} />
-                                
-                                {/* Time Slots for Part-time */}
-                                {doctor.timeSlots && doctor.timeSlots.length > 0 && (
-                                    <div className="col-span-1 md:col-span-2 py-3 border-t border-slate-50">
-                                        <div className="flex items-start gap-3">
-                                            <div className="mt-0.5 text-slate-400"><Icons.Clock className="w-4 h-4" /></div>
-                                            <div className="flex-1">
-                                                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Available Time Slots</p>
-                                                <div className="flex flex-wrap gap-2 mt-2">
-                                                    {doctor.timeSlots.map((slot, idx) => (
-                                                        <div
-                                                            key={idx}
-                                                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-violet-50 to-purple-50 text-violet-700 text-xs font-semibold rounded-full border border-violet-200/60 shadow-sm hover:shadow-md hover:border-violet-300 transition-all"
-                                                        >
-                                                            <Icons.Clock className="w-3.5 h-3.5" />
-                                                            <span>{slot.start}</span>
-                                                            <span className="text-violet-400">–</span>
-                                                            <span>{slot.end}</span>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Contract Period with improved styling */}
-                                <div className="col-span-1 md:col-span-2 pt-2">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div className="bg-gradient-to-br from-blue-50 to-cyan-50 p-4 rounded-2xl border border-blue-200/50">
-                                            <div className="flex items-center gap-2 mb-2">
-                                                <Icons.Calendar className="w-4 h-4 text-blue-600" />
-                                                <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide">Contract Start</p>
-                                            </div>
-                                            <p className="text-sm font-bold text-blue-900">{formatDate(doctor.contractStartDate)}</p>
-                                        </div>
-                                        <div className="bg-gradient-to-br from-red-50 to-pink-50 p-4 rounded-2xl border border-red-200/50">
-                                            <div className="flex items-center gap-2 mb-2">
-                                                <Icons.Calendar className="w-4 h-4 text-red-600" />
-                                                <p className="text-xs font-semibold text-red-600 uppercase tracking-wide">Contract End</p>
-                                            </div>
-                                            <p className="text-sm font-bold text-red-900">{formatDate(doctor.contractEndDate)}</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </>
-                        )}
-                        
-                        <div className="col-span-1 md:col-span-2">
-                             <InfoRow label="Additional Notes" value={doctor.notes} />
-                        </div>
-                    </div>
-                </div>
-
+              </div>
             </div>
+
+            {/* Emergency */}
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+              <SectionTitle title="Emergency & IDs" icon={FaIdCard} />
+              <div className="space-y-1">
+                <ProfileField icon={FaPhone} label="Emergency Contact" value={`${doctor.emergencyContact || ''} (${doctor.emergencyPhone || '-'})`} />
+                <ProfileField icon={FaIdCard} label="Aadhar Number" value={doctor.aadharNumber} />
+                <ProfileField icon={FaIdCard} label="PAN Number" value={doctor.panNumber} />
+              </div>
+            </div>
+
+          </div>
+
+          {/* Right Column */}
+          <div className="lg:col-span-2 space-y-6">
+
+            {/* Professional Info */}
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+              <SectionTitle title="Professional Details" icon={FaStethoscope} />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                <ProfileField icon={FaBuilding} label="Department" value={typeof doctor.department === 'object' ? doctor.department?.name : doctor.department} />
+                <ProfileField icon={FaStethoscope} label="Specialization" value={doctor.specialization} />
+                <ProfileField icon={FaIdCard} label="License Number" value={doctor.licenseNumber} />
+                <ProfileField icon={FaBriefcase} label="Experience" value={`${doctor.experience || 0} Years`} />
+              </div>
+              <div className="mt-4 pt-4 border-t border-slate-100">
+                <h4 className="text-sm font-bold text-slate-700 mb-2 flex items-center gap-2"><FaGraduationCap className="text-slate-400" /> Education</h4>
+                <p className="text-sm text-slate-600 bg-slate-50 p-3 rounded-lg border border-slate-100">{doctor.education || 'No details provided'}</p>
+              </div>
+            </div>
+
+            {/* Employment & Financial */}
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+              <SectionTitle title="Employment & Compensation" icon={FaMoneyBillWave} />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <ProfileField icon={FaCalendarAlt} label="Joining Date" value={fmtDate(doctor.startDate)} />
+                <ProfileField icon={FaBriefcase} label="Type" value={doctor.isFullTime ? 'Full-time' : 'Part-time'} />
+              </div>
+
+              {doctor.isFullTime ? (
+                <div className="border border-emerald-100 bg-emerald-50/50 rounded-xl p-4">
+                  <p className="text-sm font-bold text-emerald-800 mb-2 border-b border-emerald-200 pb-2">Full-Time Configuration</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    <ProfileField icon={FaClock} label="Shift" value={doctor.shift} colorClass="text-emerald-600" />
+                    <ProfileField icon={FaMoneyBillWave} label="Annual Salary" value={`₹${doctor.amount || 0}`} colorClass="text-emerald-600" />
+                  </div>
+
+                  {doctor.timeSlots && doctor.timeSlots.length > 0 && (
+                    <div className="mt-4">
+                      <p className="text-xs font-semibold text-emerald-700 mb-2">Shift Timings:</p>
+                      <div className="flex flex-wrap gap-2">
+                        {doctor.timeSlots.map((slot, i) => (
+                          <span key={i} className="inline-flex items-center px-2 py-1 bg-white border border-emerald-100 text-emerald-600 rounded text-xs">
+                            <FaClock className="mr-1" /> {slot.start} - {slot.end}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="border border-blue-100 bg-blue-50/50 rounded-xl p-4">
+                  <p className="text-sm font-bold text-blue-800 mb-2 border-b border-blue-200 pb-2">Consultant Configuration</p>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-4">
+                    <ProfileField icon={FaBriefcase} label="Payment Model" value={doctor.paymentType} colorClass="text-blue-600" />
+                    <ProfileField icon={FaMoneyBillWave} label="Rate / Amount" value={`₹${doctor.amount || 0}`} colorClass="text-blue-600" />
+                    <ProfileField icon={FaCalendarAlt} label="Contract Start" value={fmtDate(doctor.contractStartDate)} colorClass="text-blue-600" />
+                    <ProfileField icon={FaCalendarAlt} label="Contract End" value={fmtDate(doctor.contractEndDate)} colorClass="text-blue-600" />
+                  </div>
+
+                  <div className="mb-4">
+                    <p className="text-xs font-semibold text-blue-700 mb-1">Revenue Share Percentage</p>
+                    <div className="w-full bg-blue-200 rounded-full h-2.5">
+                      <div className="bg-blue-600 h-2.5 rounded-full" style={{ width: `${doctor.revenuePercentage || 0}%` }}></div>
+                    </div>
+                    <p className="text-right text-xs text-blue-800 font-bold mt-1">{doctor.revenuePercentage}%</p>
+                  </div>
+
+                  <div className="mt-2">
+                    <p className="text-xs font-semibold text-blue-700 mb-2">Available Time Slots</p>
+                    <div className="flex flex-wrap gap-2">
+                      {(doctor.timeSlots || []).map((slot, i) => (
+                        <span key={i} className="inline-flex items-center px-2 py-1 bg-white border border-blue-200 text-blue-600 rounded text-xs shadow-sm">
+                          <FaClock className="mr-1" /> {slot.start} - {slot.end}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {doctor.notes && (
+              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+                <SectionTitle title="Additional Notes" icon={FaFileAlt} />
+                <p className="text-sm text-slate-600 bg-amber-50 p-4 rounded-lg border border-amber-100">{doctor.notes}</p>
+              </div>
+            )}
+
+          </div>
         </div>
       </div>
     </Layout>
@@ -252,144 +292,3 @@ const DoctorProfilePage = () => {
 };
 
 export default DoctorProfilePage;
-
-
-// import React, { useEffect, useState } from 'react';
-// import { useParams, useNavigate } from 'react-router-dom';
-// import axios from 'axios';
-// import Layout from '../../../components/Layout';
-// import { adminSidebar } from '../../../constants/sidebarItems/adminSidebar';
-
-// const DoctorProfile = () => {
-//   const { id } = useParams();
-//   const navigate = useNavigate();
-//   const [doctor, setDoctor] = useState(null);
-
-//   useEffect(() => {
-//     const fetchDoctor = async () => {
-//       try {
-//         const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/doctors/${id}`);
-//         setDoctor(res.data);
-//       } catch (error) {
-//         console.error('Failed to fetch doctor data', error);
-//       }
-//     };
-
-//     fetchDoctor();
-//   }, [id]);
-
-//   if (!doctor) {
-//     return <div className="p-6 text-gray-600">Loading...</div>;
-//   }
-
-//   return (
-//     <Layout sidebarItems={adminSidebar}>
-//       <div className="p-6 max-w-4xl mx-auto">
-//         <div className="bg-white shadow rounded-xl p-6">
-//           <h2 className="text-2xl font-bold mb-2 text-gray-800">Doctor Profile</h2>
-//           <p className="text-sm text-gray-500 mb-6">Detailed information about this doctor</p>
-
-//           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-//             <div>
-//               <p className="text-sm text-gray-500">Full Name</p>
-//               <p className="text-base font-semibold text-gray-800">{doctor.firstName} {doctor.lastName}</p>
-//             </div>
-//             <div>
-//               <p className="text-sm text-gray-500">Email</p>
-//               <p className="text-base font-semibold text-gray-800">{doctor.email}</p>
-//             </div>
-//             <div>
-//               <p className="text-sm text-gray-500">Phone</p>
-//               <p className="text-base font-semibold text-gray-800">{doctor.phone}</p>
-//             </div>
-//             <div>
-//               <p className="text-sm text-gray-500">Department</p>
-//               <p className="text-base font-semibold text-gray-800">{doctor.department}</p>
-//             </div>
-//             <div>
-//               <p className="text-sm text-gray-500">Specialization</p>
-//               <p className="text-base font-semibold text-gray-800">{doctor.specialization || '—'}</p>
-//             </div>
-//             <div>
-//               <p className="text-sm text-gray-500">License Number</p>
-//               <p className="text-base font-semibold text-gray-800">{doctor.licenseNumber || '—'}</p>
-//             </div>
-//             <div>
-//               <p className="text-sm text-gray-500">Experience</p>
-//               <p className="text-base font-semibold text-gray-800">{doctor.experience ? `${doctor.experience} years` : '—'}</p>
-//             </div>
-//             <div>
-//               <p className="text-sm text-gray-500">Shift</p>
-//               <p className="text-base font-semibold text-gray-800">{doctor.shift}</p>
-//             </div>
-//             <div>
-//               <p className="text-sm text-gray-500">Status</p>
-//               <p className="text-base font-semibold text-gray-800">{doctor.status}</p>
-//             </div>
-//             <div>
-//               <p className="text-sm text-gray-500">Gender</p>
-//               <p className="text-base font-semibold text-gray-800">{doctor.gender || '—'}</p>
-//             </div>
-//             <div>
-//               <p className="text-sm text-gray-500">Date of Birth</p>
-//               <p className="text-base font-semibold text-gray-800">{doctor.dateOfBirth || '—'}</p>
-//             </div>
-//             <div>
-//               <p className="text-sm text-gray-500">Address</p>
-//               <p className="text-base font-semibold text-gray-800">{doctor.address || '—'}</p>
-//             </div>
-//             <div>
-//               <p className="text-sm text-gray-500">Qualification</p>
-//               <p className="text-base font-semibold text-gray-800">{doctor.qualification || '—'}</p>
-//             </div>
-//             <div>
-//               <p className="text-sm text-gray-500">Start Date</p>
-//               <p className="text-base font-semibold text-gray-800">{doctor.startDate || '—'}</p>
-//             </div>
-//             <div>
-//               <p className="text-sm text-gray-500">Full Time</p>
-//               <p className="text-base font-semibold text-gray-800">{doctor.isFullTime ? 'Yes' : 'No'}</p>
-//             </div>
-//             <div>
-//               <p className="text-sm text-gray-500">Consultation Fee</p>
-//               <p className="text-base font-semibold text-gray-800">₹{doctor.consultationFee || '—'}</p>
-//             </div>
-//             <div>
-//               <p className="text-sm text-gray-500">Emergency Contact</p>
-//               <p className="text-base font-semibold text-gray-800">{doctor.emergencyContact || '—'}</p>
-//             </div>
-//             <div>
-//               <p className="text-sm text-gray-500">Emergency Phone</p>
-//               <p className="text-base font-semibold text-gray-800">{doctor.emergencyPhone || '—'}</p>
-//             </div>
-//             <div>
-//               <p className="text-sm text-gray-500">Has Insurance</p>
-//               <p className="text-base font-semibold text-gray-800">{doctor.hasInsurance ? 'Yes' : 'No'}</p>
-//             </div>
-//             <div>
-//               <p className="text-sm text-gray-500">Languages</p>
-//               <p className="text-base font-semibold text-gray-800">
-//                 {doctor.languages?.length ? doctor.languages.join(', ') : '—'}
-//               </p>
-//             </div>
-//             <div className="sm:col-span-2">
-//               <p className="text-sm text-gray-500">Notes</p>
-//               <p className="text-base font-semibold text-gray-800 whitespace-pre-line">{doctor.notes || '—'}</p>
-//             </div>
-//           </div>
-
-//           <div className="mt-6 flex justify-end">
-//             <button
-//               onClick={() => navigate(-1)}
-//               className="px-4 py-2 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md"
-//             >
-//               ← Back to List
-//             </button>
-//           </div>
-//         </div>
-//       </div>
-//     </Layout>
-//   );
-// };
-
-// export default DoctorProfile;

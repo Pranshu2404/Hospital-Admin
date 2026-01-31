@@ -4,23 +4,23 @@ import axios from 'axios';
 // Helper function to format stored UTC time to local display
 const formatStoredTime = (utcTimeString) => {
     if (!utcTimeString) return 'N/A';
-    
+
     try {
         // Parse the ISO string
         const date = new Date(utcTimeString);
-        
+
         // Get the UTC hours/minutes
         const hours = date.getUTCHours();
         const minutes = date.getUTCMinutes();
-        
+
         // Create a new date with these hours/minutes in local timezone
         const displayDate = new Date();
         displayDate.setHours(hours, minutes, 0, 0);
-        
-        return displayDate.toLocaleTimeString([], { 
-            hour: '2-digit', 
+
+        return displayDate.toLocaleTimeString([], {
+            hour: '2-digit',
             minute: '2-digit',
-            hour12: true 
+            hour12: true
         });
     } catch (error) {
         console.error('Error formatting time:', error);
@@ -31,17 +31,17 @@ const formatStoredTime = (utcTimeString) => {
 // Helper function to format date
 const formatStoredDate = (utcDateString) => {
     if (!utcDateString) return 'N/A';
-    
+
     try {
         const date = new Date(utcDateString);
         // Use UTC components to avoid timezone conversion
         const year = date.getUTCFullYear();
         const month = date.getUTCMonth(); // 0-indexed
         const day = date.getUTCDate();
-        
+
         // Create a local date with UTC components
         const localDate = new Date(year, month, day);
-        
+
         return localDate.toLocaleDateString('en-IN', {
             day: 'numeric',
             month: 'long',
@@ -83,18 +83,29 @@ const getFrequencyLabel = (frequencyValue) => {
 const AppointmentCompletionSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }) => {
     const [prescription, setPrescription] = useState(null);
     const [vitals, setVitals] = useState(null);
+    const [doctorDetails, setDoctorDetails] = useState(null);
 
     useEffect(() => {
         if (isOpen && appointmentData) {
+            if (appointmentData.doctor_id && typeof appointmentData.doctor_id === 'object') {
+                setDoctorDetails(appointmentData.doctor_id);
+            }
+
             const fetchData = async () => {
                 try {
-                    // 1. Fetch Full Appointment Details to get Vitals
+                    // 1. Fetch Full Appointment Details to get Vitals and Doctor Info
                     try {
                         const apptResp = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/appointments/${appointmentData._id}`);
-                        if (apptResp.data && apptResp.data.vitals) {
-                            setVitals(apptResp.data.vitals);
-                        } else {
-                            setVitals(null);
+                        if (apptResp.data) {
+                            if (apptResp.data.vitals) {
+                                setVitals(apptResp.data.vitals);
+                            } else {
+                                setVitals(null);
+                            }
+
+                            if (apptResp.data.doctor_id && typeof apptResp.data.doctor_id === 'object') {
+                                setDoctorDetails(apptResp.data.doctor_id);
+                            }
                         }
                     } catch (e) {
                         console.error("Error fetching appointment details for vitals:", e);
@@ -156,15 +167,19 @@ const AppointmentCompletionSlipModal = ({ isOpen, onClose, appointmentData, hosp
             `Dr. ${d.firstName || d.first_name || ''} ${d.lastName || d.last_name || ''}`.trim() || 'N/A';
     };
 
+    const getDoctorEducation = () => {
+        return doctorDetails?.education || '';
+    };
+
     // Get formatted appointment date
     const getAppointmentDate = () => {
         if (appointmentData.date) return appointmentData.date;
-        
+
         // Try from appointment_date field
         if (appointmentData.appointment_date) {
             return formatStoredDate(appointmentData.appointment_date);
         }
-        
+
         // Fallback to current date
         return new Date().toLocaleDateString();
     };
@@ -172,12 +187,12 @@ const AppointmentCompletionSlipModal = ({ isOpen, onClose, appointmentData, hosp
     // Get formatted appointment time
     const getAppointmentTime = () => {
         if (appointmentData.time) return appointmentData.time;
-        
+
         // Try from start_time field
         if (appointmentData.start_time) {
             return formatStoredTime(appointmentData.start_time);
         }
-        
+
         return 'N/A';
     };
 
@@ -331,53 +346,50 @@ const AppointmentCompletionSlipModal = ({ isOpen, onClose, appointmentData, hosp
                             </div>
                         </div>
                     </div>
-                                <div className="py-2 px-1 mb-2">
-                                    <h2 className="text-xl text-center font-bold text-gray-900 leading-none uppercase">
-                                        Doctor's Prescription
-                                    </h2>
-                                </div>
+                    <div className="py-2 px-1 mb-2">
+                        <h2 className="text-xl text-center font-bold text-gray-900 leading-none uppercase">
+                            Doctor's Prescription
+                        </h2>
+                    </div>
 
                     {/* 1. Doctor Details & Slip Date (Top Row) */}
-                    
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <p className="label">Consultant Doctor</p>
-                                <p className="value text-lg font-bold text-slate-800">{getDoctorName()}</p>
-                                <p className="text-sm text-slate-500">{appointmentData.departmentName || appointmentData.department_id?.name || 'General Code'}</p>
-                            </div>
-                            <div className="text-right">
-                                <p className="label">Slip Date</p>
-                                <p className="value">{new Date().toLocaleDateString()}</p>
-                            </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <p className="label">Consultant Doctor</p>
+                            <p className="value text-lg font-bold text-slate-800">{getDoctorName()}</p>
+                            {getDoctorEducation() && <p className="text-sm font-semibold text-slate-600">{getDoctorEducation()}</p>}
+                            <p className="text-sm text-slate-500">{appointmentData.departmentName || appointmentData.department_id?.name || 'General Code'}</p>
                         </div>
-                   
+                        <div className="text-right">
+                            <p className="label">Slip Date</p>
+                            <p className="value">{new Date().toLocaleDateString()}</p>
+                        </div>
+                    </div>
+
 
                     {/* 2. Patient & Appointment Details */}
-                   
-                        <h4 className="section-title mt-0">PATIENT & APPOINTMENT DETAILS</h4>
-                        <div className="grid grid-cols-2 gap-y-3 gap-x-8">
-                            <div>
-                                <p className="label">Patient Name</p>
-                                <p className="value text-sm">{getPatientName()}</p>
-                            </div>
-                            <div>
-                                <p className="label">Appointment ID</p>
-                                <p className="value font-mono text-sm">#{appointmentData._id?.slice(-6).toUpperCase()}</p>
-                            </div>
-                            <div>
-                                <p className="label">Patient ID</p>
-                                <p className="value font-mono text-sm">{appointmentData.patientId || appointmentData.patient_id?.patientId || 'N/A'}</p>
-                            </div>
-                            <div>
-                                <p className="label">Appointment Date</p>
-                                <p className="value text-sm">{getAppointmentDate()}</p>
-                            </div>
-                            <div className="col-span-2">
-                                <p className="label">Appointment Time</p>
-                                <p className="value text-sm">{getAppointmentTime()}</p>
-                            </div>
+
+                    <h4 className="section-title mt-0">PATIENT & APPOINTMENT DETAILS</h4>
+                    <div className="grid grid-cols-2 gap-y-3 gap-x-8">
+                        <div>
+                            <p className="label">Patient Name</p>
+                            <p className="value text-sm">{getPatientName()}</p>
                         </div>
-                   
+                        <div>
+                            <p className="label">Appointment ID</p>
+                            <p className="value font-mono text-sm">#{appointmentData._id?.slice(-6).toUpperCase()}</p>
+                        </div>
+                        <div>
+                            <p className="label">Patient ID</p>
+                            <p className="value font-mono text-sm">{appointmentData.patientId || appointmentData.patient_id?.patientId || 'N/A'}</p>
+                        </div>
+                        <div>
+                            <p className="label">Appointment Date & Time</p>
+                            <p className="value text-sm">{`${getAppointmentDate()}  ${getAppointmentTime()}`}</p>
+                        </div>
+                    </div>
+
 
                     {/* 3. Vitals Details */}
                     {vitals && (vitals.bp || vitals.pulse || vitals.weight || vitals.temperature || vitals.spo2) && (
