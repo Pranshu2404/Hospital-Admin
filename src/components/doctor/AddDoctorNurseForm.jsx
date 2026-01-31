@@ -290,12 +290,12 @@ const AddDoctorNurseForm = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
     // Final validation before submission
     if (!validateStep3()) {
-      alert('Please fix the validation errors before submitting.');
-      return;
-    }
+    alert('Please fix the validation errors before submitting.');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    return;
+  }
     
     setIsLoading(true);
     try {
@@ -330,25 +330,28 @@ const AddDoctorNurseForm = () => {
     }
   };
 
-  const nextStep = () => {
-    let isValid = false;
-    
-    // Validate current step before proceeding
-    if (step === 1) {
-      isValid = validateStep1();
-    } else if (step === 2) {
-      isValid = validateStep2();
-    }
-    
-    if (isValid) {
-      setStep(prev => Math.min(prev + 1, totalSteps));
-      // Clear validation errors when moving to next step
-      setValidationErrors({});
-    } else {
-      // Scroll to top to show validation errors
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-  };
+const nextStep = () => {
+  let isValid = false;
+  
+  // Validate current step before proceeding
+  if (step === 1) {
+    isValid = validateStep1();
+  } else if (step === 2) {
+    isValid = validateStep2();
+  }
+  
+  if (isValid && step < totalSteps) {  // Add check: step < totalSteps
+    setStep(prev => Math.min(prev + 1, totalSteps));
+    // Clear validation errors when moving to next step
+    setValidationErrors({});
+  } else if (step === totalSteps) {
+    // If we're already on the last step, the submit button will handle submission
+    return;
+  } else {
+    // Scroll to top to show validation errors
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+};
 
   const prevStep = () => {
     setStep(prev => Math.max(prev - 1, 1));

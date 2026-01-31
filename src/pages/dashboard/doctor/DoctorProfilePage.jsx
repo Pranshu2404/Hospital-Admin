@@ -6,7 +6,8 @@ import {
   FaUserMd, FaEnvelope, FaPhone, FaMapMarkerAlt, FaStethoscope,
   FaAward, FaBirthdayCake, FaVenusMars, FaBuilding, FaClock,
   FaFileAlt, FaMoneyBillWave, FaIdCard, FaEdit, FaCheckCircle,
-  FaCalendarAlt, FaBriefcase, FaGraduationCap, FaTimes, FaSave, FaExclamationCircle
+  FaCalendarAlt, FaBriefcase, FaGraduationCap, FaTimes, FaSave, FaExclamationCircle,
+  FaPercentage, FaUserClock, FaHospital
 } from 'react-icons/fa';
 
 const DoctorProfilePage1 = () => {
@@ -43,6 +44,16 @@ const DoctorProfilePage1 = () => {
   // --- Helper Components ---
 
   const handleInputChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    
+    if (type === 'checkbox') {
+      setFormData(prev => ({ ...prev, [name]: checked }));
+    } else {
+      setFormData(prev => ({ ...prev, [name]: value }));
+    }
+  };
+
+  const handleSelectChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
@@ -51,6 +62,16 @@ const DoctorProfilePage1 = () => {
     try {
       setSaving(true);
       setMessage({ type: '', text: '' });
+
+      // Validate revenue percentage if doctor is part-time
+      if (!formData.isFullTime && formData.revenuePercentage !== undefined) {
+        const revenuePercentage = Number(formData.revenuePercentage);
+        if (isNaN(revenuePercentage) || revenuePercentage < 0 || revenuePercentage > 100) {
+          setMessage({ type: 'error', text: 'Revenue percentage must be between 0 and 100 for part-time doctors' });
+          setSaving(false);
+          return;
+        }
+      }
 
       const response = await axios.put(
         `${import.meta.env.VITE_BACKEND_URL}/doctors/${doctorId}`,
@@ -104,6 +125,16 @@ const DoctorProfilePage1 = () => {
       {fullTime ? 'Full-Time' : 'Part-Time'}
     </span>
   );
+
+  const RevenueBadge = ({ percentage, isFullTime }) => {
+    if (isFullTime) return null;
+    
+    return (
+      <span className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide border bg-blue-50 text-blue-700 border-blue-200">
+        Revenue: {percentage}%
+      </span>
+    );
+  };
 
   const formatDate = (date) => {
     if (!date) return null;
@@ -174,7 +205,7 @@ const DoctorProfilePage1 = () => {
               <select
                 name="gender"
                 value={formData.gender || ''}
-                onChange={handleInputChange}
+                onChange={handleSelectChange}
                 className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none transition"
               >
                 <option value="">Select Gender</option>
@@ -292,7 +323,7 @@ const DoctorProfilePage1 = () => {
               <select
                 name="shift"
                 value={formData.shift || ''}
-                onChange={handleInputChange}
+                onChange={handleSelectChange}
                 className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none transition"
               >
                 <option value="">Select Shift</option>
@@ -304,7 +335,86 @@ const DoctorProfilePage1 = () => {
           </div>
         </div>
 
-        {/* Emergency & Other */}
+        {/* Employment & Financial */}
+        <div>
+          <h4 className="font-semibold text-slate-700 mb-3 text-sm uppercase">Employment & Financial</h4>
+          <div className="space-y-3">
+            <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                id="isFullTime"
+                name="isFullTime"
+                checked={formData.isFullTime || false}
+                onChange={handleInputChange}
+                className="h-4 w-4 text-teal-600 focus:ring-teal-500 border-slate-300 rounded"
+              />
+              <label htmlFor="isFullTime" className="text-sm font-medium text-slate-700">
+                Full-Time Employee
+              </label>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">Payment Type</label>
+              <select
+                name="paymentType"
+                value={formData.paymentType || ''}
+                onChange={handleSelectChange}
+                className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none transition"
+              >
+                <option value="">Select Payment Type</option>
+                <option value="Salary">Salary</option>
+                <option value="Fee per Visit">Fee per Visit</option>
+                <option value="Per Hour">Per Hour</option>
+                <option value="Contractual Salary">Contractual Salary</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">
+                {formData.paymentType === 'Salary' || formData.paymentType === 'Contractual Salary' 
+                  ? 'Monthly Salary (₹)' 
+                  : formData.paymentType === 'Per Hour'
+                  ? 'Hourly Rate (₹)'
+                  : 'Consultation Fee (₹)'}
+              </label>
+              <input
+                type="number"
+                name="amount"
+                value={formData.amount || ''}
+                onChange={handleInputChange}
+                className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none transition"
+                min="0"
+              />
+            </div>
+
+            {/* Revenue Percentage (only for part-time doctors) */}
+            {!formData.isFullTime && (
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1 flex items-center gap-1">
+                  <FaPercentage size={10} /> Revenue Share Percentage
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    name="revenuePercentage"
+                    value={formData.revenuePercentage || ''}
+                    onChange={handleInputChange}
+                    className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none transition"
+                    min="0"
+                    max="100"
+                    placeholder="e.g., 80"
+                  />
+                  <span className="text-sm text-slate-500 whitespace-nowrap">%</span>
+                </div>
+                <p className="text-xs text-slate-500 mt-1">
+                  Percentage of appointment fees you receive (e.g., 80% means you get 80% of consultation fees)
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Emergency & Legal */}
         <div>
           <h4 className="font-semibold text-slate-700 mb-3 text-sm uppercase">Emergency & Legal</h4>
           <div className="space-y-3">
@@ -458,6 +568,12 @@ const DoctorProfilePage1 = () => {
                       <span className="text-sm">{doctor.department?.name || 'General Department'}</span>
                       <span className="hidden md:inline">•</span>
                       <StatusBadge fullTime={doctor.isFullTime} />
+                      {!doctor.isFullTime && doctor.revenuePercentage && doctor.revenuePercentage !== 100 && (
+                        <>
+                          <span className="hidden md:inline">•</span>
+                          <RevenueBadge percentage={doctor.revenuePercentage} isFullTime={doctor.isFullTime} />
+                        </>
+                      )}
                     </div>
                   </div>
 
@@ -562,10 +678,10 @@ const DoctorProfilePage1 = () => {
                 )}
               </div>
 
-              {/* Financial Info (Collapsible style visually) */}
+              {/* Financial & Revenue Info */}
               <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                <SectionTitle title="Financial & Legal" icon={FaMoneyBillWave} />
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <SectionTitle title="Financial & Revenue" icon={FaMoneyBillWave} />
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                   <div className="p-4 bg-slate-50 rounded-lg border border-slate-100">
                     <p className="text-xs text-slate-500 font-bold uppercase mb-1">Pan Number</p>
                     <p className="font-mono font-medium text-slate-800">{doctor.panNumber || 'N/A'}</p>
@@ -575,11 +691,54 @@ const DoctorProfilePage1 = () => {
                     <p className="font-mono font-medium text-slate-800">{doctor.aadharNumber || 'N/A'}</p>
                   </div>
                   <div className="p-4 bg-emerald-50 rounded-lg border border-emerald-100">
-                    <p className="text-xs text-emerald-600 font-bold uppercase mb-1">Current Salary</p>
+                    <p className="text-xs text-emerald-600 font-bold uppercase mb-1">
+                      {doctor.paymentType === 'Salary' || doctor.paymentType === 'Contractual Salary' 
+                        ? 'Monthly Salary' 
+                        : doctor.paymentType === 'Per Hour'
+                        ? 'Hourly Rate'
+                        : 'Consultation Fee'}
+                    </p>
                     <p className="font-bold text-emerald-800 text-lg">₹ {doctor.amount?.toLocaleString()}</p>
                     <p className="text-xs text-emerald-600 mt-1">{doctor.paymentType}</p>
                   </div>
                 </div>
+
+                {/* Revenue Share Information */}
+                {!doctor.isFullTime && doctor.revenuePercentage && doctor.revenuePercentage !== 100 && (
+                  <div className="p-4 bg-blue-50 rounded-lg border border-blue-100">
+                    <div className="flex items-center gap-2 mb-2">
+                      <FaPercentage className="text-blue-600" />
+                      <h4 className="text-sm font-bold text-blue-800">Revenue Share Information</h4>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs text-blue-600 font-medium">Your Revenue Share</p>
+                        <p className="text-lg font-bold text-blue-800">{doctor.revenuePercentage}% of appointment fees</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs text-blue-600">Example: For ₹500 appointment</p>
+                        <p className="text-sm font-medium text-blue-800">
+                          You: ₹{(500 * doctor.revenuePercentage / 100).toLocaleString()}
+                        </p>
+                        <p className="text-xs text-blue-500">
+                          Hospital: ₹{(500 * (100 - doctor.revenuePercentage) / 100).toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Full-Time Doctor Note */}
+                {doctor.isFullTime && (
+                  <div className="p-4 bg-green-50 rounded-lg border border-green-100">
+                    <div className="flex items-center gap-2">
+                      <FaHospital className="text-green-600" />
+                      <p className="text-sm font-medium text-green-800">
+                        Full-Time Employee: You receive a fixed monthly salary. All appointment fees go to the hospital.
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 

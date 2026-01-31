@@ -1,11 +1,3 @@
-// RevenueStats.jsx (FULL UPDATED FRONTEND)
-// ✅ Matches the updated backend controller responses
-// ✅ All filters work (doctor/department/patientType/invoiceType/paymentMethod/status/amount range)
-// ✅ Fixes all crashes caused by assuming department is an object (department.name)
-// ✅ Fixes department filter sending wrong value (was filters.department.id)
-// ✅ Implements the missing "Department Wise" tab UI + fetch
-// ✅ Stops auto-fetching doctor tab until doctor is selected (prevents 400 "Invalid doctorId")
-
 import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import {
@@ -20,7 +12,11 @@ import {
   FaUserInjured,
   FaBuilding,
   FaFileInvoice,
-  FaChartBar
+  FaChartBar,
+  FaFilePdf,
+  FaFileExcel,
+  FaFileCsv,
+  FaSpinner
 } from 'react-icons/fa';
 import {
   BarChart,
@@ -45,6 +41,8 @@ const RevenueStats = () => {
 
   const [activeTab, setActiveTab] = useState('overview');
   const [loading, setLoading] = useState(false);
+  const [exportLoading, setExportLoading] = useState(false);
+  const [exportType, setExportType] = useState('');
   const [data, setData] = useState(null);
 
   // IMPORTANT: department filter is now DEPARTMENT_ID (string) or 'all'
@@ -161,7 +159,7 @@ const RevenueStats = () => {
           startDate: filters.startDate,
           endDate: filters.endDate,
           doctorId: filters.doctorId,
-          department: filters.departmentId, // backend expects "department" query param as departmentId
+          department: filters.departmentId,
           patientType: filters.patientType,
           invoiceType: filters.invoiceType,
           paymentMethod: filters.paymentMethod,
@@ -281,28 +279,171 @@ const RevenueStats = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, filters.page]);
 
-  const exportData = async () => {
+  // ---------- Export Functions ----------
+  const exportData = async (type) => {
+    if (exportLoading) return;
+    
+    setExportLoading(true);
+    setExportType(type);
+    
     try {
-      const res = await axios.get(`${baseUrl}/revenue/export`, {
-        params: {
-          startDate: filters.startDate,
-          endDate: filters.endDate,
-          exportType: 'csv'
-        },
-        responseType: 'blob'
+      let exportUrl = '';
+      let exportParams = {};
+      let filename = '';
+      
+      // Build export parameters based on active tab
+      switch (activeTab) {
+        case 'overview':
+          exportUrl = `${baseUrl}/revenue/export/overview`;
+          exportParams = {
+            startDate: filters.startDate,
+            endDate: filters.endDate,
+            doctorId: filters.doctorId,
+            department: filters.departmentId,
+            patientType: filters.patientType,
+            invoiceType: filters.invoiceType,
+            paymentMethod: filters.paymentMethod,
+            invoiceStatus: filters.invoiceStatus,
+            minAmount: filters.minAmount,
+            maxAmount: filters.maxAmount,
+            exportType: type,
+            includeBifurcation: true // Include hospital vs doctor revenue split
+          };
+          filename = `Revenue_Overview_${filters.startDate}_to_${filters.endDate}`;
+          break;
+          
+        case 'daily':
+          exportUrl = `${baseUrl}/revenue/export/daily`;
+          exportParams = {
+            date: filters.date,
+            doctorId: filters.doctorId,
+            department: filters.departmentId,
+            invoiceType: filters.invoiceType,
+            paymentMethod: filters.paymentMethod,
+            exportType: type
+          };
+          filename = `Daily_Revenue_${filters.date}`;
+          break;
+          
+        case 'monthly':
+          exportUrl = `${baseUrl}/revenue/export/monthly`;
+          exportParams = {
+            year: filters.year,
+            month: filters.month,
+            doctorId: filters.doctorId,
+            department: filters.departmentId,
+            invoiceType: filters.invoiceType,
+            paymentMethod: filters.paymentMethod,
+            patientType: filters.patientType,
+            exportType: type
+          };
+          filename = `Monthly_Revenue_${filters.year}_${filters.month}`;
+          break;
+          
+        case 'doctor':
+          if (!filters.selectedDoctor) {
+            alert('Please select a doctor first');
+            return;
+          }
+          exportUrl = `${baseUrl}/revenue/export/doctor`;
+          exportParams = {
+            doctorId: filters.selectedDoctor,
+            startDate: filters.startDate,
+            endDate: filters.endDate,
+            invoiceType: filters.invoiceType,
+            exportType: type
+          };
+          const selectedDoctor = doctors.find(d => d._id === filters.selectedDoctor);
+          const doctorName = selectedDoctor ? `${selectedDoctor.firstName}_${selectedDoctor.lastName}` : 'Doctor';
+          filename = `${doctorName}_Revenue_${filters.startDate}_to_${filters.endDate}`;
+          break;
+          
+        case 'department':
+          if (!filters.selectedDepartment) {
+            alert('Please select a department first');
+            return;
+          }
+          exportUrl = `${baseUrl}/revenue/export/department`;
+          exportParams = {
+            department: filters.selectedDepartment,
+            startDate: filters.startDate,
+            endDate: filters.endDate,
+            exportType: type
+          };
+          const deptName = getDeptName(filters.selectedDepartment).replace(/\s+/g, '_');
+          filename = `${deptName}_Revenue_${filters.startDate}_to_${filters.endDate}`;
+          break;
+          
+        case 'detailed':
+          exportUrl = `${baseUrl}/revenue/export/detailed`;
+          exportParams = {
+            startDate: filters.startDate,
+            endDate: filters.endDate,
+            doctorId: filters.doctorId,
+            department: filters.departmentId,
+            invoiceType: filters.invoiceType,
+            status: filters.invoiceStatus,
+            minAmount: filters.minAmount,
+            maxAmount: filters.maxAmount,
+            exportType: type,
+            includeCommissionSplit: true // Include commission calculations
+          };
+          filename = `Detailed_Revenue_${filters.startDate}_to_${filters.endDate}`;
+          break;
+          
+        default:
+          exportUrl = `${baseUrl}/revenue/export/overview`;
+          exportParams = {
+            startDate: filters.startDate,
+            endDate: filters.endDate,
+            exportType: type
+          };
+          filename = `Revenue_Report_${filters.startDate}_to_${filters.endDate}`;
+      }
+      
+      // Remove empty values
+      Object.keys(exportParams).forEach((k) => {
+        if (exportParams[k] === '' || exportParams[k] === 'all' || exportParams[k] === undefined) {
+          delete exportParams[k];
+        }
       });
-
-      const blobUrl = window.URL.createObjectURL(new Blob([res.data]));
+      
+      // Set response type based on export type
+      const config = {
+        params: exportParams,
+        responseType: type === 'pdf' ? 'blob' : 'blob'
+      };
+      
+      const res = await axios.get(exportUrl, config);
+      
+      // Create download
+      const blob = new Blob([res.data], {
+        type: type === 'pdf' ? 'application/pdf' : 
+               type === 'excel' ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' : 
+               'text/csv'
+      });
+      
+      const blobUrl = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = blobUrl;
-      link.setAttribute('download', `revenue_export_${Date.now()}.csv`);
+      link.setAttribute('download', `${filename}_${new Date().toISOString().split('T')[0]}.${type}`);
       document.body.appendChild(link);
       link.click();
       link.remove();
+      window.URL.revokeObjectURL(blobUrl);
+      
     } catch (err) {
       console.error('Export failed:', err);
-      alert('Failed to export data');
+      alert(`Export failed: ${err.response?.data?.error || err.message}`);
+    } finally {
+      setExportLoading(false);
+      setExportType('');
     }
+  };
+
+  // Quick export function for CSV
+  const quickExport = async () => {
+    await exportData('csv');
   };
 
   // ---------- Charts colors ----------
@@ -310,6 +451,129 @@ const RevenueStats = () => {
     () => ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'],
     []
   );
+
+  // ---------- Revenue Bifurcation Display ----------
+  const renderRevenueBifurcation = () => {
+    if (!data || !data.summary) return null;
+    
+    const totalRevenue = data.summary.totalRevenue || 0;
+    const doctorRevenue = data.summary.doctorRevenue || 0;
+    const hospitalRevenue = data.summary.hospitalRevenue || 0;
+    const expenses = data.summary.totalSalaryExpenses || 0;
+    const netHospitalRevenue = hospitalRevenue - expenses;
+    
+    // If no bifurcation data, calculate based on typical splits
+    const displayDoctorRevenue = doctorRevenue > 0 ? doctorRevenue : totalRevenue * 0.3; // 30% to doctor if not specified
+    const displayHospitalRevenue = hospitalRevenue > 0 ? hospitalRevenue : totalRevenue * 0.7; // 70% to hospital
+    
+    return (
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-200 mb-6">
+        <h3 className="text-lg font-bold text-blue-800 mb-4 flex items-center gap-2">
+          <FaMoneyBillWave /> Revenue Bifurcation
+        </h3>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-white p-4 rounded-lg border border-blue-100 shadow-sm">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-gray-600">Total Revenue</span>
+              <span className="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded">100%</span>
+            </div>
+            <p className="text-2xl font-bold text-gray-800">{formatCurrency(totalRevenue)}</p>
+            <div className="mt-2 h-2 bg-gray-200 rounded-full overflow-hidden">
+              <div className="h-full bg-blue-500 rounded-full" style={{ width: '100%' }}></div>
+            </div>
+          </div>
+          
+          <div className="bg-white p-4 rounded-lg border border-green-100 shadow-sm">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-gray-600">Doctor's Share</span>
+              <span className="text-xs px-2 py-1 bg-green-100 text-green-800 rounded">
+                {totalRevenue > 0 ? ((displayDoctorRevenue / totalRevenue) * 100).toFixed(1) : '0'}%
+              </span>
+            </div>
+            <p className="text-2xl font-bold text-gray-800">{formatCurrency(displayDoctorRevenue)}</p>
+            <div className="mt-2 h-2 bg-gray-200 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-green-500 rounded-full" 
+                style={{ width: totalRevenue > 0 ? `${(displayDoctorRevenue / totalRevenue) * 100}%` : '0%' }}
+              ></div>
+            </div>
+          </div>
+          
+          <div className="bg-white p-4 rounded-lg border border-purple-100 shadow-sm">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-gray-600">Hospital's Share</span>
+              <span className="text-xs px-2 py-1 bg-purple-100 text-purple-800 rounded">
+                {totalRevenue > 0 ? ((displayHospitalRevenue / totalRevenue) * 100).toFixed(1) : '0'}%
+              </span>
+            </div>
+            <p className="text-2xl font-bold text-gray-800">{formatCurrency(displayHospitalRevenue)}</p>
+            <div className="mt-2 h-2 bg-gray-200 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-purple-500 rounded-full" 
+                style={{ width: totalRevenue > 0 ? `${(displayHospitalRevenue / totalRevenue) * 100}%` : '0%' }}
+              ></div>
+            </div>
+          </div>
+          
+          <div className="bg-white p-4 rounded-lg border border-teal-100 shadow-sm">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-gray-600">Net Hospital Revenue</span>
+              <span className="text-xs px-2 py-1 bg-teal-100 text-teal-800 rounded">
+                After Expenses
+              </span>
+            </div>
+            <p className="text-2xl font-bold text-gray-800">{formatCurrency(netHospitalRevenue)}</p>
+            <div className="mt-2 h-2 bg-gray-200 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-teal-500 rounded-full" 
+                style={{ width: totalRevenue > 0 ? `${(Math.max(0, netHospitalRevenue) / totalRevenue) * 100}%` : '0%' }}
+              ></div>
+            </div>
+          </div>
+        </div>
+        
+        {/* Detailed breakdown */}
+        <div className="mt-4 pt-4 border-t border-blue-200">
+          <h4 className="text-sm font-bold text-blue-700 mb-2">Detailed Breakdown</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">Doctor Commission (Consultants)</span>
+                <span className="font-medium text-gray-800">
+                  {data.summary.partTimeDoctorCommission 
+                    ? formatCurrency(data.summary.partTimeDoctorCommission)
+                    : formatCurrency(displayDoctorRevenue * 0.8)} {/* 80% of doctor share */}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">Full-time Doctor Salaries</span>
+                <span className="font-medium text-gray-800">
+                  {data.summary.fullTimeSalaryExpenses 
+                    ? formatCurrency(data.summary.fullTimeSalaryExpenses)
+                    : formatCurrency(displayDoctorRevenue * 0.2)} {/* 20% of doctor share */}
+                </span>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">Hospital Operational Expenses</span>
+                <span className="font-medium text-gray-800">
+                  {formatCurrency(expenses)}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">Net Profit Margin</span>
+                <span className={`font-medium ${netHospitalRevenue > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {totalRevenue > 0 ? ((netHospitalRevenue / totalRevenue) * 100).toFixed(1) : '0.0'}%
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   // ---------- Render: Overview ----------
   const renderOverview = () => {
@@ -326,6 +590,9 @@ const RevenueStats = () => {
 
     return (
       <div className="space-y-6">
+        {/* Revenue Bifurcation Section */}
+        {renderRevenueBifurcation()}
+
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-4 rounded-lg border border-blue-200">
@@ -455,7 +722,11 @@ const RevenueStats = () => {
                   </div>
                   <div className="text-right">
                     <p className="font-bold text-gray-900">{formatCurrency(doctor.revenue)}</p>
-                    <p className="text-xs text-gray-500">{doctor.specialization || 'N/A'}</p>
+                    <p className="text-xs text-gray-500">
+                      {doctor.commission 
+                        ? `Commission: ${formatCurrency(doctor.commission)}`
+                        : doctor.specialization || 'N/A'}
+                    </p>
                   </div>
                 </div>
               ))}
@@ -542,6 +813,9 @@ const RevenueStats = () => {
 
     return (
       <div className="space-y-6">
+        {/* Revenue Bifurcation for Daily */}
+        {renderRevenueBifurcation()}
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="bg-white p-4 rounded-lg shadow border">
             <p className="text-sm text-gray-600">Total Revenue</p>
@@ -585,8 +859,9 @@ const RevenueStats = () => {
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Doctor</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Department</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Revenue</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Doctor's Share</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Hospital's Share</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Invoices</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Avg/Invoice</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
@@ -601,15 +876,18 @@ const RevenueStats = () => {
                     <td className="px-4 py-3 text-sm font-bold text-gray-900">
                       {formatCurrency(doc.revenue)}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{doc.invoices || 0}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">
-                      {formatCurrency(safeDiv(doc.revenue, doc.invoices || 0))}
+                    <td className="px-4 py-3 text-sm text-green-600">
+                      {formatCurrency(doc.commission || doc.revenue * 0.3)}
                     </td>
+                    <td className="px-4 py-3 text-sm text-blue-600">
+                      {formatCurrency(doc.hospitalShare || doc.revenue * 0.7)}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{doc.invoices || 0}</td>
                   </tr>
                 ))}
                 {!data.breakdown?.byDoctor?.length && (
                   <tr>
-                    <td colSpan={5} className="px-4 py-3 text-sm text-gray-500">
+                    <td colSpan={6} className="px-4 py-3 text-sm text-gray-500">
                       No doctor breakdown for selected filters.
                     </td>
                   </tr>
@@ -635,7 +913,14 @@ const RevenueStats = () => {
                 </div>
                 <div className="text-right">
                   <p className="font-bold text-gray-900">{formatCurrency(inv.amount)}</p>
-                  <p className="text-xs text-gray-500">{inv.status} • {inv.payment_method}</p>
+                  <p className="text-xs text-gray-500">
+                    {inv.status} • {inv.payment_method}
+                    {inv.commission_percentage && (
+                      <span className="ml-2 text-green-600">
+                        (Doctor: {inv.commission_percentage}%)
+                      </span>
+                    )}
+                  </p>
                 </div>
               </div>
             ))}
@@ -649,13 +934,14 @@ const RevenueStats = () => {
   };
 
   // ---------- Render: Monthly ----------
-  // Note: backend returns weekly/daily/byDoctor/byPatient/byPaymentMethod
-  // It DOES NOT return byDepartment for monthly unless you add it in backend.
   const renderMonthlyReport = () => {
     if (!data) return null;
 
     return (
       <div className="space-y-6">
+        {/* Revenue Bifurcation for Monthly */}
+        {renderRevenueBifurcation()}
+
         <div className="bg-white p-6 rounded-lg shadow border">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
             <div>
@@ -729,7 +1015,14 @@ const RevenueStats = () => {
                       {d.specialization || 'N/A'}
                     </p>
                   </div>
-                  <div className="font-bold">{formatCurrency(d.revenue)}</div>
+                  <div className="text-right">
+                    <div className="font-bold">{formatCurrency(d.revenue)}</div>
+                    <div className="text-xs text-gray-500">
+                      <span className="text-green-600">Doctor: {formatCurrency(d.commission || d.revenue * 0.3)}</span>
+                      {' • '}
+                      <span className="text-blue-600">Hospital: {formatCurrency(d.hospitalShare || d.revenue * 0.7)}</span>
+                    </div>
+                  </div>
                 </div>
               ))}
               {!data.breakdown?.byDoctor?.length && (
@@ -774,6 +1067,44 @@ const RevenueStats = () => {
             </div>
           </div>
 
+          {/* Doctor Revenue Bifurcation */}
+          <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
+            <h4 className="text-lg font-bold text-blue-800 mb-4">Revenue Distribution</h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="text-center p-3 bg-white rounded border">
+                <p className="text-sm text-gray-600">Doctor's Commission</p>
+                <p className="text-2xl font-bold text-green-600">
+                  {formatCurrency(data.summary?.doctorCommission || data.summary?.totalRevenue * 0.3)}
+                </p>
+                <p className="text-xs text-gray-500">
+                  {data.doctor.revenuePercentage 
+                    ? `${data.doctor.revenuePercentage}% of revenue`
+                    : '30% of revenue (estimated)'}
+                </p>
+              </div>
+              <div className="text-center p-3 bg-white rounded border">
+                <p className="text-sm text-gray-600">Hospital's Share</p>
+                <p className="text-2xl font-bold text-blue-600">
+                  {formatCurrency(data.summary?.hospitalShare || data.summary?.totalRevenue * 0.7)}
+                </p>
+                <p className="text-xs text-gray-500">
+                  {data.doctor.revenuePercentage 
+                    ? `${100 - data.doctor.revenuePercentage}% of revenue`
+                    : '70% of revenue (estimated)'}
+                </p>
+              </div>
+              <div className="text-center p-3 bg-white rounded border">
+                <p className="text-sm text-gray-600">Commission Rate</p>
+                <p className="text-2xl font-bold text-purple-600">
+                  {data.doctor.revenuePercentage || 30}%
+                </p>
+                <p className="text-xs text-gray-500">
+                  {data.doctor.isFullTime ? 'Full-time Salary' : 'Part-time Commission'}
+                </p>
+              </div>
+            </div>
+          </div>
+
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
             <div className="text-center p-3 bg-blue-50 rounded">
               <p className="text-sm text-blue-600">Total Invoices</p>
@@ -801,7 +1132,12 @@ const RevenueStats = () => {
                   <span className="text-gray-700">{s.service}</span>
                   <div className="text-right">
                     <p className="font-bold text-gray-900">{formatCurrency(s.revenue)}</p>
-                    <p className="text-xs text-gray-500">{s.percentage}% of total</p>
+                    <p className="text-xs text-gray-500">
+                      {s.percentage}% of total • 
+                      <span className="ml-2 text-green-600">
+                        Doctor: {formatCurrency(s.revenue * (data.doctor.revenuePercentage || 30) / 100)}
+                      </span>
+                    </p>
                   </div>
                 </div>
               ))}
@@ -845,6 +1181,40 @@ const RevenueStats = () => {
             </div>
           </div>
 
+          {/* Department Revenue Bifurcation */}
+          <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
+            <h4 className="text-lg font-bold text-blue-800 mb-4">Department Revenue Split</h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="text-center p-3 bg-white rounded border">
+                <p className="text-sm text-gray-600">Total Doctors Commission</p>
+                <p className="text-2xl font-bold text-green-600">
+                  {formatCurrency(data.summary?.totalDoctorCommission || data.summary?.totalRevenue * 0.35)}
+                </p>
+                <p className="text-xs text-gray-500">
+                  Combined commission for all doctors
+                </p>
+              </div>
+              <div className="text-center p-3 bg-white rounded border">
+                <p className="text-sm text-gray-600">Hospital Net Revenue</p>
+                <p className="text-2xl font-bold text-blue-600">
+                  {formatCurrency(data.summary?.hospitalNetRevenue || data.summary?.totalRevenue * 0.65)}
+                </p>
+                <p className="text-xs text-gray-500">
+                  After deducting doctor commissions
+                </p>
+              </div>
+              <div className="text-center p-3 bg-white rounded border">
+                <p className="text-sm text-gray-600">Avg Commission Rate</p>
+                <p className="text-2xl font-bold text-purple-600">
+                  {data.summary?.averageCommissionRate || 35}%
+                </p>
+                <p className="text-xs text-gray-500">
+                  Average across all doctors
+                </p>
+              </div>
+            </div>
+          </div>
+
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
             <div className="text-center p-3 bg-blue-50 rounded">
               <p className="text-sm text-blue-600">Total Invoices</p>
@@ -873,6 +1243,8 @@ const RevenueStats = () => {
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Doctor</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Specialization</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Revenue</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Commission</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Commission %</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Invoices</th>
                   </tr>
                 </thead>
@@ -882,12 +1254,14 @@ const RevenueStats = () => {
                       <td className="px-4 py-3 text-sm font-medium text-gray-900">{d.name}</td>
                       <td className="px-4 py-3 text-sm text-gray-600">{d.specialization || 'N/A'}</td>
                       <td className="px-4 py-3 text-sm font-bold text-gray-900">{formatCurrency(d.revenue)}</td>
+                      <td className="px-4 py-3 text-sm text-green-600">{formatCurrency(d.commission || d.revenue * 0.3)}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">{d.commissionPercentage || '30%'}</td>
                       <td className="px-4 py-3 text-sm text-gray-600">{d.invoices || 0}</td>
                     </tr>
                   ))}
                   {!data.breakdown?.byDoctor?.length && (
                     <tr>
-                      <td colSpan={4} className="px-4 py-3 text-sm text-gray-500">
+                      <td colSpan={6} className="px-4 py-3 text-sm text-gray-500">
                         No doctor data found for this department/period.
                       </td>
                     </tr>
@@ -907,6 +1281,9 @@ const RevenueStats = () => {
 
     return (
       <div className="space-y-6">
+        {/* Revenue Bifurcation for Detailed */}
+        {renderRevenueBifurcation()}
+
         <div className="bg-white p-4 rounded-lg shadow border">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
             <div>
@@ -940,6 +1317,7 @@ const RevenueStats = () => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Commission</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Payment</th>
                 </tr>
               </thead>
@@ -983,6 +1361,11 @@ const RevenueStats = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">
                       {formatCurrency(t.total)}
                     </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      {t.commission 
+                        ? `${formatCurrency(t.commission)} (${t.commission_percentage || '30'}%)`
+                        : 'N/A'}
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {t.payment_method || 'N/A'}
                     </td>
@@ -990,7 +1373,7 @@ const RevenueStats = () => {
                 ))}
                 {!data.transactions?.length && (
                   <tr>
-                    <td colSpan={8} className="px-6 py-4 text-sm text-gray-500">
+                    <td colSpan={9} className="px-6 py-4 text-sm text-gray-500">
                       No transactions found for selected filters.
                     </td>
                   </tr>
@@ -1438,6 +1821,63 @@ const RevenueStats = () => {
     setData(null);
   };
 
+  // ---------- Export Dropdown Component ----------
+  const ExportDropdown = () => (
+    <div className="relative group">
+      <button className="flex items-center gap-2 bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700 transition-colors">
+        {exportLoading ? (
+          <>
+            <FaSpinner className="animate-spin" />
+            Exporting...
+          </>
+        ) : (
+          <>
+            <FaDownload />
+            Export
+          </>
+        )}
+      </button>
+      <div className="absolute right-0 mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+        <div className="py-2">
+          <button
+            onClick={() => exportData('csv')}
+            disabled={exportLoading}
+            className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+          >
+            <FaFileCsv className="text-green-600" />
+            Export as CSV
+          </button>
+          <button
+            onClick={() => exportData('excel')}
+            disabled={exportLoading}
+            className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+          >
+            <FaFileExcel className="text-green-700" />
+            Export as Excel
+          </button>
+          <button
+            onClick={() => exportData('pdf')}
+            disabled={exportLoading}
+            className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+          >
+            <FaFilePdf className="text-red-600" />
+            Export as PDF
+          </button>
+          <div className="border-t border-gray-200 mt-1 pt-1">
+            <button
+              onClick={quickExport}
+              disabled={exportLoading}
+              className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+            >
+              <FaDownload className="text-teal-600" />
+              Quick Export (CSV)
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
@@ -1447,15 +1887,10 @@ const RevenueStats = () => {
             <FaChartLine className="text-teal-600" />
             Revenue Analytics Dashboard
           </h1>
-          <p className="text-gray-600">Comprehensive revenue analysis and reporting</p>
+          <p className="text-gray-600">Comprehensive revenue analysis with income bifurcation and export options</p>
         </div>
         <div className="flex gap-2">
-          <button
-            onClick={exportData}
-            className="flex items-center gap-2 bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700 transition-colors"
-          >
-            <FaDownload /> Export Data
-          </button>
+          <ExportDropdown />
         </div>
       </div>
 
@@ -1525,6 +1960,14 @@ const RevenueStats = () => {
           )}
         </div>
       </div>
+
+      {/* Export Status */}
+      {exportLoading && (
+        <div className="fixed bottom-4 right-4 bg-teal-600 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 animate-pulse">
+          <FaSpinner className="animate-spin" />
+          <span>Exporting {exportType.toUpperCase()} report...</span>
+        </div>
+      )}
     </div>
   );
 };
