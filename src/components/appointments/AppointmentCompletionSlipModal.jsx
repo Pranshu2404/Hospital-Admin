@@ -475,6 +475,32 @@ const AppointmentCompletionSlipModal = ({ isOpen, onClose, appointmentData, hosp
                                         </table>
                                     </div>
                                 )}
+
+                                {prescription.recommendedProcedures && prescription.recommendedProcedures.length > 0 && (
+                                    <div className="mt-6">
+                                        <h5 className="font-bold text-slate-700 mb-3">Recommended Procedures</h5>
+                                        <div className="border rounded-lg overflow-hidden">
+                                            <table className="w-full text-sm">
+                                                <thead className="bg-slate-100 border-b">
+                                                    <tr>
+                                                        <th className="text-left p-2 font-bold text-slate-600">Procedure Code</th>
+                                                        <th className="text-left p-2 font-bold text-slate-600">Procedure Name</th>
+                                                        <th className="text-left p-2 font-bold text-slate-600">Notes</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-slate-100">
+                                                    {prescription.recommendedProcedures.map((proc, idx) => (
+                                                        <tr key={idx}>
+                                                            <td className="p-2 font-medium">{proc.procedure_code || '-'}</td>
+                                                            <td className="p-2">{proc.procedure_name || '-'}</td>
+                                                            <td className="p-2 text-slate-500 text-sm">{proc.notes || '-'}</td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     ) : (

@@ -426,6 +426,12 @@ const AppointmentDetails = () => {
   const [searchingProcedures, setSearchingProcedures] = useState(false);
   const [procedureErrors, setProcedureErrors] = useState({});
 
+  // State to track expanded medicine index
+  const [expandedMedicineIndex, setExpandedMedicineIndex] = useState(0);
+
+  // State to track expanded procedure index
+  const [expandedProcedureIndex, setExpandedProcedureIndex] = useState(0);
+
   // Frequency options with common medical abbreviations
   const frequencyOptions = [
     { value: 'OD', label: 'Once daily' },
@@ -502,7 +508,7 @@ const AppointmentDetails = () => {
       medicine_type: '',
       route_of_administration: '',
       duration: '',
-      frequency: 'BD',
+      frequency: '',
       instructions: '',
       quantity: ''
     }],
@@ -744,6 +750,7 @@ const AppointmentDetails = () => {
   };
 
   const addMedicine = () => {
+    const newIndex = prescription.items.length;
     setPrescription(prev => ({
       ...prev,
       items: [...prev.items, {
@@ -751,12 +758,14 @@ const AppointmentDetails = () => {
         dosage: '',
         medicine_type: '',
         route_of_administration: '',
-        duration: '7 days',
-        frequency: 'BD',
+        duration: '',
+        frequency: '',
         instructions: '',
         quantity: ''
       }]
     }));
+    // Close all previous items and expand only the new one
+    setExpandedMedicineIndex(newIndex);
   };
 
   const removeMedicine = (index) => {
@@ -767,6 +776,7 @@ const AppointmentDetails = () => {
   };
 
   const addProcedure = () => {
+    const newIndex = prescription.recommendedProcedures.length;
     setPrescription(prev => ({
       ...prev,
       recommendedProcedures: [...prev.recommendedProcedures, {
@@ -775,6 +785,8 @@ const AppointmentDetails = () => {
         notes: ''
       }]
     }));
+    // Close all previous items and expand only the new one
+    setExpandedProcedureIndex(newIndex);
   };
 
   const removeProcedure = (index) => {
@@ -1186,8 +1198,8 @@ const AppointmentDetails = () => {
           dosage: '',
           medicine_type: '',
           route_of_administration: '',
-          duration: '7 days',
-          frequency: 'BD',
+          duration: '',
+          frequency: '',
           instructions: '',
           quantity: ''
         }],
@@ -2025,69 +2037,132 @@ const AppointmentDetails = () => {
                                 </div>
 
                                 {prescription.recommendedProcedures.length > 0 && (
-                                  <div className="space-y-4 mb-4">
-                                    {prescription.recommendedProcedures.map((proc, index) => (
-                                      <div key={index} className="bg-blue-50 rounded-lg border border-blue-200 p-4">
-                                        <div className="flex justify-between items-start mb-3">
-                                          <h4 className="text-xs font-bold text-blue-400 uppercase">Procedure #{index + 1}</h4>
-                                          <button onClick={() => removeProcedure(index)} className="text-blue-400 hover:text-red-500 transition-colors">
-                                            <FaTrash size={14} />
-                                          </button>
-                                        </div>
+                                  <div className="space-y-3 mb-4">
+                                    {prescription.recommendedProcedures.map((proc, index) => {
+                                      const isExpanded = expandedProcedureIndex === index;
+                                      const isFilled = proc.procedure_code && proc.procedure_name;
 
-                                        <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-                                          <div className="md:col-span-6">
-                                            <SearchableFormSelect
-                                              label="Procedure Name/Code"
-                                              value={proc.procedure_code}
-                                              onChange={(e) => handleProcedureChange(index, e)}
-                                              options={procedureOptions}
-                                              placeholder="Search procedure..."
-                                              type="procedure"
-                                              name="procedure_code"
-                                              loading={searchingProcedures}
-                                              error={procedureErrors[index]}
-                                              onSearch={fetchProcedures}
-                                              debounceDelay={1000}
-                                              minSearchChars={0}
-                                              allowCustom={true}
-                                              freeSolo={true}
-                                            />
+                                      return (
+                                        <div
+                                          key={index}
+                                          className={`rounded-lg border transition-all ${
+                                            isExpanded
+                                              ? 'border-blue-200 bg-white shadow-md'
+                                              : 'border-blue-100 bg-blue-50 hover:border-blue-300'
+                                          }`}
+                                        >
+                                          {/* Header - Always visible */}
+                                          <div className="flex items-center justify-between">
+                                            <button
+                                              type="button"
+                                              onClick={() => setExpandedProcedureIndex(isExpanded ? -1 : index)}
+                                              className="flex-1 px-4 py-3 flex justify-between items-center hover:bg-blue-100 rounded-lg transition-colors text-left"
+                                            >
+                                              <div className="flex items-center gap-3 flex-1">
+                                                <div className={`h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                                                  isExpanded ? 'bg-blue-100 text-blue-600' : 'bg-slate-200 text-slate-600'
+                                                }`}>
+                                                  {index + 1}
+                                                </div>
+                                                {isExpanded ? (
+                                                  <div className="text-xs font-bold text-blue-400 uppercase">Procedure #{index + 1}</div>
+                                                ) : (
+                                                  <div className="flex-1 min-w-0">
+                                                    {isFilled ? (
+                                                      <div className="flex flex-wrap items-center gap-2">
+                                                        <span className="font-medium text-slate-800 truncate">{proc.procedure_code}</span>
+                                                        <span className="text-xs bg-slate-200 text-slate-700 px-2 py-1 rounded">{proc.procedure_name}</span>
+                                                        {proc.notes && (
+                                                          <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded truncate">{proc.notes}</span>
+                                                        )}
+                                                      </div>
+                                                    ) : (
+                                                      <span className="text-sm text-slate-500 italic">Empty - Click to fill</span>
+                                                    )}
+                                                  </div>
+                                                )}
+                                              </div>
+                                              <div className={`text-slate-400 transition-transform ml-2 flex-shrink-0 ${isExpanded ? 'rotate-180' : ''}`}>
+                                                <FaChevronDown size={14} />
+                                              </div>
+                                            </button>
+                                            {!isExpanded && prescription.recommendedProcedures.length > 0 && (
+                                              <button
+                                                type="button"
+                                                onClick={() => removeProcedure(index)}
+                                                className="text-slate-400 hover:text-red-500 transition-colors p-2 flex-shrink-0"
+                                              >
+                                                <FaTrash size={14} />
+                                              </button>
+                                            )}
                                           </div>
 
-                                          <div className="md:col-span-6">
-                                            <div className="mb-4 md:col-span-6">
-                                              <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                Procedure Details
-                                              </label>
-                                              <input
-                                                type="text"
-                                                value={proc.procedure_name || ''}
-                                                readOnly={true}
-                                                placeholder="Will auto-fill when code selected"
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
-                                              />
+                                          {/* Expanded Content */}
+                                          {isExpanded && (
+                                            <div className="border-t border-blue-200 p-4 bg-white rounded-b-lg">
+                                              <div className="flex justify-between items-start mb-3">
+                                                <h4 className="text-xs font-bold text-blue-400 uppercase">Procedure #{index + 1}</h4>
+                                                <button onClick={() => removeProcedure(index)} className="text-blue-400 hover:text-red-500 transition-colors">
+                                                  <FaTrash size={14} />
+                                                </button>
+                                              </div>
+
+                                              <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+                                                <div className="md:col-span-6">
+                                                  <SearchableFormSelect
+                                                    label="Procedure Name/Code"
+                                                    value={proc.procedure_code}
+                                                    onChange={(e) => handleProcedureChange(index, e)}
+                                                    options={procedureOptions}
+                                                    placeholder="Search procedure..."
+                                                    type="procedure"
+                                                    name="procedure_code"
+                                                    loading={searchingProcedures}
+                                                    error={procedureErrors[index]}
+                                                    onSearch={fetchProcedures}
+                                                    debounceDelay={1000}
+                                                    minSearchChars={0}
+                                                    allowCustom={true}
+                                                    freeSolo={true}
+                                                  />
+                                                </div>
+
+                                                <div className="md:col-span-6">
+                                                  <div className="mb-4 md:col-span-6">
+                                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                      Procedure Details
+                                                    </label>
+                                                    <input
+                                                      type="text"
+                                                      value={proc.procedure_name || ''}
+                                                      readOnly={true}
+                                                      placeholder="Will auto-fill when code selected"
+                                                      className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
+                                                    />
+                                                  </div>
+                                                </div>
+
+                                                <div className="md:col-span-12">
+                                                  <div className="mb-4 md:col-span-12">
+                                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                      Notes
+                                                    </label>
+                                                    <textarea
+                                                      name="notes"
+                                                      value={proc.notes || ''}
+                                                      onChange={(e) => handleProcedureChange(index, e)}
+                                                      placeholder="Additional notes for this procedure..."
+                                                      rows={2}
+                                                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
+                                                    />
+                                                  </div>
+                                                </div>
+                                              </div>
                                             </div>
-                                          </div>
-
-                                          <div className="md:col-span-12">
-                                            <div className="mb-4 md:col-span-12">
-                                              <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                Notes
-                                              </label>
-                                              <textarea
-                                                name="notes"
-                                                value={proc.notes || ''}
-                                                onChange={(e) => handleProcedureChange(index, e)}
-                                                placeholder="Additional notes for this procedure..."
-                                                rows={2}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
-                                              />
-                                            </div>
-                                          </div>
+                                          )}
                                         </div>
-                                      </div>
-                                    ))}
+                                      );
+                                    })}
                                   </div>
                                 )}
                               </div>
@@ -2104,146 +2179,210 @@ const AppointmentDetails = () => {
                                   </button>
                                 </div>
 
-                                <div className="space-y-4">
-                                  {prescription.items.map((item, index) => (
-                                    <div key={index} className="bg-slate-50 rounded-lg border border-slate-200 p-4 transition-all hover:shadow-md hover:border-teal-200 group">
-                                      <div className="flex justify-between items-start mb-3">
-                                        <h4 className="text-xs font-bold text-slate-400 uppercase">Medicine #{index + 1}</h4>
-                                        {prescription.items.length > 1 && (
-                                          <button onClick={() => removeMedicine(index)} className="text-slate-400 hover:text-red-500 transition-colors">
-                                            <FaTrash size={14} />
+                                <div className="space-y-3">
+                                  {prescription.items.map((item, index) => {
+                                    const isExpanded = expandedMedicineIndex === index;
+                                    const isFilled = item.medicine_name && item.dosage && item.frequency;
+
+                                    return (
+                                      <div
+                                        key={index}
+                                        className={`rounded-lg border transition-all ${
+                                          isExpanded
+                                            ? 'border-teal-200 bg-white shadow-md'
+                                            : 'border-slate-200 bg-slate-50 hover:border-teal-300'
+                                        }`}
+                                      >
+                                        {/* Header - Always visible */}
+                                        <div className="flex items-center justify-between">
+                                          <button
+                                            type="button"
+                                            onClick={() => setExpandedMedicineIndex(isExpanded ? -1 : index)}
+                                            className="flex-1 px-4 py-3 flex justify-between items-center hover:bg-slate-100 rounded-lg transition-colors text-left"
+                                          >
+                                            <div className="flex items-center gap-3 flex-1">
+                                              <div className={`h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                                                isExpanded ? 'bg-teal-100 text-teal-600' : 'bg-slate-200 text-slate-600'
+                                              }`}>
+                                                {index + 1}
+                                              </div>
+                                              {isExpanded ? (
+                                                <div className="text-xs font-bold text-slate-400 uppercase">Medicine #{index + 1}</div>
+                                              ) : (
+                                                <div className="flex-1 min-w-0">
+                                                  {isFilled ? (
+                                                    <div className="flex flex-wrap items-center gap-2">
+                                                      <span className="font-medium text-slate-800 truncate">{item.medicine_name}</span>
+                                                      <span className="text-xs bg-slate-200 text-slate-700 px-2 py-1 rounded">{item.dosage}</span>
+                                                      <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded">{item.frequency}</span>
+                                                      {item.route_of_administration && (
+                                                        <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">{item.route_of_administration}</span>
+                                                      )}
+                                                    </div>
+                                                  ) : (
+                                                    <span className="text-sm text-slate-500 italic">Empty - Click to fill</span>
+                                                  )}
+                                                </div>
+                                              )}
+                                            </div>
+                                            <div className={`text-slate-400 transition-transform ml-2 flex-shrink-0 ${isExpanded ? 'rotate-180' : ''}`}>
+                                              <FaChevronDown size={14} />
+                                            </div>
                                           </button>
+                                          {!isExpanded && prescription.items.length > 1 && (
+                                            <button
+                                              type="button"
+                                              onClick={() => removeMedicine(index)}
+                                              className="text-slate-400 hover:text-red-500 transition-colors p-2 flex-shrink-0"
+                                            >
+                                              <FaTrash size={14} />
+                                            </button>
+                                          )}
+                                        </div>
+
+                                        {/* Expanded Content */}
+                                        {isExpanded && (
+                                          <div className="border-t border-slate-200 p-4 bg-white rounded-b-lg">
+                                            <div className="flex justify-between items-start mb-3">
+                                              <h4 className="text-xs font-bold text-slate-400 uppercase">Medicine #{index + 1}</h4>
+                                              {prescription.items.length > 1 && (
+                                                <button onClick={() => removeMedicine(index)} className="text-slate-400 hover:text-red-500 transition-colors">
+                                                  <FaTrash size={14} />
+                                                </button>
+                                              )}
+                                            </div>
+
+                                            <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+
+                                              <div className="md:col-span-6">
+                                                <SearchableFormSelect
+                                                  label="Medicine Name"
+                                                  value={item.medicine_name}
+                                                  onChange={(e) => handleMedicineChange(index, e)}
+                                                  options={medicineOptions}
+                                                  placeholder="Search medicine..."
+                                                  required
+                                                  type="medicine"
+                                                  name="medicine_name"
+                                                  loading={searchingMedicines}
+                                                  error={medicineErrors[index]}
+                                                  onSearch={fetchMedicines}
+                                                  debounceDelay={1000}
+                                                  minSearchChars={0}
+                                                  allowCustom={true}
+                                                  freeSolo={true}
+                                                />
+                                              </div>
+                                              <div className="md:col-span-3">
+                                                <SearchableFormSelect
+                                                  label="Medicine Type"
+                                                  value={item.medicine_type || ''}
+                                                  onChange={(e) => handleMedicineChange(index, e)}
+                                                  options={medicineTypeOptions}
+                                                  placeholder="Select type"
+                                                  name="medicine_type"
+                                                  allowCustom={false}
+                                                  freeSolo={false}
+                                                />
+                                              </div>
+
+
+                                              <div className="md:col-span-3">
+                                                <div className="mb-4 md:col-span-3">
+                                                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                    Dosage <span className="text-red-500">*</span>
+                                                  </label>
+                                                  <input
+                                                    type="text"
+                                                    name="dosage"
+                                                    value={item.dosage}
+                                                    onChange={(e) => handleMedicineChange(index, e)}
+                                                    placeholder="500mg"
+                                                    required={true}
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
+                                                  />
+                                                </div>
+                                              </div>
+
+                                              <div className="md:col-span-3">
+                                                <SearchableFormSelect
+                                                  label="Route"
+                                                  value={item.route_of_administration || ""}
+                                                  onChange={(e) => handleMedicineChange(index, e)}
+                                                  options={routeOptions}
+                                                  placeholder="Select route"
+                                                  name="route_of_administration"
+                                                  allowCustom={false}
+                                                  freeSolo={false}
+                                                />
+                                              </div>
+
+                                              <div className="md:col-span-3">
+                                                <SearchableFormSelect
+                                                  label="Frequency"
+                                                  value={item.frequency}
+                                                  onChange={(e) => handleMedicineChange(index, e)}
+                                                  options={frequencyOptions}
+                                                  placeholder="Select frequency"
+                                                  name="frequency"
+                                                  required={true}
+                                                  allowCustom={false}
+                                                  freeSolo={false}
+                                                />
+                                              </div>
+
+                                              <div className="md:col-span-3">
+                                                <SearchableFormSelect
+                                                  label="Duration"
+                                                  value={item.duration}
+                                                  onChange={(e) => handleMedicineChange(index, e)}
+                                                  options={durationOptions}
+                                                  placeholder="Select duration"
+                                                  name="duration"
+                                                  required={true}
+                                                  allowCustom={false}
+                                                  freeSolo={false}
+                                                />
+                                              </div>
+
+                                              <div className="md:col-span-3">
+                                                <div className="mb-4 md:col-span-3">
+                                                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                    Quantity
+                                                  </label>
+                                                  <input
+                                                    type="text"
+                                                    name="quantity"
+                                                    value={item.quantity}
+                                                    onChange={(e) => handleMedicineChange(index, e)}
+                                                    placeholder="Auto-calculated"
+                                                    readOnly={true}
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
+                                                  />
+                                                </div>
+                                              </div>
+
+                                              <div className="md:col-span-12">
+                                                <div className="mb-4 md:col-span-12">
+                                                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                    Special Instructions
+                                                  </label>
+                                                  <input
+                                                    type="text"
+                                                    name="instructions"
+                                                    value={item.instructions}
+                                                    onChange={(e) => handleMedicineChange(index, e)}
+                                                    placeholder="e.g. After food with water"
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
+                                                  />
+                                                </div>
+                                              </div>
+                                            </div>
+                                          </div>
                                         )}
                                       </div>
-
-                                      <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-
-                                        <div className="md:col-span-6">
-                                          <SearchableFormSelect
-                                            label="Medicine Name"
-                                            value={item.medicine_name}
-                                            onChange={(e) => handleMedicineChange(index, e)}
-                                            options={medicineOptions}
-                                            placeholder="Search medicine..."
-                                            required
-                                            type="medicine"
-                                            name="medicine_name"
-                                            loading={searchingMedicines}
-                                            error={medicineErrors[index]}
-                                            onSearch={fetchMedicines}  // Will be called immediately on typing
-                                            debounceDelay={1000}  // Optional: can remove or set to 0
-                                            minSearchChars={0} // Wait for 2 characters before API call
-                                            allowCustom={true}
-                                            freeSolo={true}
-                                          />
-                                        </div>
-                                        <div className="md:col-span-3">
-                                          <SearchableFormSelect
-                                            label="Medicine Type"
-                                            value={item.medicine_type || ''}
-                                            onChange={(e) => handleMedicineChange(index, e)}
-                                            options={medicineTypeOptions}
-                                            placeholder="Select type"
-                                            name="medicine_type"
-                                            allowCustom={false}
-                                            freeSolo={false}
-                                          />
-                                        </div>
-
-
-                                        <div className="md:col-span-3">
-                                          <div className="mb-4 md:col-span-3">
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                              Dosage <span className="text-red-500">*</span>
-                                            </label>
-                                            <input
-                                              type="text"
-                                              name="dosage"
-                                              value={item.dosage}
-                                              onChange={(e) => handleMedicineChange(index, e)}
-                                              placeholder="500mg"
-                                              required={true}
-                                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
-                                            />
-                                          </div>
-                                        </div>
-
-                                        <div className="md:col-span-3">
-                                          <SearchableFormSelect
-                                            label="Route"
-                                            value={item.route_of_administration || ""}
-                                            onChange={(e) => handleMedicineChange(index, e)}
-                                            options={routeOptions}
-                                            placeholder="Select route"
-                                            name="route_of_administration"
-                                            allowCustom={false}
-                                            freeSolo={false}
-                                          />
-                                        </div>
-
-                                        <div className="md:col-span-3">
-                                          <SearchableFormSelect
-                                            label="Frequency"
-                                            value={item.frequency}
-                                            onChange={(e) => handleMedicineChange(index, e)}
-                                            options={frequencyOptions}
-                                            placeholder="Select frequency"
-                                            name="frequency"
-                                            required={true}
-                                            allowCustom={false}
-                                            freeSolo={false}
-                                          />
-                                        </div>
-
-                                        <div className="md:col-span-3">
-                                          <SearchableFormSelect
-                                            label="Duration"
-                                            value={item.duration}
-                                            onChange={(e) => handleMedicineChange(index, e)}
-                                            options={durationOptions}
-                                            placeholder="Select duration"
-                                            name="duration"
-                                            required={true}
-                                            allowCustom={false}
-                                            freeSolo={false}
-                                          />
-                                        </div>
-
-                                        <div className="md:col-span-3">
-                                          <div className="mb-4 md:col-span-3">
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                              Quantity
-                                            </label>
-                                            <input
-                                              type="text"
-                                              name="quantity"
-                                              value={item.quantity}
-                                              onChange={(e) => handleMedicineChange(index, e)}
-                                              placeholder="Auto-calculated"
-                                              readOnly={true}
-                                              className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
-                                            />
-                                          </div>
-                                        </div>
-
-                                        <div className="md:col-span-12">
-                                          <div className="mb-4 md:col-span-12">
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                              Special Instructions
-                                            </label>
-                                            <input
-                                              type="text"
-                                              name="instructions"
-                                              value={item.instructions}
-                                              onChange={(e) => handleMedicineChange(index, e)}
-                                              placeholder="e.g. After food with water"
-                                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
-                                            />
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  ))}
+                                    );
+                                  })}
                                 </div>
                               </div>
 
