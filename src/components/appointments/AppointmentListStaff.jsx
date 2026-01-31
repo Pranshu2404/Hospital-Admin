@@ -261,21 +261,21 @@ const AppointmentListStaff = () => {
   const handleCompleteClick = async (appointment, e) => {
     e.stopPropagation();
     if (appointment.status !== 'Completed') {
-      if (window.confirm('Mark this appointment as Completed and generate Completion Slip?')) {
-        try {
-          await axios.patch(`${import.meta.env.VITE_BACKEND_URL}/appointments/${appointment._id}`, { status: 'Completed' });
+      // if (window.confirm('Mark this appointment as Completed and generate Completion Slip?')) {
+      //   try {
+      //     await axios.patch(`${import.meta.env.VITE_BACKEND_URL}/appointments/${appointment._id}`, { status: 'Completed' });
 
-          // Update local state
-          setAppointments(prev => prev.map(a => a._id === appointment._id ? { ...a, status: 'Completed' } : a));
+      //     // Update local state
+      //     setAppointments(prev => prev.map(a => a._id === appointment._id ? { ...a, status: 'Completed' } : a));
 
-          // Open completion slip
-          setSelectedAppointment({ ...appointment, status: 'Completed' });
-          setIsCompletionModalOpen(true);
-        } catch (error) {
-          console.error('Error completing appointment:', error);
-          alert('Failed to update status. Please try again.');
-        }
-      }
+      //     // Open completion slip
+      //     setSelectedAppointment({ ...appointment, status: 'Completed' });
+      //     setIsCompletionModalOpen(true);
+      //   } catch (error) {
+      //     console.error('Error completing appointment:', error);
+      //     alert('Failed to update status. Please try again.');
+      //   }
+      // }
     } else {
       // Already completed, just show slip
       setSelectedAppointment(appointment);
@@ -346,7 +346,7 @@ const AppointmentListStaff = () => {
               ? 'text-green-600 bg-green-50 hover:bg-green-100'
               : 'text-slate-400 hover:text-green-600 hover:bg-green-50'
               }`}
-            title={appointment.status === 'Completed' ? "View Completion Slip" : "Complete Appointment"}
+            title={appointment.status === 'Completed' ? "View Doctor's Prescription" : "Doctor's Prescription"}
           >
             <CheckCircle size={20} />
           </button>

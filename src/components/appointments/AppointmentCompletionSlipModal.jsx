@@ -52,6 +52,34 @@ const formatStoredDate = (utcDateString) => {
     }
 };
 
+// Frequency options mapping
+const FREQUENCY_OPTIONS = [
+    { value: 'OD', label: 'Once daily' },
+    { value: 'BD', label: 'Twice daily' },
+    { value: 'TDS', label: 'Three times daily' },
+    { value: 'QDS', label: 'Four times daily' },
+    { value: 'q4h', label: 'Every 4 hours' },
+    { value: 'q6h', label: 'Every 6 hours' },
+    { value: 'q8h', label: 'Every 8 hours' },
+    { value: 'q12h', label: 'Every 12 hours' },
+    { value: 'Mane', label: 'In the morning' },
+    { value: 'Nocte', label: 'At night' },
+    { value: 'q.a.m.', label: 'Every morning' },
+    { value: 'q.p.m.', label: 'Every evening' },
+    { value: 'AC', label: 'Before meals' },
+    { value: 'PC', label: 'After meals' },
+    { value: 'PRN', label: 'As needed' },
+    { value: 'SOS', label: 'When required' },
+    { value: 'Stat', label: 'Immediately' },
+    { value: 'q.o.d.', label: 'Every other day' }
+];
+
+// Helper function to get frequency label from value
+const getFrequencyLabel = (frequencyValue) => {
+    const frequency = FREQUENCY_OPTIONS.find(opt => opt.value === frequencyValue);
+    return frequency ? frequency.label : frequencyValue;
+};
+
 const AppointmentCompletionSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }) => {
     const [prescription, setPrescription] = useState(null);
     const [vitals, setVitals] = useState(null);
@@ -438,13 +466,39 @@ const AppointmentCompletionSlipModal = ({ isOpen, onClose, appointmentData, hosp
                                                     <tr key={idx}>
                                                         <td className="p-2 font-medium">{item.medicine_name}</td>
                                                         <td className="p-2">{item.dosage}</td>
-                                                        <td className="p-2">{item.frequency}</td>
+                                                        <td className="p-2">{getFrequencyLabel(item.frequency)}</td>
                                                         <td className="p-2">{item.duration}</td>
                                                         <td className="p-2 text-slate-500 text-sm">{item.instructions}</td>
                                                     </tr>
                                                 ))}
                                             </tbody>
                                         </table>
+                                    </div>
+                                )}
+
+                                {prescription.recommendedProcedures && prescription.recommendedProcedures.length > 0 && (
+                                    <div className="mt-6">
+                                        <h5 className="font-bold text-slate-700 mb-3">Recommended Procedures</h5>
+                                        <div className="border rounded-lg overflow-hidden">
+                                            <table className="w-full text-sm">
+                                                <thead className="bg-slate-100 border-b">
+                                                    <tr>
+                                                        <th className="text-left p-2 font-bold text-slate-600">Procedure Code</th>
+                                                        <th className="text-left p-2 font-bold text-slate-600">Procedure Name</th>
+                                                        <th className="text-left p-2 font-bold text-slate-600">Notes</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-slate-100">
+                                                    {prescription.recommendedProcedures.map((proc, idx) => (
+                                                        <tr key={idx}>
+                                                            <td className="p-2 font-medium">{proc.procedure_code || '-'}</td>
+                                                            <td className="p-2">{proc.procedure_name || '-'}</td>
+                                                            <td className="p-2 text-slate-500 text-sm">{proc.notes || '-'}</td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
                                     </div>
                                 )}
                             </div>
