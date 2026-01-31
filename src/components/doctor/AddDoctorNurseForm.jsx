@@ -11,6 +11,7 @@ const Icons = {
   Shield: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>,
   Check: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>,
   Building: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>,
+  Percent: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" /></svg>,
 };
 
 const AddDoctorNurseForm = () => {
@@ -35,6 +36,7 @@ const AddDoctorNurseForm = () => {
     startDate: getTodayDate(), isFullTime: true, paymentType: 'Salary', amount: '',
     contractStartDate: '', contractEndDate: '', visitsPerWeek: '', workingDaysPerWeek: [],
     shift: '', timeSlots: [{ start: '', end: '' }], notes: '', emergencyContact: '', emergencyPhone: '',
+    revenuePercentage: 80, // NEW FIELD: Default 80% for part-time doctors
     // hospitalId will be added from localStorage during submission
   });
 
@@ -114,6 +116,19 @@ const AddDoctorNurseForm = () => {
     if (field === 'state') {
       fetchCities(value);
       setFormData(prev => ({ ...prev, city: '' })); // Reset city when state changes
+    }
+
+    // If changing to full-time, reset revenue percentage to 100
+    if (field === 'isFullTime' && value === true) {
+      setFormData(prev => ({ ...prev, revenuePercentage: 100 }));
+    }
+    
+    // If changing to part-time, set default to 80%
+    if (field === 'isFullTime' && value === false) {
+      setFormData(prev => ({ 
+        ...prev, 
+        revenuePercentage: prev.revenuePercentage === 100 ? 80 : prev.revenuePercentage 
+      }));
     }
   };
 
@@ -237,6 +252,11 @@ const AddDoctorNurseForm = () => {
         errors.amount = 'Rate must be a positive number';
       }
       
+      // Revenue percentage validation for part-time doctors
+      if (formData.revenuePercentage < 0 || formData.revenuePercentage > 100) {
+        errors.revenuePercentage = 'Revenue percentage must be between 0 and 100';
+      }
+      
       if (!formData.contractStartDate) errors.contractStartDate = 'Contract start date is required';
       if (!formData.contractEndDate) errors.contractEndDate = 'Contract end date is required';
       
@@ -292,7 +312,9 @@ const AddDoctorNurseForm = () => {
         ...formData,
         workingDaysPerWeek: formData.isFullTime ? [] : formData.workingDaysPerWeek,
         shift: formData.isFullTime ? formData.shift : '',
-        hospitalId: hospitalId // Add hospitalId from localStorage
+        hospitalId: hospitalId, // Add hospitalId from localStorage
+        // Only send revenuePercentage if doctor is part-time
+        revenuePercentage: formData.isFullTime ? 100 : formData.revenuePercentage
       };
 
       console.log('Submitting doctor data:', submissionData);
@@ -365,7 +387,6 @@ const AddDoctorNurseForm = () => {
 
   // --- Step Indicator ---
   const StepIndicator = () => {
-
     const steps = ['Personal Details', 'Professional Info', 'Employment & Shift'];
 
     return (
@@ -690,7 +711,12 @@ const AddDoctorNurseForm = () => {
                     value={formData.isFullTime ? 'Full-time' : 'Part-time'}
                     onChange={(e) => {
                       const isFull = e.target.value === 'Full-time';
-                      setFormData(prev => ({ ...prev, isFullTime: isFull, workingDaysPerWeek: isFull ? [] : prev.workingDaysPerWeek }));
+                      setFormData(prev => ({ 
+                        ...prev, 
+                        isFullTime: isFull, 
+                        workingDaysPerWeek: isFull ? [] : prev.workingDaysPerWeek,
+                        revenuePercentage: isFull ? 100 : prev.revenuePercentage
+                      }));
                     }}
                     options={[{ value: 'Full-time', label: 'Full-time (Salaried)' }, { value: 'Part-time', label: 'Part-time (Consultant)' }]}
                   />
@@ -791,6 +817,64 @@ const AddDoctorNurseForm = () => {
                           error={!!validationErrors.contractEndDate}
                         />
                         <ErrorMessage field="contractEndDate" />
+                      </div>
+                    </div>
+
+                    {/* NEW: Revenue Percentage Field for Part-time Doctors */}
+                    <div className="mb-6 p-4 bg-blue-100/50 rounded-xl border border-blue-200">
+                      <h4 className="text-sm font-bold text-blue-700 mb-3 flex items-center gap-2">
+                        <Icons.Percent /> Revenue Distribution
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-bold text-blue-700 uppercase mb-1">
+                            Doctor's Revenue Percentage
+                          </label>
+                          <div className="relative">
+                            <input
+                              type="range"
+                              min="0"
+                              max="100"
+                              step="5"
+                              value={formData.revenuePercentage}
+                              onChange={(e) => handleInputChange('revenuePercentage', parseInt(e.target.value))}
+                              className="w-full h-2 bg-blue-200 rounded-lg appearance-none cursor-pointer"
+                            />
+                            <div className="flex justify-between text-xs text-blue-600 mt-1">
+                              <span>0%</span>
+                              <span>50%</span>
+                              <span>100%</span>
+                            </div>
+                          </div>
+                          <div className="text-center mt-2">
+                            <span className="text-lg font-bold text-blue-700">
+                              {formData.revenuePercentage}%
+                            </span>
+                            <p className="text-xs text-blue-600 mt-1">
+                              {formData.revenuePercentage}% of appointment fees will go to doctor
+                              <br />
+                              {100 - formData.revenuePercentage}% will be hospital revenue
+                            </p>
+                          </div>
+                          <ErrorMessage field="revenuePercentage" />
+                        </div>
+                        
+                        <div className="bg-white p-4 rounded-lg border border-blue-200">
+                          <h5 className="text-xs font-bold text-blue-700 mb-2">Example Calculation</h5>
+                          <div className="text-sm">
+                            <p className="mb-1">
+                              <span className="font-medium">Consultant Fees:</span> ₹{formData.amount || 0}
+                            </p>
+                            <p className="mb-1">
+                              <span className="font-medium">Doctor's Share ({formData.revenuePercentage}%):</span> 
+                              <span className="text-green-600 font-bold"> ₹{(formData.amount * formData.revenuePercentage / 100).toFixed(2) || 0}</span>
+                            </p>
+                            <p>
+                              <span className="font-medium">Hospital's Share ({100 - formData.revenuePercentage}%):</span> 
+                              <span className="text-blue-600 font-bold"> ₹{(formData.amount * (100 - formData.revenuePercentage) / 100).toFixed(2) || 0}</span>
+                            </p>
+                          </div>
+                        </div>
                       </div>
                     </div>
 
