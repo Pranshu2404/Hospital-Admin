@@ -25,7 +25,7 @@ const AddDoctorNurseForm = () => {
   const [states, setStates] = useState([]);
   const [cities, setCities] = useState([]);
   const navigate = useNavigate();
-  
+
   // Add validation errors state
   const [validationErrors, setValidationErrors] = useState({});
 
@@ -103,7 +103,7 @@ const AddDoctorNurseForm = () => {
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    
+
     // Clear validation error for this field when user starts typing
     if (validationErrors[field]) {
       setValidationErrors(prev => {
@@ -122,12 +122,12 @@ const AddDoctorNurseForm = () => {
     if (field === 'isFullTime' && value === true) {
       setFormData(prev => ({ ...prev, revenuePercentage: 100 }));
     }
-    
+
     // If changing to part-time, set default to 80%
     if (field === 'isFullTime' && value === false) {
-      setFormData(prev => ({ 
-        ...prev, 
-        revenuePercentage: prev.revenuePercentage === 100 ? 80 : prev.revenuePercentage 
+      setFormData(prev => ({
+        ...prev,
+        revenuePercentage: prev.revenuePercentage === 100 ? 80 : prev.revenuePercentage
       }));
     }
   };
@@ -184,59 +184,59 @@ const AddDoctorNurseForm = () => {
   // Step validation functions
   const validateStep1 = () => {
     const errors = {};
-    
+
     // Required fields for step 1
     if (!formData.firstName.trim()) errors.firstName = 'First name is required';
     if (!formData.email.trim()) errors.email = 'Email is required';
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) errors.email = 'Invalid email format';
-    
+
     if (!formData.phone.trim()) errors.phone = 'Phone is required';
     else if (!/^[6-9]\d{9}$/.test(formData.phone)) errors.phone = 'Invalid Indian mobile number (10 digits starting with 6-9)';
-    
+
     if (!formData.dateOfBirth) errors.dateOfBirth = 'Date of birth is required';
-    
+
     if (formData.aadharNumber && formData.aadharNumber.length !== 12) {
       errors.aadharNumber = 'Aadhar must be 12 digits';
     }
-    
+
     if (formData.emergencyPhone && !/^[6-9]\d{9}$/.test(formData.emergencyPhone)) {
       errors.emergencyPhone = 'Invalid Indian mobile number';
     }
-    
+
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
   };
 
   const validateStep2 = () => {
     const errors = {};
-    
+
     // Required fields for step 2
     if (!formData.department) errors.department = 'Department is required';
     if (!formData.specialization.trim()) errors.specialization = 'Specialization is required';
     if (!formData.licenseNumber.trim()) errors.licenseNumber = 'License number is required';
     if (!formData.education) errors.education = 'Highest qualification is required';
-    
+
     // Experience validation
     if (!formData.experience) errors.experience = 'Experience is required';
     else if (isNaN(formData.experience) || parseInt(formData.experience) < 0) {
       errors.experience = 'Experience must be a positive number';
     }
-    
+
     // PAN validation (if provided)
     if (formData.panNumber && !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(formData.panNumber)) {
       errors.panNumber = 'Invalid PAN format (e.g., ABCDE1234F)';
     }
-    
+
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
   };
 
   const validateStep3 = () => {
     const errors = {};
-    
+
     // Required fields for step 3
     if (!formData.startDate) errors.startDate = 'Joining date is required';
-    
+
     if (formData.isFullTime) {
       // Full-time validation
       if (!formData.shift) errors.shift = 'Shift is required for full-time employees';
@@ -251,15 +251,15 @@ const AddDoctorNurseForm = () => {
       else if (isNaN(formData.amount) || parseFloat(formData.amount) <= 0) {
         errors.amount = 'Rate must be a positive number';
       }
-      
+
       // Revenue percentage validation for part-time doctors
       if (formData.revenuePercentage < 0 || formData.revenuePercentage > 100) {
         errors.revenuePercentage = 'Revenue percentage must be between 0 and 100';
       }
-      
+
       if (!formData.contractStartDate) errors.contractStartDate = 'Contract start date is required';
       if (!formData.contractEndDate) errors.contractEndDate = 'Contract end date is required';
-      
+
       // Validate contract dates
       if (formData.contractStartDate && formData.contractEndDate) {
         const start = new Date(formData.contractStartDate);
@@ -268,7 +268,7 @@ const AddDoctorNurseForm = () => {
           errors.contractEndDate = 'Contract end date must be after start date';
         }
       }
-      
+
       // Validate time slots
       if (!formData.timeSlots || formData.timeSlots.length === 0) {
         errors.timeSlots = 'At least one time slot is required';
@@ -283,7 +283,7 @@ const AddDoctorNurseForm = () => {
         });
       }
     }
-    
+
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -292,11 +292,11 @@ const AddDoctorNurseForm = () => {
     e.preventDefault();
     // Final validation before submission
     if (!validateStep3()) {
-    alert('Please fix the validation errors before submitting.');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    return;
-  }
-    
+      alert('Please fix the validation errors before submitting.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
     setIsLoading(true);
     try {
       // Get hospital ID from localStorage
@@ -330,28 +330,28 @@ const AddDoctorNurseForm = () => {
     }
   };
 
-const nextStep = () => {
-  let isValid = false;
-  
-  // Validate current step before proceeding
-  if (step === 1) {
-    isValid = validateStep1();
-  } else if (step === 2) {
-    isValid = validateStep2();
-  }
-  
-  if (isValid && step < totalSteps) {  // Add check: step < totalSteps
-    setStep(prev => Math.min(prev + 1, totalSteps));
-    // Clear validation errors when moving to next step
-    setValidationErrors({});
-  } else if (step === totalSteps) {
-    // If we're already on the last step, the submit button will handle submission
-    return;
-  } else {
-    // Scroll to top to show validation errors
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }
-};
+  const nextStep = () => {
+    let isValid = false;
+
+    // Validate current step before proceeding
+    if (step === 1) {
+      isValid = validateStep1();
+    } else if (step === 2) {
+      isValid = validateStep2();
+    }
+
+    if (isValid && step < totalSteps) {  // Add check: step < totalSteps
+      setStep(prev => Math.min(prev + 1, totalSteps));
+      // Clear validation errors when moving to next step
+      setValidationErrors({});
+    } else if (step === totalSteps) {
+      // If we're already on the last step, the submit button will handle submission
+      return;
+    } else {
+      // Scroll to top to show validation errors
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
 
   const prevStep = () => {
     setStep(prev => Math.max(prev - 1, 1));
@@ -380,7 +380,7 @@ const nextStep = () => {
   // Error display component
   const ErrorMessage = ({ field }) => {
     if (!validationErrors[field]) return null;
-    
+
     return (
       <div className="mt-1.5 text-xs text-rose-600 font-medium animate-fade-in">
         {validationErrors[field]}
@@ -480,47 +480,47 @@ const nextStep = () => {
               <div className="space-y-8 animate-fade-in-right">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                   <div>
-                    <FormInput 
-                      label="First Name" 
-                      value={formData.firstName} 
-                      onChange={(e) => handleInputChange('firstName', e.target.value)} 
-                      required 
+                    <FormInput
+                      label="First Name"
+                      value={formData.firstName}
+                      onChange={(e) => handleInputChange('firstName', e.target.value)}
+                      required
                       placeholder="e.g. John"
                       error={!!validationErrors.firstName}
                     />
                     <ErrorMessage field="firstName" />
                   </div>
-                  
+
                   <div>
-                    <FormInput 
-                      label="Last Name" 
-                      value={formData.lastName} 
-                      onChange={(e) => handleInputChange('lastName', e.target.value)} 
+                    <FormInput
+                      label="Last Name"
+                      value={formData.lastName}
+                      onChange={(e) => handleInputChange('lastName', e.target.value)}
                       placeholder="e.g. Doe"
                     />
                   </div>
 
                   <div>
-                    <FormInput 
-                      label="Email Address" 
-                      type="email" 
-                      value={formData.email} 
-                      onChange={(e) => handleInputChange('email', e.target.value)} 
-                      required 
+                    <FormInput
+                      label="Email Address"
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => handleInputChange('email', e.target.value)}
+                      required
                       placeholder="doctor@hospital.com"
                       error={!!validationErrors.email}
                     />
                     <ErrorMessage field="email" />
                   </div>
-                  
+
                   <div>
-                    <FormInput 
-                      label="Phone Number" 
-                      type="tel" 
-                      value={formData.phone} 
-                      onChange={(e) => handleInputChange('phone', e.target.value.replace(/[^0-9]/g, '').slice(0, 10))} 
-                      required 
-                      placeholder="e.g. 9876543210" 
+                    <FormInput
+                      label="Phone Number"
+                      type="tel"
+                      value={formData.phone}
+                      onChange={(e) => handleInputChange('phone', e.target.value.replace(/[^0-9]/g, '').slice(0, 10))}
+                      required
+                      placeholder="e.g. 9876543210"
                       maxLength={10}
                       error={!!validationErrors.phone}
                     />
@@ -528,12 +528,12 @@ const nextStep = () => {
                   </div>
 
                   <div>
-                    <FormInput 
-                      label="Date of Birth" 
-                      type="date" 
-                      value={formData.dateOfBirth} 
-                      onChange={(e) => handleInputChange('dateOfBirth', e.target.value)} 
-                      required 
+                    <FormInput
+                      label="Date of Birth"
+                      type="date"
+                      value={formData.dateOfBirth}
+                      onChange={(e) => handleInputChange('dateOfBirth', e.target.value)}
+                      required
                       max={getLocalDateString()}
                       error={!!validationErrors.dateOfBirth}
                     />
@@ -541,20 +541,20 @@ const nextStep = () => {
                   </div>
 
                   <div>
-                    <SearchableFormSelect 
-                      label="Gender" 
-                      value={formData.gender} 
-                      onChange={(e) => handleInputChange('gender', e.target.value)} 
-                      options={[{ value: 'male', label: 'Male' }, { value: 'female', label: 'Female' }, { value: 'other', label: 'Other' }]} 
+                    <SearchableFormSelect
+                      label="Gender"
+                      value={formData.gender}
+                      onChange={(e) => handleInputChange('gender', e.target.value)}
+                      options={[{ value: 'male', label: 'Male' }, { value: 'female', label: 'Female' }, { value: 'other', label: 'Other' }]}
                     />
                   </div>
-                  
+
                   <div>
-                    <FormInput 
-                      label="Aadhar Number" 
-                      value={formData.aadharNumber} 
-                      onChange={(e) => handleInputChange('aadharNumber', e.target.value.replace(/[^0-9]/g, '').slice(0, 12))} 
-                      maxLength={12} 
+                    <FormInput
+                      label="Aadhar Number"
+                      value={formData.aadharNumber}
+                      onChange={(e) => handleInputChange('aadharNumber', e.target.value.replace(/[^0-9]/g, '').slice(0, 12))}
+                      maxLength={12}
                       placeholder="12-digit UID"
                       error={!!validationErrors.aadharNumber}
                     />
@@ -577,20 +577,20 @@ const nextStep = () => {
                         placeholder="Street, Apartment, etc."
                       ></textarea>
                     </div>
-                    
+
                     <SearchableFormSelect label="State" value={formData.state} onChange={(e) => handleInputChange('state', e.target.value)} options={stateOptions} />
                     <SearchableFormSelect label="City" value={formData.city} onChange={(e) => handleInputChange('city', e.target.value)} options={cityOptions} disabled={!formData.state} />
                     <FormInput label="ZIP Code" value={formData.zipCode} onChange={(e) => handleInputChange('zipCode', e.target.value)} />
 
                     <FormInput label="Emergency Contact Name" value={formData.emergencyContact} onChange={(e) => handleInputChange('emergencyContact', e.target.value)} />
-                    
+
                     <div>
-                      <FormInput 
-                        label="Emergency Contact Phone" 
-                        type="tel" 
-                        value={formData.emergencyPhone} 
-                        onChange={(e) => handleInputChange('emergencyPhone', e.target.value.replace(/[^0-9]/g, '').slice(0, 10))} 
-                        placeholder="e.g. 9876543210" 
+                      <FormInput
+                        label="Emergency Contact Phone"
+                        type="tel"
+                        value={formData.emergencyPhone}
+                        onChange={(e) => handleInputChange('emergencyPhone', e.target.value.replace(/[^0-9]/g, '').slice(0, 10))}
+                        placeholder="e.g. 9876543210"
                         maxLength={10}
                         error={!!validationErrors.emergencyPhone}
                       />
@@ -617,24 +617,24 @@ const nextStep = () => {
                 <div className="bg-slate-50/50 p-6 rounded-2xl border border-slate-100">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                     <div>
-                      <SearchableFormSelect 
-                        label="Department" 
-                        value={formData.department} 
-                        onChange={(e) => handleInputChange('department', e.target.value)} 
-                        options={departmentOptions} 
-                        required 
+                      <SearchableFormSelect
+                        label="Department"
+                        value={formData.department}
+                        onChange={(e) => handleInputChange('department', e.target.value)}
+                        options={departmentOptions}
+                        required
                         icon={<Icons.Briefcase />}
                         error={!!validationErrors.department}
                       />
                       <ErrorMessage field="department" />
                     </div>
-                    
+
                     <div>
-                      <FormInput 
-                        label="Specialization" 
-                        value={formData.specialization} 
-                        onChange={(e) => handleInputChange('specialization', e.target.value)} 
-                        required 
+                      <FormInput
+                        label="Specialization"
+                        value={formData.specialization}
+                        onChange={(e) => handleInputChange('specialization', e.target.value)}
+                        required
                         placeholder="e.g. Cardiology"
                         error={!!validationErrors.specialization}
                       />
@@ -642,17 +642,17 @@ const nextStep = () => {
                     </div>
 
                     <div>
-                      <FormInput 
-                        label="License / Registration No." 
-                        value={formData.licenseNumber} 
-                        onChange={(e) => handleInputChange('licenseNumber', e.target.value)} 
-                        required 
+                      <FormInput
+                        label="License / Registration No."
+                        value={formData.licenseNumber}
+                        onChange={(e) => handleInputChange('licenseNumber', e.target.value)}
+                        required
                         placeholder="MED-12345"
                         error={!!validationErrors.licenseNumber}
                       />
                       <ErrorMessage field="licenseNumber" />
                     </div>
-                    
+
                     <div>
                       <SearchableFormSelect
                         label="Highest Qualification"
@@ -666,23 +666,24 @@ const nextStep = () => {
                     </div>
 
                     <div>
-                      <FormInput 
-                        label="Years of Experience" 
-                        type="number" 
-                        value={formData.experience} 
-                        onChange={(e) => handleInputChange('experience', e.target.value)} 
+                      <FormInput
+                        label="Years of Experience"
+                        type="number"
+                        value={formData.experience}
+                        onChange={(e) => handleInputChange('experience', e.target.value)}
+                        required
                         placeholder="e.g. 5"
                         error={!!validationErrors.experience}
                       />
                       <ErrorMessage field="experience" />
                     </div>
-                    
+
                     <div>
-                      <FormInput 
-                        label="PAN Number" 
-                        value={formData.panNumber} 
-                        onChange={(e) => handleInputChange('panNumber', e.target.value)} 
-                        maxLength={10} 
+                      <FormInput
+                        label="PAN Number"
+                        value={formData.panNumber}
+                        onChange={(e) => handleInputChange('panNumber', e.target.value)}
+                        maxLength={10}
                         placeholder="ABCDE1234F"
                         error={!!validationErrors.panNumber}
                       />
@@ -698,25 +699,25 @@ const nextStep = () => {
               <div className="space-y-8 animate-fade-in-right">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <FormInput 
-                      label="Joining Date" 
-                      type="date" 
-                      value={formData.startDate} 
-                      onChange={(e) => handleInputChange('startDate', e.target.value)} 
+                    <FormInput
+                      label="Joining Date"
+                      type="date"
+                      value={formData.startDate}
+                      onChange={(e) => handleInputChange('startDate', e.target.value)}
                       required
                       error={!!validationErrors.startDate}
                     />
                     <ErrorMessage field="startDate" />
                   </div>
-                  
+
                   <SearchableFormSelect
                     label="Employment Type"
                     value={formData.isFullTime ? 'Full-time' : 'Part-time'}
                     onChange={(e) => {
                       const isFull = e.target.value === 'Full-time';
-                      setFormData(prev => ({ 
-                        ...prev, 
-                        isFullTime: isFull, 
+                      setFormData(prev => ({
+                        ...prev,
+                        isFullTime: isFull,
                         workingDaysPerWeek: isFull ? [] : prev.workingDaysPerWeek,
                         revenuePercentage: isFull ? 100 : prev.revenuePercentage
                       }));
@@ -742,13 +743,13 @@ const nextStep = () => {
                         />
                         <ErrorMessage field="shift" />
                       </div>
-                      
+
                       <div>
-                        <FormInput 
-                          label="Annual Salary (₹)" 
-                          type="number" 
-                          value={formData.amount} 
-                          onChange={(e) => handleInputChange('amount', e.target.value)} 
+                        <FormInput
+                          label="Annual Salary (₹)"
+                          type="number"
+                          value={formData.amount}
+                          onChange={(e) => handleInputChange('amount', e.target.value)}
                           placeholder="e.g. 1200000"
                           error={!!validationErrors.amount}
                         />
@@ -775,47 +776,47 @@ const nextStep = () => {
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                       <div>
-                        <SearchableFormSelect 
-                          label="Payment Model" 
-                          value={formData.paymentType} 
-                          onChange={(e) => handleInputChange('paymentType', e.target.value)} 
-                          options={[{ value: 'Fee per Visit', label: 'Fee per Visit' }, { value: 'Per Hour', label: 'Per Hour' }]} 
+                        <SearchableFormSelect
+                          label="Payment Model"
+                          value={formData.paymentType}
+                          onChange={(e) => handleInputChange('paymentType', e.target.value)}
+                          options={[{ value: 'Fee per Visit', label: 'Fee per Visit' }, { value: 'Per Hour', label: 'Per Hour' }]}
                           required
                           error={!!validationErrors.paymentType}
                         />
                         <ErrorMessage field="paymentType" />
                       </div>
-                      
+
                       <div>
-                        <FormInput 
-                          label="Rate / Amount (₹)" 
-                          type="number" 
-                          value={formData.amount} 
-                          onChange={(e) => handleInputChange('amount', e.target.value)} 
+                        <FormInput
+                          label="Rate / Amount (₹)"
+                          type="number"
+                          value={formData.amount}
+                          onChange={(e) => handleInputChange('amount', e.target.value)}
                           required
                           error={!!validationErrors.amount}
                         />
                         <ErrorMessage field="amount" />
                       </div>
-                      
+
                       <div>
-                        <FormInput 
-                          label="Contract Start" 
-                          type="date" 
-                          value={formData.contractStartDate} 
-                          onChange={(e) => handleInputChange('contractStartDate', e.target.value)} 
+                        <FormInput
+                          label="Contract Start"
+                          type="date"
+                          value={formData.contractStartDate}
+                          onChange={(e) => handleInputChange('contractStartDate', e.target.value)}
                           required
                           error={!!validationErrors.contractStartDate}
                         />
                         <ErrorMessage field="contractStartDate" />
                       </div>
-                      
+
                       <div>
-                        <FormInput 
-                          label="Contract End" 
-                          type="date" 
-                          value={formData.contractEndDate} 
-                          onChange={(e) => handleInputChange('contractEndDate', e.target.value)} 
+                        <FormInput
+                          label="Contract End"
+                          type="date"
+                          value={formData.contractEndDate}
+                          onChange={(e) => handleInputChange('contractEndDate', e.target.value)}
                           required
                           error={!!validationErrors.contractEndDate}
                         />
@@ -861,7 +862,7 @@ const nextStep = () => {
                           </div>
                           <ErrorMessage field="revenuePercentage" />
                         </div>
-                        
+
                         <div className="bg-white p-4 rounded-lg border border-blue-200">
                           <h5 className="text-xs font-bold text-blue-700 mb-2">Example Calculation</h5>
                           <div className="text-sm">
@@ -869,11 +870,11 @@ const nextStep = () => {
                               <span className="font-medium">Consultant Fees:</span> ₹{formData.amount || 0}
                             </p>
                             <p className="mb-1">
-                              <span className="font-medium">Doctor's Share ({formData.revenuePercentage}%):</span> 
+                              <span className="font-medium">Doctor's Share ({formData.revenuePercentage}%):</span>
                               <span className="text-green-600 font-bold"> ₹{(formData.amount * formData.revenuePercentage / 100).toFixed(2) || 0}</span>
                             </p>
                             <p>
-                              <span className="font-medium">Hospital's Share ({100 - formData.revenuePercentage}%):</span> 
+                              <span className="font-medium">Hospital's Share ({100 - formData.revenuePercentage}%):</span>
                               <span className="text-blue-600 font-bold"> ₹{(formData.amount * (100 - formData.revenuePercentage) / 100).toFixed(2) || 0}</span>
                             </p>
                           </div>
@@ -937,6 +938,7 @@ const nextStep = () => {
             <div className="mt-12 pt-6 border-t border-slate-100 flex justify-between items-center">
               {step > 1 ? (
                 <button
+                  key="back-btn"
                   type="button"
                   onClick={prevStep}
                   className="px-6 py-3 rounded-xl bg-white border border-slate-200 text-slate-600 font-bold hover:bg-slate-50 hover:text-slate-900 transition-colors shadow-sm"
@@ -949,14 +951,16 @@ const nextStep = () => {
 
               {step < 3 ? (
                 <button
+                  key="next-btn"
                   type="button"
-                  onClick={nextStep}
+                  onClick={(e) => { e.preventDefault(); nextStep(); }}
                   className="px-8 py-3 rounded-xl bg-emerald-600 text-white font-bold hover:bg-emerald-700 shadow-lg shadow-emerald-600/20 transition-all hover:-translate-y-0.5"
                 >
                   Next Step
                 </button>
               ) : (
                 <button
+                  key="submit-btn"
                   type="submit"
                   disabled={isLoading}
                   className="px-10 py-3 rounded-xl bg-emerald-600 text-white font-bold hover:bg-emerald-700 shadow-lg shadow-emerald-600/20 transition-all hover:-translate-y-0.5 disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-2"
