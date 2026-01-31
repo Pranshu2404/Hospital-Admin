@@ -496,6 +496,8 @@ const AppointmentDetails = () => {
     diagnosis: '',
     notes: '',
     investigation: '',
+    presenting_complaint: '',
+    history_of_presenting_complaint: '',
     // Add one default procedure box open by default
     recommendedProcedures: [{
       procedure_code: '',
@@ -598,6 +600,26 @@ const AppointmentDetails = () => {
     };
 
     loadInitialData();
+  }, []);
+
+  // ✅ Fetch current doctor's department (Added to fix history loading)
+  useEffect(() => {
+    const fetchCurrentDoctorDept = async () => {
+      const doctorId = localStorage.getItem('doctorId');
+      if (!doctorId) return;
+
+      try {
+        const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/doctors/${doctorId}`);
+        if (res.data) {
+          const dept = res.data.department?._id || res.data.department;
+          setCurrentDoctorDept(dept);
+        }
+      } catch (error) {
+        console.error("Error fetching current doctor details:", error);
+      }
+    };
+
+    fetchCurrentDoctorDept();
   }, []);
 
   useEffect(() => {
@@ -1124,6 +1146,8 @@ const AppointmentDetails = () => {
         symptoms: prescription.symptoms?.trim() || '',
         notes: prescription.notes?.trim() || '',
         investigation: prescription.investigation?.trim() || '',
+        presenting_complaint: prescription.presenting_complaint?.trim() || '',
+        history_of_presenting_complaint: prescription.history_of_presenting_complaint?.trim() || '',
         recommendedProcedures: proceduresWithCosts,
         items: validItems.map(item => ({
           medicine_name: item.medicine_name.trim(),
@@ -1192,6 +1216,8 @@ const AppointmentDetails = () => {
         diagnosis: '',
         notes: '',
         investigation: '',
+        presenting_complaint: '',
+        history_of_presenting_complaint: '',
         recommendedProcedures: [],
         items: [{
           medicine_name: '',
@@ -1508,6 +1534,29 @@ const AppointmentDetails = () => {
 
                         {expandedPrescription === rx._id && (
                           <div className="px-6 py-5 space-y-5">
+                            {rx.presenting_complaint && (
+                              <div className="bg-rose-50 rounded-lg p-4 border border-rose-200">
+                                <div className="flex items-start gap-3">
+                                  <FaNotesMedical className="text-rose-600 text-lg mt-1 flex-shrink-0" />
+                                  <div className="flex-1">
+                                    <h6 className="font-bold text-slate-800 mb-1">Presenting Complaint</h6>
+                                    <p className="text-slate-700 text-sm whitespace-pre-line">{rx.presenting_complaint}</p>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            {rx.history_of_presenting_complaint && (
+                              <div className="bg-orange-50 rounded-lg p-4 border border-orange-200">
+                                <div className="flex items-start gap-3">
+                                  <FaHistory className="text-orange-600 text-lg mt-1 flex-shrink-0" />
+                                  <div className="flex-1">
+                                    <h6 className="font-bold text-slate-800 mb-1">History of Presenting Complaint</h6>
+                                    <p className="text-slate-700 text-sm whitespace-pre-line">{rx.history_of_presenting_complaint}</p>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
                             {rx.notes && (
                               <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
                                 <div className="flex items-start gap-3">
@@ -1982,6 +2031,34 @@ const AppointmentDetails = () => {
                             <div className="p-6 space-y-6 flex-grow">
                               <div className="mb-4">
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
+                                  Presenting Complaint
+                                </label>
+                                <textarea
+                                  name="presenting_complaint"
+                                  value={prescription.presenting_complaint}
+                                  onChange={handleInputChange}
+                                  placeholder="Chief complaint or main reason for visit..."
+                                  rows={2}
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
+                                />
+                              </div>
+
+                              <div className="mb-4">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                  History of Presenting Complaint
+                                </label>
+                                <textarea
+                                  name="history_of_presenting_complaint"
+                                  value={prescription.history_of_presenting_complaint}
+                                  onChange={handleInputChange}
+                                  placeholder="Detailed history of the presenting complaint..."
+                                  rows={3}
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
+                                />
+                              </div>
+
+                              <div className="mb-4">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
                                   Clinical Notes
                                 </label>
                                 <textarea
@@ -2045,23 +2122,21 @@ const AppointmentDetails = () => {
                                       return (
                                         <div
                                           key={index}
-                                          className={`rounded-lg border transition-all ${
-                                            isExpanded
-                                              ? 'border-blue-200 bg-white shadow-md'
+                                          className={`rounded-lg border transition-all ${isExpanded
+                                              ? 'border-blue-200 bg-blue-50 shadow-md'
                                               : 'border-blue-100 bg-blue-50 hover:border-blue-300'
-                                          }`}
+                                            }`}
                                         >
-                                          {/* Header - Always visible */}
+                                          {/* Header - Always visible - Compact padding */}
                                           <div className="flex items-center justify-between">
                                             <button
                                               type="button"
                                               onClick={() => setExpandedProcedureIndex(isExpanded ? -1 : index)}
-                                              className="flex-1 px-4 py-3 flex justify-between items-center hover:bg-blue-100 rounded-lg transition-colors text-left"
+                                              className="flex-1 px-4 py-2 flex justify-between items-center hover:bg-blue-100 rounded-lg transition-colors text-left"
                                             >
                                               <div className="flex items-center gap-3 flex-1">
-                                                <div className={`h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold ${
-                                                  isExpanded ? 'bg-blue-100 text-blue-600' : 'bg-slate-200 text-slate-600'
-                                                }`}>
+                                                <div className={`h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold ${isExpanded ? 'bg-blue-100 text-blue-600' : 'bg-slate-200 text-slate-600'
+                                                  }`}>
                                                   {index + 1}
                                                 </div>
                                                 {isExpanded ? (
@@ -2071,9 +2146,9 @@ const AppointmentDetails = () => {
                                                     {isFilled ? (
                                                       <div className="flex flex-wrap items-center gap-2">
                                                         <span className="font-medium text-slate-800 truncate">{proc.procedure_code}</span>
-                                                        <span className="text-xs bg-slate-200 text-slate-700 px-2 py-1 rounded">{proc.procedure_name}</span>
+                                                        <span className="text-xs bg-slate-200 text-slate-700 px-2 py-0.5 rounded">{proc.procedure_name}</span>
                                                         {proc.notes && (
-                                                          <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded truncate">{proc.notes}</span>
+                                                          <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded truncate">{proc.notes}</span>
                                                         )}
                                                       </div>
                                                     ) : (
@@ -2097,18 +2172,17 @@ const AppointmentDetails = () => {
                                             )}
                                           </div>
 
-                                          {/* Expanded Content */}
+                                          {/* Expanded Content - Compacted */}
                                           {isExpanded && (
-                                            <div className="border-t border-blue-200 p-4 bg-white rounded-b-lg">
-                                              <div className="flex justify-between items-start mb-3">
-                                                <h4 className="text-xs font-bold text-blue-400 uppercase">Procedure #{index + 1}</h4>
-                                                <button onClick={() => removeProcedure(index)} className="text-blue-400 hover:text-red-500 transition-colors">
+                                            <div className="border-t border-blue-200 p-3 rounded-b-lg">
+                                              <div className="flex justify-between items-start mb-2">
+                                                <button onClick={() => removeProcedure(index)} className="text-blue-400 hover:text-red-500 transition-colors ml-auto">
                                                   <FaTrash size={14} />
                                                 </button>
                                               </div>
 
-                                              <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-                                                <div className="md:col-span-6">
+                                              <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+                                                <div className="md:col-span-5">
                                                   <SearchableFormSelect
                                                     label="Procedure Name/Code"
                                                     value={proc.procedure_code}
@@ -2127,33 +2201,33 @@ const AppointmentDetails = () => {
                                                   />
                                                 </div>
 
-                                                <div className="md:col-span-6">
-                                                  <div className="mb-4 md:col-span-6">
-                                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                      Procedure Details
+                                                <div className="md:col-span-3">
+                                                  <div className="mb-0">
+                                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                                                      Details
                                                     </label>
                                                     <input
                                                       type="text"
                                                       value={proc.procedure_name || ''}
                                                       readOnly={true}
-                                                      placeholder="Will auto-fill when code selected"
-                                                      className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
+                                                      placeholder="Auto-fill"
+                                                      className="w-full mt-1 px-3 py-3 text-sm border border-gray-300 rounded-lg bg-white focus:ring-1 focus:ring-teal-500 transition-colors"
                                                     />
                                                   </div>
                                                 </div>
 
-                                                <div className="md:col-span-12">
-                                                  <div className="mb-4 md:col-span-12">
-                                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                <div className="md:col-span-4">
+                                                  <div className="mb-0">
+                                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
                                                       Notes
                                                     </label>
                                                     <textarea
                                                       name="notes"
                                                       value={proc.notes || ''}
                                                       onChange={(e) => handleProcedureChange(index, e)}
-                                                      placeholder="Additional notes for this procedure..."
-                                                      rows={2}
-                                                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
+                                                      placeholder="Notes..."
+                                                      rows={1}
+                                                      className="w-full px-3 py-3 text-sm border border-gray-300 rounded-lg focus:ring-1 focus:ring-teal-500 transition-colors bg-white"
                                                     />
                                                   </div>
                                                 </div>
@@ -2187,23 +2261,21 @@ const AppointmentDetails = () => {
                                     return (
                                       <div
                                         key={index}
-                                        className={`rounded-lg border transition-all ${
-                                          isExpanded
-                                            ? 'border-teal-200 bg-white shadow-md'
-                                            : 'border-slate-200 bg-slate-50 hover:border-teal-300'
-                                        }`}
+                                        className={`rounded-lg border transition-all ${isExpanded
+                                            ? 'border-teal-200 bg-teal-50 shadow-md'
+                                            : 'border-teal-100 bg-teal-50 hover:border-teal-300'
+                                          }`}
                                       >
-                                        {/* Header - Always visible */}
+                                        {/* Header - Always visible - Compact padding */}
                                         <div className="flex items-center justify-between">
                                           <button
                                             type="button"
                                             onClick={() => setExpandedMedicineIndex(isExpanded ? -1 : index)}
-                                            className="flex-1 px-4 py-3 flex justify-between items-center hover:bg-slate-100 rounded-lg transition-colors text-left"
+                                            className="flex-1 px-4 py-2 flex justify-between items-center hover:bg-teal-100 rounded-lg transition-colors text-left"
                                           >
                                             <div className="flex items-center gap-3 flex-1">
-                                              <div className={`h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold ${
-                                                isExpanded ? 'bg-teal-100 text-teal-600' : 'bg-slate-200 text-slate-600'
-                                              }`}>
+                                              <div className={`h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold ${isExpanded ? 'bg-teal-100 text-teal-600' : 'bg-slate-200 text-slate-600'
+                                                }`}>
                                                 {index + 1}
                                               </div>
                                               {isExpanded ? (
@@ -2213,10 +2285,10 @@ const AppointmentDetails = () => {
                                                   {isFilled ? (
                                                     <div className="flex flex-wrap items-center gap-2">
                                                       <span className="font-medium text-slate-800 truncate">{item.medicine_name}</span>
-                                                      <span className="text-xs bg-slate-200 text-slate-700 px-2 py-1 rounded">{item.dosage}</span>
-                                                      <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded">{item.frequency}</span>
+                                                      <span className="text-xs bg-slate-200 text-slate-700 px-2 py-0.5 rounded">{item.dosage}</span>
+                                                      <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded">{item.frequency}</span>
                                                       {item.route_of_administration && (
-                                                        <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">{item.route_of_administration}</span>
+                                                        <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">{item.route_of_administration}</span>
                                                       )}
                                                     </div>
                                                   ) : (
@@ -2240,27 +2312,23 @@ const AppointmentDetails = () => {
                                           )}
                                         </div>
 
-                                        {/* Expanded Content */}
+                                        {/* Expanded Content - Compacted */}
                                         {isExpanded && (
-                                          <div className="border-t border-slate-200 p-4 bg-white rounded-b-lg">
-                                            <div className="flex justify-between items-start mb-3">
-                                              <h4 className="text-xs font-bold text-slate-400 uppercase">Medicine #{index + 1}</h4>
-                                              {prescription.items.length > 1 && (
-                                                <button onClick={() => removeMedicine(index)} className="text-slate-400 hover:text-red-500 transition-colors">
-                                                  <FaTrash size={14} />
-                                                </button>
-                                              )}
+                                          <div className="border-t border-slate-200 p-3 rounded-b-lg">
+                                            <div className="flex justify-between items-start mb-2">
+                                              <button onClick={() => removeMedicine(index)} className="text-slate-400 hover:text-red-500 transition-colors ml-auto">
+                                                <FaTrash size={14} />
+                                              </button>
                                             </div>
 
-                                            <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-
-                                              <div className="md:col-span-6">
+                                            <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+                                              <div className="md:col-span-4">
                                                 <SearchableFormSelect
                                                   label="Medicine Name"
                                                   value={item.medicine_name}
                                                   onChange={(e) => handleMedicineChange(index, e)}
                                                   options={medicineOptions}
-                                                  placeholder="Search medicine..."
+                                                  placeholder="Search..."
                                                   required
                                                   type="medicine"
                                                   name="medicine_name"
@@ -2273,23 +2341,21 @@ const AppointmentDetails = () => {
                                                   freeSolo={true}
                                                 />
                                               </div>
-                                              <div className="md:col-span-3">
+                                              <div className="md:col-span-2">
                                                 <SearchableFormSelect
-                                                  label="Medicine Type"
+                                                  label="Type"
                                                   value={item.medicine_type || ''}
                                                   onChange={(e) => handleMedicineChange(index, e)}
                                                   options={medicineTypeOptions}
-                                                  placeholder="Select type"
+                                                  placeholder="Type"
                                                   name="medicine_type"
                                                   allowCustom={false}
                                                   freeSolo={false}
                                                 />
                                               </div>
-
-
-                                              <div className="md:col-span-3">
-                                                <div className="mb-4 md:col-span-3">
-                                                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                                              <div className="md:col-span-2">
+                                                <div className="mb-0">
+                                                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
                                                     Dosage <span className="text-red-500">*</span>
                                                   </label>
                                                   <input
@@ -2299,31 +2365,29 @@ const AppointmentDetails = () => {
                                                     onChange={(e) => handleMedicineChange(index, e)}
                                                     placeholder="500mg"
                                                     required={true}
-                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
+                                                    className="w-full mt-1 px-3 py-3 text-sm border border-gray-300 rounded-lg focus:ring-1 focus:ring-teal-500 transition-colors bg-grey-100"
                                                   />
                                                 </div>
                                               </div>
-
-                                              <div className="md:col-span-3">
+                                              <div className="md:col-span-2">
                                                 <SearchableFormSelect
                                                   label="Route"
                                                   value={item.route_of_administration || ""}
                                                   onChange={(e) => handleMedicineChange(index, e)}
                                                   options={routeOptions}
-                                                  placeholder="Select route"
+                                                  placeholder="Route"
                                                   name="route_of_administration"
                                                   allowCustom={false}
                                                   freeSolo={false}
                                                 />
                                               </div>
-
-                                              <div className="md:col-span-3">
+                                              <div className="md:col-span-2">
                                                 <SearchableFormSelect
                                                   label="Frequency"
                                                   value={item.frequency}
                                                   onChange={(e) => handleMedicineChange(index, e)}
                                                   options={frequencyOptions}
-                                                  placeholder="Select frequency"
+                                                  placeholder="Freq"
                                                   name="frequency"
                                                   required={true}
                                                   allowCustom={false}
@@ -2331,41 +2395,40 @@ const AppointmentDetails = () => {
                                                 />
                                               </div>
 
-                                              <div className="md:col-span-3">
+                                              {/* Row 2 */}
+                                              <div className="md:col-span-2">
                                                 <SearchableFormSelect
                                                   label="Duration"
                                                   value={item.duration}
                                                   onChange={(e) => handleMedicineChange(index, e)}
                                                   options={durationOptions}
-                                                  placeholder="Select duration"
+                                                  placeholder="Dur"
                                                   name="duration"
                                                   required={true}
                                                   allowCustom={false}
                                                   freeSolo={false}
                                                 />
                                               </div>
-
-                                              <div className="md:col-span-3">
-                                                <div className="mb-4 md:col-span-3">
-                                                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                    Quantity
+                                              <div className="md:col-span-2">
+                                                <div className="mb-0">
+                                                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                                                    Qty
                                                   </label>
                                                   <input
                                                     type="text"
                                                     name="quantity"
                                                     value={item.quantity}
                                                     onChange={(e) => handleMedicineChange(index, e)}
-                                                    placeholder="Auto-calculated"
+                                                    placeholder="Qty"
                                                     readOnly={true}
-                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
+                                                    className="w-full mt-1 px-3 py-3 text-sm border border-gray-300 rounded-lg bg-gray-100 focus:ring-1 focus:ring-teal-500 transition-colors"
                                                   />
                                                 </div>
                                               </div>
-
-                                              <div className="md:col-span-12">
-                                                <div className="mb-4 md:col-span-12">
-                                                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                    Special Instructions
+                                              <div className="md:col-span-8">
+                                                <div className="mb-0">
+                                                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                                                    Instructions
                                                   </label>
                                                   <input
                                                     type="text"
@@ -2373,7 +2436,7 @@ const AppointmentDetails = () => {
                                                     value={item.instructions}
                                                     onChange={(e) => handleMedicineChange(index, e)}
                                                     placeholder="e.g. After food with water"
-                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
+                                                    className="w-full mt-1 px-3 py-3 text-sm border border-gray-300 rounded-lg focus:ring-1 focus:ring-teal-500 transition-colors bg-white"
                                                   />
                                                 </div>
                                               </div>

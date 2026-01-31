@@ -52,7 +52,7 @@ const PatientListPage = () => {
               patientMap[patientId] = {
                 id: patient.patient_id || patientId,
                 patientId: patient.patient_id || patientId,
-                mongoId: patientId,
+                mongoId: patient._id,
                 name: `${patient.first_name || ""} ${patient.last_name || ""}`.trim(),
                 firstName: patient.first_name || "",
                 lastName: patient.last_name || "",
