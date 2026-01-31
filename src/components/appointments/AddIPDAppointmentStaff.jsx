@@ -6,7 +6,7 @@ import AppointmentSlipModal from './AppointmentSlipModal';
 import QRCodeModal from './QRCodeModal';
 import PaymentPendingModal from './PaymentPendingModal';
 import SuccessModal from './SuccessModal';
-import { FaUser, FaCloudUploadAlt, FaTimes, FaIdCard, FaCalendarAlt, FaClock, FaUserPlus, FaCheckCircle, FaArrowLeft } from 'react-icons/fa';
+import { FaUser, FaCloudUploadAlt, FaTimes, FaIdCard, FaCalendarAlt, FaClock, FaUserPlus, FaCheckCircle, FaArrowLeft, FaMoneyBillWave } from 'react-icons/fa';
 
 const appointmentTypeOptions = [
   { value: 'consultation', label: 'Consultation' },
@@ -374,8 +374,25 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
   // Calculate charges whenever relevant form data changes
   useEffect(() => {
     calculateCharges();
-  }, [formData.appointment_type, formData.doctorId, formData.duration, includeRegistrationFee, formData.roomId, type]);
+  }, [formData.appointment_type, formData.doctorId, formData.duration, includeRegistrationFee, formData.roomId, type, doctorDetails]);
 
+  // Helper function to get doctor fee description
+  const getDoctorFeeDescription = (doctorDetails) => {
+    if (!doctorDetails) return "Consultation Fee";
+    
+    const doctorName = `Dr. ${doctorDetails.firstName} ${doctorDetails.lastName}`;
+    
+    if (doctorDetails.paymentType === 'Per Hour') {
+      const hours = Number(formData.duration) / 60;
+      return `Doctor Fee (${hours.toFixed(1)} hr @ ₹${doctorDetails.amount || 0}/hr)`;
+    } else if (doctorDetails.paymentType === 'Fee per Visit') {
+      return `Doctor Consultation Fee (${doctorName})`;
+    } else {
+      return `Consultation Fee (${doctorName})`;
+    }
+  };
+
+  // UPDATED: Calculate charges based on doctor type
   const calculateCharges = () => {
     let charges = [];
     let total = 0;
@@ -383,10 +400,11 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
     // Check if patient is new (based on includeRegistrationFee checkbox)
     const isNewPatient = includeRegistrationFee;
 
-    // Add OPD charges if applicable
-    if (type === 'opd' && hospitalCharges?.opdCharges) {
-      if (isNewPatient) {
-        const regFee = hospitalCharges.opdCharges.registrationFee || 0;
+    // For OPD appointments
+    if (type === 'opd') {
+      // First add OPD registration fee if it's a new patient
+      if (isNewPatient && hospitalCharges?.opdCharges?.registrationFee) {
+        const regFee = hospitalCharges.opdCharges.registrationFee;
         charges.push({
           description: "OPD Registration Fee",
           amount: regFee
@@ -394,14 +412,64 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
         total += regFee;
       }
 
-      const consultFee = hospitalCharges.opdCharges.consultationFee || 0;
-      charges.push({
-        description: "OPD Consultation Fee",
-        amount: consultFee
-      });
-      total += consultFee;
+      // Determine consultation fee based on doctor type
+      let consultationFee = 0;
+      
+      if (doctorDetails) {
+        // Check if doctor is part-time or fee-per-visit
+        const isPartTimeDoctor = !doctorDetails.isFullTime || 
+                                doctorDetails.paymentType === 'Fee per Visit' || 
+                                doctorDetails.paymentType === 'Per Hour';
+        
+        if (isPartTimeDoctor) {
+          // For part-time or fee-per-visit doctors, use doctor.amount field (consultation fee)
+          consultationFee = doctorDetails.amount || 0;
+          
+          // For per-hour doctors, calculate based on duration
+          if (doctorDetails.paymentType === 'Per Hour') {
+            const hours = Number(formData.duration) / 60;
+            consultationFee = consultationFee * hours;
+          }
+          
+          // Add doctor consultation fee
+          charges.push({
+            description: getDoctorFeeDescription(doctorDetails),
+            amount: consultationFee
+          });
+          total += consultationFee;
+          
+          // Add hospital service charge for OPD (from hospital charges)
+          // const opdServiceFee = hospitalCharges?.opdCharges?.serviceCharge || 
+          //                      hospitalCharges?.opdCharges?.consultationFee || 
+          //                      0;
+          // if (opdServiceFee > 0) {
+          //   charges.push({
+          //     description: "Hospital Service Charge",
+          //     amount: opdServiceFee
+          //   });
+          //   total += opdServiceFee;
+          // }
+        } else {
+          // For full-time doctors, use hospital's consultation fee
+          consultationFee = hospitalCharges?.opdCharges?.consultationFee || 0;
+          charges.push({
+            description: `Consultation Fee (Dr. ${doctorDetails.firstName} ${doctorDetails.lastName})`,
+            amount: consultationFee
+          });
+          total += consultationFee;
+        }
+      } else {
+        // If no doctor details yet, use default hospital consultation fee
+        consultationFee = hospitalCharges?.opdCharges?.consultationFee || 0;
+        charges.push({
+          description: "OPD Consultation Fee",
+          amount: consultationFee
+        });
+        total += consultationFee;
+      }
 
-      if (hospitalCharges.opdCharges.discountValue > 0) {
+      // Apply discount if available
+      if (hospitalCharges?.opdCharges?.discountValue > 0) {
         let discount = 0;
         if (hospitalCharges.opdCharges.discountType === 'Percentage') {
           discount = (total * hospitalCharges.opdCharges.discountValue) / 100;
@@ -446,48 +514,15 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
           total += roomCharge;
         }
       }
-    }
 
-    // Add doctor fees based on employment type
-    if (doctorDetails) {
-      if (doctorDetails.type === "part-time" && doctorDetails.payPerHour) {
-        const hours = Number(formData.duration) / 60;
-        const docFee = doctorDetails.payPerHour * hours;
+      // For IPD, include doctor's visit fee if part-time
+      if (doctorDetails && !doctorDetails.isFullTime && doctorDetails.paymentType === 'Fee per Visit') {
+        const doctorVisitFee = doctorDetails.amount || 0;
         charges.push({
-          description: `Doctor Fee (${hours} hr)`,
-          amount: docFee
+          description: `Doctor Visit Fee (Dr. ${doctorDetails.firstName} ${doctorDetails.lastName})`,
+          amount: doctorVisitFee
         });
-        total += docFee;
-      } else {
-        // For full-time doctors, use appointment type-based fees
-        let consultationFee = 0;
-
-        switch (formData.appointment_type) {
-          case 'consultation':
-            consultationFee = doctorDetails.consultationFee || 500;
-            break;
-          case 'follow-up':
-            consultationFee = doctorDetails.followUpFee || 300;
-            break;
-          case 'checkup':
-            consultationFee = doctorDetails.checkupFee || 700;
-            break;
-          case 'procedure':
-            consultationFee = doctorDetails.procedureFee || 1500;
-            break;
-          case 'surgery':
-            consultationFee = doctorDetails.surgeryConsultationFee || 2000;
-            break;
-          case 'emergency':
-            consultationFee = doctorDetails.emergencyFee || 1000;
-            break;
-          default:
-            consultationFee = 500;
-        }
-
-        // Adjust fee based on duration for full-time doctors too
-        const durationMultiplier = parseInt(formData.duration) / 30;
-        consultationFee = Math.round(consultationFee * durationMultiplier);
+        total += doctorVisitFee;
       }
     }
 
@@ -1356,6 +1391,20 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
   const selectedPatient = formData.patientId ?
     filteredPatients.find(p => p._id === formData.patientId) : null;
 
+  // Helper to display doctor consultation fee
+  const getDoctorFeeDisplay = () => {
+    if (!doctorDetails) return null;
+    
+    if (doctorDetails.paymentType === 'Per Hour') {
+      return `₹${doctorDetails.amount || 0}/hour`;
+    } else if (doctorDetails.paymentType === 'Fee per Visit') {
+      return `₹${doctorDetails.amount || 0}/visit`;
+    } else if (doctorDetails.isFullTime) {
+      return `₹${hospitalCharges?.opdCharges?.consultationFee || 0} (Hospital Fee)`;
+    }
+    return `₹${doctorDetails.amount || 0}`;
+  };
+
   return (
     <>
       <style>{`
@@ -1395,6 +1444,34 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
           z-index: 100;
           max-width: 500px;
           width: 90%;
+        }
+
+        .fee-info-badge {
+          display: inline-flex;
+          align-items: center;
+          padding: 4px 8px;
+          border-radius: 6px;
+          font-size: 12px;
+          font-weight: 600;
+          margin-left: 8px;
+        }
+
+        .fee-part-time {
+          background-color: #f0f9ff;
+          color: #0369a1;
+          border: 1px solid #bae6fd;
+        }
+
+        .fee-full-time {
+          background-color: #f0fdf4;
+          color: #15803d;
+          border: 1px solid #bbf7d0;
+        }
+
+        .fee-per-hour {
+          background-color: #fef3c7;
+          color: #92400e;
+          border: 1px solid #fde68a;
         }
       `}</style>
 
@@ -1520,7 +1597,7 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
                               onChange={(e) => handleInputChange('doctorId', e.target.value)}
                               options={(doctors || []).map(d => ({
                                 value: d._id,
-                                label: (d.isFullTime) ? `Dr. ${d.firstName} ${d.lastName} (Full Time)` : `Dr. ${d.firstName} ${d.lastName} (Part Time)`
+                                label: `${d.isFullTime ? 'Full-time' : 'Part-time'} - Dr. ${d.firstName} ${d.lastName} (${type === 'opd' ? `Fee: ₹${d.amount}` : ''})`
                               }))}
                               required
                             />
@@ -1700,7 +1777,19 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
 
                         {/* Charges Summary */}
                         <div className="bg-gray-50 border border-gray-100 rounded-lg p-6">
-                          <h3 className="text-lg font-semibold text-gray-900 mb-4">Charges Summary</h3>
+                          <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-lg font-semibold text-gray-900">Charges Summary</h3>
+                            {doctorDetails && type === 'opd' && (
+                              <div className={`fee-info-badge ${
+                                doctorDetails.paymentType === 'Per Hour' ? 'fee-per-hour' :
+                                !doctorDetails.isFullTime ? 'fee-part-time' : 'fee-full-time'
+                              }`}>
+                                <FaMoneyBillWave className="mr-1" size={12} />
+                                {doctorDetails.paymentType === 'Per Hour' ? 'Per Hour' :
+                                 !doctorDetails.isFullTime ? 'Part-time Fee' : 'Hospital Fee'}
+                              </div>
+                            )}
+                          </div>
                           {chargesSummary.length > 0 ? (
                             <div className="space-y-3">
                               {chargesSummary.map((item, index) => (
@@ -1977,6 +2066,19 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
                         <p className="text-sm text-gray-600">
                           {doctorDetails.specialization} • {doctorDetails.isFullTime ? 'Full-time' : 'Part-time'}
                         </p>
+                        {type === 'opd' && (
+                          <div className="mt-2">
+                            <p className="text-sm font-medium text-gray-900 flex items-center">
+                              <FaMoneyBillWave className="mr-2" size={14} />
+                              Consultation Fee: {getDoctorFeeDisplay()}
+                            </p>
+                            {doctorDetails.revenuePercentage && doctorDetails.revenuePercentage < 100 && (
+                              <p className="text-xs text-blue-600 mt-1">
+                                Doctor's revenue share: {doctorDetails.revenuePercentage}%
+                              </p>
+                            )}
+                          </div>
+                        )}
                       </div>
                     )}
 

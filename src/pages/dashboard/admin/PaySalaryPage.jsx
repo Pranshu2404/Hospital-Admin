@@ -11,9 +11,12 @@ import {
   FaDollarSign,
   FaNotesMedical,
   FaTrashAlt,
-  FaFileAlt
+  FaFileAlt,
+  FaMoneyBillWave,
+  FaArrowLeft // ADD THIS ICON
 } from 'react-icons/fa';
 import { toast } from 'react-toastify';
+import { useNavigate } from 'react-router-dom'; // ADD THIS
 import Layout from '@/components/Layout';
 import { adminSidebar } from '@/constants/sidebarItems/adminSidebar';
 
@@ -35,6 +38,9 @@ const PaySalaryPage = () => {
     paymentMethod: 'bank_transfer',
     notes: ''
   });
+
+  // NEW: Navigation hook
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchData();
@@ -64,7 +70,7 @@ const PaySalaryPage = () => {
     try {
       // Assuming there's an API endpoint to get a list of doctors
       const response = await apiClient.get('/doctors');
-      setDoctors(response.data.doctors || []);
+      setDoctors(response.data || []); // Adjusted based on your API response
     } catch (err) {
       console.error('Error fetching doctors:', err);
       setDoctors([]); // Ensure doctors is always an array
@@ -130,16 +136,44 @@ const PaySalaryPage = () => {
     }).format(amount);
   };
 
+  // Calculate selected amount with revenue distribution display
+  const calculateSelectedAmount = () => {
+    return salaries
+      .filter(s => selectedSalaries.includes(s._id))
+      .reduce((sum, salary) => {
+        // Calculate based on doctor's revenue percentage
+        const doctor = salary.doctor_id || {};
+        const baseAmount = salary.net_amount || salary.amount || 0;
+        
+        // For part-time doctors with revenue percentage < 100%
+        if (doctor.revenuePercentage && doctor.revenuePercentage < 100) {
+          const percentage = doctor.revenuePercentage;
+          return sum + (baseAmount * percentage / 100);
+        }
+        
+        return sum + baseAmount;
+      }, 0);
+  };
+
   return (
     <Layout sidebarItems={adminSidebar}>
     <div className="p-6 space-y-6 bg-gray-100 min-h-screen">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-            <FaMoneyCheckAlt className="text-teal-600" />
-            Pay Salaries
-          </h1>
-          <p className="text-gray-600">Review and process pending salary payments for doctors.</p>
+        <div className="flex items-center gap-4">
+          {/* Back to Expense Page Button */}
+          <button
+            onClick={() => navigate('/dashboard/admin/expense')}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors"
+          >
+            <FaArrowLeft /> Back to Expenses
+          </button>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+              <FaMoneyCheckAlt className="text-teal-600" />
+              Pay Salaries
+            </h1>
+            <p className="text-gray-600">Review and process pending salary payments for doctors.</p>
+          </div>
         </div>
         <button
           onClick={handlePaySalaries}
@@ -154,7 +188,7 @@ const PaySalaryPage = () => {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="bg-white p-6 rounded-lg shadow border flex items-center justify-between">
           <div>
             <p className="text-sm text-gray-600">Pending Records</p>
@@ -173,10 +207,17 @@ const PaySalaryPage = () => {
           <div>
             <p className="text-sm text-gray-600">Selected Amount</p>
             <p className="text-2xl font-bold text-blue-600">
-              {formatCurrency(salaries.filter(s => selectedSalaries.includes(s._id)).reduce((sum, s) => sum + s.net_amount, 0))}
+              {formatCurrency(calculateSelectedAmount())}
             </p>
           </div>
           <FaCheckCircle className="text-3xl text-blue-400" />
+        </div>
+        <div className="bg-white p-6 rounded-lg shadow border flex items-center justify-between">
+          <div>
+            <p className="text-sm text-gray-600">Selected Records</p>
+            <p className="text-2xl font-bold text-green-600">{selectedSalaries.length}</p>
+          </div>
+          <FaUsers className="text-3xl text-green-400" />
         </div>
       </div>
 
@@ -195,6 +236,7 @@ const PaySalaryPage = () => {
             >
               <option value="monthly">Monthly</option>
               <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
             </select>
           </div>
           <div>
@@ -209,6 +251,8 @@ const PaySalaryPage = () => {
               {doctors.map(doctor => (
                 <option key={doctor._id} value={doctor._id}>
                   {doctor.firstName} {doctor.lastName} ({doctor.paymentType})
+                  {doctor.revenuePercentage && doctor.revenuePercentage < 100 && 
+                    ` - ${doctor.revenuePercentage}% share`}
                 </option>
               ))}
             </select>
@@ -239,6 +283,28 @@ const PaySalaryPage = () => {
             />
           </div>
         </div>
+        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+            <input
+              type="date"
+              name="startDate"
+              value={filters.startDate}
+              onChange={handleFilterChange}
+              className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+            <input
+              type="date"
+              name="endDate"
+              value={filters.endDate}
+              onChange={handleFilterChange}
+              className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500"
+            />
+          </div>
+        </div>
       </div>
 
       <div className="bg-white rounded-lg shadow border overflow-hidden">
@@ -246,9 +312,18 @@ const PaySalaryPage = () => {
           <h3 className="text-lg font-semibold text-gray-800">
             Pending Salaries
           </h3>
-          <span className="text-sm text-gray-500">
-            {salaries.length} records found
-          </span>
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-gray-500">
+              {salaries.length} records found
+            </span>
+            <button
+              onClick={handleSelectAll}
+              className="text-sm px-3 py-1 rounded-lg border border-gray-300 hover:bg-gray-50"
+            >
+              {selectedSalaries.length === salaries.length && salaries.length > 0 ? 
+                'Deselect All' : 'Select All'}
+            </button>
+          </div>
         </div>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
@@ -266,42 +341,79 @@ const PaySalaryPage = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Payment Type</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Period</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Net Amount</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Notes</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Appointments</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Revenue %</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {salaries.map(salary => (
-                <tr key={salary._id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <input
-                      type="checkbox"
-                      checked={selectedSalaries.includes(salary._id)}
-                      onChange={() => handleSelectSalary(salary._id)}
-                      className="rounded text-teal-600 focus:ring-teal-500"
-                    />
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">
-                      {salary.doctor_id?.firstName} {salary.doctor_id?.lastName}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{salary.doctor_id?.paymentType}</div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="text-sm font-medium text-gray-900 capitalize">{salary.period_type}</div>
-                    <div className="text-xs text-gray-500">
-                      {new Date(salary.period_start).toLocaleDateString()} - {new Date(salary.period_end).toLocaleDateString()}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-bold text-green-600">{formatCurrency(salary.net_amount)}</div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="text-sm text-gray-500 max-w-xs truncate">{salary.notes}</div>
-                  </td>
-                </tr>
-              ))}
+              {salaries.map(salary => {
+                const doctor = salary.doctor_id || {};
+                const revenuePercentage = doctor.revenuePercentage || 100;
+                const doctorAmount = revenuePercentage < 100 ? 
+                  ((salary.net_amount || salary.amount || 0) * revenuePercentage / 100) : 
+                  (salary.net_amount || salary.amount || 0);
+                
+                return (
+                  <tr key={salary._id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <input
+                        type="checkbox"
+                        checked={selectedSalaries.includes(salary._id)}
+                        onChange={() => handleSelectSalary(salary._id)}
+                        className="rounded text-teal-600 focus:ring-teal-500"
+                      />
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">
+                        {doctor.firstName} {doctor.lastName}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {doctor.email || doctor.phone}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">{doctor.paymentType}</div>
+                      <div className="text-xs text-gray-500">
+                        {doctor.isFullTime ? 'Full-time' : 'Part-time'}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="text-sm font-medium text-gray-900 capitalize">{salary.period_type}</div>
+                      <div className="text-xs text-gray-500">
+                        {new Date(salary.period_start).toLocaleDateString()} - {new Date(salary.period_end).toLocaleDateString()}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-bold text-green-600">
+                        {formatCurrency(salary.net_amount || salary.amount || 0)}
+                      </div>
+                      {revenuePercentage < 100 && (
+                        <div className="text-xs text-blue-600">
+                          Doctor: {formatCurrency(doctorAmount)} ({revenuePercentage}%)
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">{salary.appointment_count || 0}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {revenuePercentage < 100 ? (
+                        <div className="text-sm font-medium text-blue-600">
+                          {revenuePercentage}%
+                        </div>
+                      ) : (
+                        <div className="text-sm text-gray-500">100%</div>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800">
+                        {salary.status || 'Pending'}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -311,6 +423,24 @@ const PaySalaryPage = () => {
             <p>No pending salaries found for the selected filters.</p>
           </div>
         )}
+      </div>
+
+      {/* Information Panel about Revenue Distribution */}
+      <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+        <h4 className="text-sm font-bold text-blue-800 mb-2 flex items-center gap-2">
+          <FaMoneyBillWave /> About Revenue Distribution
+        </h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="text-sm text-blue-700">
+            <p className="mb-1"><span className="font-semibold">Full-time Doctors:</span> Get 100% of their fixed salary</p>
+            <p className="mb-1"><span className="font-semibold">Part-time Doctors:</span> Revenue percentage applies to appointment fees</p>
+            <p><span className="font-semibold">Example:</span> ₹500 fees × 80% = ₹400 to doctor, ₹100 to hospital</p>
+          </div>
+          <div className="text-sm text-blue-700">
+            <p className="mb-1">The system automatically calculates doctor's share based on their revenue percentage.</p>
+            <p>You're paying only the doctor's calculated share, not the full appointment fees.</p>
+          </div>
+        </div>
       </div>
     </div>
     </Layout>

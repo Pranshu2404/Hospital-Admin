@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import apiClient from '../../api/apiClient';
+import { useNavigate } from 'react-router-dom';
 import {
   FaMoneyBillWave,
   FaSearch,
@@ -16,27 +17,14 @@ import {
   FaFileInvoice,
   FaFileMedical,
   FaTimes,
-  FaCheckCircle
+  FaCheckCircle,
+  FaMoneyCheckAlt,
+  FaCalendar,
+  FaFileAlt,
+  FaReceipt,
+  FaBuilding
 } from 'react-icons/fa';
 
-/**
- * ✅ Updated ExpensePage
- * - Fixes salary API integration with your UPDATED backend:
- *   GET    /salaries
- *   GET    /salaries/stats
- *   GET    /salaries/pending
- *   PUT    /salaries/:id/status
- *   POST   /salaries/bulk-pay
- *   GET    /salaries/report?periodType&startDate&endDate&format=csv
- *
- * - Fixes common runtime errors:
- *   null-safe search, correct doctor fields (firstName/lastName),
- *   correct salary status casing (backend uses lowercase: paid/pending),
- *   adds pay salary modal + bulk pay for admins.
- *
- * NOTE: Expenses & Purchase Orders APIs are kept as-is (since not provided fully),
- * but now guarded so UI doesn’t crash if response shapes differ.
- */
 
 const ExpensePage = () => {
   const [expenseRecords, setExpenseRecords] = useState([]);
@@ -70,7 +58,25 @@ const ExpensePage = () => {
     notes: 'Bulk payment processed'
   });
 
-  // Unified filters (kept simple; only relevant keys used per tab)
+  // NEW: Add Expense Modal
+  const [addExpenseModalOpen, setAddExpenseModalOpen] = useState(false);
+  const [newExpense, setNewExpense] = useState({
+    date: new Date().toISOString().split('T')[0],
+    category: 'Other',
+    description: '',
+    amount: '',
+    vendor: '',
+    payment_method: 'Cash',
+    department: '',
+    notes: '',
+    tax_rate: 0,
+    receipt_number: ''
+  });
+
+  // Navigation hook
+  const navigate = useNavigate();
+
+  // Unified filters
   const [filters, setFilters] = useState({
     // Expenses period filter
     period: 'monthly', // daily | monthly | all
@@ -78,13 +84,11 @@ const ExpensePage = () => {
     month: new Date().getMonth() + 1,
     year: new Date().getFullYear(),
     category: 'all',
-
-    // Shared status filter (each tab maps values)
     status: 'all',
 
     // Salaries
     periodType: 'all', // daily | weekly | monthly | all
-    startDate: '', // for salaries report/list overlap filter
+    startDate: '',
     endDate: '',
     page: 1,
     limit: 50
@@ -93,7 +97,6 @@ const ExpensePage = () => {
   const handleFilterChange = (key, value) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
     if (key !== 'page') {
-      // reset pagination on most filter changes
       setFilters((prev) => ({ ...prev, page: 1 }));
     }
   };
@@ -101,10 +104,6 @@ const ExpensePage = () => {
   // ---------- helpers ----------
   const safeLower = (v) => (typeof v === 'string' ? v.toLowerCase() : '');
   const toTitle = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
-
-  const normalizeSalaryStatus = (status) => safeLower(status); // backend uses lowercase
-  const normalizeExpenseStatus = (status) => status; // unknown, keep as-is
-  const normalizePOStatus = (status) => status; // unknown, keep as-is
 
   const formatCurrency = (amount) =>
     new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(Number(amount || 0));
@@ -119,7 +118,8 @@ const ExpensePage = () => {
       cancelled: 'bg-red-100 text-red-800',
       received: 'bg-green-100 text-green-800',
       'partially received': 'bg-blue-100 text-blue-800',
-      hold: 'bg-orange-100 text-orange-800'
+      hold: 'bg-orange-100 text-orange-800',
+      'partially paid': 'bg-blue-100 text-blue-800'
     };
 
     const cls = statusClasses[status] || 'bg-gray-100 text-gray-800';
@@ -135,7 +135,7 @@ const ExpensePage = () => {
       Pharmaceuticals: FaFileMedical,
       Maintenance: FaTools,
       Insurance: FaFileInvoice,
-      Rent: FaFileInvoice,
+      Rent: FaBuilding,
       Other: FaMoneyBillWave
     };
     const IconComponent = icons[category] || FaMoneyBillWave;
@@ -180,32 +180,31 @@ const ExpensePage = () => {
     }
   };
 
-  // ----- Expenses (kept as your existing endpoints, but now safe) -----
+  // ----- UPDATED: Expense API calls -----
   const fetchExpenseData = async () => {
     try {
-      let endpoint = '';
+      let endpoint = '/expenses';
       const params = {};
 
       if (filters.category !== 'all') params.category = filters.category;
       if (filters.status !== 'all') params.status = filters.status;
 
       if (filters.period === 'daily') {
-        endpoint = '/api/expenses/daily';
+        endpoint = '/expenses/daily';
         params.date = filters.date;
       } else if (filters.period === 'monthly') {
-        endpoint = '/api/expenses/monthly';
+        endpoint = '/expenses/monthly';
         params.year = filters.year;
         params.month = filters.month;
-      } else {
-        endpoint = '/api/expenses';
       }
+      // For 'all', no additional params needed
 
       const response = await apiClient.get(endpoint, { params });
-      const raw = Array.isArray(response.data) ? response.data : response.data?.records || response.data?.data || [];
+      const raw = response.data?.expenses || response.data?.data || response.data || [];
       setExpenseRecords(transformExpenseData(raw));
     } catch (err) {
       console.error('Error fetching expense data:', err);
-      setExpenseRecords([]); // don’t crash
+      setExpenseRecords([]);
     }
   };
 
@@ -218,7 +217,7 @@ const ExpensePage = () => {
       }
       if (filters.period === 'daily') params.date = filters.date;
 
-      const response = await apiClient.get('/api/expenses/summary', { params });
+      const response = await apiClient.get('/expenses/summary', { params });
       setExpenseSummary(response.data || null);
     } catch (err) {
       console.error('Error fetching expense summary:', err);
@@ -229,26 +228,29 @@ const ExpensePage = () => {
   const transformExpenseData = (arr) =>
     (Array.isArray(arr) ? arr : []).map((item) => ({
       id: item._id || item.id,
+      expense_number: item.expense_number || 'N/A',
       date: item.date ? new Date(item.date).toISOString().split('T')[0] : '',
       category: item.category || 'Other',
-      vendor: item.vendor || item.supplier || 'N/A',
+      vendor: item.vendor || 'N/A',
       description: item.description || item.notes || 'N/A',
-      amount: Number(item.amount || item.total || 0),
-      approvedBy: item.approvedBy || item.approved_by || 'N/A',
+      amount: Number(item.amount || 0),
+      total_amount: Number(item.total_amount || item.amount || 0),
+      approved_by: item.approved_by?.name || item.approvedBy || 'N/A',
       department: item.department || 'N/A',
-      status: item.status || 'Pending',
-      paymentMethod: item.paymentMethod || item.payment_method || 'N/A',
-      receiptNo: item.receiptNo || item.receipt_no || ''
+      status: item.payment_status || item.status || 'Pending',
+      approval_status: item.approval_status || 'Pending',
+      payment_method: item.payment_method || 'N/A',
+      receipt_number: item.receipt_number || item.receiptNo || ''
     }));
 
-  // ----- Purchase Orders (kept as-is, safe-guarded) -----
+  // ----- UPDATED: Purchase Order API calls -----
   const fetchPurchaseOrders = async () => {
     try {
       const params = {};
       if (filters.status !== 'all') params.status = filters.status;
 
-      const response = await apiClient.get('/api/orders/purchase', { params });
-      const orders = response.data?.orders || response.data?.data || response.data || [];
+      const response = await apiClient.get('/orders/purchase', { params });
+      const orders = response.data?.purchaseOrders || response.data?.orders || response.data?.data || response.data || [];
       setPurchaseOrders(Array.isArray(orders) ? orders : []);
     } catch (err) {
       console.error('Error fetching purchase orders:', err);
@@ -258,7 +260,7 @@ const ExpensePage = () => {
 
   const fetchPurchaseOrderSummary = async () => {
     try {
-      const response = await apiClient.get('/api/orders/purchase/stats');
+      const response = await apiClient.get('/orders/purchase/stats');
       setPurchaseOrderSummary(response.data || null);
     } catch (err) {
       console.error('Error fetching purchase order summary:', err);
@@ -266,7 +268,7 @@ const ExpensePage = () => {
     }
   };
 
-  // ----- Salaries (UPDATED to your backend) -----
+  // ----- Salaries -----
   const fetchSalaryData = async () => {
     try {
       const params = {
@@ -274,10 +276,9 @@ const ExpensePage = () => {
         limit: filters.limit
       };
 
-      if (filters.status !== 'all') params.status = normalizeSalaryStatus(filters.status); // e.g. "paid"
+      if (filters.status !== 'all') params.status = safeLower(filters.status);
       if (filters.periodType && filters.periodType !== 'all') params.periodType = filters.periodType;
 
-      // overlap filter (supported by updated backend)
       if (filters.startDate && filters.endDate) {
         params.startDate = filters.startDate;
         params.endDate = filters.endDate;
@@ -293,7 +294,6 @@ const ExpensePage = () => {
 
   const fetchSalarySummary = async () => {
     try {
-      // optional: you can pass period/startDate/endDate to stats too, backend supports it
       const params = {};
       if (filters.periodType && filters.periodType !== 'all') params.period = filters.periodType;
       if (filters.startDate && filters.endDate) {
@@ -309,15 +309,18 @@ const ExpensePage = () => {
     }
   };
 
-  // ---------- filtering/search (client-side extra filtering) ----------
+  // ---------- filtering/search ----------
   const filteredExpenseRecords = useMemo(() => {
     const q = safeLower(searchTerm);
     return expenseRecords.filter((r) => {
       const matchesSearch =
-        safeLower(r.description).includes(q) || safeLower(r.vendor).includes(q) || safeLower(r.category).includes(q);
+        safeLower(r.description).includes(q) || 
+        safeLower(r.vendor).includes(q) || 
+        safeLower(r.category).includes(q) ||
+        safeLower(r.expense_number).includes(q);
 
       const matchesCategory = filters.category === 'all' || r.category === filters.category;
-      const matchesStatus = filters.status === 'all' || r.status === filters.status;
+      const matchesStatus = filters.status === 'all' || safeLower(r.status) === safeLower(filters.status);
 
       return matchesSearch && matchesCategory && matchesStatus;
     });
@@ -327,7 +330,7 @@ const ExpensePage = () => {
     const q = safeLower(searchTerm);
     return purchaseOrders.filter((o) => {
       const orderNum = safeLower(o.order_number);
-      const supplierName = safeLower(o.supplier_id?.name);
+      const supplierName = safeLower(o.supplier_name || o.supplier_id?.name);
       const notes = safeLower(o.notes);
 
       const matchesSearch = orderNum.includes(q) || supplierName.includes(q) || notes.includes(q);
@@ -351,9 +354,8 @@ const ExpensePage = () => {
 
       const matchesSearch = doctorName.includes(q) || periodType.includes(q) || notes.includes(q);
 
-      // status filter already applied server-side, but keep safe
       const matchesStatus =
-        filters.status === 'all' || normalizeSalaryStatus(s.status) === normalizeSalaryStatus(filters.status);
+        filters.status === 'all' || safeLower(s.status) === safeLower(filters.status);
 
       const matchesPeriod = !filters.periodType || filters.periodType === 'all' || s.period_type === filters.periodType;
 
@@ -361,17 +363,36 @@ const ExpensePage = () => {
     });
   }, [salaryRecords, filters.status, filters.periodType, searchTerm]);
 
-  const totals = useMemo(() => {
-    const totalExpenses = filteredExpenseRecords.reduce((sum, r) => sum + Number(r.amount || 0), 0);
-    const paidExpenses = filteredExpenseRecords
-      .filter((r) => safeLower(r.status) === 'paid')
-      .reduce((sum, r) => sum + Number(r.amount || 0), 0);
-    const pendingExpenses = filteredExpenseRecords
-      .filter((r) => safeLower(r.status) === 'pending')
-      .reduce((sum, r) => sum + Number(r.amount || 0), 0);
-
-    return { totalExpenses, paidExpenses, pendingExpenses };
-  }, [filteredExpenseRecords]);
+  // ---------- expense actions ----------
+  const handleAddExpense = async () => {
+    try {
+      setLoading(true);
+      const response = await apiClient.post('/expenses', newExpense);
+      
+      if (response.data) {
+        setAddExpenseModalOpen(false);
+        setNewExpense({
+          date: new Date().toISOString().split('T')[0],
+          category: 'Other',
+          description: '',
+          amount: '',
+          vendor: '',
+          payment_method: 'Cash',
+          department: '',
+          notes: '',
+          tax_rate: 0,
+          receipt_number: ''
+        });
+        fetchData();
+        alert('Expense added successfully!');
+      }
+    } catch (err) {
+      console.error('Error adding expense:', err);
+      alert(err?.response?.data?.error || 'Failed to add expense');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // ---------- salary pay actions ----------
   const openPayModal = (salary) => {
@@ -449,7 +470,6 @@ const ExpensePage = () => {
   const exportReport = async () => {
     try {
       if (activeTab === 'salaries') {
-        // Use backend CSV report
         const periodType = filters.periodType && filters.periodType !== 'all' ? filters.periodType : 'monthly';
         const startDate = filters.startDate || new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
         const endDate = filters.endDate || new Date().toISOString().split('T')[0];
@@ -469,22 +489,18 @@ const ExpensePage = () => {
         return;
       }
 
-      // Fallback: client-side CSV for expenses/purchase-orders (kept)
+      // Client-side CSV for expenses/purchase-orders
       let csvContent = 'data:text/csv;charset=utf-8,';
 
       if (activeTab === 'expenses') {
-        csvContent += 'Date,Category,Vendor,Description,Amount,Status,Payment Method,Approved By,Department,Receipt No\n';
+        csvContent += 'Expense Number,Date,Category,Vendor,Description,Amount,Total Amount,Payment Status,Payment Method,Department,Receipt No\n';
         filteredExpenseRecords.forEach((r) => {
-          csvContent += `${r.date},${r.category},${safeCsv(r.vendor)},${safeCsv(r.description)},${r.amount},${r.status},${safeCsv(
-            r.paymentMethod
-          )},${safeCsv(r.approvedBy)},${safeCsv(r.department)},${safeCsv(r.receiptNo)}\n`;
+          csvContent += `${safeCsv(r.expense_number)},${r.date},${r.category},${safeCsv(r.vendor)},${safeCsv(r.description)},${r.amount},${r.total_amount},${r.status},${safeCsv(r.payment_method)},${safeCsv(r.department)},${safeCsv(r.receipt_number)}\n`;
         });
       } else if (activeTab === 'purchase-orders') {
         csvContent += 'Order Number,Order Date,Supplier,Total Amount,Status,Expected Delivery,Notes\n';
         filteredPurchaseOrders.forEach((o) => {
-          csvContent += `${o.order_number},${o.order_date},${safeCsv(o.supplier_id?.name || 'N/A')},${o.total_amount},${
-            o.status
-          },${o.expected_delivery || 'N/A'},${safeCsv(o.notes || '')}\n`;
+          csvContent += `${o.order_number},${o.order_date},${safeCsv(o.supplier_name || o.supplier_id?.name || 'N/A')},${o.total_amount},${o.status},${o.expected_delivery || 'N/A'},${safeCsv(o.notes || '')}\n`;
         });
       }
 
@@ -539,7 +555,7 @@ const ExpensePage = () => {
     'Other'
   ];
 
-  const purchaseOrderStatuses = ['Pending', 'Approved', 'Partially Received', 'Received', 'Cancelled'];
+  const purchaseOrderStatuses = ['Draft', 'Pending', 'Approved', 'Ordered', 'Partially Received', 'Received', 'Cancelled'];
 
   const salaryStatuses = ['all', 'pending', 'paid', 'cancelled', 'hold'];
   const periodTypes = ['daily', 'weekly', 'monthly'];
@@ -573,14 +589,28 @@ const ExpensePage = () => {
             <FaDownload /> Export
           </button>
 
+          {/* Pay Salary Page Link */}
+          <button
+            onClick={() => navigate('/dashboard/admin/finance/salary')}
+            className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
+          >
+            <FaMoneyCheckAlt /> Pay Salaries
+          </button>
+
           {activeTab === 'expenses' && (
-            <button className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+            <button 
+              onClick={() => setAddExpenseModalOpen(true)}
+              className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+            >
               <FaPlus /> Add Expense
             </button>
           )}
 
           {activeTab === 'purchase-orders' && (
-            <button className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+            <button 
+              onClick={() => setAddPurchaseOrderModalOpen(true)}
+              className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+            >
               <FaPlus /> Create Purchase Order
             </button>
           )}
@@ -663,7 +693,7 @@ const ExpensePage = () => {
           title={`Total ${activeTab === 'salaries' ? 'Salaries' : activeTab === 'purchase-orders' ? 'Orders' : 'Expenses'}`}
           value={
             activeTab === 'expenses'
-              ? formatCurrency(expenseSummary?.totalExpenses ?? totals.totalExpenses)
+              ? formatCurrency(expenseSummary?.overall?.totalExpenses ?? totals.totalExpenses)
               : activeTab === 'purchase-orders'
               ? formatCurrency(purchaseOrderSummary?.totalAmount || 0)
               : formatCurrency(salarySummary?.overall?.totalAmount || 0)
@@ -675,7 +705,7 @@ const ExpensePage = () => {
           title={`Paid ${activeTab === 'salaries' ? 'Salaries' : activeTab === 'purchase-orders' ? 'Received' : 'Expenses'}`}
           value={
             activeTab === 'expenses'
-              ? formatCurrency(expenseSummary?.paidExpenses ?? totals.paidExpenses)
+              ? formatCurrency(expenseSummary?.overall?.paidExpenses ?? totals.paidExpenses)
               : activeTab === 'purchase-orders'
               ? formatCurrency(purchaseReceivedAmount)
               : formatCurrency(paidSalaryAmount)
@@ -688,7 +718,7 @@ const ExpensePage = () => {
           title={`Pending ${activeTab === 'salaries' ? 'Salaries' : activeTab === 'purchase-orders' ? 'Orders' : 'Expenses'}`}
           value={
             activeTab === 'expenses'
-              ? formatCurrency(expenseSummary?.pendingExpenses ?? totals.pendingExpenses)
+              ? formatCurrency(expenseSummary?.overall?.pendingExpenses ?? totals.pendingExpenses)
               : activeTab === 'purchase-orders'
               ? formatCurrency(purchasePendingAmount)
               : formatCurrency(pendingSalaryAmount)
@@ -727,7 +757,8 @@ const ExpensePage = () => {
         <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
           {/* Search */}
           <div className="relative md:col-span-2">
-            <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+            <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
+            <FaSearch className="absolute left-3 top-3/4 transform -translate-y-1/2 text-gray-400" />
             <input
               type="text"
               placeholder={
@@ -905,7 +936,7 @@ const ExpensePage = () => {
                 <option value="all">All</option>
                 <option value="Paid">Paid</option>
                 <option value="Pending">Pending</option>
-                <option value="Approved">Approved</option>
+                <option value="Partially Paid">Partially Paid</option>
                 <option value="Cancelled">Cancelled</option>
               </select>
             )}
@@ -1138,6 +1169,149 @@ const ExpensePage = () => {
           </div>
         </Modal>
       )}
+
+      {/* Add Expense Modal */}
+      {addExpenseModalOpen && (
+        <Modal title="Add New Expense" onClose={() => setAddExpenseModalOpen(false)}>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                <input
+                  type="date"
+                  value={newExpense.date}
+                  onChange={(e) => setNewExpense({...newExpense, date: e.target.value})}
+                  className="w-full p-2 border rounded-lg"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                <select
+                  value={newExpense.category}
+                  onChange={(e) => setNewExpense({...newExpense, category: e.target.value})}
+                  className="w-full p-2 border rounded-lg"
+                >
+                  {categories.map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+              <input
+                type="text"
+                value={newExpense.description}
+                onChange={(e) => setNewExpense({...newExpense, description: e.target.value})}
+                className="w-full p-2 border rounded-lg"
+                placeholder="Expense description"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Amount (₹)</label>
+                <input
+                  type="number"
+                  value={newExpense.amount}
+                  onChange={(e) => setNewExpense({...newExpense, amount: e.target.value})}
+                  className="w-full p-2 border rounded-lg"
+                  placeholder="0.00"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Tax Rate (%)</label>
+                <input
+                  type="number"
+                  value={newExpense.tax_rate}
+                  onChange={(e) => setNewExpense({...newExpense, tax_rate: e.target.value})}
+                  className="w-full p-2 border rounded-lg"
+                  placeholder="0"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Vendor</label>
+                <input
+                  type="text"
+                  value={newExpense.vendor}
+                  onChange={(e) => setNewExpense({...newExpense, vendor: e.target.value})}
+                  className="w-full p-2 border rounded-lg"
+                  placeholder="Vendor name"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Payment Method</label>
+                <select
+                  value={newExpense.payment_method}
+                  onChange={(e) => setNewExpense({...newExpense, payment_method: e.target.value})}
+                  className="w-full p-2 border rounded-lg"
+                >
+                  <option value="Cash">Cash</option>
+                  <option value="Card">Card</option>
+                  <option value="Bank Transfer">Bank Transfer</option>
+                  <option value="UPI">UPI</option>
+                  <option value="Cheque">Cheque</option>
+                  <option value="Online">Online</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Department</label>
+              <input
+                type="text"
+                value={newExpense.department}
+                onChange={(e) => setNewExpense({...newExpense, department: e.target.value})}
+                className="w-full p-2 border rounded-lg"
+                placeholder="Department (optional)"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Receipt Number</label>
+              <input
+                type="text"
+                value={newExpense.receipt_number}
+                onChange={(e) => setNewExpense({...newExpense, receipt_number: e.target.value})}
+                className="w-full p-2 border rounded-lg"
+                placeholder="Receipt number (optional)"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+              <textarea
+                value={newExpense.notes}
+                onChange={(e) => setNewExpense({...newExpense, notes: e.target.value})}
+                className="w-full p-2 border rounded-lg"
+                rows={2}
+                placeholder="Additional notes (optional)"
+              />
+            </div>
+
+            <div className="flex gap-2 justify-end">
+              <button onClick={() => setAddExpenseModalOpen(false)} className="px-4 py-2 rounded-lg border hover:bg-gray-50">
+                Cancel
+              </button>
+              <button
+                onClick={handleAddExpense}
+                disabled={loading || !newExpense.description || !newExpense.amount}
+                className={`px-4 py-2 rounded-lg ${
+                  loading || !newExpense.description || !newExpense.amount
+                    ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                    : 'bg-teal-600 text-white hover:bg-teal-700'
+                }`}
+              >
+                {loading ? 'Adding...' : 'Add Expense'}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 };
@@ -1158,8 +1332,8 @@ const SummaryCard = ({ title, value, icon, valueClass = 'text-gray-800' }) => (
 
 const Modal = ({ title, onClose, children }) => (
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-    <div className="bg-white rounded-lg shadow-xl w-full max-w-lg">
-      <div className="flex items-center justify-between p-4 border-b">
+    <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+      <div className="flex items-center justify-between p-4 border-b sticky top-0 bg-white z-10">
         <h3 className="text-lg font-semibold text-gray-800">{title}</h3>
         <button onClick={onClose} className="p-2 rounded hover:bg-gray-100">
           <FaTimes />
@@ -1176,12 +1350,12 @@ const ExpenseTable = ({ records, formatCurrency, getStatusBadge, getCategoryIcon
     <table className="w-full">
       <thead className="bg-gray-50">
         <tr>
+          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Expense #</th>
           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Category</th>
           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vendor</th>
           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
-          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Approved By</th>
           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
         </tr>
@@ -1189,6 +1363,7 @@ const ExpenseTable = ({ records, formatCurrency, getStatusBadge, getCategoryIcon
       <tbody className="divide-y divide-gray-200">
         {records.map((r) => (
           <tr key={r.id} className="hover:bg-gray-50">
+            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{r.expense_number}</td>
             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{r.date || '—'}</td>
             <td className="px-6 py-4 whitespace-nowrap">
               <div className="flex items-center gap-2">
@@ -1198,14 +1373,16 @@ const ExpenseTable = ({ records, formatCurrency, getStatusBadge, getCategoryIcon
             </td>
             <td className="px-6 py-4">
               <div className="text-sm font-medium text-gray-900">{r.description}</div>
-              <div className="text-sm text-gray-500">{r.department}</div>
-              {r.receiptNo ? <div className="text-xs text-gray-400">Receipt: {r.receiptNo}</div> : null}
+              {r.department && <div className="text-sm text-gray-500">{r.department}</div>}
+              {r.receipt_number && <div className="text-xs text-gray-400">Receipt: {r.receipt_number}</div>}
             </td>
             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{r.vendor}</td>
-            <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">{formatCurrency(r.amount)}</td>
-            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{r.approvedBy}</td>
+            <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">{formatCurrency(r.total_amount)}</td>
             <td className="px-6 py-4 whitespace-nowrap">
               <span className={getStatusBadge(r.status)}>{r.status}</span>
+              {r.approval_status !== 'Approved' && r.approval_status !== 'Pending' && (
+                <div className="text-xs text-gray-500 mt-1">{r.approval_status}</div>
+              )}
             </td>
             <td className="px-6 py-4 whitespace-nowrap">
               <div className="flex items-center gap-3">
@@ -1248,7 +1425,7 @@ const PurchaseOrderTable = ({ orders, formatCurrency, getStatusBadge }) => (
         {orders.map((o) => (
           <tr key={o._id} className="hover:bg-gray-50">
             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{o.order_number}</td>
-            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{o.supplier_id?.name || 'N/A'}</td>
+            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{o.supplier_name || o.supplier_id?.name || 'N/A'}</td>
             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
               {o.order_date ? new Date(o.order_date).toLocaleDateString() : '—'}
             </td>
@@ -1257,6 +1434,11 @@ const PurchaseOrderTable = ({ orders, formatCurrency, getStatusBadge }) => (
             </td>
             <td className="px-6 py-4 whitespace-nowrap">
               <span className={getStatusBadge(o.status)}>{o.status}</span>
+              {o.expected_delivery && o.status === 'Ordered' && (
+                <div className="text-xs text-gray-500 mt-1">
+                  Expected: {new Date(o.expected_delivery).toLocaleDateString()}
+                </div>
+              )}
             </td>
             <td className="px-6 py-4 whitespace-nowrap">
               <div className="flex items-center gap-3">
@@ -1319,6 +1501,11 @@ const SalaryTable = ({ salaries, formatCurrency, getStatusBadge, onPay, selected
               <td className="px-6 py-4 whitespace-nowrap">
                 <div className="text-sm font-medium text-gray-900">{doctorName}</div>
                 {doc.paymentType ? <div className="text-xs text-gray-500">{doc.paymentType}</div> : null}
+                {doc.revenuePercentage && doc.revenuePercentage !== 100 ? (
+                  <div className="text-xs text-blue-600 font-medium">
+                    Revenue Share: {doc.revenuePercentage}%
+                  </div>
+                ) : null}
               </td>
 
               <td className="px-6 py-4">
@@ -1387,12 +1574,12 @@ const ExpenseSummary = ({ expenseSummary, formatCurrency }) => (
       <div>
         <h4 className="font-medium text-gray-700 mb-3">Expense Breakdown</h4>
         <div className="space-y-2">
-          <Row label="Total Expenses" value={formatCurrency(expenseSummary.totalExpenses || 0)} valueClass="text-red-600" />
-          <Row label="Paid Expenses" value={formatCurrency(expenseSummary.paidExpenses || 0)} valueClass="text-green-600" />
-          <Row label="Pending Expenses" value={formatCurrency(expenseSummary.pendingExpenses || 0)} valueClass="text-yellow-600" />
+          <Row label="Total Expenses" value={formatCurrency(expenseSummary.overall?.totalExpenses || 0)} valueClass="text-red-600" />
+          <Row label="Paid Expenses" value={formatCurrency(expenseSummary.overall?.paidExpenses || 0)} valueClass="text-green-600" />
+          <Row label="Pending Expenses" value={formatCurrency(expenseSummary.overall?.pendingExpenses || 0)} valueClass="text-yellow-600" />
           <div className="flex justify-between border-t pt-2">
             <span className="font-medium">Net Expenses:</span>
-            <span className="font-bold text-red-600">{formatCurrency(expenseSummary.totalExpenses || 0)}</span>
+            <span className="font-bold text-red-600">{formatCurrency(expenseSummary.overall?.totalExpenses || 0)}</span>
           </div>
         </div>
       </div>
@@ -1453,7 +1640,7 @@ const PurchaseOrderSummary = ({ purchaseOrderSummary, formatCurrency }) => {
   );
 };
 
-// Salary Summary (UPDATED for lowercase statuses)
+// Salary Summary
 const SalarySummary = ({ salarySummary, formatCurrency }) => {
   const getStatusAmount = (status) =>
     salarySummary.byStatus?.find((s) => (s._id || '').toString().toLowerCase() === status)?.totalAmount || 0;
