@@ -496,6 +496,8 @@ const AppointmentDetails = () => {
     diagnosis: '',
     notes: '',
     investigation: '',
+    presenting_complaint: '',
+    history_of_presenting_complaint: '',
     // Add one default procedure box open by default
     recommendedProcedures: [{
       procedure_code: '',
@@ -1124,6 +1126,8 @@ const AppointmentDetails = () => {
         symptoms: prescription.symptoms?.trim() || '',
         notes: prescription.notes?.trim() || '',
         investigation: prescription.investigation?.trim() || '',
+        presenting_complaint: prescription.presenting_complaint?.trim() || '',
+        history_of_presenting_complaint: prescription.history_of_presenting_complaint?.trim() || '',
         recommendedProcedures: proceduresWithCosts,
         items: validItems.map(item => ({
           medicine_name: item.medicine_name.trim(),
@@ -1192,6 +1196,8 @@ const AppointmentDetails = () => {
         diagnosis: '',
         notes: '',
         investigation: '',
+        presenting_complaint: '',
+        history_of_presenting_complaint: '',
         recommendedProcedures: [],
         items: [{
           medicine_name: '',
@@ -1980,6 +1986,34 @@ const AppointmentDetails = () => {
                             </div>
 
                             <div className="p-6 space-y-6 flex-grow">
+                              <div className="mb-4">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                  Presenting Complaint
+                                </label>
+                                <textarea
+                                  name="presenting_complaint"
+                                  value={prescription.presenting_complaint}
+                                  onChange={handleInputChange}
+                                  placeholder="Chief complaint or main reason for visit..."
+                                  rows={2}
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
+                                />
+                              </div>
+
+                              <div className="mb-4">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                  History of Presenting Complaint
+                                </label>
+                                <textarea
+                                  name="history_of_presenting_complaint"
+                                  value={prescription.history_of_presenting_complaint}
+                                  onChange={handleInputChange}
+                                  placeholder="Detailed history of the presenting complaint..."
+                                  rows={3}
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
+                                />
+                              </div>
+
                               <div className="mb-4">
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
                                   Clinical Notes
