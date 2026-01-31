@@ -10,17 +10,20 @@ const NurseAppointments = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedAppointment, setSelectedAppointment] = useState(null);
 
+    // Default Vitals (Normal Range / Standard placeholders)
+    const defaultVitals = {
+        bp: '120/80',
+        weight: '70',
+        pulse: '72',
+        spo2: '98',
+        temperature: '98.6',
+        respiratory_rate: '16',
+        random_blood_sugar: '100',
+        height: '170'
+    };
+
     // Vitals Form State
-    const [vitals, setVitals] = useState({
-        bp: '',
-        weight: '',
-        pulse: '',
-        spo2: '',
-        temperature: '',
-        respiratory_rate: '',
-        random_blood_sugar: '',
-        height: ''
-    });
+    const [vitals, setVitals] = useState(defaultVitals);
 
     useEffect(() => {
         fetchAppointments();
@@ -65,16 +68,16 @@ const NurseAppointments = () => {
 
     const handleUpdateClick = (appointment) => {
         setSelectedAppointment(appointment);
-        // Pre-fill if vitals exist (dependant on backend sending them)
+        // Pre-fill if vitals exist, otherwise use defaults
         setVitals({
-            bp: appointment.vitals?.bp || '',
-            weight: appointment.vitals?.weight || '',
-            pulse: appointment.vitals?.pulse || '',
-            spo2: appointment.vitals?.spo2 || '',
-            temperature: appointment.vitals?.temperature || '',
-            respiratory_rate: appointment.vitals?.respiratory_rate || '',
-            random_blood_sugar: appointment.vitals?.random_blood_sugar || '',
-            height: appointment.vitals?.height || ''
+            bp: appointment.vitals?.bp || defaultVitals.bp,
+            weight: appointment.vitals?.weight || defaultVitals.weight,
+            pulse: appointment.vitals?.pulse || defaultVitals.pulse,
+            spo2: appointment.vitals?.spo2 || defaultVitals.spo2,
+            temperature: appointment.vitals?.temperature || defaultVitals.temperature,
+            respiratory_rate: appointment.vitals?.respiratory_rate || defaultVitals.respiratory_rate,
+            random_blood_sugar: appointment.vitals?.random_blood_sugar || defaultVitals.random_blood_sugar,
+            height: appointment.vitals?.height || defaultVitals.height
         });
     };
 
@@ -142,26 +145,26 @@ const NurseAppointments = () => {
                                 filteredList.map(a => (
                                     <tr key={a._id} className="hover:bg-slate-50 transition">
                                         <td className="px-6 py-4">
-    {a.start_time ? 
-        (() => {
-            // Parse the ISO string
-            const date = new Date(a.start_time);
-            
-            // Get the UTC hours/minutes
-            const hours = date.getUTCHours();
-            const minutes = date.getUTCMinutes();
-            
-            // Create a new date with these hours/minutes in local timezone
-            const displayDate = new Date();
-            displayDate.setHours(hours, minutes, 0, 0);
-            
-            return displayDate.toLocaleTimeString([], { 
-                hour: '2-digit', 
-                minute: '2-digit',
-                hour12: true 
-            });
-        })() : 'N/A'}
-</td>
+                                            {a.start_time ?
+                                                (() => {
+                                                    // Parse the ISO string
+                                                    const date = new Date(a.start_time);
+
+                                                    // Get the UTC hours/minutes
+                                                    const hours = date.getUTCHours();
+                                                    const minutes = date.getUTCMinutes();
+
+                                                    // Create a new date with these hours/minutes in local timezone
+                                                    const displayDate = new Date();
+                                                    displayDate.setHours(hours, minutes, 0, 0);
+
+                                                    return displayDate.toLocaleTimeString([], {
+                                                        hour: '2-digit',
+                                                        minute: '2-digit',
+                                                        hour12: true
+                                                    });
+                                                })() : 'N/A'}
+                                        </td>
                                         <td className="px-6 py-4 font-medium text-slate-900">
                                             {a.patient_id?.first_name} {a.patient_id?.last_name}
                                         </td>
