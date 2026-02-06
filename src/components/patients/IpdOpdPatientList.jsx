@@ -121,7 +121,7 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient, updatePatientBa
       const headers = [
         'Type', 'Patient ID', 'Name', 'Phone', 'Email', 'Age', 'Date of Birth', 'Gender',
         'Blood Group', 'Aadhaar Number',
-        'Address', 'Registration Date','Last Visit', 'Department', 'Last Visited Doctor', 'Status',
+        'Address', 'Registration Date', 'Last Visit', 'Department', 'Last Visited Doctor', 'Status',
         'Total Appointments', 'Total Collection',
       ];
 
@@ -195,7 +195,7 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient, updatePatientBa
       const headers = [
         'Type', 'Patient ID', 'Name', 'Phone', 'Email', 'Age', 'Date of Birth', 'Gender',
         'Blood Group', 'Aadhaar Number',
-        'Address', 'Registration Date','Last Visit', 'Department', 'Last Visited Doctor', 'Status',
+        'Address', 'Registration Date', 'Last Visit', 'Department', 'Last Visited Doctor', 'Status',
         'Total Appointments', 'Total Collection'
       ];
 
@@ -315,6 +315,10 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient, updatePatientBa
     } else if (dateFilter === 'month') {
       const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
       return { start: monthStart, end: new Date(today) };
+    } else if (dateFilter === 'last30days') {
+      const start = new Date(today);
+      start.setDate(today.getDate() - 30);
+      return { start: start, end: new Date(today) };
     } else if (dateFilter === 'custom') {
       return {
         start: customStartDate ? new Date(customStartDate) : null,
@@ -481,6 +485,7 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient, updatePatientBa
                 <option value="today">Today</option>
                 <option value="week">This Week</option>
                 <option value="month">This Month</option>
+                <option value="last30days">Last 30 Days</option>
                 <option value="custom">Custom Range</option>
               </select>
             </div>

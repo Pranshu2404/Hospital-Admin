@@ -39,17 +39,17 @@ const calendarStyles = `
 // --- Helper Functions ---
 const formatStoredTime = (utcTimeString) => {
     if (!utcTimeString) return 'N/A';
-    
+
     try {
         const date = new Date(utcTimeString);
         // Extract UTC hours and minutes
         const hours = date.getUTCHours();
         const minutes = date.getUTCMinutes();
-        
+
         // Format as 12-hour time
         const hour12 = hours % 12 || 12;
         const ampm = hours >= 12 ? 'PM' : 'AM';
-        
+
         return `${hour12}:${minutes.toString().padStart(2, '0')} ${ampm}`;
     } catch (error) {
         console.error('Error formatting time:', error);
@@ -59,7 +59,7 @@ const formatStoredTime = (utcTimeString) => {
 
 const formatStoredDate = (utcTimeString) => {
     if (!utcTimeString) return '';
-    
+
     try {
         const date = new Date(utcTimeString);
         return date.toLocaleDateString([], {
@@ -74,17 +74,17 @@ const formatStoredDate = (utcTimeString) => {
 
 const getAppointmentStartDate = (appt) => {
     if (!appt.start_time) return new Date(appt.appointment_date);
-    
+
     try {
         const date = new Date(appt.start_time);
         // Extract UTC components
         const utcHours = date.getUTCHours();
         const utcMinutes = date.getUTCMinutes();
-        
+
         // Create a new date with these components (treated as local time)
         const localDate = new Date(appt.appointment_date || date);
         localDate.setHours(utcHours, utcMinutes, 0, 0);
-        
+
         return localDate;
     } catch (error) {
         return new Date(appt.appointment_date);
@@ -96,18 +96,18 @@ const getAppointmentEndDate = (appt) => {
         const start = getAppointmentStartDate(appt);
         return new Date(start.getTime() + (appt.duration || 30) * 60000);
     }
-    
+
     try {
         const date = new Date(appt.end_time);
         // Extract UTC components
         const utcHours = date.getUTCHours();
         const utcMinutes = date.getUTCMinutes();
-        
+
         // Create a new date with these components (treated as local time)
         const startDate = getAppointmentStartDate(appt);
         const endDate = new Date(startDate);
         endDate.setHours(utcHours, utcMinutes, 0, 0);
-        
+
         return endDate;
     } catch (error) {
         const start = getAppointmentStartDate(appt);
@@ -311,13 +311,13 @@ const RecentAppointments = ({ appointments }) => {
         const time = formatStoredTime(appt.start_time);
         const date = formatStoredDate(appt.start_time);
 
-        return { 
-            patientName, 
-            doctorName, 
-            time, 
+        return {
+            patientName,
+            doctorName,
+            time,
             date,
-            type: appt.type || 'Visit', 
-            status: appt.status || 'Scheduled' 
+            type: appt.type || 'Visit',
+            status: appt.status || 'Scheduled'
         };
     };
 
@@ -691,6 +691,16 @@ const StaffDashboard = () => {
         </Layout>
     );
 
+    const todayDateString = new Date().toDateString();
+
+    const todayPatientsCount = patients.filter(p =>
+        p.registered_at && new Date(p.registered_at).toDateString() === todayDateString
+    ).length;
+
+    const todayAppointmentsCount = appointments.filter(appt =>
+        appt.appointment_date && new Date(appt.appointment_date).toDateString() === todayDateString
+    ).length;
+
     return (
         <Layout sidebarItems={staffSidebar} section="Staff">
             <style>{calendarStyles}</style>
@@ -718,17 +728,17 @@ const StaffDashboard = () => {
                     </div>
 
                     {/* Stats Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <StatCard
-                            title="Registered Patients"
-                            value={patients.length}
+                            title="Today's Registered Patients"
+                            value={todayPatientsCount}
                             icon={<UserIcon />}
                             color={{ bg: 'bg-teal-50', text: 'text-teal-600' }}
                             onClick={() => navigate('/dashboard/staff/patient-list')}
                         />
                         <StatCard
-                            title="Total Visits"
-                            value={appointments.length}
+                            title="Today's Appointments"
+                            value={todayAppointmentsCount}
                             icon={<FaUser />}
                             color={{ bg: 'bg-indigo-50', text: 'text-indigo-600' }}
                             onClick={() => navigate('/dashboard/staff/appointments')}
@@ -740,13 +750,13 @@ const StaffDashboard = () => {
                             color={{ bg: 'bg-blue-50', text: 'text-blue-600' }}
                             onClick={() => navigate('/dashboard/staff/billing')}
                         />
-                        <StatCard
+                        {/* <StatCard
                             title="Total Registration Collection"
                             value={`₹${Number(totalCollection)}`}
                             icon={<FaMoneyBill />}
                             color={{ bg: 'bg-emerald-50', text: 'text-emerald-600' }}
                             onClick={() => navigate('/dashboard/staff/billing')}
-                        />
+                        /> */}
                     </div>
 
                     {/* Main Content Grid */}

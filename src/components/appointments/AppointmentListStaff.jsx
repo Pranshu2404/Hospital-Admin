@@ -21,7 +21,10 @@ const AppointmentListStaff = () => {
   const [appointments, setAppointments] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
-  const [filterDate, setFilterDate] = useState('');
+  // Replaced simple filterDate with robust date range filtering
+  const [dateFilter, setDateFilter] = useState('all');
+  const [customStartDate, setCustomStartDate] = useState('');
+  const [customEndDate, setCustomEndDate] = useState('');
   const [appointmentType, setAppointmentType] = useState(null);
   const [completedCollapsed, setCompletedCollapsed] = useState(false);
 
@@ -40,6 +43,32 @@ const AppointmentListStaff = () => {
       setAppointmentType(patientType);
     }
   }, [patientType]);
+
+  const getDateRangeFromFilter = () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (dateFilter === 'today') {
+      return { start: new Date(today), end: new Date(today) };
+    } else if (dateFilter === 'week') {
+      const weekStart = new Date(today);
+      weekStart.setDate(today.getDate() - today.getDay()); // Sunday as start of week
+      return { start: weekStart, end: new Date(today) };
+    } else if (dateFilter === 'month') {
+      const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+      return { start: monthStart, end: new Date(today) };
+    } else if (dateFilter === 'last30days') {
+      const start = new Date(today);
+      start.setDate(today.getDate() - 30);
+      return { start: start, end: new Date(today) };
+    } else if (dateFilter === 'custom') {
+      return {
+        start: customStartDate ? new Date(customStartDate) : null,
+        end: customEndDate ? new Date(customEndDate) : null,
+      };
+    }
+    return { start: null, end: null };
+  };
 
   // Helper function to format stored UTC time as local time (treat UTC as IST)
   const formatStoredTime = (utcTimeString) => {
@@ -206,8 +235,20 @@ const AppointmentListStaff = () => {
       appointment.patientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       appointment.doctorName.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = filterStatus === 'all' || appointment.status === filterStatus;
-    const matchesDate = !filterDate || new Date(appointment.rawDate).toISOString().slice(0, 10) === filterDate;
-    return matchesSearch && matchesStatus && matchesDate;
+
+    let matchesDateFilter = true;
+    if (dateFilter !== 'all') {
+      const { start, end } = getDateRangeFromFilter();
+      if (appointment.rawDate) {
+        const appDate = new Date(appointment.rawDate);
+        appDate.setHours(0, 0, 0, 0);
+        // Compare dates (ensure start and end are set to midnight as well)
+        if (start && appDate < start) matchesDateFilter = false;
+        if (end && appDate > end) matchesDateFilter = false;
+      }
+    }
+
+    return matchesSearch && matchesStatus && matchesDateFilter;
   });
 
   // Separate the filtered appointments
@@ -247,6 +288,21 @@ const AppointmentListStaff = () => {
     setSelectedAppointment(appointment);
     setIsViewModalOpen(true);
   };
+  // ... (rest of rendering code)
+  // Make sure to render the new filtering UI below in the next chunk call if this exceeds typical replacement size. 
+  // This chunk handles state, logic updates. Next chunk will handle UI update.
+
+  // NOTE: The user requested replacing the UI too. I need to make sure I update the Filter UI part.
+  // The current view shows logic update mixed with lines 23-156 replacement.
+  // I will submit this big chunk updating state and logic first.
+  // Then I will do a smaller chunk to update the UI elements (inputs).
+  // Wait, I can do it all since I have the filteredAppointments logic here too.
+  // I need to be careful about not breaking the file structure.
+
+  // Actually, I can replace the logic block first, then do the UI block.
+  // The block selected covers state declarations and useEffects up to filteredAppointments logic.
+  // That seems safe.
+
 
   const handleAppointmentSuccess = (newAppointment) => {
     // Add to list immediately
@@ -429,12 +485,39 @@ const AppointmentListStaff = () => {
                 <Filter className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={14} />
               </div>
 
-              <input
-                type="date"
-                value={filterDate}
-                onChange={(e) => setFilterDate(e.target.value)}
-                className="px-3 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-500/20 cursor-pointer"
-              />
+              <div className="flex flex-col sm:flex-row gap-2">
+                <select
+                  value={dateFilter}
+                  onChange={(e) => setDateFilter(e.target.value)}
+                  className="appearance-none pl-4 pr-10 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-500/20 cursor-pointer hover:bg-slate-50 transition-colors"
+                >
+                  <option value="all">All Dates</option>
+                  <option value="today">Today</option>
+                  <option value="week">This Week</option>
+                  <option value="month">This Month</option>
+                  <option value="last30days">Last 30 Days</option>
+                  <option value="custom">Custom Range</option>
+                </select>
+
+                {dateFilter === 'custom' && (
+                  <div className="flex gap-2">
+                    <input
+                      type="date"
+                      value={customStartDate}
+                      onChange={(e) => setCustomStartDate(e.target.value)}
+                      className="px-3 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+                      placeholder="Start"
+                    />
+                    <input
+                      type="date"
+                      value={customEndDate}
+                      onChange={(e) => setCustomEndDate(e.target.value)}
+                      className="px-3 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+                      placeholder="End"
+                    />
+                  </div>
+                )}
+              </div>
             </div>
 
             <button
@@ -566,7 +649,7 @@ const AppointmentListStaff = () => {
                     </div>
                     <h3 className="text-slate-800 font-medium mb-1">No appointments found</h3>
                     <p className="text-slate-500 text-sm">
-                      {searchTerm || filterDate ? 'Try adjusting your filters' : 'Get started by creating a new appointment'}
+                      {searchTerm || dateFilter !== 'all' ? 'Try adjusting your filters' : 'Get started by creating a new appointment'}
                     </p>
                   </div>
                 </div>
