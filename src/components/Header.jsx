@@ -162,10 +162,14 @@ const Header = ({
     const pathSegments = location.pathname.split('/');
     if (pathSegments.length > 2 && pathSegments[1] === 'dashboard') {
       const role = pathSegments[2];
-      if (role === 'registrar' || role === 'receptionist') {
+      if (role === 'registrar' || role === 'receptionist' || role === 'staff') {
         return 'Registrar';
       }
       return role.charAt(0).toUpperCase() + role.slice(1);
+    }
+    // Also check if user.role is 'staff' outside dashboard path
+    if (user.role === 'staff') {
+      return 'Registrar';
     }
     return user.role || 'Admin';
   };
@@ -300,10 +304,10 @@ const Header = ({
                 </div>
                 
                 <div className="hidden md:block text-left mr-1">
-                  <p className="text-sm font-bold text-gray-700 leading-none truncate max-w-[120px]">
+                  {/* <p className="text-sm font-bold text-gray-700 leading-none truncate max-w-[120px]">
                     {displayName}
-                  </p>
-                  <p className="text-[10px] font-medium text-teal-600 uppercase tracking-wide mt-0.5">
+                  </p> */}
+                  <p className="text-sm font-medium text-teal-600 uppercase tracking-wide mt-0.5">
                     {getUserRole()}
                   </p>
                 </div>
@@ -319,7 +323,7 @@ const Header = ({
                 <div className="absolute right-0 mt-3 w-56 bg-white rounded-2xl shadow-xl border border-gray-100 ring-1 ring-black/5 transform origin-top-right transition-all z-50">
                   <div className="p-4 border-b border-gray-50">
                     <p className="text-xs font-semibold text-gray-400 uppercase">Signed in as</p>
-                    <p className="text-sm font-bold text-gray-800 truncate">{displayName}</p>
+                    {/* <p className="text-sm font-bold text-gray-800 truncate">{displayName}</p> */}
                     <p className="text-[10px] font-medium text-teal-600 uppercase tracking-wide mt-0.5">
                       {getUserRole()}
                     </p>
