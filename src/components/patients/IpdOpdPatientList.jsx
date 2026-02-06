@@ -96,31 +96,31 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient, updatePatientBa
     try {
       // Prepare data for export
       const exportData = patients.map(patient => ({
+        'Type': patient.type,
         'Patient ID': patient.patientId,
         'Name': patient.name,
-        'Age': patient.age,
-        'Gender': patient.gender,
-        'Phone': patient.phone,
         'Email': patient.email || 'N/A',
-        'Type': patient.type,
-        'Blood Group': patient.bloodGroup,
-        'Last Visit': patient.lastVisit,
-        'Aadhaar Number': patient.aadhaar_number,
+        'Phone': patient.phone,
+        'Age': patient.age,
         'Date of Birth': patient.dob,
+        'Gender': patient.gender,
+        'Blood Group': patient.bloodGroup,
+        'Aadhaar Number': patient.aadhaar_number,
         'Address': patient.address,
-        'Status': patient.status,
         'Registration Date': patient.registrationDate,
+        'Department': patient.department,
+        'Last Visit': patient.lastVisit,
+        'Status': patient.status,
         'Total Appointments': patient.totalAppointments,
         'Total Collection': patient.totalCollection,
-        'Department': patient.department,
       }));
 
       // Create CSV content
       const headers = [
-        'Patient ID', 'Name', 'Age', 'Gender', 'Phone', 'Email',
-        'Type', 'Blood Group', 'Last Visit', 'Aadhaar Number',
-        'Date of Birth', 'Address', 'Status', 'Registration Date',
-        'Total Appointments', 'Total Collection', 'Department'
+        'Type','Patient ID', 'Name','Phone', 'Email', 'Age','Date of Birth', 'Gender', 
+         'Blood Group', 'Aadhaar Number',
+         'Address', 'Registration Date','Department','Last Visit','Status',
+        'Total Appointments', 'Total Collection', 
       ];
 
       const csvRows = [

@@ -73,15 +73,15 @@ const addDaysToDate = (dateString, days) => {
 // Check if all available hours have passed for today - FIXED VERSION
 const checkIfAllHoursPassed = (doctorWorkingHours, currentTime) => {
   if (!doctorWorkingHours || doctorWorkingHours.length === 0) return true;
-  
+
   const currentMinutes = currentTime.getHours() * 60 + currentTime.getMinutes();
-  
+
   return doctorWorkingHours.every(range => {
     const [startH, startM] = range.start.split(':').map(Number);
     const [endH, endM] = range.end.split(':').map(Number);
     const startInMinutes = startH * 60 + startM;
     const endInMinutes = endH * 60 + endM;
-    
+
     if (endInMinutes <= startInMinutes) { // Overnight shift (e.g., 23:00 to 07:00)
       // For overnight shift, check if current time is after the end time AND after the start time
       // This means we've passed both parts of the overnight shift
@@ -95,15 +95,15 @@ const checkIfAllHoursPassed = (doctorWorkingHours, currentTime) => {
 // Helper to check if there are any future time slots available today
 const hasFutureTimeSlotsToday = (doctorWorkingHours, currentTime, duration) => {
   if (!doctorWorkingHours || doctorWorkingHours.length === 0) return false;
-  
+
   const currentMinutes = currentTime.getHours() * 60 + currentTime.getMinutes();
-  
+
   for (const range of doctorWorkingHours) {
     const [startH, startM] = range.start.split(':').map(Number);
     const [endH, endM] = range.end.split(':').map(Number);
     const startInMinutes = startH * 60 + startM;
     const endInMinutes = endH * 60 + endM;
-    
+
     if (endInMinutes <= startInMinutes) { // Overnight shift
       // Check if we're before the overnight shift starts
       if (currentMinutes < startInMinutes) {
@@ -126,7 +126,7 @@ const hasFutureTimeSlotsToday = (doctorWorkingHours, currentTime, duration) => {
       }
     }
   }
-  
+
   return false;
 };
 
@@ -140,7 +140,7 @@ const isToday = (dateString) => {
 const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false, onClose = () => { }, onSuccess }) => {
   const navigate = useNavigate();
   const formContainerRef = useRef(null); // Ref for scrolling to top
-  
+
   // Helper to get local YYYY-MM-DD date string (avoids timezone-shift issues)
   const getLocalDateString = () => {
     const t = new Date();
@@ -238,9 +238,9 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
   // Function to scroll to top
   const scrollToTop = () => {
     if (formContainerRef.current) {
-      formContainerRef.current.scrollIntoView({ 
-        behavior: 'smooth', 
-        block: 'start' 
+      formContainerRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start'
       });
     } else {
       // Fallback to window scroll
@@ -265,7 +265,7 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
     setAutoAssignedTime(null);
     setAutoSwitchMessage('');
     setNewPatientData(null);
-    
+
     // Scroll to top after reset
     setTimeout(() => {
       scrollToTop();
@@ -281,7 +281,7 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
     setFormData2(initialFormData2);
     setShowFields(false);
     setNewPatientData(null);
-    
+
     // Scroll to top
     setTimeout(() => {
       scrollToTop();
@@ -335,13 +335,13 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
   // Add this helper function near the top (after other helper functions):
   const convertUTCTimeToLocalForDate = (utcTimeString, targetDateString) => {
     if (!utcTimeString) return null;
-    
+
     // Create a date object in UTC
     const utcDate = new Date(utcTimeString);
-    
+
     // Get the target date in local timezone
     const targetDate = new Date(targetDateString + 'T00:00:00');
-    
+
     // Combine target date with UTC time components
     const localDate = new Date(
       targetDate.getFullYear(),
@@ -351,7 +351,7 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
       utcDate.getUTCMinutes(),
       utcDate.getUTCSeconds()
     );
-    
+
     return localDate;
   };
 
@@ -379,9 +379,9 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
   // Helper function to get doctor fee description
   const getDoctorFeeDescription = (doctorDetails) => {
     if (!doctorDetails) return "Consultation Fee";
-    
+
     const doctorName = `Dr. ${doctorDetails.firstName} ${doctorDetails.lastName}`;
-    
+
     if (doctorDetails.paymentType === 'Per Hour') {
       const hours = Number(formData.duration) / 60;
       return `Doctor Fee (${hours.toFixed(1)} hr @ ₹${doctorDetails.amount || 0}/hr)`;
@@ -414,30 +414,30 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
 
       // Determine consultation fee based on doctor type
       let consultationFee = 0;
-      
+
       if (doctorDetails) {
         // Check if doctor is part-time or fee-per-visit
-        const isPartTimeDoctor = !doctorDetails.isFullTime || 
-                                doctorDetails.paymentType === 'Fee per Visit' || 
-                                doctorDetails.paymentType === 'Per Hour';
-        
+        const isPartTimeDoctor = !doctorDetails.isFullTime ||
+          doctorDetails.paymentType === 'Fee per Visit' ||
+          doctorDetails.paymentType === 'Per Hour';
+
         if (isPartTimeDoctor) {
           // For part-time or fee-per-visit doctors, use doctor.amount field (consultation fee)
           consultationFee = doctorDetails.amount || 0;
-          
+
           // For per-hour doctors, calculate based on duration
           if (doctorDetails.paymentType === 'Per Hour') {
             const hours = Number(formData.duration) / 60;
             consultationFee = consultationFee * hours;
           }
-          
+
           // Add doctor consultation fee
           charges.push({
             description: getDoctorFeeDescription(doctorDetails),
             amount: consultationFee
           });
           total += consultationFee;
-          
+
           // Add hospital service charge for OPD (from hospital charges)
           // const opdServiceFee = hospitalCharges?.opdCharges?.serviceCharge || 
           //                      hospitalCharges?.opdCharges?.consultationFee || 
@@ -535,15 +535,15 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
     if (field === 'doctorId') {
       // Store previous doctor ID before changing
       setPreviousDoctorId(formData.doctorId);
-      
+
       // Check if we're switching doctors
       if (formData.doctorId && value && formData.doctorId !== value) {
         // Reset to today if the selected date is not today
         // This ensures when switching doctors, we always check availability for today first
         const today = getLocalDateString();
         if (formData.date !== today) {
-          setFormData(prev => ({ 
-            ...prev, 
+          setFormData(prev => ({
+            ...prev,
             [field]: value,
             date: today, // Reset to today when switching doctors
             start_time: '' // Clear start time
@@ -554,7 +554,7 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
         }
       }
     }
-    
+
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -634,7 +634,7 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
       if (isToday && doctorWorkingHours.length > 0) {
         const allHoursPassed = checkIfAllHoursPassed(doctorWorkingHours, now);
         const hasFutureSlots = hasFutureTimeSlotsToday(doctorWorkingHours, now, duration);
-        
+
         // Only switch date if ALL hours have passed AND no future slots available
         if (allHoursPassed && !hasFutureSlots) {
           // Switch to next date
@@ -669,16 +669,16 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
       // Check if current date is not today and doctor has working hours
       const today = getLocalDateString();
       const isDateToday = isToday(formData.date);
-      
+
       if (!isDateToday && doctorWorkingHours.length > 0) {
         const now = new Date();
         const duration = parseInt(formData.duration);
         const hasSlotsToday = hasFutureTimeSlotsToday(doctorWorkingHours, now, duration);
-        
+
         // Only reset to today if new doctor has slots available today
         if (hasSlotsToday) {
-          setFormData(prev => ({ 
-            ...prev, 
+          setFormData(prev => ({
+            ...prev,
             date: today,
             start_time: '' // Clear start time
           }));
@@ -706,7 +706,7 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
       if (isToday && doctorWorkingHours.length > 0) {
         const allHoursPassed = checkIfAllHoursPassed(doctorWorkingHours, now);
         const hasFutureSlots = hasFutureTimeSlotsToday(doctorWorkingHours, now, duration);
-        
+
         // Only switch date if ALL hours have passed AND no future slots available
         if (allHoursPassed && !hasFutureSlots) {
           // Switch to next date
@@ -768,10 +768,10 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
           const currentHour = currentTime.getHours();
           const currentMinute = currentTime.getMinutes();
           const currentTotalMinutes = currentHour * 60 + currentMinute;
-          
+
           const [endHour, endMinute] = [endH, endM];
           const endTotalMinutes = endHour * 60 + endMinute;
-          
+
           // Check if we're still within the shift
           if (isOvernightShift) {
             // For overnight shift, we need special handling
@@ -833,9 +833,9 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
             // Convert UTC appointment times to local time for the selected date
             const apptStartLocal = convertUTCTimeToLocalForDate(appt.startTime, formData.date);
             const apptEndLocal = convertUTCTimeToLocalForDate(appt.endTime, formData.date);
-            
+
             if (!apptStartLocal || !apptEndLocal) return false;
-            
+
             // Create local time for proposed appointment
             const newStart = new Date(today);
             newStart.setHours(currentTime.getHours(), currentTime.getMinutes());
@@ -998,7 +998,7 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
     // Only apply time restrictions if it's today's date
     if (selectedDate.toDateString() === today.toDateString()) {
       const currentMinutes = today.getHours() * 60 + today.getMinutes();
-      const duration = parseInt(formData.duration) || 30;
+      const duration = parseInt(formData.duration) || 10;
       const nextSlotMinutes = Math.ceil(currentMinutes / duration) * duration;
       const nextHours = Math.floor(nextSlotMinutes / 60);
       const nextMins = nextSlotMinutes % 60;
@@ -1074,14 +1074,14 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
       // Convert UTC appointment times to local time for comparison
       const apptStartLocal = convertUTCTimeToLocalForDate(appt.startTime, formData.date);
       const apptEndLocal = convertUTCTimeToLocalForDate(appt.endTime, formData.date);
-      
+
       if (!apptStartLocal || !apptEndLocal) continue;
-      
+
       const apptStartHour = apptStartLocal.getHours();
       const apptStartMinute = apptStartLocal.getMinutes();
       const apptEndHour = apptEndLocal.getHours();
       const apptEndMinute = apptEndLocal.getMinutes();
-      
+
       const apptStartMin = apptStartHour * 60 + apptStartMinute;
       const apptEndMin = apptEndHour * 60 + apptEndMinute;
 
@@ -1300,16 +1300,16 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
         // Store times as UTC without timezone conversion
         // If user selects 9 PM, store as 21:00 UTC
         appointmentData.start_time = `${formData.date}T${formData.start_time}:00+00:00`;
-        
+
         // Calculate end time in 24-hour format
         const [hours, minutes] = formData.start_time.split(':').map(Number);
         const totalMinutes = hours * 60 + minutes + parseInt(formData.duration);
         const endHours = Math.floor(totalMinutes / 60) % 24;
         const endMinutes = totalMinutes % 60;
         const endTimeFormatted = `${String(endHours).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')}`;
-        
+
         appointmentData.end_time = `${formData.date}T${endTimeFormatted}:00+00:00`;
-        
+
         console.log('Storing times as UTC:', {
           start: appointmentData.start_time,
           end: appointmentData.end_time
@@ -1360,12 +1360,12 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
         patientId: appt.patient_id?.patientId
       };
       setSubmitDetails(enriched);
-      
+
       // Close success modal after a delay and show slip
       setTimeout(() => {
         setShowSuccessModal(false);
         setSlipModal(true); // Show slip modal
-        
+
         // Reset form for next appointment
         resetFormForNextAppointment();
       }, 2000);
@@ -1394,7 +1394,7 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
   // Helper to display doctor consultation fee
   const getDoctorFeeDisplay = () => {
     if (!doctorDetails) return null;
-    
+
     if (doctorDetails.paymentType === 'Per Hour') {
       return `₹${doctorDetails.amount || 0}/hour`;
     } else if (doctorDetails.paymentType === 'Fee per Visit') {
@@ -1673,7 +1673,7 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
                                 required
                                 min={minTime}
                                 max={maxTime}
-                                step="300"
+                                step="600"
                               />
                               {formData.start_time && (
                                 <div className="flex items-center justify-center bg-gray-50 rounded-lg p-4">
@@ -1781,13 +1781,12 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
                           <div className="flex items-center justify-between mb-4">
                             <h3 className="text-lg font-semibold text-gray-900">Charges Summary</h3>
                             {doctorDetails && type === 'opd' && (
-                              <div className={`fee-info-badge ${
-                                doctorDetails.paymentType === 'Per Hour' ? 'fee-per-hour' :
-                                !doctorDetails.isFullTime ? 'fee-part-time' : 'fee-full-time'
-                              }`}>
+                              <div className={`fee-info-badge ${doctorDetails.paymentType === 'Per Hour' ? 'fee-per-hour' :
+                                  !doctorDetails.isFullTime ? 'fee-part-time' : 'fee-full-time'
+                                }`}>
                                 <FaMoneyBillWave className="mr-1" size={12} />
                                 {doctorDetails.paymentType === 'Per Hour' ? 'Per Hour' :
-                                 !doctorDetails.isFullTime ? 'Part-time Fee' : 'Hospital Fee'}
+                                  !doctorDetails.isFullTime ? 'Part-time Fee' : 'Hospital Fee'}
                               </div>
                             )}
                           </div>
@@ -2105,11 +2104,11 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
                               // Convert UTC times to local time for display
                               const startTimeLocal = convertUTCTimeToLocalForDate(appt.startTime, formData.date);
                               const endTimeLocal = convertUTCTimeToLocalForDate(appt.endTime, formData.date);
-                              
+
                               const startTime = startTimeLocal ? startTimeLocal.toLocaleTimeString([], {
                                 hour: '2-digit', minute: '2-digit'
                               }) : 'N/A';
-                              
+
                               const endTime = endTimeLocal ? endTimeLocal.toLocaleTimeString([], {
                                 hour: '2-digit', minute: '2-digit'
                               }) : 'N/A';
