@@ -49,12 +49,18 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient, updatePatientBa
         email: p.email,
         type: p.patient_type ? p.patient_type.toUpperCase() : 'OPD',
         bloodGroup: p.blood_group || 'N/A',
-        lastVisit: p.registered_at ? new Date(p.registered_at).toISOString().split('T')[0] : 'N/A',
+        lastVisit: p.lastVisitDate
+          ? new Date(p.lastVisitDate).toISOString().split('T')[0]
+          : (p.registered_at ? new Date(p.registered_at).toISOString().split('T')[0] : 'N/A'),
         status: 'Active',
         image: p.patient_image,
         aadhaar_number: p.aadhaar_number || 'N/A',
         address: p.address || 'N/A',
         dob: p.dob ? new Date(p.dob).toISOString().split('T')[0] : 'N/A',
+        registrationDate: p.registered_at ? new Date(p.registered_at).toISOString().split('T')[0] : 'N/A',
+        totalAppointments: p.totalAppointments || 0,
+        totalCollection: p.totalCollection || 0,
+        department: p.lastVisitedDepartment || 'N/A',
       }));
 
       setPatients(formatted);
@@ -86,7 +92,7 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient, updatePatientBa
   const exportToCSV = () => {
     setIsExporting(true);
     setShowExportDropdown(false);
-    
+
     try {
       // Prepare data for export
       const exportData = patients.map(patient => ({
@@ -103,18 +109,23 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient, updatePatientBa
         'Date of Birth': patient.dob,
         'Address': patient.address,
         'Status': patient.status,
+        'Registration Date': patient.registrationDate,
+        'Total Appointments': patient.totalAppointments,
+        'Total Collection': patient.totalCollection,
+        'Department': patient.department,
       }));
 
       // Create CSV content
       const headers = [
-        'Patient ID', 'Name', 'Age', 'Gender', 'Phone', 'Email', 
+        'Patient ID', 'Name', 'Age', 'Gender', 'Phone', 'Email',
         'Type', 'Blood Group', 'Last Visit', 'Aadhaar Number',
-        'Date of Birth', 'Address', 'Status'
+        'Date of Birth', 'Address', 'Status', 'Registration Date',
+        'Total Appointments', 'Total Collection', 'Department'
       ];
-      
+
       const csvRows = [
         headers.join(','),
-        ...exportData.map(row => 
+        ...exportData.map(row =>
           headers.map(header => {
             const value = row[header];
             // Handle values that might contain commas or quotes
@@ -127,21 +138,21 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient, updatePatientBa
       ];
 
       const csvContent = csvRows.join('\n');
-      
+
       // Create and download file
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       const timestamp = new Date().toISOString().split('T')[0];
       const fileName = `patients_export_${timestamp}.csv`;
-      
+
       link.setAttribute('href', url);
       link.setAttribute('download', fileName);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
-      
+
     } catch (error) {
       console.error('Error exporting CSV:', error);
       alert('Failed to export patient list. Please try again.');
@@ -154,7 +165,7 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient, updatePatientBa
   const exportToExcel = async () => {
     setIsExporting(true);
     setShowExportDropdown(false);
-    
+
     try {
       // For a proper Excel export, you would typically use a library like xlsx
       // Here's a fallback using CSV with .xls extension
@@ -172,17 +183,22 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient, updatePatientBa
         'Date of Birth': patient.dob,
         'Address': patient.address,
         'Status': patient.status,
+        'Registration Date': patient.registrationDate,
+        'Total Appointments': patient.totalAppointments,
+        'Total Collection': patient.totalCollection,
+        'Department': patient.department,
       }));
 
       const headers = [
-        'Patient ID', 'Name', 'Age', 'Gender', 'Phone', 'Email', 
+        'Patient ID', 'Name', 'Age', 'Gender', 'Phone', 'Email',
         'Type', 'Blood Group', 'Last Visit', 'Aadhaar Number',
-        'Date of Birth', 'Address', 'Status'
+        'Date of Birth', 'Address', 'Status', 'Registration Date',
+        'Total Appointments', 'Total Collection', 'Department'
       ];
-      
+
       const csvRows = [
         headers.join('\t'), // Use tab delimiter for better Excel compatibility
-        ...exportData.map(row => 
+        ...exportData.map(row =>
           headers.map(header => row[header]).join('\t')
         )
       ];
@@ -193,14 +209,14 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient, updatePatientBa
       const link = document.createElement('a');
       const timestamp = new Date().toISOString().split('T')[0];
       const fileName = `patients_export_${timestamp}.xls`;
-      
+
       link.setAttribute('href', url);
       link.setAttribute('download', fileName);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
-      
+
     } catch (error) {
       console.error('Error exporting Excel:', error);
       alert('Failed to export patient list. Please try again.');
@@ -223,7 +239,7 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient, updatePatientBa
       complete: async (results) => {
         try {
           console.log("Uploading data:", results.data);
-          
+
           const response = await axios.post(
             `${import.meta.env.VITE_BACKEND_URL}/patients/bulk-add`,
             results.data
@@ -232,7 +248,7 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient, updatePatientBa
           fetchPatients();
           setTimeout(() => {
             setIsModalOpen(false);
-            setUploadSuccess(''); 
+            setUploadSuccess('');
           }, 2000);
         } catch (apiError) {
           console.error("Upload failed", apiError);
@@ -250,9 +266,9 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient, updatePatientBa
 
   const downloadDemoCSV = () => {
     const headers = [
-      'salutation', 'first_name', 'middle_name', 'last_name', 'email', 'phone', 
-      'gender', 'dob', 'patient_type', 'blood_group', 'address', 'city', 'state', 
-      'zipCode', 'village', 'district', 'tehsil', 'aadhaar_number', 
+      'salutation', 'first_name', 'middle_name', 'last_name', 'email', 'phone',
+      'gender', 'dob', 'patient_type', 'blood_group', 'address', 'city', 'state',
+      'zipCode', 'village', 'district', 'tehsil', 'aadhaar_number',
       'emergency_contact', 'emergency_phone', 'medical_history', 'allergies', 'medications'
     ];
 
@@ -361,7 +377,7 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient, updatePatientBa
                   {isExporting ? 'Exporting...' : 'Export'}
                 </Button>
                 {showExportDropdown && (
-                  <div 
+                  <div
                     className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-10"
                     onMouseEnter={() => setShowExportDropdown(true)}
                     onMouseLeave={() => setShowExportDropdown(false)}
@@ -518,7 +534,7 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient, updatePatientBa
                       ) : (
                         <div className="w-10 h-10 bg-teal-100 rounded-full flex items-center justify-center border border-teal-200">
                           <span className="text-teal-600 font-medium text-sm">
-                            {patient.name.replace(/(Mr\.|Mrs\.|Ms\.|Dr\.)/g, '').trim().split(' ').map(n => n[0]).join('').substring(0,2)}
+                            {patient.name.replace(/(Mr\.|Mrs\.|Ms\.|Dr\.)/g, '').trim().split(' ').map(n => n[0]).join('').substring(0, 2)}
                           </span>
                         </div>
                       )}
@@ -533,11 +549,10 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient, updatePatientBa
                     <div className="text-sm text-gray-500">{patient.email}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                      patient.type === 'IPD' 
-                        ? 'bg-blue-100 text-blue-800 border border-blue-200' 
-                        : 'bg-green-100 text-green-800 border border-green-200'
-                    }`}>
+                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${patient.type === 'IPD'
+                      ? 'bg-blue-100 text-blue-800 border border-blue-200'
+                      : 'bg-green-100 text-green-800 border border-green-200'
+                      }`}>
                       {patient.type}
                     </span>
                   </td>
@@ -553,8 +568,8 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient, updatePatientBa
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex space-x-2">
-                      <button 
-                        onClick={() => handleViewPatient(patient)} 
+                      <button
+                        onClick={() => handleViewPatient(patient)}
                         className="text-teal-600 hover:text-teal-900 hover:bg-teal-50 p-2 rounded transition-colors"
                         title="View Patient"
                       >
@@ -563,14 +578,14 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient, updatePatientBa
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                         </svg>
                       </button>
-                      <button 
-                        onClick={() => navigate(`${updatePatientBasePath}/${patient.id}`)} 
+                      <button
+                        onClick={() => navigate(`${updatePatientBasePath}/${patient.id}`)}
                         className="text-blue-600 hover:text-blue-900 hover:bg-blue-50 p-2 rounded transition-colors"
                         title="Edit Patient"
                       >
                         <EditIcon />
                       </button>
-                      <button 
+                      <button
                         className="text-red-600 hover:text-red-900 hover:bg-red-50 p-2 rounded transition-colors"
                         title="Delete Patient"
                       >
@@ -636,9 +651,9 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient, updatePatientBa
                   <thead className="bg-gray-200">
                     <tr>
                       {[
-                        'salutation', 'first_name', 'middle_name', 'last_name', 'email', 'phone', 
-                        'gender', 'dob', 'patient_type', 'blood_group', 'address', 'city', 'state', 
-                        'zipCode', 'village', 'district', 'tehsil', 'aadhaar_number', 
+                        'salutation', 'first_name', 'middle_name', 'last_name', 'email', 'phone',
+                        'gender', 'dob', 'patient_type', 'blood_group', 'address', 'city', 'state',
+                        'zipCode', 'village', 'district', 'tehsil', 'aadhaar_number',
                         'emergency_contact', 'emergency_phone', 'medical_history', 'allergies', 'medications'
                       ].map((header) => (
                         <th key={header} className="px-3 py-2 text-left font-medium text-gray-600 whitespace-nowrap">
@@ -650,8 +665,8 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient, updatePatientBa
                   <tbody>
                     <tr className="bg-white">
                       {[
-                        'Mr.', 'Amit', 'Kumar', 'Sharma', 'amit.s@ex.com', '9876543210', 
-                        'male', '1990-05-15', 'opd', 'O+', '123 St', 'Kanpur', 'UP', 
+                        'Mr.', 'Amit', 'Kumar', 'Sharma', 'amit.s@ex.com', '9876543210',
+                        'male', '1990-05-15', 'opd', 'O+', '123 St', 'Kanpur', 'UP',
                         '208001', 'N/A', 'Kanpur', 'Kanpur', '123456789012',
                         'Rajesh', '987...', 'None', 'None', 'None'
                       ].map((value, index) => (
