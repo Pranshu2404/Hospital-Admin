@@ -61,6 +61,7 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient, updatePatientBa
         totalAppointments: p.totalAppointments || 0,
         totalCollection: p.totalCollection || 0,
         department: p.lastVisitedDepartment || 'N/A',
+        doctor: p.lastVisitedDoctor && p.lastVisitedDoctor.trim() !== '' ? `Dr. ${p.lastVisitedDoctor}` : 'N/A',
       }));
 
       setPatients(formatted);
@@ -109,6 +110,7 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient, updatePatientBa
         'Address': patient.address,
         'Registration Date': patient.registrationDate,
         'Department': patient.department,
+        'Last Visited Doctor': patient.doctor,
         'Last Visit': patient.lastVisit,
         'Status': patient.status,
         'Total Appointments': patient.totalAppointments,
@@ -117,10 +119,10 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient, updatePatientBa
 
       // Create CSV content
       const headers = [
-        'Type','Patient ID', 'Name','Phone', 'Email', 'Age','Date of Birth', 'Gender', 
-         'Blood Group', 'Aadhaar Number',
-         'Address', 'Registration Date','Department','Last Visit','Status',
-        'Total Appointments', 'Total Collection', 
+        'Type', 'Patient ID', 'Name', 'Phone', 'Email', 'Age', 'Date of Birth', 'Gender',
+        'Blood Group', 'Aadhaar Number',
+        'Address', 'Registration Date','Last Visit', 'Department', 'Last Visited Doctor', 'Status',
+        'Total Appointments', 'Total Collection',
       ];
 
       const csvRows = [
@@ -187,13 +189,14 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient, updatePatientBa
         'Total Appointments': patient.totalAppointments,
         'Total Collection': patient.totalCollection,
         'Department': patient.department,
+        'Last Visited Doctor': patient.doctor,
       }));
 
       const headers = [
-        'Patient ID', 'Name', 'Age', 'Gender', 'Phone', 'Email',
-        'Type', 'Blood Group', 'Last Visit', 'Aadhaar Number',
-        'Date of Birth', 'Address', 'Status', 'Registration Date',
-        'Total Appointments', 'Total Collection', 'Department'
+        'Type', 'Patient ID', 'Name', 'Phone', 'Email', 'Age', 'Date of Birth', 'Gender',
+        'Blood Group', 'Aadhaar Number',
+        'Address', 'Registration Date','Last Visit', 'Department', 'Last Visited Doctor', 'Status',
+        'Total Appointments', 'Total Collection'
       ];
 
       const csvRows = [
@@ -514,6 +517,7 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient, updatePatientBa
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Patient</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Doctor</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Visit</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
@@ -555,6 +559,10 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient, updatePatientBa
                       }`}>
                       {patient.type}
                     </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm font-medium text-slate-700">{patient.doctor}</div>
+                    <div className="text-xs text-slate-500">{patient.department}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     <span className="bg-gray-50 px-2 py-1 rounded border border-gray-200">

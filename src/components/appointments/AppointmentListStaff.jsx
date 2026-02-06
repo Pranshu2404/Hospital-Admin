@@ -44,18 +44,18 @@ const AppointmentListStaff = () => {
   // Helper function to format stored UTC time as local time (treat UTC as IST)
   const formatStoredTime = (utcTimeString) => {
     if (!utcTimeString) return 'N/A';
-    
+
     try {
       const date = new Date(utcTimeString);
-      
+
       // Get UTC hours and minutes directly (since the time is stored in UTC but represents IST)
       const hours = date.getUTCHours();
       const minutes = date.getUTCMinutes();
-      
+
       // Format as 12-hour time
       const hour12 = hours % 12 || 12;
       const ampm = hours >= 12 ? 'PM' : 'AM';
-      
+
       return `${hour12}:${minutes.toString().padStart(2, '0')} ${ampm}`;
     } catch (error) {
       console.error('Error formatting time:', error);
@@ -66,7 +66,7 @@ const AppointmentListStaff = () => {
   // Get time in minutes from start_time string
   const getTimeInMinutes = (startTimeString) => {
     if (!startTimeString) return 0;
-    
+
     try {
       const date = new Date(startTimeString);
       const hours = date.getUTCHours(); // Using UTC hours since time is stored as UTC
@@ -83,19 +83,19 @@ const AppointmentListStaff = () => {
     if (appointment.status === 'Completed' || appointment.status === 'Cancelled') {
       return false;
     }
-    
+
     const now = new Date();
     const appointmentDate = new Date(appointment.appointment_date);
-    
+
     // Set current time to compare with appointment time
     const nowHours = now.getHours();
     const nowMinutes = now.getMinutes();
     appointmentDate.setHours(nowHours, nowMinutes, 0, 0);
-    
+
     const appointmentTime = getTimeInMinutes(appointment.start_time);
     const appointmentDateTime = new Date(appointment.appointment_date);
     appointmentDateTime.setHours(Math.floor(appointmentTime / 60), appointmentTime % 60, 0, 0);
-    
+
     return appointmentDateTime > now;
   };
 
@@ -112,17 +112,17 @@ const AppointmentListStaff = () => {
         const enriched = appointmentRes.data.map((appt) => {
           const timeInMinutes = getTimeInMinutes(appt.start_time);
           const appointmentDate = new Date(appt.appointment_date);
-          
+
           return {
             ...appt,
             patientName: `${appt.patient_id?.first_name || ''} ${appt.patient_id?.last_name || ''}`.trim(),
             patientImage: appt.patient_id?.patient_image || null,
             doctorName: `Dr. ${appt.doctor_id?.firstName || ''} ${appt.doctor_id?.lastName || ''}`.trim(),
             departmentName: appt.department_id?.name || 'N/A',
-            date: appointmentDate.toLocaleDateString('en-US', { 
-              month: 'short', 
-              day: 'numeric', 
-              year: 'numeric' 
+            date: appointmentDate.toLocaleDateString('en-US', {
+              month: 'short',
+              day: 'numeric',
+              year: 'numeric'
             }),
             rawDate: appt.appointment_date,
             // Use the formatStoredTime helper for proper time display
@@ -158,7 +158,7 @@ const AppointmentListStaff = () => {
   const separateAppointments = (appts) => {
     const completed = [];
     const upcoming = [];
-    
+
     appts.forEach(appt => {
       if (appt.status === 'Completed' || appt.status === 'Cancelled') {
         completed.push(appt);
@@ -169,7 +169,7 @@ const AppointmentListStaff = () => {
         completed.push(appt);
       }
     });
-    
+
     return { completed, upcoming };
   };
 
@@ -181,7 +181,7 @@ const AppointmentListStaff = () => {
       const dateB = new Date(b.rawDate);
       const dateDiff = dateA.getTime() - dateB.getTime();
       if (dateDiff !== 0) return dateDiff;
-      
+
       // If same date, sort by time (earliest time first)
       return a.timeInMinutes - b.timeInMinutes;
     });
@@ -195,7 +195,7 @@ const AppointmentListStaff = () => {
       const dateB = new Date(b.rawDate);
       const dateDiff = dateB.getTime() - dateA.getTime();
       if (dateDiff !== 0) return dateDiff;
-      
+
       // If same date, sort by time (latest time first)
       return b.timeInMinutes - a.timeInMinutes;
     });
@@ -314,7 +314,13 @@ const AppointmentListStaff = () => {
             <Calendar size={12} className="text-slate-400" /> {appointment.date}
           </span>
           <span className="text-xs text-slate-500 flex items-center gap-2 mt-0.5">
-            <Clock size={12} className="text-slate-400" /> {appointment.time}
+            {appointment.type === 'number-based' ? (
+              <span className="font-bold text-slate-700">#{appointment.serial_number} (Queue)</span>
+            ) : (
+              <>
+                <Clock size={12} className="text-slate-400" /> {appointment.time}
+              </>
+            )}
             {isUpcoming && index === 0 && (
               <span className="inline-flex items-center gap-0.5 bg-teal-50 text-teal-600 text-xs px-1.5 py-0.5 rounded border border-teal-100">
                 <ArrowUp size={10} /> Next
@@ -511,7 +517,7 @@ const AppointmentListStaff = () => {
                     )}
                   </div>
                 </button>
-                
+
                 {!completedCollapsed && (
                   <>
                     <table className="w-full">
@@ -534,7 +540,7 @@ const AppointmentListStaff = () => {
                         {sortedCompleted.map((appointment, index) => renderAppointmentRow(appointment, false, index))}
                       </tbody>
                     </table>
-                    
+
                     {/* Collapse Footer */}
                     <div className="px-6 py-2 border-t border-slate-100 bg-green-25 flex justify-center">
                       <button
@@ -566,7 +572,7 @@ const AppointmentListStaff = () => {
                 </div>
               </div>
             )}
-            
+
             {/* Only Completed Section is collapsed and no upcoming appointments */}
             {sortedUpcoming.length === 0 && sortedCompleted.length > 0 && completedCollapsed && (
               <div className="px-6 py-8 text-center">
@@ -589,7 +595,7 @@ const AppointmentListStaff = () => {
               Showing <span className="font-bold text-slate-700">{filteredAppointments.length}</span> results
               {sortedUpcoming.length > 0 && sortedCompleted.length > 0 && (
                 <span className="ml-2">
-                  (<span className="text-teal-600">{sortedUpcoming.length} upcoming</span>, 
+                  (<span className="text-teal-600">{sortedUpcoming.length} upcoming</span>,
                   <span className="text-green-600"> {sortedCompleted.length} completed</span>)
                   {completedCollapsed && sortedCompleted.length > 0 && (
                     <span className="text-green-400 ml-2"></span>
@@ -608,7 +614,7 @@ const AppointmentListStaff = () => {
       {/* --- Type Selection Modal --- */}
       {chooserOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
-          <div className={`bg-white rounded-2xl shadow-2xl w-full overflow-hidden transform transition-all ${selectedType?"max-w-5xl":"max-w-3xl"}`}>
+          <div className={`bg-white rounded-2xl shadow-2xl w-full overflow-hidden transform transition-all ${selectedType ? "max-w-5xl" : "max-w-3xl"}`}>
 
             {!selectedType ? (
               <div className="p-8">
