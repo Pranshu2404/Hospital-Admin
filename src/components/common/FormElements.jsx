@@ -84,7 +84,9 @@ export const SearchableFormSelect = ({
   required, 
   className = "", 
   placeholder = "Search...",
-  disabled 
+  disabled,
+  icon,
+  error
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isOpen, setIsOpen] = useState(false);
@@ -120,6 +122,9 @@ export const SearchableFormSelect = ({
   }, [value, normalizedOptions]);
 
   const handleKeyDown = (e) => {
+    // IMPORTANT: Stop propagation to prevent parent form handlers
+    e.stopPropagation();
+    
     if (e.key === 'ArrowDown') {
       e.preventDefault();
       setIsOpen(true);
@@ -127,18 +132,42 @@ export const SearchableFormSelect = ({
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
       setActiveIndex(prev => (prev > 0 ? prev - 1 : prev));
-    } else if (e.key === 'Enter' && isOpen) {
-      e.preventDefault();
-      if (displayedOptions[activeIndex]) handleSelect(displayedOptions[activeIndex]);
+    } else if (e.key === 'Enter') {
+      e.preventDefault(); // Prevent form submission
+      if (isOpen && displayedOptions[activeIndex]) {
+        handleSelect(displayedOptions[activeIndex]);
+      } else {
+        // If dropdown is closed, open it
+        setIsOpen(true);
+      }
     } else if (e.key === 'Escape') {
       setIsOpen(false);
     }
   };
 
   const handleSelect = (opt) => {
-    onChange({ target: { name: label.toLowerCase().replace(/\s/g, ''), value: opt.value } });
+    // Create a synthetic event that matches the expected format
+    const syntheticEvent = {
+      target: {
+        name: label.toLowerCase().replace(/\s/g, ''),
+        value: opt.value
+      },
+      // Stop propagation to prevent parent handlers
+      stopPropagation: () => {},
+      preventDefault: () => {}
+    };
+    
+    onChange(syntheticEvent);
     setSearchTerm(opt.label);
     setIsOpen(false);
+    
+    // Focus back on input after selection
+    setTimeout(() => {
+      if (wrapperRef.current) {
+        const input = wrapperRef.current.querySelector('input');
+        if (input) input.focus();
+      }
+    }, 0);
   };
 
   useEffect(() => {
@@ -156,6 +185,13 @@ export const SearchableFormSelect = ({
       </label>
 
       <div className="relative">
+        {/* Optional icon */}
+        {icon && (
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+            {icon}
+          </div>
+        )}
+        
         <input
           type="text"
           value={searchTerm}
@@ -164,11 +200,28 @@ export const SearchableFormSelect = ({
             setSearchTerm(e.target.value);
             setActiveIndex(0);
             setIsOpen(true);
+            
+            // Clear selection if user types something different
+            if (value && e.target.value !== searchTerm) {
+              const syntheticEvent = {
+                target: {
+                  name: label.toLowerCase().replace(/\s/g, ''),
+                  value: ''
+                },
+                stopPropagation: () => {},
+                preventDefault: () => {}
+              };
+              onChange(syntheticEvent);
+            }
           }}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           disabled={disabled}
-          className="block w-full px-4 py-3 bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all"
+          className={`block w-full px-4 py-3 bg-gray-50 border ${
+            error ? 'border-red-300 focus:ring-red-500/20 focus:border-red-500' : 'border-gray-200 focus:ring-emerald-500/20 focus:border-emerald-500'
+          } text-gray-900 text-sm rounded-xl focus:outline-none focus:ring-2 focus:bg-white transition-all ${
+            icon ? 'pl-10' : ''
+          }`}
         />
 
         {isOpen && displayedOptions.length > 0 && (
@@ -190,6 +243,11 @@ export const SearchableFormSelect = ({
           </div>
         )}
       </div>
+      
+      {/* Error message */}
+      {error && (
+        <p className="mt-1 text-xs text-red-600">{error}</p>
+      )}
     </div>
   );
 };

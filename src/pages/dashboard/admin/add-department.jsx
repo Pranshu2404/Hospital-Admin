@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../../../components/Layout';
 import { adminSidebar } from '../../../constants/sidebarItems/adminSidebar';
@@ -57,6 +57,199 @@ const Icons = {
       <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
     </svg>
   )
+};
+
+// Searchable Department Select Component
+const SearchableDepartmentSelect = ({ 
+  value, 
+  onChange, 
+  options = [], 
+  placeholder = "Search departments...",
+  disabled = false,
+  className = ""
+}) => {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isOpen, setIsOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const wrapperRef = useRef(null);
+
+  // Normalize options
+  const normalizedOptions = useMemo(() => {
+    return options.map(opt => 
+      typeof opt === 'object' ? opt : { value: opt, label: opt }
+    );
+  }, [options]);
+
+  // Filter and sort options based on search term
+  const filteredOptions = useMemo(() => {
+    if (!searchTerm) return normalizedOptions;
+    const lowerSearch = searchTerm.toLowerCase();
+    
+    return normalizedOptions
+      .filter(opt => opt.label.toLowerCase().includes(lowerSearch))
+      .sort((a, b) => {
+        const aStarts = a.label.toLowerCase().startsWith(lowerSearch);
+        const bStarts = b.label.toLowerCase().startsWith(lowerSearch);
+        if (aStarts && !bStarts) return -1;
+        if (!aStarts && bStarts) return 1;
+        return 0;
+      });
+  }, [searchTerm, normalizedOptions]);
+
+  // Find selected option
+  const selectedOption = useMemo(() => 
+    normalizedOptions.find(opt => opt.value === value),
+    [value, normalizedOptions]
+  );
+
+  // Update search term when value changes
+  useEffect(() => {
+    if (selectedOption) {
+      setSearchTerm(selectedOption.label);
+    } else if (!value) {
+      setSearchTerm('');
+    }
+  }, [value, selectedOption]);
+
+  // Handle keyboard navigation
+  const handleKeyDown = (e) => {
+    if (disabled) return;
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setIsOpen(true);
+        setActiveIndex(prev => 
+          prev < filteredOptions.length - 1 ? prev + 1 : prev
+        );
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setIsOpen(true);
+        setActiveIndex(prev => prev > 0 ? prev - 1 : prev);
+        break;
+      case 'Enter':
+        e.preventDefault();
+        if (isOpen && filteredOptions[activeIndex]) {
+          handleSelect(filteredOptions[activeIndex]);
+        }
+        break;
+      case 'Escape':
+        setIsOpen(false);
+        break;
+      case 'Tab':
+        setIsOpen(false);
+        break;
+    }
+  };
+
+  // Handle option selection
+  const handleSelect = (option) => {
+    onChange(option.value);
+    setSearchTerm(option.label);
+    setIsOpen(false);
+    setActiveIndex(0);
+  };
+
+  // Handle input change
+  const handleInputChange = (e) => {
+    setSearchTerm(e.target.value);
+    setActiveIndex(0);
+    setIsOpen(true);
+    
+    // Clear selection if search doesn't match selected
+    if (selectedOption && e.target.value !== selectedOption.label) {
+      onChange('');
+    }
+  };
+
+  // Handle click outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+        setIsOpen(false);
+        
+        // Reset search term if no value selected
+        if (!value && searchTerm) {
+          setSearchTerm('');
+        }
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [value, searchTerm]);
+
+  return (
+    <div className={`relative ${className}`} ref={wrapperRef}>
+      <div className="relative">
+        {/* Search Icon */}
+        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+          <Icons.Search />
+        </div>
+
+        {/* Input */}
+        <input
+          type="text"
+          value={searchTerm}
+          onChange={handleInputChange}
+          onFocus={() => setIsOpen(true)}
+          onKeyDown={handleKeyDown}
+          placeholder={placeholder}
+          disabled={disabled}
+          className="w-full pl-11 pr-10 py-3 bg-slate-50 border border-slate-200 text-slate-900 text-sm rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all duration-200 placeholder-slate-400 disabled:opacity-50 disabled:cursor-not-allowed"
+          autoComplete="off"
+        />
+
+        {/* Clear/Chevron Icon */}
+        {searchTerm && !disabled && (
+          <button
+            type="button"
+            onClick={() => {
+              setSearchTerm('');
+              onChange('');
+              setIsOpen(false);
+            }}
+            className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600"
+          >
+            <Icons.X />
+          </button>
+        )}
+      </div>
+
+      {/* Dropdown */}
+      {isOpen && !disabled && (
+        <div className="absolute z-50 w-full mt-2 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden animate-fade-in-down">
+          {filteredOptions.length > 0 ? (
+            <div className="max-h-60 overflow-y-auto overflow-x-hidden">
+              {filteredOptions.map((option, index) => (
+                <div
+                  key={option.value}
+                  onClick={() => handleSelect(option)}
+                  onMouseEnter={() => setActiveIndex(index)}
+                  className={`px-4 py-3 cursor-pointer transition-colors ${
+                    index === activeIndex 
+                      ? 'bg-emerald-50 text-emerald-700' 
+                      : 'text-slate-600 hover:bg-slate-50'
+                  } ${option.value === value ? 'bg-emerald-100/50 font-medium' : ''}`}
+                >
+                  <div className="flex items-center gap-2">
+                    <Icons.Building className="w-4 h-4 flex-shrink-0" />
+                    <span className="text-sm">{option.label}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="px-4 py-8 text-center">
+              <p className="text-sm text-slate-500">No departments found</p>
+              <p className="text-xs text-slate-400 mt-1">Try a different search term</p>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
 };
 
 // Department Popup Modal Component
@@ -367,7 +560,6 @@ const SelectDepartment = () => {
   const [showPopup, setShowPopup] = useState(false);
   const [showAssignPrompt, setShowAssignPrompt] = useState(false);
   const [newlyAddedDept, setNewlyAddedDept] = useState(null);
-  const [suggestions, setSuggestions] = useState([]);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -383,24 +575,7 @@ const SelectDepartment = () => {
   }, []);
 
   const handleInputChange = (e) => {
-    const value = e.target.value;
-    setNewDeptName(value);
-
-    if (value) {
-      const existingDeptNames = departments.map(d => d.name.toLowerCase());
-      const filteredSuggestions = hospitalDepartmentSuggestions.filter(suggestion =>
-        suggestion.toLowerCase().includes(value.toLowerCase()) &&
-        !existingDeptNames.includes(suggestion.toLowerCase())
-      );
-      setSuggestions(filteredSuggestions);
-    } else {
-      setSuggestions([]);
-    }
-  };
-
-  const handleSuggestionClick = (name) => {
-    setNewDeptName(name);
-    setSuggestions([]);
+    setNewDeptName(e.target.value);
   };
 
   const handleAddDepartment = async (e) => {
@@ -409,7 +584,6 @@ const SelectDepartment = () => {
     if (!trimmed) return;
     if (departments.some(d => d.name.toLowerCase() === trimmed.toLowerCase())) {
       alert('This department name already exists on the list.');
-      setSuggestions([]);
       return;
     }
     try {
@@ -419,7 +593,6 @@ const SelectDepartment = () => {
       setNewDeptName('');
       setNewlyAddedDept(newDept);
       setShowAssignPrompt(true);
-      setSuggestions([]);
     } catch (err) {
       let errorMessage = 'An unexpected error occurred.';
       if (err.response?.data?.error) {
@@ -472,6 +645,12 @@ const SelectDepartment = () => {
     setShowAssignPrompt(false);
   };
 
+  // Prepare department options for the searchable select
+  const departmentOptions = departments.map(dept => ({
+    value: dept._id,
+    label: dept.name
+  }));
+
   return (
     <Layout sidebarItems={adminSidebar}>
       <div className="p-8 min-h-screen bg-slate-50/50 font-sans text-slate-800">
@@ -493,31 +672,48 @@ const SelectDepartment = () => {
 
           <form onSubmit={handleAddDepartment} className="relative">
             <div className="flex flex-col sm:flex-row gap-4 items-start">
-              <div className="relative w-full flex-1 group">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 group-focus-within:text-emerald-500 transition-colors">
-                  <Icons.Search />
-                </div>
+              <div className="relative w-full flex-1">
+                {/* Replace the input with SearchableDepartmentSelect if you want to search existing departments */}
+                <SearchableDepartmentSelect
+                  value=""
+                  onChange={(value) => {
+                    // If you want to allow selecting existing departments to edit
+                    const selectedDept = departments.find(d => d._id === value);
+                    if (selectedDept) {
+                      handleDepartmentClick(selectedDept);
+                    }
+                  }}
+                  options={departmentOptions}
+                  placeholder="Search existing departments..."
+                  className="mb-2"
+                />
+                
                 <input
                   type="text"
-                  placeholder="E.g. Cardiology, Neurology..."
+                  placeholder="Or add new department name..."
                   value={newDeptName}
                   onChange={handleInputChange}
-                  className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 text-slate-900 text-sm rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all duration-200 placeholder-slate-400"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 text-slate-900 text-sm rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all duration-200 placeholder-slate-400"
                   autoComplete="off"
                 />
 
-                {/* Suggestions Dropdown */}
-                {suggestions.length > 0 && (
+                {/* Suggestions List */}
+                {newDeptName && (
                   <ul className="absolute z-40 w-full bg-white border border-slate-200 rounded-xl shadow-xl mt-2 max-h-60 overflow-y-auto overflow-x-hidden animate-fade-in-down">
-                    {suggestions.map((name, index) => (
-                      <li
-                        key={`${name}-${index}`}
-                        className="px-4 py-3 cursor-pointer hover:bg-emerald-50 hover:text-emerald-700 text-sm font-medium text-slate-600 transition-colors border-b border-slate-50 last:border-b-0"
-                        onClick={() => handleSuggestionClick(name)}
-                      >
-                        {name}
-                      </li>
-                    ))}
+                    {hospitalDepartmentSuggestions
+                      .filter(suggestion => 
+                        suggestion.toLowerCase().includes(newDeptName.toLowerCase()) &&
+                        !departments.some(d => d.name.toLowerCase() === suggestion.toLowerCase())
+                      )
+                      .map((name, index) => (
+                        <li
+                          key={`${name}-${index}`}
+                          className="px-4 py-3 cursor-pointer hover:bg-emerald-50 hover:text-emerald-700 text-sm font-medium text-slate-600 transition-colors border-b border-slate-50 last:border-b-0"
+                          onClick={() => setNewDeptName(name)}
+                        >
+                          {name}
+                        </li>
+                      ))}
                   </ul>
                 )}
               </div>
@@ -535,9 +731,22 @@ const SelectDepartment = () => {
 
         {/* Departments Grid */}
         <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-8">
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-4 mb-8">
             <h2 className="text-xl font-bold text-slate-900">Existing Departments</h2>
-            <span className="bg-slate-100 text-slate-600 text-sm font-bold px-3 py-1 rounded-full">
+            <div className="flex-1 max-w-md">
+              <SearchableDepartmentSelect
+                value=""
+                onChange={(value) => {
+                  const selectedDept = departments.find(d => d._id === value);
+                  if (selectedDept) {
+                    handleDepartmentClick(selectedDept);
+                  }
+                }}
+                options={departmentOptions}
+                placeholder="Search departments..."
+              />
+            </div>
+            <span className="bg-slate-100 text-slate-600 text-sm font-bold px-3 py-1 rounded-full ml-auto">
               Total: {departments.length}
             </span>
           </div>

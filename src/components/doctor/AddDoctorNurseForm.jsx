@@ -737,7 +737,7 @@ const AddDoctorNurseForm = () => {
                           label="Select Shift"
                           value={formData.shift}
                           onChange={(e) => handleShiftChange(e.target.value)}
-                          options={['Morning', 'Evening', 'Night', 'Rotating'].map(v => ({ value: v, label: v }))}
+                          options={['Morning', 'Evening', 'Night'].map(v => ({ value: v, label: v }))}
                           required
                           error={!!validationErrors.shift}
                         />

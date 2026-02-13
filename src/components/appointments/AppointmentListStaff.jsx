@@ -718,7 +718,7 @@ const AppointmentListStaff = () => {
                     <p className="text-sm text-slate-500 leading-relaxed">Outpatient Department consultation for general checkups and visits.</p>
                   </button>
 
-                  <button
+                  {/* <button
                     onClick={() => setSelectedType('ipd')}
                     className="group relative p-6 rounded-xl border-2 border-slate-100 hover:border-teal-500 bg-white hover:bg-teal-50/30 transition-all duration-300 text-left"
                   >
@@ -727,7 +727,7 @@ const AppointmentListStaff = () => {
                     </div>
                     <h4 className="text-lg font-bold text-slate-800 mb-2">IPD Admission</h4>
                     <p className="text-sm text-slate-500 leading-relaxed">Inpatient Department admission for surgeries, wards, and long-term care.</p>
-                  </button>
+                  </button> */}
                 </div>
 
                 <button
