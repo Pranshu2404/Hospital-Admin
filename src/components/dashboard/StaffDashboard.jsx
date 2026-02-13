@@ -557,7 +557,7 @@ const StaffDashboard = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [invoices, setInvoices] = useState([]);
-    const [todayCollection, setTodayCollection] = useState(0);
+    const [todayCollection, setTodayCollection] = useState({ paid: 0, pending: 0 });
     const [totalCollection, setTotalCollection] = useState(0);
     const [currentTime, setCurrentTime] = useState(dayjs());
 
@@ -596,22 +596,29 @@ const StaffDashboard = () => {
                     ? invoicesData
                     : invoicesData.invoices || invoicesData.data || [];
 
-                const billsArray = Array.isArray(billsData) ? billsData : [];
+                const billsArray = Array.isArray(billsData)
+                    ? billsData
+                    : billsData.bills || billsData.data || [];
 
                 setInvoices(invoicesArray);
 
-                // ---- TODAY'S COLLECTION (Paid BILLS only) ----
+                // ---- TODAY'S COLLECTION (Paid & Pending) ----
                 const today = new Date().toDateString();
 
-                const todayTotal = billsArray
-                    .filter(bill =>
-                        bill.generated_at &&
-                        new Date(bill.generated_at).toDateString() === today &&
-                        bill.status === 'Paid'
-                    )
+                const todayBills = billsArray.filter(bill =>
+                    bill.generated_at &&
+                    new Date(bill.generated_at).toDateString() === today
+                );
+
+                const todayPaid = todayBills
+                    .filter(bill => bill.status === 'Paid')
                     .reduce((sum, bill) => sum + Number(bill.total_amount || 0), 0);
 
-                setTodayCollection(todayTotal);
+                const todayPending = todayBills
+                    .filter(bill => bill.status === 'Pending')
+                    .reduce((sum, bill) => sum + Number(bill.total_amount || 0), 0);
+
+                setTodayCollection({ paid: todayPaid, pending: todayPending });
 
                 // ---- TOTAL REGISTERED COLLECTION (Paid BILLS only) ----
                 const totalAmount = billsArray
@@ -745,7 +752,16 @@ const StaffDashboard = () => {
                         />
                         <StatCard
                             title="Today's Registration Collection"
-                            value={`₹${todayCollection}`}
+                            value={
+                                <div className="flex flex-col">
+                                    <span className="text-green-600">₹{todayCollection.paid || 0}</span>
+                                    {(todayCollection.pending > 0) && (
+                                        <span className="text-sm text-amber-600 mt-1">
+                                            Pending: ₹{todayCollection.pending}
+                                        </span>
+                                    )}
+                                </div>
+                            }
                             icon={<FaMoneyBill />}
                             color={{ bg: 'bg-blue-50', text: 'text-blue-600' }}
                             onClick={() => navigate('/dashboard/staff/billing')}
