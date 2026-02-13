@@ -374,7 +374,7 @@ function ProcedureManagement() {
           status: 'Paid',
           notes: `Bill for procedure ${selectedProcedure.procedure_name}. ${completeProcedureData.notes}`
         });
-
+        
         // Store the generated bill and invoice
         setGeneratedBill(billResponse.data.bill);
         setGeneratedInvoice(billResponse.data.invoice);

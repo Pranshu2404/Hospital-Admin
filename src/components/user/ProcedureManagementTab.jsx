@@ -31,7 +31,7 @@ const ProcedureManagementTab = ({ hospitalData }) => {
     try {
       setLoading(true);
       const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/procedures`);
-      
+      console.log('Fetched procedures:', response.data);
       if (response.data.success) {
         setProcedures(response.data.data || []);
       } else {

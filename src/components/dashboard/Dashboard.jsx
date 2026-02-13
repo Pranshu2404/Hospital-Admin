@@ -99,7 +99,7 @@ const Dashboard = () => {
         axios.get(`${baseUrl}/revenue/daily`, { params: { date: today.format('YYYY-MM-DD') } }),
         axios.get(`${baseUrl}/invoices`, { params: { limit: 100, page: 1 } })
       ]);
-
+      console.log('Finance data responses:', dailyRes, invoicesRes);
       const dailyData = dailyRes.data;
       const dailyIncome = toNumber(dailyData?.summary?.totalRevenue);
 
