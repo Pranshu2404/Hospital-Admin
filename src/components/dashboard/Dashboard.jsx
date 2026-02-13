@@ -49,9 +49,9 @@ const Icons = {
       <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
     </svg>
   ),
-  TrendingUp: () => (
+  Clock: () => (
     <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8L5.257 19.743M5 7h8m0 0V5m0 2L19 5" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
     </svg>
   ),
   FileText: () => (
@@ -73,11 +73,10 @@ const Dashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [currentTime, setCurrentTime] = useState(dayjs());
 
-  // ✅ Finance computed from NEW revenue responses
+  // ✅ Finance computed from revenue responses
   const [financeStats, setFinanceStats] = useState({
     dailyIncome: 0,
-    weeklyIncome: 0,
-    monthlyIncome: 0
+    pendingPayments: 0
   });
 
   const [recentInvoices, setRecentInvoices] = useState([]);
@@ -88,45 +87,32 @@ const Dashboard = () => {
     return () => clearInterval(timer);
   }, []);
 
-  // ✅ NEW: Revenue API integration based on your current response structure
-  // daily:  { date, summary: { totalRevenue, ... }, ... }
-  // weekly: { period: { start, end }, summary: { totalRevenue, ... }, ... }
-  // monthly:{ period: { year, month }, summary: { totalRevenue, ... }, ... }
+  // ✅ Fetch finance data with pending payments
   const fetchFinanceData = async () => {
     setLoadingFinance(true);
     const baseUrl = import.meta.env.VITE_BACKEND_URL;
 
     try {
       const today = dayjs();
-      const startOfWeek = today.startOf('week'); // if you want Monday-start, use isoWeek plugin
-      const startOfMonth = today.startOf('month');
 
-      const [dailyRes, weeklyRes, monthlyRes, invoicesRes] = await Promise.all([
+      const [dailyRes, invoicesRes] = await Promise.all([
         axios.get(`${baseUrl}/revenue/daily`, { params: { date: today.format('YYYY-MM-DD') } }),
-        axios.get(`${baseUrl}/revenue`, {
-          params: {
-            startDate: startOfWeek.format('YYYY-MM-DD'),
-            endDate: today.format('YYYY-MM-DD')
-          }
-        }),
-        axios.get(`${baseUrl}/revenue/monthly`, {
-          params: { year: today.year(), month: today.month() + 1 }
-        }),
-        axios.get(`${baseUrl}/invoices`, { params: { limit: 5, page: 1 } })
+        axios.get(`${baseUrl}/invoices`, { params: { limit: 100, page: 1 } })
       ]);
 
       const dailyData = dailyRes.data;
-      const weeklyData = weeklyRes.data;
-      const monthlyData = monthlyRes.data;
-
       const dailyIncome = toNumber(dailyData?.summary?.totalRevenue);
-      const weeklyIncome = toNumber(weeklyData?.summary?.totalRevenue);
-      const monthlyIncome = toNumber(monthlyData?.summary?.totalRevenue);
 
+      // Calculate pending payments from invoices
       const invoicePayload = invoicesRes.data;
       const invoiceList = invoicePayload?.invoices || [];
+      
+      // Sum up pending/unpaid invoices
+      const pendingTotal = invoiceList
+        .filter(inv => inv.status === 'Pending' || inv.status === 'pending')
+        .reduce((sum, inv) => sum + toNumber(inv.total || inv.total_amount || inv.amount || 0), 0);
 
-      const invoices = invoiceList.map((inv) => ({
+      const invoices = invoiceList.slice(0, 5).map((inv) => ({
         id: inv._id,
         invoiceNumber: inv.invoice_number || inv.number || `#${String(inv._id || '').slice(-4)}`,
         patientName: inv.patient_id?.first_name || inv.patientName || 'Unknown',
@@ -138,11 +124,14 @@ const Dashboard = () => {
           : 'N/A'
       }));
 
-      setFinanceStats({ dailyIncome, weeklyIncome, monthlyIncome });
+      setFinanceStats({ 
+        dailyIncome, 
+        pendingPayments: pendingTotal 
+      });
       setRecentInvoices(invoices);
     } catch (err) {
       console.error('Finance data fetch error:', err);
-      setFinanceStats({ dailyIncome: 0, weeklyIncome: 0, monthlyIncome: 0 });
+      setFinanceStats({ dailyIncome: 0, pendingPayments: 0 });
       setRecentInvoices([]);
     } finally {
       setLoadingFinance(false);
@@ -342,7 +331,7 @@ const Dashboard = () => {
         ))}
       </div>
 
-      {/* Finance Income Cards (now correctly reading summary.totalRevenue) */}
+      {/* Financial Overview Cards - Only 2 Cards */}
       <div className="mb-10">
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-lg font-bold text-slate-900">Financial Overview</h2>
@@ -354,19 +343,22 @@ const Dashboard = () => {
           </button>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-          {/* Daily */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Today's Income Card */}
           <div
             onClick={() => navigate('/dashboard/admin/income')}
             className="relative overflow-hidden rounded-3xl p-6 cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-xl bg-gradient-to-br from-green-50 to-green-100 border border-white/50 shadow-sm group"
           >
             <div className="flex items-start justify-between relative z-10">
               <div>
-                <p className="text-sm font-bold opacity-70 mb-1 text-green-900">Daily Income</p>
+                <p className="text-sm font-bold opacity-70 mb-1 text-green-900">Today's Income</p>
                 <h3 className="text-3xl font-extrabold text-green-900">
                   {formatCurrency(financeStats.dailyIncome)}
                 </h3>
-                <p className="text-xs text-green-700 mt-2">{dayjs().format('MMM DD')}</p>
+                <p className="text-xs text-green-700 mt-2 flex items-center gap-1">
+                  <Icons.Calendar />
+                  {dayjs().format('MMM DD, YYYY')}
+                </p>
               </div>
               <div className="p-3 rounded-2xl bg-green-600 text-white shadow-md bg-opacity-90 group-hover:scale-110 transition-transform duration-300">
                 <Icons.DollarSign />
@@ -375,40 +367,23 @@ const Dashboard = () => {
             <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-white/20 rounded-full blur-2xl group-hover:bg-white/30 transition-colors"></div>
           </div>
 
-          {/* Weekly */}
+          {/* Today's Pending Payments Card */}
           <div
-            onClick={() => navigate('/dashboard/admin/income')}
-            className="relative overflow-hidden rounded-3xl p-6 cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-xl bg-gradient-to-br from-blue-50 to-blue-100 border border-white/50 shadow-sm group"
+            onClick={() => navigate('/dashboard/admin/invoices?status=pending')}
+            className="relative overflow-hidden rounded-3xl p-6 cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-xl bg-gradient-to-br from-amber-50 to-amber-100 border border-white/50 shadow-sm group"
           >
             <div className="flex items-start justify-between relative z-10">
               <div>
-                <p className="text-sm font-bold opacity-70 mb-1 text-blue-900">Weekly Income</p>
-                <h3 className="text-3xl font-extrabold text-blue-900">
-                  {formatCurrency(financeStats.weeklyIncome)}
+                <p className="text-sm font-bold opacity-70 mb-1 text-amber-900">Pending Payments</p>
+                <h3 className="text-3xl font-extrabold text-amber-900">
+                  {formatCurrency(financeStats.pendingPayments)}
                 </h3>
-                <p className="text-xs text-blue-700 mt-2">This week</p>
+                <p className="text-xs text-amber-700 mt-2 flex items-center gap-1">
+                  <Icons.Clock />
+                  Outstanding amount
+                </p>
               </div>
-              <div className="p-3 rounded-2xl bg-blue-600 text-white shadow-md bg-opacity-90 group-hover:scale-110 transition-transform duration-300">
-                <Icons.TrendingUp />
-              </div>
-            </div>
-            <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-white/20 rounded-full blur-2xl group-hover:bg-white/30 transition-colors"></div>
-          </div>
-
-          {/* Monthly */}
-          <div
-            onClick={() => navigate('/dashboard/admin/income')}
-            className="relative overflow-hidden rounded-3xl p-6 cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-xl bg-gradient-to-br from-purple-50 to-purple-100 border border-white/50 shadow-sm group"
-          >
-            <div className="flex items-start justify-between relative z-10">
-              <div>
-                <p className="text-sm font-bold opacity-70 mb-1 text-purple-900">Monthly Income</p>
-                <h3 className="text-3xl font-extrabold text-purple-900">
-                  {formatCurrency(financeStats.monthlyIncome)}
-                </h3>
-                <p className="text-xs text-purple-700 mt-2">{dayjs().format('MMMM YYYY')}</p>
-              </div>
-              <div className="p-3 rounded-2xl bg-purple-600 text-white shadow-md bg-opacity-90 group-hover:scale-110 transition-transform duration-300">
+              <div className="p-3 rounded-2xl bg-amber-600 text-white shadow-md bg-opacity-90 group-hover:scale-110 transition-transform duration-300">
                 <Icons.FileText />
               </div>
             </div>
