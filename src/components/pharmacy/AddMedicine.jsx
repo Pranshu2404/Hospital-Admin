@@ -448,24 +448,6 @@ const AddMedicine = () => {
             </select>
           </FormField>
 
-          <FormField label="Dosage Form" icon={<FaBarcode className="text-gray-400" />}>
-            <select
-              value={formData.dosage_form}
-              onChange={(e) => handleInputChange('dosage_form', e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500"
-            >
-              <option value="">Select Dosage Form</option>
-              <option value="Tablet">Tablet</option>
-              <option value="Capsule">Capsule</option>
-              <option value="Syrup">Syrup</option>
-              <option value="Injection">Injection</option>
-              <option value="Ointment">Ointment</option>
-              <option value="Drops">Drops</option>
-              <option value="Inhaler">Inhaler</option>
-              <option value="Other">Other</option>
-            </select>
-          </FormField>
-
           <FormField label="Strength" icon={<FaWeight className="text-gray-400" />}>
             <input
               type="text"

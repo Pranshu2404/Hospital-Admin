@@ -89,6 +89,7 @@ const PurchaseOrdersList = () => {
   const [showModal, setShowModal] = useState(false);
   const [receivingItems, setReceivingItems] = useState({});
   const [receivingLoading, setReceivingLoading] = useState(false);
+  const [receivingErrors, setReceivingErrors] = useState({}); // New state for validation errors
   const [stats, setStats] = useState({
     total: 0,
     draft: 0,
@@ -157,6 +158,7 @@ const PurchaseOrdersList = () => {
       const response = await apiClient.get(`/orders/purchase/${orderId}`);
       setSelectedOrder(response.data);
       setShowModal(true);
+      setReceivingErrors({}); // Clear errors when opening modal
       
       // Initialize receiving items with 0 quantities
       const initialReceiving = {};
@@ -164,7 +166,9 @@ const PurchaseOrdersList = () => {
         initialReceiving[item._id] = {
           received: item.received || 0,
           toReceive: Math.max(0, (item.quantity - (item.received || 0))),
-          maxAllowed: Math.max(0, (item.quantity - (item.received || 0)))
+          maxAllowed: Math.max(0, (item.quantity - (item.received || 0))),
+          batch_number: item.batch_number || '',
+          expiry_date: item.expiry_date || ''
         };
       });
       setReceivingItems(initialReceiving);
@@ -177,6 +181,17 @@ const PurchaseOrdersList = () => {
   const handleReceiveItem = (itemId, field, value) => {
     const item = selectedOrder.items.find(item => item._id === itemId);
     if (!item) return;
+    
+    // Clear error for this field if it exists
+    if (receivingErrors[itemId]?.[field]) {
+      setReceivingErrors(prev => ({
+        ...prev,
+        [itemId]: {
+          ...prev[itemId],
+          [field]: null
+        }
+      }));
+    }
     
     if (field === 'toReceive') {
       const numericValue = parseInt(value) || 0;
@@ -200,29 +215,85 @@ const PurchaseOrdersList = () => {
     }
   };
 
+  // Validate receiving items before submission
+  const validateReceivingItems = () => {
+    const errors = {};
+    let isValid = true;
+
+    selectedOrder.items.forEach(item => {
+      const receiveQty = receivingItems[item._id]?.toReceive || 0;
+      
+      // Only validate items that are being received
+      if (receiveQty > 0) {
+        const itemErrors = {};
+        
+        // Validate batch number
+        const batchNumber = receivingItems[item._id]?.batch_number || item.batch_number || '';
+        if (!batchNumber || batchNumber.trim() === '') {
+          itemErrors.batch_number = 'Batch number is required';
+          isValid = false;
+        }
+        
+        // Validate expiry date
+        const expiryDate = receivingItems[item._id]?.expiry_date || item.expiry_date || '';
+        if (!expiryDate) {
+          itemErrors.expiry_date = 'Expiry date is required';
+          isValid = false;
+        } else {
+          // Check if expiry date is in the future
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          const expDate = new Date(expiryDate);
+          if (expDate <= today) {
+            itemErrors.expiry_date = 'Expiry date must be in the future';
+            isValid = false;
+          }
+        }
+
+        if (Object.keys(itemErrors).length > 0) {
+          errors[item._id] = itemErrors;
+        }
+      }
+    });
+
+    setReceivingErrors(errors);
+    return isValid;
+  };
+
   const submitReceiving = async () => {
     try {
+      // Validate before submission
+      if (!validateReceivingItems()) {
+        // Scroll to the first error
+        const firstErrorItem = Object.keys(receivingErrors)[0];
+        if (firstErrorItem) {
+          const element = document.getElementById(`item-${firstErrorItem}`);
+          element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        return;
+      }
+
       setReceivingLoading(true);
       
-      // Prepare the receive data
-      const receiveData = {
-        items: selectedOrder.items
-          .filter(item => receivingItems[item._id]?.toReceive > 0)
-          .map(item => ({
-            item_id: item._id,
-            quantity_received: receivingItems[item._id]?.toReceive || 0,
-            batch_number: receivingItems[item._id]?.batch_number || item.batch_number || '',
-            expiry_date: receivingItems[item._id]?.expiry_date || item.expiry_date || null,
-            selling_price: receivingItems[item._id]?.selling_price !== undefined 
-              ? parseFloat(receivingItems[item._id]?.selling_price) 
-              : item.selling_price || 0
-          }))
-      };
+      // Prepare the receive data - CORRECT STRUCTURE
+      const receiveItems = selectedOrder.items
+        .filter(item => receivingItems[item._id]?.toReceive > 0)
+        .map(item => ({
+          item_id: item._id,
+          quantity_received: receivingItems[item._id]?.toReceive || 0,
+          batch_number: receivingItems[item._id]?.batch_number || item.batch_number || '',
+          expiry_date: receivingItems[item._id]?.expiry_date || item.expiry_date || null,
+          selling_price: receivingItems[item._id]?.selling_price !== undefined 
+            ? parseFloat(receivingItems[item._id]?.selling_price) 
+            : item.selling_price || 0
+        }));
 
-      console.log('Submitting Receive Data:', receiveData.items);
-      
+      console.log('Submitting Receive Items:', receiveItems);
+      console.log('Selected Order ID:', selectedOrder._id);
+
+      // Send directly as { received_items: [...] } - NOT wrapped in items property
       await apiClient.post(`/orders/purchase/${selectedOrder._id}/receive`, { 
-        received_items: receiveData.items 
+        received_items: receiveItems  // ✅ Direct array under received_items
       });
       
       // Show success message
@@ -233,6 +304,7 @@ const PurchaseOrdersList = () => {
       setShowModal(false);
       setSelectedOrder(null);
       setReceivingItems({});
+      setReceivingErrors({});
       
     } catch (err) {
       setError('Failed to receive items');
@@ -249,10 +321,14 @@ const PurchaseOrdersList = () => {
       maxReceiving[item._id] = {
         received: item.received || 0,
         toReceive: Math.max(0, pending),
-        maxAllowed: Math.max(0, pending)
+        maxAllowed: Math.max(0, pending),
+        batch_number: item.batch_number || '',
+        expiry_date: item.expiry_date || ''
       };
     });
     setReceivingItems(maxReceiving);
+    // Clear errors when filling all
+    setReceivingErrors({});
   };
 
   const handleClearAll = () => {
@@ -261,10 +337,14 @@ const PurchaseOrdersList = () => {
       resetReceiving[item._id] = {
         received: item.received || 0,
         toReceive: 0,
-        maxAllowed: Math.max(0, item.quantity - (item.received || 0))
+        maxAllowed: Math.max(0, item.quantity - (item.received || 0)),
+        batch_number: item.batch_number || '',
+        expiry_date: item.expiry_date || ''
       };
     });
     setReceivingItems(resetReceiving);
+    // Clear errors when clearing all
+    setReceivingErrors({});
   };
 
   const getStatusBadge = (status) => {
@@ -669,19 +749,6 @@ const PurchaseOrdersList = () => {
                               })}
                             </p>
                           </div>
-                          <div>
-                            <p className="text-sm text-gray-500 font-medium">Delivery Date</p>
-                            <p className={`font-semibold ${
-                              new Date(order.expected_delivery_date) < new Date() && order.status !== 'Received'
-                                ? 'text-red-600'
-                                : 'text-gray-800'
-                            }`}>
-                              {new Date(order.expected_delivery_date).toLocaleDateString('en-IN', {
-                                day: '2-digit',
-                                month: 'short'
-                              })}
-                            </p>
-                          </div>
                         </div>
                       </div>
                     </div>
@@ -818,7 +885,7 @@ const PurchaseOrdersList = () => {
       {/* Order Details Modal */}
       {showModal && selectedOrder && (
         <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden animate-scale-in">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden animate-scale-in">
             <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-blue-50 rounded-lg">
@@ -842,6 +909,7 @@ const PurchaseOrdersList = () => {
                     setShowModal(false);
                     setSelectedOrder(null);
                     setReceivingItems({});
+                    setReceivingErrors({});
                   }}
                   className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
                 >
@@ -919,15 +987,21 @@ const PurchaseOrdersList = () => {
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Receive Now</th>
                         )}
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cost/Unit</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Selling Price</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total Cost</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
                       {selectedOrder.items.map((item) => {
                         const pending = item.quantity - (item.received || 0);
+                        const itemErrors = receivingErrors[item._id] || {};
+                        const hasError = Object.keys(itemErrors).length > 0;
+                        
                         return (
-                          <tr key={item._id} className="hover:bg-gray-50/50">
+                          <tr 
+                            key={item._id} 
+                            id={`item-${item._id}`}
+                            className={`hover:bg-gray-50/50 ${hasError ? 'bg-red-50/50' : ''}`}
+                          >
                             <td className="px-4 py-3">
                               <div>
                                 <p className="font-medium text-gray-800">{item.medicine_id?.name || 'N/A'}</p>
@@ -935,25 +1009,40 @@ const PurchaseOrdersList = () => {
                             </td>
                             <td className="px-4 py-3">
                               {canReceiveStock(selectedOrder) ? (
-                                <input
-                                  type="text"
-                                  value={receivingItems[item._id]?.batch_number ?? item.batch_number ?? ''}
-                                  onChange={(e) => handleReceiveItem(item._id, 'batch_number', e.target.value)}
-                                  className="w-full px-2 py-1.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 text-sm"
-                                  placeholder="Enter batch number"
-                                />
+                                <div>
+                                  <input
+                                    type="text"
+                                    value={receivingItems[item._id]?.batch_number ?? item.batch_number ?? ''}
+                                    onChange={(e) => handleReceiveItem(item._id, 'batch_number', e.target.value)}
+                                    className={`w-full px-2 py-1.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 text-sm ${
+                                      itemErrors.batch_number ? 'border-red-300 bg-red-50' : 'border-gray-200'
+                                    }`}
+                                    placeholder="Enter batch number"
+                                  />
+                                  {itemErrors.batch_number && (
+                                    <p className="text-xs text-red-600 mt-1">{itemErrors.batch_number}</p>
+                                  )}
+                                </div>
                               ) : (
                                 <span className="text-sm text-gray-700">{item.batch_number || '-'}</span>
                               )}
                             </td>
                             <td className="px-4 py-3">
                               {canReceiveStock(selectedOrder) ? (
-                                <input
-                                  type="date"
-                                  value={receivingItems[item._id]?.expiry_date ? new Date(receivingItems[item._id]?.expiry_date).toISOString().split('T')[0] : (item.expiry_date ? new Date(item.expiry_date).toISOString().split('T')[0] : '')}
-                                  onChange={(e) => handleReceiveItem(item._id, 'expiry_date', e.target.value)}
-                                  className="w-full px-2 py-1.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 text-sm"
-                                />
+                                <div>
+                                  <input
+                                    type="date"
+                                    min={new Date().toISOString().split('T')[0]} // Set minimum date to today
+                                    value={receivingItems[item._id]?.expiry_date ? new Date(receivingItems[item._id]?.expiry_date).toISOString().split('T')[0] : (item.expiry_date ? new Date(item.expiry_date).toISOString().split('T')[0] : '')}
+                                    onChange={(e) => handleReceiveItem(item._id, 'expiry_date', e.target.value)}
+                                    className={`w-full px-2 py-1.5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 text-sm ${
+                                      itemErrors.expiry_date ? 'border-red-300 bg-red-50' : 'border-gray-200'
+                                    }`}
+                                  />
+                                  {itemErrors.expiry_date && (
+                                    <p className="text-xs text-red-600 mt-1">{itemErrors.expiry_date}</p>
+                                  )}
+                                </div>
                               ) : (
                                 <span className="text-sm text-gray-700">
                                   {item.expiry_date ? new Date(item.expiry_date).toLocaleDateString('en-IN') : '-'}
@@ -1002,21 +1091,6 @@ const PurchaseOrdersList = () => {
                               </td>
                             )}
                             <td className="px-4 py-3 font-medium">{formatCurrency(item.unit_cost)}</td>
-                            <td className="px-4 py-3 font-medium">
-                              {canReceiveStock(selectedOrder) ? (
-                                <input
-                                  type="number"
-                                  min="0"
-                                  step="0.01"
-                                  value={receivingItems[item._id]?.selling_price ?? item.selling_price ?? 0}
-                                  onChange={(e) => handleReceiveItem(item._id, 'selling_price', e.target.value)}
-                                  className="w-32 px-2 py-1.5 border border-green-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 text-sm font-semibold text-green-600"
-                                  placeholder="₹0.00"
-                                />
-                              ) : (
-                                <span className="text-green-600 font-bold">{formatCurrency(item.selling_price || 0)}</span>
-                              )}
-                            </td>
                             <td className="px-4 py-3 font-bold text-gray-800">
                               {formatCurrency(item.unit_cost * item.quantity)}
                             </td>

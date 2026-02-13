@@ -45,7 +45,8 @@ import {
   SortAsc,
   MoreVertical,
   Pill,
-  Package2
+  Package2,
+  Clock
 } from 'lucide-react';
 import { navigate } from 'wouter/use-browser-location';
 
@@ -89,7 +90,8 @@ const MedicineList = () => {
     const fetchMedicines = async () => {
       try {
         const response = await apiClient.get('/medicines?limit=200');
-        setMedicines(response.data.medicines || response.data);
+        // Response now includes stock_quantity from backend
+        setMedicines(response.data);
       } catch (err) {
         setError('Failed to fetch medicines. Please try again later.');
         console.error('Error fetching medicines:', err);
@@ -108,15 +110,16 @@ const MedicineList = () => {
 
   const sortedAndFilteredMedicines = useMemo(() => {
     let filtered = medicines.filter(med => {
-      const matchesSearch = med.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      const matchesSearch = med.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            med.generic_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            med.brand?.toLowerCase().includes(searchTerm.toLowerCase());
       
       const matchesCategory = categoryFilter ? med.category === categoryFilter : true;
       
-      const matchesStock = stockFilter === 'low' ? (med.stock_quantity < (med.min_stock_level || 10)) :
-                           stockFilter === 'out' ? med.stock_quantity === 0 :
-                           stockFilter === 'adequate' ? (med.stock_quantity >= (med.min_stock_level || 10)) : true;
+      const stockQty = med.stock_quantity || 0;
+      const matchesStock = stockFilter === 'low' ? (stockQty < (med.min_stock_level || 10)) :
+                           stockFilter === 'out' ? stockQty === 0 :
+                           stockFilter === 'adequate' ? (stockQty >= (med.min_stock_level || 10)) : true;
       
       return matchesSearch && matchesCategory && matchesStock;
     });
@@ -127,8 +130,8 @@ const MedicineList = () => {
       
       switch(sortBy) {
         case 'name':
-          aVal = a.name.toLowerCase();
-          bVal = b.name.toLowerCase();
+          aVal = a.name?.toLowerCase() || '';
+          bVal = b.name?.toLowerCase() || '';
           break;
         case 'stock':
           aVal = a.stock_quantity || 0;
@@ -142,9 +145,13 @@ const MedicineList = () => {
           aVal = a.category || '';
           bVal = b.category || '';
           break;
+        case 'expiry':
+          aVal = a.earliest_expiry ? new Date(a.earliest_expiry).getTime() : Infinity;
+          bVal = b.earliest_expiry ? new Date(b.earliest_expiry).getTime() : Infinity;
+          break;
         default:
-          aVal = a.name.toLowerCase();
-          bVal = b.name.toLowerCase();
+          aVal = a.name?.toLowerCase() || '';
+          bVal = b.name?.toLowerCase() || '';
       }
       
       if (sortOrder === 'asc') {
@@ -158,22 +165,29 @@ const MedicineList = () => {
   }, [medicines, searchTerm, categoryFilter, stockFilter, sortBy, sortOrder]);
 
   // Open detail card. If `toEdit` true, open in edit mode.
-  const openDetail = (med, toEdit = false) => {
-    setDetailMedicine(med);
-    setFormState({
-      name: med.name || '',
-      generic_name: med.generic_name || '',
-      brand: med.brand || '',
-      category: med.category || '',
-      strength: med.strength || '',
-      description: med.description || '',
-      min_stock_level: med.min_stock_level || 10,
-      prescription_required: !!med.prescription_required,
-      location: med.location || {},
-      is_active: med.is_active,
-    });
-    setEditMode(toEdit);
-    setShowDetailCard(true);
+  const openDetail = async (med, toEdit = false) => {
+    try {
+      // Fetch detailed medicine info with batches
+      const response = await apiClient.get(`/medicines/${med._id}`);
+      setDetailMedicine(response.data);
+      setFormState({
+        name: response.data.name || '',
+        generic_name: response.data.generic_name || '',
+        brand: response.data.brand || '',
+        category: response.data.category || '',
+        strength: response.data.strength || '',
+        description: response.data.description || '',
+        min_stock_level: response.data.min_stock_level || 10,
+        prescription_required: !!response.data.prescription_required,
+        location: response.data.location || {},
+        is_active: response.data.is_active,
+      });
+      setEditMode(toEdit);
+      setShowDetailCard(true);
+    } catch (err) {
+      console.error('Error fetching medicine details:', err);
+      alert('Failed to fetch medicine details');
+    }
   };
 
   const closeDetail = () => {
@@ -199,8 +213,12 @@ const MedicineList = () => {
     try {
       const res = await apiClient.put(`/medicines/${detailMedicine._id}`, formState);
       const updated = res.data;
-      setMedicines(prev => prev.map(m => m._id === updated._id ? updated : m));
-      setDetailMedicine(updated);
+      
+      // Refresh the medicine with updated data
+      const refreshed = await apiClient.get(`/medicines/${detailMedicine._id}`);
+      
+      setMedicines(prev => prev.map(m => m._id === updated._id ? refreshed.data : m));
+      setDetailMedicine(refreshed.data);
       setEditMode(false);
     } catch (err) {
       console.error('Update failed', err);
@@ -257,11 +275,11 @@ const MedicineList = () => {
 
   const stats = useMemo(() => ({
     total: medicines.length,
-    inStock: medicines.filter(m => m.stock_quantity > 0).length,
-    lowStock: medicines.filter(m => m.stock_quantity > 0 && m.stock_quantity < (m.min_stock_level || 10)).length,
-    outOfStock: medicines.filter(m => m.stock_quantity === 0).length,
+    inStock: medicines.filter(m => (m.stock_quantity || 0) > 0).length,
+    lowStock: medicines.filter(m => (m.stock_quantity || 0) > 0 && (m.stock_quantity || 0) < (m.min_stock_level || 10)).length,
+    outOfStock: medicines.filter(m => (m.stock_quantity || 0) === 0).length,
     totalValue: medicines.reduce((sum, med) => 
-      sum + ((med.price_per_unit || 0) * (med.stock_quantity || 0)), 0)
+      sum + (med.total_stock_value || 0), 0)
   }), [medicines]);
 
   const formatCurrency = (amount) => {
@@ -270,7 +288,16 @@ const MedicineList = () => {
       currency: 'INR',
       minimumFractionDigits: 0,
       maximumFractionDigits: 0
-    }).format(amount);
+    }).format(amount || 0);
+  };
+
+  const formatDate = (date) => {
+    if (!date) return 'N/A';
+    return new Date(date).toLocaleDateString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    });
   };
 
   if (loading) {
@@ -362,8 +389,8 @@ const MedicineList = () => {
 
       {/* Filters & Search */}
       <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 mb-6">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-          <div className="relative">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+          <div className="relative lg:col-span-2">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
               <FaSearch />
             </div>
@@ -406,6 +433,7 @@ const MedicineList = () => {
             >
               <option value="name">Sort by Name</option>
               <option value="stock">Sort by Stock</option>
+              <option value="expiry">Sort by Expiry</option>
               <option value="price">Sort by Price</option>
               <option value="category">Sort by Category</option>
             </select>
@@ -469,7 +497,8 @@ const MedicineList = () => {
                   <th className="px-6 py-4">Medicine Details</th>
                   <th className="px-6 py-4">Category</th>
                   <th className="px-6 py-4">Stock Level</th>
-                  {/* <th className="px-6 py-4">Pricing</th> */}
+                  <th className="px-6 py-4">Batches</th>
+                  <th className="px-6 py-4">Earliest Expiry</th>
                   <th className="px-6 py-4">Status</th>
                   <th className="px-6 py-4 text-right">Actions</th>
                 </tr>
@@ -515,20 +544,28 @@ const MedicineList = () => {
                           )}
                         </div>
                       </td>
-                      {/* <td className="px-6 py-4">
-                        <div className="space-y-1">
+                      <td className="px-6 py-4">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-50 text-purple-700 border border-purple-200">
+                          <FaBoxes className="w-3 h-3" />
+                          {medicine.batch_count || 0} batches
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        {medicine.earliest_expiry ? (
                           <div className="flex items-center gap-1">
-                            <FaRupeeSign className="text-slate-400 text-sm" />
-                            <span className="font-bold text-slate-800">{medicine.price_per_unit?.toFixed(2) || '0.00'}</span>
-                            <span className="text-xs text-slate-500">/unit</span>
+                            <Clock className="w-3 h-3 text-slate-400" />
+                            <span className={`text-sm ${
+                              new Date(medicine.earliest_expiry) < new Date() 
+                                ? 'text-red-600 font-semibold' 
+                                : 'text-slate-600'
+                            }`}>
+                              {formatDate(medicine.earliest_expiry)}
+                            </span>
                           </div>
-                          {medicine.mrp && (
-                            <div className="text-xs text-slate-500">
-                              MRP: ₹{medicine.mrp}
-                            </div>
-                          )}
-                        </div>
-                      </td> */}
+                        ) : (
+                          <span className="text-slate-400">No batches</span>
+                        )}
+                      </td>
                       <td className="px-6 py-4">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ring-1 ring-inset ${
                           medicine.is_active 
@@ -554,12 +591,13 @@ const MedicineList = () => {
                           >
                             <Edit className="w-4 h-4" />
                           </button>
-                          <button onClick={() => confirmDelete(medicine)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg  group-hover:opacity-100 transition-opacity" title="Delete">
+                          <button 
+                            onClick={() => confirmDelete(medicine)} 
+                            className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" 
+                            title="Delete"
+                          >
                             <Trash2 className="w-4 h-4" />
                           </button>
-                          {/* <button className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition-colors" title="More">
-                            <MoreVertical className="w-4 h-4" />
-                          </button> */}
                         </div>
                       </td>
                     </tr>
@@ -576,7 +614,7 @@ const MedicineList = () => {
         <div className="fixed inset-0 z-40 flex items-start justify-center pt-12 pb-6 overflow-y-auto ">
           <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" onClick={closeDetail}></div>
           <div className="relative z-50 w-full max-w-2xl mx-4 my-auto">
-            <div className="bg-white border border-slate-200">
+            <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-2xl">
               {/* Header */}
               <div className="bg-gradient-to-r from-teal-50 to-cyan-50 border-b border-slate-200 px-6 py-5 flex items-start justify-between">
                 <div>
@@ -617,12 +655,56 @@ const MedicineList = () => {
                         <p className="text-sm font-semibold text-slate-800">{detailMedicine.min_stock_level ?? 10} units</p>
                       </div>
                     </div>
+                    
+                    {/* Stock Summary */}
+                    <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                      <h4 className="font-semibold text-blue-800 mb-3">Stock Summary</h4>
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="bg-white p-2 rounded-lg text-center">
+                          <p className="text-xs text-slate-500">Total Stock</p>
+                          <p className="text-lg font-bold text-slate-800">{detailMedicine.stock_quantity || 0} units</p>
+                        </div>
+                        <div className="bg-white p-2 rounded-lg text-center">
+                          <p className="text-xs text-slate-500">Total Batches</p>
+                          <p className="text-lg font-bold text-slate-800">{detailMedicine.batch_count || 0}</p>
+                        </div>
+                        <div className="bg-white p-2 rounded-lg text-center">
+                          <p className="text-xs text-slate-500">Stock Value</p>
+                          <p className="text-lg font-bold text-slate-800">{formatCurrency(detailMedicine.total_stock_value || 0)}</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Batch Details */}
+                    {detailMedicine.batches && detailMedicine.batches.length > 0 && (
+                      <div className="border border-slate-200 rounded-lg overflow-hidden">
+                        <div className="bg-slate-50 px-4 py-2 border-b border-slate-200">
+                          <h4 className="font-semibold text-slate-700">Batch Details</h4>
+                        </div>
+                        <div className="p-4 space-y-3">
+                          {detailMedicine.batches.map((batch, idx) => (
+                            <div key={idx} className="flex items-center justify-between p-3 bg-white border border-slate-100 rounded-lg">
+                              <div>
+                                <p className="font-medium text-slate-800">Batch: {batch.batch_number}</p>
+                                <p className="text-xs text-slate-500">Expiry: {formatDate(batch.expiry_date)}</p>
+                              </div>
+                              <div className="text-right">
+                                <p className="font-bold text-slate-800">{batch.quantity} units</p>
+                                <p className="text-xs text-slate-500">₹{batch.selling_price}/unit</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
                     {detailMedicine.description && (
                       <div className="bg-slate-50 p-3 rounded-lg">
                         <p className="text-xs text-slate-500 font-bold uppercase mb-1">Description</p>
                         <p className="text-sm text-slate-700">{detailMedicine.description}</p>
                       </div>
                     )}
+                    
                     <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg flex items-center gap-2">
                       <div className="w-4 h-4 bg-blue-500 rounded-full"></div>
                       <p className="text-sm font-semibold text-blue-700">
@@ -712,6 +794,11 @@ const MedicineList = () => {
               <p className="text-slate-700">
                 Are you sure you want to delete <span className="font-bold text-slate-900">"{deleteTarget.name}"</span>? This medicine will be deactivated and removed from the inventory.
               </p>
+              {deleteTarget.batch_count > 0 && (
+                <p className="text-sm text-amber-600 mt-2">
+                  ⚠️ This medicine has {deleteTarget.batch_count} batch(es) associated with it. Deleting it will also deactivate all associated batches.
+                </p>
+              )}
             </div>
             <div className="bg-slate-50 border-t border-slate-200 px-6 py-4 flex items-center justify-end gap-2">
               <button onClick={closeDeleteConfirm} className="px-4 py-2 bg-slate-200 text-slate-700 font-semibold rounded-lg hover:bg-slate-300 transition-colors">Cancel</button>
