@@ -16,7 +16,11 @@ import {
   FaFilePdf,
   FaFileExcel,
   FaFileCsv,
-  FaSpinner
+  FaSpinner,
+  FaSyringe,
+  FaHospital,
+  FaClipboardList,
+  FaStethoscope
 } from 'react-icons/fa';
 import {
   BarChart,
@@ -45,7 +49,6 @@ const RevenueStats = () => {
   const [exportType, setExportType] = useState('');
   const [data, setData] = useState(null);
 
-  // IMPORTANT: department filter is now DEPARTMENT_ID (string) or 'all'
   const [filters, setFilters] = useState({
     startDate: toISODate(new Date(new Date().setDate(new Date().getDate() - 30))),
     endDate: toISODate(new Date()),
@@ -71,11 +74,17 @@ const RevenueStats = () => {
 
     // Doctor/Department specific tabs
     selectedDoctor: '',
-    selectedDepartment: ''
+    selectedDepartment: '',
+
+    // Procedure specific filters
+    procedureCode: 'all',
+    procedureCategory: 'all'
   });
 
   const [doctors, setDoctors] = useState([]);
   const [departments, setDepartments] = useState([]);
+  const [procedureCodes, setProcedureCodes] = useState([]);
+  const [procedureCategories, setProcedureCategories] = useState([]);
 
   // ---------- Helpers ----------
   const formatCurrency = (amount) => {
@@ -107,7 +116,7 @@ const RevenueStats = () => {
 
       // Reset pagination if changing filters relevant to detailed report
       if (
-        ['startDate', 'endDate', 'doctorId', 'departmentId', 'invoiceType', 'invoiceStatus', 'minAmount', 'maxAmount'].includes(
+        ['startDate', 'endDate', 'doctorId', 'departmentId', 'invoiceType', 'invoiceStatus', 'minAmount', 'maxAmount', 'procedureCode', 'procedureCategory'].includes(
           key
         )
       ) {
@@ -121,7 +130,6 @@ const RevenueStats = () => {
   const fetchDoctors = async () => {
     try {
       const res = await axios.get(`${baseUrl}/doctors`);
-      // support both array response or {data: []}
       const list = Array.isArray(res.data) ? res.data : res.data?.data || [];
       setDoctors(list);
     } catch (err) {
@@ -141,9 +149,25 @@ const RevenueStats = () => {
     }
   };
 
+  const fetchProcedureData = async () => {
+    try {
+      const res = await axios.get(`${baseUrl}/procedures/all?limit=1000`);
+      if (res.data.success) {
+        const procedures = res.data.data || [];
+        const codes = [...new Set(procedures.map(p => p.code))].filter(Boolean);
+        const categories = [...new Set(procedures.map(p => p.category))].filter(Boolean);
+        setProcedureCodes(codes);
+        setProcedureCategories(categories);
+      }
+    } catch (err) {
+      console.error('Error fetching procedure data:', err);
+    }
+  };
+
   useEffect(() => {
     fetchDoctors();
     fetchDepartments();
+    fetchProcedureData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -212,6 +236,18 @@ const RevenueStats = () => {
         };
         break;
 
+      case 'procedures':
+        url = `${baseUrl}/revenue/procedures`;
+        params = {
+          startDate: filters.startDate,
+          endDate: filters.endDate,
+          doctorId: filters.doctorId,
+          departmentId: filters.departmentId,
+          procedureCode: filters.procedureCode !== 'all' ? filters.procedureCode : undefined,
+          procedureCategory: filters.procedureCategory !== 'all' ? filters.procedureCategory : undefined
+        };
+        break;
+
       case 'detailed':
         url = `${baseUrl}/revenue/detailed`;
         params = {
@@ -258,6 +294,7 @@ const RevenueStats = () => {
     try {
       const { url, params } = buildRequest();
       const res = await axios.get(url, { params });
+      console.log(res.data)
       setData(res.data);
     } catch (err) {
       console.error('Error fetching revenue data:', err);
@@ -270,11 +307,10 @@ const RevenueStats = () => {
 
   // Fetch when tab changes OR pagination changes in detailed
   useEffect(() => {
-    if (activeTab === 'detailed') {
+    if (activeTab === 'detailed' || activeTab === 'procedures') {
       fetchData();
       return;
     }
-    // for other tabs, do not auto-fetch on every filter keystroke. Only on tab change.
     fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, filters.page]);
@@ -282,15 +318,15 @@ const RevenueStats = () => {
   // ---------- Export Functions ----------
   const exportData = async (type) => {
     if (exportLoading) return;
-    
+
     setExportLoading(true);
     setExportType(type);
-    
+
     try {
       let exportUrl = '';
       let exportParams = {};
       let filename = '';
-      
+
       // Build export parameters based on active tab
       switch (activeTab) {
         case 'overview':
@@ -307,11 +343,11 @@ const RevenueStats = () => {
             minAmount: filters.minAmount,
             maxAmount: filters.maxAmount,
             exportType: type,
-            includeBifurcation: true // Include hospital vs doctor revenue split
+            includeBifurcation: true
           };
           filename = `Revenue_Overview_${filters.startDate}_to_${filters.endDate}`;
           break;
-          
+
         case 'daily':
           exportUrl = `${baseUrl}/revenue/export/daily`;
           exportParams = {
@@ -324,7 +360,7 @@ const RevenueStats = () => {
           };
           filename = `Daily_Revenue_${filters.date}`;
           break;
-          
+
         case 'monthly':
           exportUrl = `${baseUrl}/revenue/export/monthly`;
           exportParams = {
@@ -339,7 +375,7 @@ const RevenueStats = () => {
           };
           filename = `Monthly_Revenue_${filters.year}_${filters.month}`;
           break;
-          
+
         case 'doctor':
           if (!filters.selectedDoctor) {
             alert('Please select a doctor first');
@@ -357,7 +393,7 @@ const RevenueStats = () => {
           const doctorName = selectedDoctor ? `${selectedDoctor.firstName}_${selectedDoctor.lastName}` : 'Doctor';
           filename = `${doctorName}_Revenue_${filters.startDate}_to_${filters.endDate}`;
           break;
-          
+
         case 'department':
           if (!filters.selectedDepartment) {
             alert('Please select a department first');
@@ -373,7 +409,21 @@ const RevenueStats = () => {
           const deptName = getDeptName(filters.selectedDepartment).replace(/\s+/g, '_');
           filename = `${deptName}_Revenue_${filters.startDate}_to_${filters.endDate}`;
           break;
-          
+
+        case 'procedures':
+          exportUrl = `${baseUrl}/revenue/export/procedures`;
+          exportParams = {
+            startDate: filters.startDate,
+            endDate: filters.endDate,
+            doctorId: filters.doctorId,
+            departmentId: filters.departmentId,
+            procedureCode: filters.procedureCode !== 'all' ? filters.procedureCode : undefined,
+            procedureCategory: filters.procedureCategory !== 'all' ? filters.procedureCategory : undefined,
+            exportType: type
+          };
+          filename = `Procedure_Revenue_${filters.startDate}_to_${filters.endDate}`;
+          break;
+
         case 'detailed':
           exportUrl = `${baseUrl}/revenue/export/detailed`;
           exportParams = {
@@ -386,11 +436,11 @@ const RevenueStats = () => {
             minAmount: filters.minAmount,
             maxAmount: filters.maxAmount,
             exportType: type,
-            includeCommissionSplit: true // Include commission calculations
+            includeCommissionSplit: true
           };
           filename = `Detailed_Revenue_${filters.startDate}_to_${filters.endDate}`;
           break;
-          
+
         default:
           exportUrl = `${baseUrl}/revenue/export/overview`;
           exportParams = {
@@ -400,29 +450,29 @@ const RevenueStats = () => {
           };
           filename = `Revenue_Report_${filters.startDate}_to_${filters.endDate}`;
       }
-      
+
       // Remove empty values
       Object.keys(exportParams).forEach((k) => {
         if (exportParams[k] === '' || exportParams[k] === 'all' || exportParams[k] === undefined) {
           delete exportParams[k];
         }
       });
-      
+
       // Set response type based on export type
       const config = {
         params: exportParams,
         responseType: type === 'pdf' ? 'blob' : 'blob'
       };
-      
+
       const res = await axios.get(exportUrl, config);
-      
+
       // Create download
       const blob = new Blob([res.data], {
-        type: type === 'pdf' ? 'application/pdf' : 
-               type === 'excel' ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' : 
-               'text/csv'
+        type: type === 'pdf' ? 'application/pdf' :
+          type === 'excel' ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' :
+            'text/csv'
       });
-      
+
       const blobUrl = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = blobUrl;
@@ -431,7 +481,7 @@ const RevenueStats = () => {
       link.click();
       link.remove();
       window.URL.revokeObjectURL(blobUrl);
-      
+
     } catch (err) {
       console.error('Export failed:', err);
       alert(`Export failed: ${err.response?.data?.error || err.message}`);
@@ -448,30 +498,55 @@ const RevenueStats = () => {
 
   // ---------- Charts colors ----------
   const pieColors = useMemo(
-    () => ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'],
+    () => ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#FF6B6B', '#4ECDC4', '#45B7D1'],
     []
   );
 
   // ---------- Revenue Bifurcation Display ----------
   const renderRevenueBifurcation = () => {
     if (!data || !data.summary) return null;
-    
-    const totalRevenue = data.summary.totalRevenue || 0;
-    const doctorRevenue = data.summary.doctorRevenue || 0;
-    const hospitalRevenue = data.summary.hospitalRevenue || 0;
-    const expenses = data.summary.totalSalaryExpenses || 0;
+
+    const summary = data.summary;
+    const breakdown = data.breakdown || {};
+    const topPerformers = data.topPerformers || {};
+
+    const totalRevenue = summary.totalRevenue || 0;
+    const doctorRevenue = summary.doctorRevenue || 0;
+    const hospitalRevenue = summary.hospitalRevenue || 0;
+    const expenses = summary.totalSalaryExpenses || 0;
     const netHospitalRevenue = hospitalRevenue - expenses;
-    
-    // If no bifurcation data, calculate based on typical splits
-    const displayDoctorRevenue = doctorRevenue > 0 ? doctorRevenue : totalRevenue * 0.3; // 30% to doctor if not specified
-    const displayHospitalRevenue = hospitalRevenue > 0 ? hospitalRevenue : totalRevenue * 0.7; // 70% to hospital
-    
+
+    // Get procedure revenue from summary or breakdown
+    const procedureRevenue = summary.procedureRevenue ||
+      breakdown.bySource?.procedures?.amount || 0;
+
+    // Get doctor commission from topPerformers
+    let totalDoctorCommission = 0;
+    let procedureDoctorCommission = 0;
+
+    if (topPerformers.doctors && topPerformers.doctors.length > 0) {
+      totalDoctorCommission = topPerformers.doctors.reduce((sum, doc) => {
+        // Check if doctor has procedure revenue
+        if (doc.procedureRevenue && doc.procedureRevenue > 0) {
+          procedureDoctorCommission += doc.commission * (doc.procedureRevenue / doc.revenue);
+        }
+        return sum + (doc.commission || 0);
+      }, 0);
+    }
+
+    // Calculate procedure hospital share
+    const procedureHospitalShare = procedureRevenue - procedureDoctorCommission;
+
+    // Use actual data if available, otherwise fallback to estimates
+    const displayDoctorRevenue = doctorRevenue > 0 ? doctorRevenue : totalRevenue * 0.3;
+    const displayHospitalRevenue = hospitalRevenue > 0 ? hospitalRevenue : totalRevenue * 0.7;
+
     return (
       <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-200 mb-6">
         <h3 className="text-lg font-bold text-blue-800 mb-4 flex items-center gap-2">
           <FaMoneyBillWave /> Revenue Bifurcation
         </h3>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="bg-white p-4 rounded-lg border border-blue-100 shadow-sm">
             <div className="flex items-center justify-between mb-2">
@@ -479,11 +554,15 @@ const RevenueStats = () => {
               <span className="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded">100%</span>
             </div>
             <p className="text-2xl font-bold text-gray-800">{formatCurrency(totalRevenue)}</p>
+            <div className="mt-2 text-xs text-gray-500">
+              <span className="text-blue-600">Appt:</span> {formatCurrency(summary.appointmentRevenue || 0)} |
+              <span className="text-indigo-600 ml-1">Proc:</span> {formatCurrency(procedureRevenue)}
+            </div>
             <div className="mt-2 h-2 bg-gray-200 rounded-full overflow-hidden">
               <div className="h-full bg-blue-500 rounded-full" style={{ width: '100%' }}></div>
             </div>
           </div>
-          
+
           <div className="bg-white p-4 rounded-lg border border-green-100 shadow-sm">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium text-gray-600">Doctor's Share</span>
@@ -492,14 +571,22 @@ const RevenueStats = () => {
               </span>
             </div>
             <p className="text-2xl font-bold text-gray-800">{formatCurrency(displayDoctorRevenue)}</p>
+            <div className="mt-2 text-xs text-gray-500">
+              {topPerformers.doctors?.map(doc => (
+                <div key={doc.doctorId} className="flex justify-between">
+                  <span>{doc.name}:</span>
+                  <span className="font-medium">{formatCurrency(doc.commission || 0)}</span>
+                </div>
+              ))}
+            </div>
             <div className="mt-2 h-2 bg-gray-200 rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-green-500 rounded-full" 
+              <div
+                className="h-full bg-green-500 rounded-full"
                 style={{ width: totalRevenue > 0 ? `${(displayDoctorRevenue / totalRevenue) * 100}%` : '0%' }}
               ></div>
             </div>
           </div>
-          
+
           <div className="bg-white p-4 rounded-lg border border-purple-100 shadow-sm">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium text-gray-600">Hospital's Share</span>
@@ -508,14 +595,18 @@ const RevenueStats = () => {
               </span>
             </div>
             <p className="text-2xl font-bold text-gray-800">{formatCurrency(displayHospitalRevenue)}</p>
+            <div className="mt-2 text-xs text-gray-500">
+              <div>Before Expenses</div>
+              <div className="font-medium">{formatCurrency(displayHospitalRevenue)}</div>
+            </div>
             <div className="mt-2 h-2 bg-gray-200 rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-purple-500 rounded-full" 
+              <div
+                className="h-full bg-purple-500 rounded-full"
                 style={{ width: totalRevenue > 0 ? `${(displayHospitalRevenue / totalRevenue) * 100}%` : '0%' }}
               ></div>
             </div>
           </div>
-          
+
           <div className="bg-white p-4 rounded-lg border border-teal-100 shadow-sm">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium text-gray-600">Net Hospital Revenue</span>
@@ -524,15 +615,128 @@ const RevenueStats = () => {
               </span>
             </div>
             <p className="text-2xl font-bold text-gray-800">{formatCurrency(netHospitalRevenue)}</p>
+            <div className="mt-2 text-xs text-gray-500">
+              <div>Profit Margin: {summary.profitMargin?.toFixed(1) || 0}%</div>
+            </div>
             <div className="mt-2 h-2 bg-gray-200 rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-teal-500 rounded-full" 
+              <div
+                className="h-full bg-teal-500 rounded-full"
                 style={{ width: totalRevenue > 0 ? `${(Math.max(0, netHospitalRevenue) / totalRevenue) * 100}%` : '0%' }}
               ></div>
             </div>
           </div>
         </div>
-        
+
+        {/* Revenue Source Breakdown */}
+        <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="bg-white p-3 rounded-lg border border-blue-100">
+            <h5 className="text-sm font-semibold text-blue-700 mb-2">Revenue Sources</h5>
+            <div className="space-y-1 text-sm">
+              <div className="flex justify-between">
+                <span>Appointments:</span>
+                <span className="font-medium">{formatCurrency(summary.appointmentRevenue || 0)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Procedures:</span>
+                <span className="font-medium text-indigo-600">{formatCurrency(procedureRevenue)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Pharmacy:</span>
+                <span className="font-medium">{formatCurrency(summary.pharmacyRevenue || 0)}</span>
+              </div>
+              <div className="flex justify-between pt-1 border-t">
+                <span>Total:</span>
+                <span className="font-bold">{formatCurrency(totalRevenue)}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white p-3 rounded-lg border border-green-100">
+            <h5 className="text-sm font-semibold text-green-700 mb-2">Doctor Details</h5>
+            <div className="space-y-1 text-sm">
+              {topPerformers.doctors && topPerformers.doctors.length > 0 ? (
+                topPerformers.doctors.map(doc => (
+                  <div key={doc.doctorId} className="flex justify-between">
+                    <span>{doc.name}:</span>
+                    <span>
+                      <span className="font-medium">{formatCurrency(doc.commission || 0)}</span>
+                      {doc.procedureRevenue > 0 && (
+                        <span className="text-xs text-indigo-600 ml-1">
+                          (Proc: {formatCurrency(doc.procedureRevenue)})
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                ))
+              ) : (
+                <div className="text-gray-500">No doctor data</div>
+              )}
+            </div>
+          </div>
+
+          <div className="bg-white p-3 rounded-lg border border-purple-100">
+            <h5 className="text-sm font-semibold text-purple-700 mb-2">Status Breakdown</h5>
+            <div className="space-y-1 text-sm">
+              <div className="flex justify-between">
+                <span>Paid:</span>
+                <span className="font-medium text-green-600">{formatCurrency(breakdown.byStatus?.paid?.amount || 0)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Receivable:</span>
+                <span className="font-medium text-yellow-600">{formatCurrency(breakdown.byStatus?.receivable?.amount || 0)}</span>
+              </div>
+              <div className="flex justify-between pt-1 border-t">
+                <span>Collection Rate:</span>
+                <span className="font-bold">{summary.collectionRate?.toFixed(1) || 0}%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Procedure Revenue Highlight - Show only if there are procedures */}
+        {procedureRevenue > 0 && (
+          <div className="mt-4 p-3 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg border border-indigo-200">
+            <h4 className="text-sm font-bold text-indigo-700 mb-2 flex items-center gap-2">
+              <FaSyringe /> Procedure Revenue Breakdown
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+              <div className="flex justify-between items-center bg-white p-2 rounded">
+                <span className="text-sm text-gray-600">Procedure Revenue</span>
+                <span className="font-medium text-gray-800">{formatCurrency(procedureRevenue)}</span>
+              </div>
+              <div className="flex justify-between items-center bg-white p-2 rounded">
+                <span className="text-sm text-gray-600">Doctor's Commission</span>
+                <span className="font-medium text-green-600">{formatCurrency(procedureDoctorCommission)}</span>
+              </div>
+              <div className="flex justify-between items-center bg-white p-2 rounded">
+                <span className="text-sm text-gray-600">Hospital's Share</span>
+                <span className="font-medium text-blue-600">{formatCurrency(procedureHospitalShare)}</span>
+              </div>
+              <div className="flex justify-between items-center bg-white p-2 rounded">
+                <span className="text-sm text-gray-600">% of Total</span>
+                <span className="font-medium text-purple-600">
+                  {totalRevenue > 0 ? ((procedureRevenue / totalRevenue) * 100).toFixed(1) : 0}%
+                </span>
+              </div>
+            </div>
+
+            {/* Top Procedures Preview */}
+            {breakdown.bySource?.procedures?.byProcedure && breakdown.bySource.procedures.byProcedure.length > 0 && (
+              <div className="mt-3 pt-2 border-t border-indigo-200">
+                <h5 className="text-xs font-semibold text-indigo-600 mb-2">Top Procedures:</h5>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                  {breakdown.bySource.procedures.byProcedure.slice(0, 4).map((proc, idx) => (
+                    <div key={idx} className="text-xs bg-white p-1 rounded flex justify-between">
+                      <span>{proc.code}:</span>
+                      <span className="font-medium">{formatCurrency(proc.revenue)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Detailed breakdown */}
         <div className="mt-4 pt-4 border-t border-blue-200">
           <h4 className="text-sm font-bold text-blue-700 mb-2">Detailed Breakdown</h4>
@@ -541,17 +745,23 @@ const RevenueStats = () => {
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-600">Doctor Commission (Consultants)</span>
                 <span className="font-medium text-gray-800">
-                  {data.summary.partTimeDoctorCommission 
-                    ? formatCurrency(data.summary.partTimeDoctorCommission)
-                    : formatCurrency(displayDoctorRevenue * 0.8)} {/* 80% of doctor share */}
+                  {summary.partTimeDoctorCommission
+                    ? formatCurrency(summary.partTimeDoctorCommission)
+                    : formatCurrency(displayDoctorRevenue * 0.8)}
                 </span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-600">Full-time Doctor Salaries</span>
                 <span className="font-medium text-gray-800">
-                  {data.summary.fullTimeSalaryExpenses 
-                    ? formatCurrency(data.summary.fullTimeSalaryExpenses)
-                    : formatCurrency(displayDoctorRevenue * 0.2)} {/* 20% of doctor share */}
+                  {summary.fullTimeSalaryExpenses
+                    ? formatCurrency(summary.fullTimeSalaryExpenses)
+                    : formatCurrency(displayDoctorRevenue * 0.2)}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">Average Invoice</span>
+                <span className="font-medium text-gray-800">
+                  {formatCurrency(data.metrics?.averageInvoiceValue || 0)}
                 </span>
               </div>
             </div>
@@ -568,8 +778,319 @@ const RevenueStats = () => {
                   {totalRevenue > 0 ? ((netHospitalRevenue / totalRevenue) * 100).toFixed(1) : '0.0'}%
                 </span>
               </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">Collection Rate</span>
+                <span className="font-medium text-green-600">
+                  {summary.collectionRate?.toFixed(1) || 0}%
+                </span>
+              </div>
             </div>
           </div>
+        </div>
+
+        {/* Period Info */}
+        <div className="mt-4 text-xs text-gray-500 flex justify-between items-center">
+          <span>
+            Period: {new Date(data.period?.start).toLocaleDateString()} - {new Date(data.period?.end).toLocaleDateString()}
+          </span>
+          <span>
+            Total Invoices: {data.counts?.totalInvoices || 0} |
+            Patients: {data.counts?.uniquePatients || 0} |
+            Doctors: {data.counts?.uniqueDoctors || 0}
+          </span>
+        </div>
+      </div>
+    );
+  };
+
+  // ---------- Render: Procedure Revenue Analytics ----------
+  // Updated renderProcedureRevenue function
+  const renderProcedureRevenue = () => {
+    if (!data) return null;
+
+    // Get data from the backend response structure
+    const summary = data.summary || {};
+    const breakdown = data.breakdown || {};
+
+    const totalProcedureRevenue = summary.totalProcedureRevenue || 0;
+    const totalProcedures = summary.totalProcedures || 0;
+    const averageProcedureValue = summary.averageProcedureValue || 0;
+
+    // Calculate commission based on doctor data (default 30% if not specified)
+    // In a real scenario, this would come from doctor's revenuePercentage
+    const defaultCommissionPercent = 30;
+
+    // Group by doctor to calculate commissions
+    const doctorCommissions = {};
+    (breakdown.byDoctor || []).forEach(item => {
+      if (!doctorCommissions[item.doctorId]) {
+        doctorCommissions[item.doctorId] = {
+          doctorName: item.doctorName,
+          totalRevenue: 0,
+          totalCommission: 0,
+          procedures: []
+        };
+      }
+      doctorCommissions[item.doctorId].totalRevenue += item.revenue;
+      doctorCommissions[item.doctorId].totalCommission += item.commission || (item.revenue * defaultCommissionPercent / 100);
+      doctorCommissions[item.doctorId].procedures.push(item);
+    });
+
+    const totalDoctorCommission = Object.values(doctorCommissions).reduce((sum, doc) => sum + doc.totalCommission, 0);
+    const totalHospitalShare = totalProcedureRevenue - totalDoctorCommission;
+
+    return (
+      <div className="space-y-6">
+        {/* Procedure Revenue Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="bg-gradient-to-r from-indigo-50 to-indigo-100 p-4 rounded-lg border border-indigo-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-indigo-600 font-medium">Procedure Revenue</p>
+                <p className="text-2xl font-bold text-gray-800">
+                  {formatCurrency(totalProcedureRevenue)}
+                </p>
+              </div>
+              <FaSyringe className="text-indigo-500 text-2xl" />
+            </div>
+            <p className="text-xs text-gray-600 mt-1">
+              {totalProcedures} procedures performed
+            </p>
+          </div>
+
+          <div className="bg-gradient-to-r from-green-50 to-green-100 p-4 rounded-lg border border-green-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-green-600 font-medium">Avg. Procedure Value</p>
+                <p className="text-2xl font-bold text-gray-800">
+                  {formatCurrency(averageProcedureValue)}
+                </p>
+              </div>
+              <FaChartLine className="text-green-500 text-2xl" />
+            </div>
+            <p className="text-xs text-gray-600 mt-1">
+              Across {summary.uniqueProcedures || 0} unique procedures
+            </p>
+          </div>
+
+          <div className="bg-gradient-to-r from-purple-50 to-purple-100 p-4 rounded-lg border border-purple-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-purple-600 font-medium">Doctor's Commission</p>
+                <p className="text-2xl font-bold text-gray-800">
+                  {formatCurrency(totalDoctorCommission)}
+                </p>
+              </div>
+              <FaUserMd className="text-purple-500 text-2xl" />
+            </div>
+            <p className="text-xs text-gray-600 mt-1">
+              {totalProcedureRevenue > 0 ? ((totalDoctorCommission / totalProcedureRevenue) * 100).toFixed(1) : 0}% of revenue
+            </p>
+          </div>
+
+          <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-4 rounded-lg border border-blue-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-blue-600 font-medium">Hospital's Share</p>
+                <p className="text-2xl font-bold text-gray-800">
+                  {formatCurrency(totalHospitalShare)}
+                </p>
+              </div>
+              <FaHospital className="text-blue-500 text-2xl" />
+            </div>
+            <p className="text-xs text-gray-600 mt-1">
+              Net after doctor commissions
+            </p>
+          </div>
+        </div>
+
+        {/* Top Procedures */}
+        <div className="bg-white p-4 rounded-lg shadow border">
+          <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+            <FaClipboardList className="text-indigo-500" /> Top Performing Procedures
+          </h3>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Procedure</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Code</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Revenue</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Count</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Avg Price</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">% of Total</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Doctor's Share</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Hospital's Share</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {(breakdown.byProcedure || []).map((proc, idx) => {
+                  // Find doctor commission for this procedure (if multiple doctors perform same procedure, we need to aggregate)
+                  const procedureDoctors = (breakdown.byDoctor || []).filter(
+                    d => d.procedureCode === proc.code
+                  );
+                  const procedureCommission = procedureDoctors.reduce((sum, d) => sum + (d.commission || 0), 0);
+                  const procedureHospitalShare = proc.revenue - procedureCommission;
+
+                  return (
+                    <tr key={proc.code || idx} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 text-sm font-medium text-gray-900">{proc.name}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">{proc.code}</td>
+                      <td className="px-4 py-3 text-sm font-bold text-gray-900">{formatCurrency(proc.revenue)}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">{proc.count}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">{formatCurrency(proc.averagePrice)}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">
+                        {proc.percentage?.toFixed(1)}%
+                      </td>
+                      <td className="px-4 py-3 text-sm text-green-600">{formatCurrency(procedureCommission)}</td>
+                      <td className="px-4 py-3 text-sm text-blue-600">{formatCurrency(procedureHospitalShare)}</td>
+                    </tr>
+                  );
+                })}
+                {!breakdown.byProcedure?.length && (
+                  <tr>
+                    <td colSpan={8} className="px-4 py-3 text-sm text-gray-500">
+                      No procedure data for selected period
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Procedures by Doctor */}
+        <div className="bg-white p-4 rounded-lg shadow border">
+          <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+            <FaUserMd className="text-indigo-500" /> Procedure Revenue by Doctor
+          </h3>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Doctor</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Procedure</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Revenue</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Commission</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Commission %</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Hospital Share</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Count</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">% of Total</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {(breakdown.byDoctor || []).map((item, idx) => (
+                  <tr key={`${item.doctorId}-${item.procedureCode}-${idx}`} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 text-sm font-medium text-gray-900">{item.doctorName}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">
+                      {item.procedureCode} - {item.procedureName}
+                    </td>
+                    <td className="px-4 py-3 text-sm font-bold text-gray-900">{formatCurrency(item.revenue)}</td>
+                    <td className="px-4 py-3 text-sm text-green-600">{formatCurrency(item.commission)}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{item.commissionPercentage}%</td>
+                    <td className="px-4 py-3 text-sm text-blue-600">{formatCurrency(item.hospitalShare)}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{item.count}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{item.percentage?.toFixed(1)}%</td>
+                  </tr>
+                ))}
+                {!breakdown.byDoctor?.length && (
+                  <tr>
+                    <td colSpan={8} className="px-4 py-3 text-sm text-gray-500">
+                      No doctor procedure data for selected period
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Procedures by Department */}
+        <div className="bg-white p-4 rounded-lg shadow border">
+          <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+            <FaBuilding className="text-indigo-500" /> Procedure Revenue by Department
+          </h3>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Department</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Revenue</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">% of Total</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Procedures Count</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Avg per Procedure</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {(breakdown.byDepartment || []).map((dept, idx) => (
+                  <tr key={dept.departmentId || idx} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 text-sm font-medium text-gray-900">{dept.departmentName}</td>
+                    <td className="px-4 py-3 text-sm font-bold text-gray-900">{formatCurrency(dept.revenue)}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{dept.percentage?.toFixed(1)}%</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{dept.count}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">
+                      {formatCurrency(dept.revenue / dept.count)}
+                    </td>
+                  </tr>
+                ))}
+                {!breakdown.byDepartment?.length && (
+                  <tr>
+                    <td colSpan={5} className="px-4 py-3 text-sm text-gray-500">
+                      No department procedure data for selected period
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Procedure Trend Chart */}
+        <div className="bg-white p-4 rounded-lg shadow border">
+          <h3 className="font-semibold text-gray-800 mb-4">Procedure Revenue Trend</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={breakdown.daily || []}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="date" />
+              <YAxis yAxisId="left" tickFormatter={(v) => `₹${Math.round(v / 1000)}k`} />
+              <YAxis yAxisId="right" orientation="right" />
+              <Tooltip
+                formatter={(value, name) => {
+                  if (name === 'revenue') return [formatCurrency(value), 'Revenue'];
+                  if (name === 'count') return [value, 'Count'];
+                  return [value, name];
+                }}
+              />
+              <Legend />
+              <Line
+                yAxisId="left"
+                type="monotone"
+                dataKey="revenue"
+                stroke="#8884D8"
+                name="Revenue"
+                strokeWidth={2}
+              />
+              <Line
+                yAxisId="right"
+                type="monotone"
+                dataKey="count"
+                stroke="#82ca9d"
+                name="Count"
+                strokeWidth={2}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Period Summary */}
+        <div className="bg-gray-50 p-4 rounded-lg border text-sm text-gray-600">
+          <p>
+            Showing data from <span className="font-medium">{data.period?.start}</span> to{' '}
+            <span className="font-medium">{data.period?.end}</span>
+          </p>
+          <p className="mt-1">
+            Total unique procedures: <span className="font-medium">{summary.uniqueProcedures || 0}</span>
+          </p>
         </div>
       </div>
     );
@@ -690,6 +1211,9 @@ const RevenueStats = () => {
                 <Tooltip formatter={(v) => formatCurrency(v)} />
                 <Legend />
                 <Line type="monotone" dataKey="revenue" stroke="#0088FE" name="Revenue" />
+                {data.breakdown?.daily?.[0]?.procedureRevenue && (
+                  <Line type="monotone" dataKey="procedureRevenue" stroke="#8884D8" name="Procedure Revenue" />
+                )}
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -723,7 +1247,12 @@ const RevenueStats = () => {
                   <div className="text-right">
                     <p className="font-bold text-gray-900">{formatCurrency(doctor.revenue)}</p>
                     <p className="text-xs text-gray-500">
-                      {doctor.commission 
+                      {doctor.procedureRevenue && (
+                        <span className="text-indigo-600 mr-2">
+                          Proc: {formatCurrency(doctor.procedureRevenue)}
+                        </span>
+                      )}
+                      {doctor.commission
                         ? `Commission: ${formatCurrency(doctor.commission)}`
                         : doctor.specialization || 'N/A'}
                     </p>
@@ -738,12 +1267,12 @@ const RevenueStats = () => {
 
           <div className="bg-white p-4 rounded-lg shadow border">
             <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
-              <FaUserInjured className="text-purple-500" /> Top Patients
+              <FaSyringe className="text-purple-500" /> Top Procedures
             </h3>
             <div className="space-y-3">
-              {(data.topPerformers?.patients || []).map((patient, index) => (
+              {(data.topPerformers?.procedures || []).slice(0, 5).map((proc, index) => (
                 <div
-                  key={patient.patientId || index}
+                  key={proc.code || index}
                   className="flex items-center justify-between p-3 hover:bg-gray-50 rounded"
                 >
                   <div className="flex items-center gap-3">
@@ -751,25 +1280,22 @@ const RevenueStats = () => {
                       {index + 1}
                     </div>
                     <div>
-                      <p className="font-medium text-gray-800">{patient.name}</p>
+                      <p className="font-medium text-gray-800">{proc.name || proc.procedureName}</p>
                       <p className="text-xs text-gray-500">
-                        {patient.type || 'Unknown'} • {patient.visits || 0} visits
+                        Code: {proc.code || proc.procedureCode} • {proc.count || 0} performed
                       </p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="font-bold text-gray-900">{formatCurrency(patient.revenue)}</p>
+                    <p className="font-bold text-gray-900">{formatCurrency(proc.revenue)}</p>
                     <p className="text-xs text-gray-500">
-                      Avg:{' '}
-                      {formatCurrency(
-                        safeDiv(patient.revenue, patient.visits || 0)
-                      )}
+                      Avg: {formatCurrency(proc.averagePrice || proc.revenue / proc.count)}
                     </p>
                   </div>
                 </div>
               ))}
-              {!data.topPerformers?.patients?.length && (
-                <div className="text-sm text-gray-500">No patient data for selected filters.</div>
+              {!data.topPerformers?.procedures?.length && (
+                <div className="text-sm text-gray-500">No procedure data for selected filters.</div>
               )}
             </div>
           </div>
@@ -840,12 +1366,15 @@ const RevenueStats = () => {
         <div className="bg-white p-4 rounded-lg shadow border">
           <h3 className="font-semibold text-gray-800 mb-4">Hourly Revenue Distribution</h3>
           <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={data.breakdown?.byHour || []}>
+            <BarChart data={data.breakdown?.hourly || []}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="hour" />
               <YAxis tickFormatter={(v) => `₹${Math.round(v / 1000)}k`} />
               <Tooltip formatter={(v) => formatCurrency(v)} />
-              <Bar dataKey="revenue" fill="#0088FE" />
+              <Bar dataKey="revenue" fill="#0088FE" name="Total Revenue" />
+              {data.breakdown?.hourly?.[0]?.procedureRevenue && (
+                <Bar dataKey="procedureRevenue" fill="#8884D8" name="Procedure Revenue" />
+              )}
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -858,7 +1387,8 @@ const RevenueStats = () => {
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Doctor</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Department</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Revenue</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total Revenue</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Procedure Revenue</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Doctor's Share</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Hospital's Share</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Invoices</th>
@@ -876,6 +1406,9 @@ const RevenueStats = () => {
                     <td className="px-4 py-3 text-sm font-bold text-gray-900">
                       {formatCurrency(doc.revenue)}
                     </td>
+                    <td className="px-4 py-3 text-sm text-indigo-600">
+                      {formatCurrency(doc.procedureRevenue || doc.revenue * 0.3)}
+                    </td>
                     <td className="px-4 py-3 text-sm text-green-600">
                       {formatCurrency(doc.commission || doc.revenue * 0.3)}
                     </td>
@@ -887,7 +1420,7 @@ const RevenueStats = () => {
                 ))}
                 {!data.breakdown?.byDoctor?.length && (
                   <tr>
-                    <td colSpan={6} className="px-4 py-3 text-sm text-gray-500">
+                    <td colSpan={7} className="px-4 py-3 text-sm text-gray-500">
                       No doctor breakdown for selected filters.
                     </td>
                   </tr>
@@ -910,6 +1443,11 @@ const RevenueStats = () => {
                   <p className="text-xs text-gray-500">
                     {inv.patient} • {inv.time}
                   </p>
+                  {inv.type === 'Procedure' && (
+                    <span className="text-xs bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded mt-1 inline-block">
+                      Procedure
+                    </span>
+                  )}
                 </div>
                 <div className="text-right">
                   <p className="font-bold text-gray-900">{formatCurrency(inv.amount)}</p>
@@ -977,6 +1515,9 @@ const RevenueStats = () => {
                   <p className="text-sm font-medium text-gray-700">Week {week.week}</p>
                   <p className="text-lg font-bold text-gray-900">{formatCurrency(week.revenue)}</p>
                   <p className="text-xs text-gray-500">
+                    Procedure: {formatCurrency(week.procedureRevenue || 0)}
+                  </p>
+                  <p className="text-xs text-gray-500">
                     Days {week.startDay}-{week.endDay}
                   </p>
                 </div>
@@ -997,7 +1538,10 @@ const RevenueStats = () => {
                 <YAxis tickFormatter={(v) => `₹${Math.round(v / 1000)}k`} />
                 <Tooltip formatter={(v) => formatCurrency(v)} />
                 <Legend />
-                <Line type="monotone" dataKey="revenue" stroke="#00C49F" name="Revenue" />
+                <Line type="monotone" dataKey="revenue" stroke="#00C49F" name="Total Revenue" />
+                {data.breakdown?.daily?.[0]?.procedureRevenue && (
+                  <Line type="monotone" dataKey="procedureRevenue" stroke="#8884D8" name="Procedure Revenue" />
+                )}
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -1021,6 +1565,11 @@ const RevenueStats = () => {
                       <span className="text-green-600">Doctor: {formatCurrency(d.commission || d.revenue * 0.3)}</span>
                       {' • '}
                       <span className="text-blue-600">Hospital: {formatCurrency(d.hospitalShare || d.revenue * 0.7)}</span>
+                      {d.procedureRevenue > 0 && (
+                        <span className="ml-2 text-indigo-600">
+                          Proc: {formatCurrency(d.procedureRevenue)}
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1070,27 +1619,31 @@ const RevenueStats = () => {
           {/* Doctor Revenue Bifurcation */}
           <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
             <h4 className="text-lg font-bold text-blue-800 mb-4">Revenue Distribution</h4>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="text-center p-3 bg-white rounded border">
                 <p className="text-sm text-gray-600">Doctor's Commission</p>
                 <p className="text-2xl font-bold text-green-600">
                   {formatCurrency(data.summary?.doctorCommission || data.summary?.totalRevenue * 0.3)}
                 </p>
                 <p className="text-xs text-gray-500">
-                  {data.doctor.revenuePercentage 
+                  {data.doctor.revenuePercentage
                     ? `${data.doctor.revenuePercentage}% of revenue`
                     : '30% of revenue (estimated)'}
                 </p>
               </div>
               <div className="text-center p-3 bg-white rounded border">
-                <p className="text-sm text-gray-600">Hospital's Share</p>
-                <p className="text-2xl font-bold text-blue-600">
-                  {formatCurrency(data.summary?.hospitalShare || data.summary?.totalRevenue * 0.7)}
+                <p className="text-sm text-gray-600">Procedure Revenue</p>
+                <p className="text-2xl font-bold text-indigo-600">
+                  {formatCurrency(data.summary?.procedureRevenue || 0)}
                 </p>
                 <p className="text-xs text-gray-500">
-                  {data.doctor.revenuePercentage 
-                    ? `${100 - data.doctor.revenuePercentage}% of revenue`
-                    : '70% of revenue (estimated)'}
+                  {data.breakdown?.byService?.filter(s => s.service === 'Procedure')?.[0]?.percentage || 0}% of total
+                </p>
+              </div>
+              <div className="text-center p-3 bg-white rounded border">
+                <p className="text-sm text-gray-600">Procedure Commission</p>
+                <p className="text-2xl font-bold text-green-600">
+                  {formatCurrency(data.summary?.procedureCommission || data.summary?.procedureRevenue * 0.3)}
                 </p>
               </div>
               <div className="text-center p-3 bg-white rounded border">
@@ -1115,12 +1668,14 @@ const RevenueStats = () => {
               <p className="text-xl font-bold text-gray-800">{data.summary?.uniquePatients || 0}</p>
             </div>
             <div className="text-center p-3 bg-purple-50 rounded">
-              <p className="text-sm text-purple-600">Avg/Patient</p>
-              <p className="text-xl font-bold text-gray-800">{formatCurrency(data.summary?.averageRevenuePerPatient || 0)}</p>
+              <p className="text-sm text-purple-600">Procedures Performed</p>
+              <p className="text-xl font-bold text-gray-800">{data.summary?.procedureCount || 0}</p>
             </div>
-            <div className="text-center p-3 bg-teal-50 rounded">
-              <p className="text-sm text-teal-600">Avg/Visit</p>
-              <p className="text-xl font-bold text-gray-800">{formatCurrency(data.summary?.averageRevenuePerVisit || 0)}</p>
+            <div className="text-center p-3 bg-indigo-50 rounded">
+              <p className="text-sm text-indigo-600">Avg/Procedure</p>
+              <p className="text-xl font-bold text-gray-800">
+                {formatCurrency(data.summary?.averageProcedureValue || 0)}
+              </p>
             </div>
           </div>
 
@@ -1129,14 +1684,22 @@ const RevenueStats = () => {
             <div className="space-y-2">
               {(data.breakdown?.byService || []).map((s, idx) => (
                 <div key={`${s.service}-${idx}`} className="flex items-center justify-between p-2 hover:bg-gray-50 rounded">
-                  <span className="text-gray-700">{s.service}</span>
+                  <span className="text-gray-700 flex items-center gap-2">
+                    {s.service === 'Procedure' && <FaSyringe className="text-indigo-500" />}
+                    {s.service}
+                  </span>
                   <div className="text-right">
                     <p className="font-bold text-gray-900">{formatCurrency(s.revenue)}</p>
                     <p className="text-xs text-gray-500">
-                      {s.percentage}% of total • 
+                      {s.percentage}% of total •
                       <span className="ml-2 text-green-600">
                         Doctor: {formatCurrency(s.revenue * (data.doctor.revenuePercentage || 30) / 100)}
                       </span>
+                      {s.service === 'Procedure' && (
+                        <span className="ml-2 text-indigo-600">
+                          ({s.count || 0} procedures)
+                        </span>
+                      )}
                     </p>
                   </div>
                 </div>
@@ -1184,7 +1747,7 @@ const RevenueStats = () => {
           {/* Department Revenue Bifurcation */}
           <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
             <h4 className="text-lg font-bold text-blue-800 mb-4">Department Revenue Split</h4>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="text-center p-3 bg-white rounded border">
                 <p className="text-sm text-gray-600">Total Doctors Commission</p>
                 <p className="text-2xl font-bold text-green-600">
@@ -1192,6 +1755,15 @@ const RevenueStats = () => {
                 </p>
                 <p className="text-xs text-gray-500">
                   Combined commission for all doctors
+                </p>
+              </div>
+              <div className="text-center p-3 bg-white rounded border">
+                <p className="text-sm text-gray-600">Procedure Revenue</p>
+                <p className="text-2xl font-bold text-indigo-600">
+                  {formatCurrency(data.summary?.procedureRevenue || 0)}
+                </p>
+                <p className="text-xs text-gray-500">
+                  {data.breakdown?.bySource?.procedures?.percentage?.toFixed(1) || 0}% of total
                 </p>
               </div>
               <div className="text-center p-3 bg-white rounded border">
@@ -1225,11 +1797,11 @@ const RevenueStats = () => {
               <p className="text-xl font-bold text-gray-800">{data.summary?.activeDoctors || 0}</p>
             </div>
             <div className="text-center p-3 bg-purple-50 rounded">
-              <p className="text-sm text-purple-600">Avg/Doctor</p>
-              <p className="text-xl font-bold text-gray-800">{formatCurrency(data.summary?.averageRevenuePerDoctor || 0)}</p>
+              <p className="text-sm text-purple-600">Procedures</p>
+              <p className="text-xl font-bold text-gray-800">{data.summary?.procedureCount || 0}</p>
             </div>
-            <div className="text-center p-3 bg-teal-50 rounded">
-              <p className="text-sm text-teal-600">Total Doctors</p>
+            <div className="text-center p-3 bg-indigo-50 rounded">
+              <p className="text-sm text-indigo-600">Total Doctors</p>
               <p className="text-xl font-bold text-gray-800">{data.summary?.totalDoctors || 0}</p>
             </div>
           </div>
@@ -1243,6 +1815,7 @@ const RevenueStats = () => {
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Doctor</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Specialization</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Revenue</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Procedure Revenue</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Commission</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Commission %</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Invoices</th>
@@ -1254,6 +1827,7 @@ const RevenueStats = () => {
                       <td className="px-4 py-3 text-sm font-medium text-gray-900">{d.name}</td>
                       <td className="px-4 py-3 text-sm text-gray-600">{d.specialization || 'N/A'}</td>
                       <td className="px-4 py-3 text-sm font-bold text-gray-900">{formatCurrency(d.revenue)}</td>
+                      <td className="px-4 py-3 text-sm text-indigo-600">{formatCurrency(d.procedureRevenue || 0)}</td>
                       <td className="px-4 py-3 text-sm text-green-600">{formatCurrency(d.commission || d.revenue * 0.3)}</td>
                       <td className="px-4 py-3 text-sm text-gray-600">{d.commissionPercentage || '30%'}</td>
                       <td className="px-4 py-3 text-sm text-gray-600">{d.invoices || 0}</td>
@@ -1261,7 +1835,7 @@ const RevenueStats = () => {
                   ))}
                   {!data.breakdown?.byDoctor?.length && (
                     <tr>
-                      <td colSpan={6} className="px-4 py-3 text-sm text-gray-500">
+                      <td colSpan={7} className="px-4 py-3 text-sm text-gray-500">
                         No doctor data found for this department/period.
                       </td>
                     </tr>
@@ -1299,7 +1873,7 @@ const RevenueStats = () => {
               <p className="text-xl font-bold text-gray-800">{formatCurrency(data.summary?.totalPending || 0)}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-600">Total Invoices (page)</p>
+              <p className="text-sm text-gray-600">Total Invoices</p>
               <p className="text-xl font-bold text-gray-800">{data.summary?.totalInvoices || 0}</p>
             </div>
           </div>
@@ -1315,6 +1889,7 @@ const RevenueStats = () => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Patient</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Doctor</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Procedure</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Commission</th>
@@ -1322,58 +1897,70 @@ const RevenueStats = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {(data.transactions || []).map((t, idx) => (
-                  <tr key={t.invoice_number || idx} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {t.invoice_number}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {t.issue_date ? new Date(t.issue_date).toLocaleDateString() : '-'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {t.patient?.name || 'Unknown'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {t.doctor?.name || 'Unknown'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`px-2 py-1 text-xs rounded-full ${
-                          t.invoice_type === 'Appointment'
+                {(data.transactions || []).map((t, idx) => {
+                  const procedureInfo = t.procedure_items?.[0];
+                  return (
+                    <tr key={t.invoice_number || idx} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        {t.invoice_number}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {t.issue_date ? new Date(t.issue_date).toLocaleDateString() : '-'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {t.patient?.name || 'Unknown'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {t.doctor?.name || 'Unknown'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span
+                          className={`px-2 py-1 text-xs rounded-full ${t.invoice_type === 'Appointment'
                             ? 'bg-blue-100 text-blue-800'
                             : t.invoice_type === 'Pharmacy'
-                            ? 'bg-purple-100 text-purple-800'
-                            : 'bg-green-100 text-green-800'
-                        }`}
-                      >
-                        {t.invoice_type}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`px-2 py-1 text-xs rounded-full ${
-                          t.status === 'Paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                        }`}
-                      >
-                        {t.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">
-                      {formatCurrency(t.total)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      {t.commission 
-                        ? `${formatCurrency(t.commission)} (${t.commission_percentage || '30'}%)`
-                        : 'N/A'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {t.payment_method || 'N/A'}
-                    </td>
-                  </tr>
-                ))}
+                              ? 'bg-purple-100 text-purple-800'
+                              : t.invoice_type === 'Procedure'
+                                ? 'bg-indigo-100 text-indigo-800'
+                                : 'bg-gray-100 text-gray-800'
+                            }`}
+                        >
+                          {t.invoice_type}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                        {t.invoice_type === 'Procedure' && procedureInfo ? (
+                          <span title={procedureInfo.procedure_name}>
+                            {procedureInfo.procedure_code}
+                          </span>
+                        ) : '-'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span
+                          className={`px-2 py-1 text-xs rounded-full ${t.status === 'Paid' ? 'bg-green-100 text-green-800' :
+                            t.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`}
+                        >
+                          {t.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">
+                        {formatCurrency(t.total)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                        {t.commission
+                          ? `${formatCurrency(t.commission)} (${t.commission_percentage || '30'}%)`
+                          : 'N/A'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {t.payment_method || 'N/A'}
+                      </td>
+                    </tr>
+                  );
+                })}
                 {!data.transactions?.length && (
                   <tr>
-                    <td colSpan={9} className="px-6 py-4 text-sm text-gray-500">
+                    <td colSpan={10} className="px-6 py-4 text-sm text-gray-500">
                       No transactions found for selected filters.
                     </td>
                   </tr>
@@ -1393,20 +1980,18 @@ const RevenueStats = () => {
                 <button
                   onClick={() => handleFilterChange('page', Math.max(1, filters.page - 1))}
                   disabled={filters.page <= 1}
-                  className={`px-3 py-1 text-sm rounded border ${
-                    filters.page <= 1 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'
-                  }`}
+                  className={`px-3 py-1 text-sm rounded border ${filters.page <= 1 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'
+                    }`}
                 >
                   Previous
                 </button>
                 <button
                   onClick={() => handleFilterChange('page', filters.page + 1)}
                   disabled={filters.page >= data.pagination.totalPages}
-                  className={`px-3 py-1 text-sm rounded border ${
-                    filters.page >= data.pagination.totalPages
-                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                      : 'bg-white text-gray-700 hover:bg-gray-50'
-                  }`}
+                  className={`px-3 py-1 text-sm rounded border ${filters.page >= data.pagination.totalPages
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : 'bg-white text-gray-700 hover:bg-gray-50'
+                    }`}
                 >
                   Next
                 </button>
@@ -1430,6 +2015,8 @@ const RevenueStats = () => {
         return renderDoctorRevenue();
       case 'department':
         return renderDepartmentRevenue();
+      case 'procedures':
+        return renderProcedureRevenue();
       case 'detailed':
         return renderDetailedReport();
       default:
@@ -1484,6 +2071,37 @@ const RevenueStats = () => {
           <option value="Appointment">Appointment</option>
           <option value="Pharmacy">Pharmacy</option>
           <option value="Procedure">Procedure</option>
+        </select>
+      </div>
+    </>
+  );
+
+  const procedureFilters = (
+    <>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Procedure Code</label>
+        <select
+          value={filters.procedureCode}
+          onChange={(e) => handleFilterChange('procedureCode', e.target.value)}
+          className="w-full p-2 border border-gray-300 rounded-lg text-sm"
+        >
+          <option value="all">All Procedures</option>
+          {procedureCodes.map((code) => (
+            <option key={code} value={code}>{code}</option>
+          ))}
+        </select>
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Procedure Category</label>
+        <select
+          value={filters.procedureCategory}
+          onChange={(e) => handleFilterChange('procedureCategory', e.target.value)}
+          className="w-full p-2 border border-gray-300 rounded-lg text-sm"
+        >
+          <option value="all">All Categories</option>
+          {procedureCategories.map((cat) => (
+            <option key={cat} value={cat}>{cat}</option>
+          ))}
         </select>
       </div>
     </>
@@ -1587,7 +2205,7 @@ const RevenueStats = () => {
 
       case 'daily':
         return (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
               <input
@@ -1603,7 +2221,7 @@ const RevenueStats = () => {
 
       case 'monthly':
         return (
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Month</label>
               <select
@@ -1643,6 +2261,46 @@ const RevenueStats = () => {
                 <option value="Emergency">Emergency</option>
               </select>
             </div>
+          </div>
+        );
+
+      case 'procedures':
+        return (
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+              <input
+                type="date"
+                value={filters.startDate}
+                onChange={(e) => handleFilterChange('startDate', e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded-lg text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+              <input
+                type="date"
+                value={filters.endDate}
+                onChange={(e) => handleFilterChange('endDate', e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded-lg text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Doctor</label>
+              <select
+                value={filters.doctorId}
+                onChange={(e) => handleFilterChange('doctorId', e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded-lg text-sm"
+              >
+                <option value="all">All Doctors</option>
+                {doctors.map((d) => (
+                  <option key={d._id} value={d._id}>
+                    {d.firstName} {d.lastName}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {procedureFilters}
           </div>
         );
 
@@ -1739,7 +2397,7 @@ const RevenueStats = () => {
 
       case 'detailed':
         return (
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
               <input
@@ -1816,7 +2474,9 @@ const RevenueStats = () => {
       page: 1,
       limit: 10,
       selectedDoctor: '',
-      selectedDepartment: ''
+      selectedDepartment: '',
+      procedureCode: 'all',
+      procedureCategory: 'all'
     });
     setData(null);
   };
@@ -1887,7 +2547,7 @@ const RevenueStats = () => {
             <FaChartLine className="text-teal-600" />
             Revenue Analytics Dashboard
           </h1>
-          <p className="text-gray-600">Comprehensive revenue analysis with income bifurcation and export options</p>
+          <p className="text-gray-600">Comprehensive revenue analysis with procedure revenue tracking and bifurcation</p>
         </div>
         <div className="flex gap-2">
           <ExportDropdown />
@@ -1901,6 +2561,7 @@ const RevenueStats = () => {
             { id: 'overview', label: 'Overview', icon: <FaChartBar /> },
             { id: 'daily', label: 'Daily Report', icon: <FaCalendarAlt /> },
             { id: 'monthly', label: 'Monthly Report', icon: <FaChartLine /> },
+            { id: 'procedures', label: 'Procedure Revenue', icon: <FaSyringe /> },
             { id: 'doctor', label: 'Doctor Wise', icon: <FaUserMd /> },
             { id: 'department', label: 'Department Wise', icon: <FaBuilding /> },
             { id: 'detailed', label: 'Detailed Report', icon: <FaFileInvoice /> }
@@ -1911,11 +2572,10 @@ const RevenueStats = () => {
                 setActiveTab(tab.id);
                 handleFilterChange('page', 1);
               }}
-              className={`flex items-center gap-2 px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === tab.id
-                  ? 'border-teal-600 text-teal-600 bg-teal-50'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-              }`}
+              className={`flex items-center gap-1 px-6 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === tab.id
+                ? 'border-teal-600 text-teal-600 bg-teal-50'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                }`}
             >
               {tab.icon}
               {tab.label}

@@ -679,13 +679,14 @@ const AppointmentSlipModal = ({ isOpen, onClose, appointmentData, hospitalInfo }
           <div className="slip-section mt-6 important-instructions">
             <h4 className="text-md font-semibold text-gray-800 mb-2">IMPORTANT INSTRUCTIONS</h4>
             <ul className="text-xs text-gray-600 space-y-1 list-disc pl-4">
-              <li>Please arrive 15 minutes before your appointment time</li>
-              <li>Bring this slip and your ID proof for verification</li>
-              <li>Carry all previous medical reports and prescriptions</li>
-              <li>In case of cancellation, please inform 24 hours in advance</li>
-              <li>Late arrivals may need to reschedule</li>
+              <li>Please arrive 15 minutes before your appointment time — कृपया अपनी अपॉइंटमेंट के समय से 15 मिनट पहले पहुँचें।</li>
+              <li>Bring this slip and your ID proof for verification — सत्यापन के लिए यह स्लिप और अपना पहचान पत्र साथ लाएँ।</li>
+              <li>Carry all previous medical reports and prescriptions — अपनी सभी पिछली मेडिकल रिपोर्ट्स और प्रिस्क्रिप्शन साथ लाएँ।</li>
+              <li>In case of cancellation, please inform 24 hours in advance — रद्द करने की स्थिति में कृपया 24 घंटे पहले सूचित करें।</li>
+              <li>Late arrivals may need to reschedule — देर से आने पर आपको अपॉइंटमेंट पुनः निर्धारित करनी पड़ सकती है।</li>
             </ul>
           </div>
+
 
           {/* Footer */}
           <div className="slip-footer text-center">

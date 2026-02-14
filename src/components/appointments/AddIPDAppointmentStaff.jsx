@@ -1597,7 +1597,7 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
                               onChange={(e) => handleInputChange('doctorId', e.target.value)}
                               options={(doctors || []).map(d => ({
                                 value: d._id,
-                                label: `${d.isFullTime ? 'Full-time' : 'Part-time'} - Dr. ${d.firstName} ${d.lastName} (${type === 'opd' ? `Fee: ₹${d.amount}` : ''})`
+                                label: `${d.isFullTime ? 'Full-time' : 'Part-time'} - Dr. ${d.firstName} ${d.lastName}`
                               }))}
                               required
                             />
