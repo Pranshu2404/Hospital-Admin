@@ -7,7 +7,7 @@ import {
   FaArrowLeft, FaFilePrescription, FaCloudUploadAlt, FaTrash,
   FaHistory, FaCalendarCheck, FaPrescriptionBottleAlt,
   FaFlask, FaFileAlt, FaChevronDown, FaChevronUp, FaCapsules, FaHeartbeat, FaMagic, FaTimesCircle,
-  FaProcedures, FaSearch
+  FaProcedures, FaSearch, FaVial, FaMicroscope, FaThermometerHalf, FaDna
 } from 'react-icons/fa';
 import { summarizePatientHistory } from '@/utils/geminiService';
 import Layout from '@/components/Layout';
@@ -83,10 +83,10 @@ const SearchableFormSelect = ({
       const haystack = [
         opt.label,
         opt.value,
-        opt.dosage,
-        opt.strength,
+        opt.name,
         opt.category,
-        opt.name
+        opt.specimen_type,
+        opt.description
       ].filter(Boolean).join(' ').toLowerCase();
 
       return haystack.includes(term);
@@ -291,6 +291,7 @@ const SearchableFormSelect = ({
   const getIcon = () => {
     if (type === "medicine") return <FaCapsules className="text-purple-500 text-sm" />;
     if (type === "procedure") return <FaProcedures className="text-blue-500 text-sm" />;
+    if (type === "labtest") return <FaMicroscope className="text-amber-500 text-sm" />;
     return <FaSearch className="text-gray-400 text-sm" />;
   };
 
@@ -358,13 +359,13 @@ const SearchableFormSelect = ({
                     </div>
 
                     {/* Extra meta */}
-                    {(opt.name || opt.strength || opt.dosage || opt.category || opt.base_price) && (
+                    {(opt.name || opt.specimen_type || opt.category || opt.base_price) && (
                       <div className="text-xs text-gray-500 mt-0.5">
                         {opt.name && <span>{opt.name} </span>}
                         {typeof opt.base_price !== 'undefined' && <span>• ₹{opt.base_price || 0} </span>}
-                        {opt.strength && <span>• Strength: {opt.strength} </span>}
-                        {opt.dosage && <span>• Form: {opt.dosage} </span>}
+                        {opt.specimen_type && <span>• {opt.specimen_type} </span>}
                         {opt.category && <span>• {opt.category}</span>}
+                        {opt.fasting_required && <span>• Fasting Required</span>}
                       </div>
                     )}
                   </div>
@@ -426,11 +427,20 @@ const AppointmentDetails = () => {
   const [searchingProcedures, setSearchingProcedures] = useState(false);
   const [procedureErrors, setProcedureErrors] = useState({});
 
+  // ✅ NEW: State for lab test search
+  const [labTestOptions, setLabTestOptions] = useState([]);
+  const [loadingLabTests, setLoadingLabTests] = useState(false);
+  const [searchingLabTests, setSearchingLabTests] = useState(false);
+  const [labTestErrors, setLabTestErrors] = useState({});
+
   // State to track expanded medicine index
   const [expandedMedicineIndex, setExpandedMedicineIndex] = useState(0);
 
   // State to track expanded procedure index
   const [expandedProcedureIndex, setExpandedProcedureIndex] = useState(0);
+
+  // ✅ NEW: State to track expanded lab test index
+  const [expandedLabTestIndex, setExpandedLabTestIndex] = useState(0);
 
   // Frequency options with common medical abbreviations
   const frequencyOptions = [
@@ -504,6 +514,14 @@ const AppointmentDetails = () => {
       procedure_name: '',
       notes: ''
     }],
+    // ✅ NEW: Add one default lab test box open by default
+    recommendedLabTests: [{
+      lab_test_code: '',
+      lab_test_name: '',
+      notes: '',
+      fasting_required: false,
+      specimen_type: ''
+    }],
     items: [{
       medicine_name: '',
       dosage: '',
@@ -522,7 +540,7 @@ const AppointmentDetails = () => {
   const [summarizing, setSummarizing] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
 
-  // ✅ Fetch medicines from backend (UPDATED: label is just medicine_name so editing doesn't pollute state)
+  // ✅ Fetch medicines from backend
   const fetchMedicines = async (searchTerm = '') => {
     if (searchTerm.length < 2 && searchTerm !== '') return;
 
@@ -534,9 +552,9 @@ const AppointmentDetails = () => {
 
       if (response.data.data && response.data.data.medicines) {
         const medicineOpts = response.data.data.medicines.map(med => ({
-          label: med.medicine_name,               // ✅ keep clean
-          value: med.medicine_name,               // ✅ same as label
-          dosage: med.dosage_form,                // used for autofill mapping
+          label: med.medicine_name,
+          value: med.medicine_name,
+          dosage: med.dosage_form,
           strength: med.strength,
           code: med.nlem_code,
           healthcare_level: med.healthcare_level,
@@ -552,7 +570,7 @@ const AppointmentDetails = () => {
     }
   };
 
-  // ✅ Fetch procedures from backend (UPDATED: label is just code; name in metadata)
+  // ✅ Fetch procedures from backend
   const fetchProcedures = async (searchTerm = '') => {
     if (searchTerm.length < 2 && searchTerm !== '') return;
 
@@ -564,7 +582,7 @@ const AppointmentDetails = () => {
 
       if (response.data.data && response.data.data.procedures) {
         const procedureOpts = response.data.data.procedures.map(proc => ({
-          label: proc.code,               // ✅ keep clean
+          label: proc.code,
           value: proc.code,
           name: proc.name,
           category: proc.category,
@@ -582,20 +600,55 @@ const AppointmentDetails = () => {
     }
   };
 
-  // Load initial medicines and procedures
+  // ✅ NEW: Fetch lab tests from backend
+  const fetchLabTests = async (searchTerm = '') => {
+    if (searchTerm.length < 2 && searchTerm !== '') return;
+
+    setSearchingLabTests(true);
+    try {
+      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/labtests/search`, {
+        params: { q: searchTerm, limit: 20 }
+      });
+
+      if (response.data.data && response.data.data.labTests) {
+        const labTestOpts = response.data.data.labTests.map(test => ({
+          label: test.code,
+          value: test.code,
+          name: test.name,
+          category: test.category,
+          base_price: test.base_price,
+          specimen_type: test.specimen_type,
+          fasting_required: test.fasting_required,
+          turnaround_time_hours: test.turnaround_time_hours,
+          description: test.description
+        }));
+        setLabTestOptions(labTestOpts);
+      }
+    } catch (error) {
+      console.error('Error fetching lab tests:', error);
+      setLabTestOptions([]);
+    } finally {
+      setSearchingLabTests(false);
+    }
+  };
+
+  // Load initial medicines, procedures, and lab tests
   useEffect(() => {
     const loadInitialData = async () => {
       setLoadingMedicines(true);
       setLoadingProcedures(true);
+      setLoadingLabTests(true);
 
       try {
         await fetchMedicines('');
         await fetchProcedures('');
+        await fetchLabTests('');
       } catch (error) {
         console.error('Error loading initial data:', error);
       } finally {
         setLoadingMedicines(false);
         setLoadingProcedures(false);
+        setLoadingLabTests(false);
       }
     };
 
@@ -817,6 +870,30 @@ const AppointmentDetails = () => {
     setPrescription(prev => ({ ...prev, recommendedProcedures: newProcedures }));
   };
 
+  // ✅ NEW: Add lab test
+  const addLabTest = () => {
+    const newIndex = prescription.recommendedLabTests.length;
+    setPrescription(prev => ({
+      ...prev,
+      recommendedLabTests: [...prev.recommendedLabTests, {
+        lab_test_code: '',
+        lab_test_name: '',
+        notes: '',
+        fasting_required: false,
+        specimen_type: ''
+      }]
+    }));
+    // Close all previous items and expand only the new one
+    setExpandedLabTestIndex(newIndex);
+  };
+
+  // ✅ NEW: Remove lab test
+  const removeLabTest = (index) => {
+    const newLabTests = [...prescription.recommendedLabTests];
+    newLabTests.splice(index, 1);
+    setPrescription(prev => ({ ...prev, recommendedLabTests: newLabTests }));
+  };
+
   // ✅ Procedure change (UPDATED: uses _selectedOption and clears properly)
   const handleProcedureChange = (index, e) => {
     const { name, value, _selectedOption } = e.target;
@@ -855,8 +932,52 @@ const AppointmentDetails = () => {
     setPrescription(prev => ({ ...prev, recommendedProcedures: newProcedures }));
   };
 
-  // ✅ Medicine change (UPDATED: clears dependent fields when medicine cleared,
-  // and auto-fill only when selection is from dropdown)
+  // ✅ NEW: Lab test change
+  const handleLabTestChange = (index, e) => {
+    const { name, value, _selectedOption } = e.target;
+    const newLabTests = [...prescription.recommendedLabTests];
+
+    if (name === 'lab_test_code') {
+      if (!value) {
+        newLabTests[index] = {
+          ...newLabTests[index],
+          lab_test_code: '',
+          lab_test_name: '',
+          base_price: 0,
+          category: '',
+          fasting_required: false,
+          specimen_type: '',
+          notes: newLabTests[index].notes || ''
+        };
+      } else if (_selectedOption) {
+        newLabTests[index] = {
+          ...newLabTests[index],
+          lab_test_code: value,
+          lab_test_name: _selectedOption.name || '',
+          base_price: _selectedOption.base_price || 0,
+          category: _selectedOption.category,
+          fasting_required: _selectedOption.fasting_required || false,
+          specimen_type: _selectedOption.specimen_type || '',
+          turnaround_time_hours: _selectedOption.turnaround_time_hours,
+          notes: newLabTests[index].notes || ''
+        };
+      } else {
+        // free typing (code)
+        newLabTests[index] = {
+          ...newLabTests[index],
+          lab_test_code: value
+        };
+      }
+    } else if (name === 'fasting_required') {
+      newLabTests[index].fasting_required = e.target.checked;
+    } else {
+      newLabTests[index][name] = value;
+    }
+
+    setPrescription(prev => ({ ...prev, recommendedLabTests: newLabTests }));
+  };
+
+  // ✅ Medicine change
   const handleMedicineChange = (index, e) => {
     const { name, value, _selectedOption } = e.target;
     const newItems = [...prescription.items];
@@ -1040,6 +1161,7 @@ const AppointmentDetails = () => {
 
     setMedicineErrors({});
     setProcedureErrors({});
+    setLabTestErrors({});
 
     if (!prescription.diagnosis.trim()) {
       setMessage('Diagnosis is required');
@@ -1077,7 +1199,22 @@ const AppointmentDetails = () => {
     });
     setProcedureErrors(procedureErrorsLocal);
 
-    if (hasMedicineErrors || hasProcedureErrors) {
+    // ✅ Validate lab tests
+    const labTestErrorsLocal = {};
+    let hasLabTestErrors = false;
+    prescription.recommendedLabTests.forEach((test, index) => {
+      const errors = [];
+      if (test.lab_test_code && !test.lab_test_name) {
+        errors.push('Lab test name is required when code is selected');
+      }
+      if (errors.length > 0) {
+        labTestErrorsLocal[index] = errors;
+        hasLabTestErrors = true;
+      }
+    });
+    setLabTestErrors(labTestErrorsLocal);
+
+    if (hasMedicineErrors || hasProcedureErrors || hasLabTestErrors) {
       setMessage('Please fix all validation errors before submitting');
       setSubmitting(false);
       return;
@@ -1138,6 +1275,55 @@ const AppointmentDetails = () => {
           })
       );
 
+      // ✅ NEW: Fetch lab tests with costs
+      const labTestsWithCosts = await Promise.all(
+        prescription.recommendedLabTests
+          .filter(test => test.lab_test_code && test.lab_test_name)
+          .map(async (test) => {
+            try {
+              const labTestResponse = await axios.get(
+                `${import.meta.env.VITE_BACKEND_URL}/labtests/${test.lab_test_code}`
+              );
+              const labTestData = labTestResponse.data.data || labTestResponse.data;
+
+              await axios.post(
+                `${import.meta.env.VITE_BACKEND_URL}/labtests/${test.lab_test_code}/increment-usage`
+              );
+
+              return {
+                lab_test_code: test.lab_test_code,
+                lab_test_name: test.lab_test_name,
+                notes: test.notes?.trim() || '',
+                status: 'Pending',
+                cost: labTestData.base_price || 0,
+                base_price: labTestData.base_price || 0,
+                category: labTestData.category,
+                specimen_type: labTestData.specimen_type || test.specimen_type,
+                fasting_required: labTestData.fasting_required || test.fasting_required || false,
+                turnaround_time_hours: labTestData.turnaround_time_hours,
+                insurance_coverage: labTestData.insurance_coverage || 'Partial',
+                is_billed: false
+              };
+            } catch (error) {
+              console.warn(`Could not fetch lab test ${test.lab_test_code}:`, error);
+              return {
+                lab_test_code: test.lab_test_code,
+                lab_test_name: test.lab_test_name,
+                notes: test.notes?.trim() || '',
+                status: 'Pending',
+                cost: 0,
+                base_price: 0,
+                category: 'Other',
+                specimen_type: test.specimen_type || '',
+                fasting_required: test.fasting_required || false,
+                turnaround_time_hours: 24,
+                insurance_coverage: 'Partial',
+                is_billed: false
+              };
+            }
+          })
+      );
+
       const prescriptionData = {
         patient_id: appointment.patient_id?._id || appointment.patient_id,
         doctor_id: appointment.doctor_id?._id || appointment.doctor_id,
@@ -1149,6 +1335,7 @@ const AppointmentDetails = () => {
         presenting_complaint: prescription.presenting_complaint?.trim() || '',
         history_of_presenting_complaint: prescription.history_of_presenting_complaint?.trim() || '',
         recommendedProcedures: proceduresWithCosts,
+        recommendedLabTests: labTestsWithCosts,
         items: validItems.map(item => ({
           medicine_name: item.medicine_name.trim(),
           dosage: item.dosage.trim(),
@@ -1165,7 +1352,9 @@ const AppointmentDetails = () => {
         is_repeatable: prescription.isRepeatable || false,
         repeat_count: prescription.repeatCount || 0,
         has_procedures: proceduresWithCosts.length > 0,
-        procedures_status: proceduresWithCosts.length > 0 ? 'Pending' : 'None'
+        procedures_status: proceduresWithCosts.length > 0 ? 'Pending' : 'None',
+        has_lab_tests: labTestsWithCosts.length > 0,
+        lab_tests_status: labTestsWithCosts.length > 0 ? 'Pending' : 'None'
       };
 
       const prescriptionResponse = await axios.post(
@@ -1177,12 +1366,21 @@ const AppointmentDetails = () => {
       const savedPrescription = prescriptionResponse.data;
 
       const proceduresWithPrice = proceduresWithCosts.filter(proc => proc.cost > 0);
+      const labTestsWithPrice = labTestsWithCosts.filter(test => test.cost > 0);
+      
       let procedureBillingNote = '';
+      let labTestBillingNote = '';
 
       if (proceduresWithPrice.length > 0) {
         const totalProcedureCost = proceduresWithPrice.reduce((sum, proc) => sum + proc.cost, 0);
         procedureBillingNote = ` ${proceduresWithPrice.length} procedure(s) added with total cost: ₹${totalProcedureCost}. `;
         procedureBillingNote += `These procedures will need to be billed separately by the billing department.`;
+      }
+
+      if (labTestsWithPrice.length > 0) {
+        const totalLabTestCost = labTestsWithPrice.reduce((sum, test) => sum + test.cost, 0);
+        labTestBillingNote = ` ${labTestsWithPrice.length} lab test(s) added with total cost: ₹${totalLabTestCost}. `;
+        labTestBillingNote += `These tests will need to be billed separately by the billing department.`;
       }
 
       await axios.put(
@@ -1204,6 +1402,7 @@ const AppointmentDetails = () => {
 
       let successMessage = 'Prescription saved successfully. ';
       if (procedureBillingNote) successMessage += procedureBillingNote;
+      if (labTestBillingNote) successMessage += labTestBillingNote;
       successMessage += ` ${validItems.length} medicine(s) prescribed.`;
       if (salaryInfoLocal) {
         successMessage += ` Appointment salary credited: ₹${salaryInfoLocal.amount}.`;
@@ -1219,6 +1418,7 @@ const AppointmentDetails = () => {
         presenting_complaint: '',
         history_of_presenting_complaint: '',
         recommendedProcedures: [],
+        recommendedLabTests: [],
         items: [{
           medicine_name: '',
           dosage: '',
@@ -1241,6 +1441,9 @@ const AppointmentDetails = () => {
             hasProcedures: proceduresWithPrice.length > 0,
             proceduresCount: proceduresWithPrice.length,
             totalProcedureCost: proceduresWithPrice.reduce((sum, proc) => sum + proc.cost, 0),
+            hasLabTests: labTestsWithPrice.length > 0,
+            labTestsCount: labTestsWithPrice.length,
+            totalLabTestCost: labTestsWithPrice.reduce((sum, test) => sum + test.cost, 0),
             medicineCount: validItems.length,
             salaryCredited: !!salaryInfoLocal
           }
@@ -1257,7 +1460,7 @@ const AppointmentDetails = () => {
         else if (err.response.status === 401) errorMessage = 'Authentication required. Please login again.';
         else if (err.response.status === 403) errorMessage = 'You do not have permission to create prescriptions.';
         else if (err.response.status === 404) errorMessage = 'Appointment not found.';
-        else if (err.response.status === 422) errorMessage = 'Invalid procedure selection. Please try again.';
+        else if (err.response.status === 422) errorMessage = 'Invalid procedure or lab test selection. Please try again.';
         else if (err.response.status >= 500) errorMessage = 'Server error. Please try again later.';
       } else if (err.request) {
         errorMessage = 'Network error. Please check your connection.';
@@ -1316,8 +1519,6 @@ const AppointmentDetails = () => {
     });
   };
 
-  // --- UI below is unchanged except where SearchableFormSelect props changed for medicine/procedure ---
-
   const PatientHistoryTabs = () => {
     if (!appointment?.patient_id) return null;
 
@@ -1364,11 +1565,8 @@ const AppointmentDetails = () => {
           </nav>
         </div>
 
-        {/* The rest of PatientHistoryTabs UI is unchanged from your code */}
-        {/* ... keep your existing PatientHistoryTabs content here (no changes needed) */}
+        {/* Patient History Tabs Content - Keep your existing content unchanged */}
         <div className="p-4">
-          {/* (unchanged long UI omitted here intentionally) */}
-          {/* Keep your existing content exactly as-is */}
           {loadingHistory ? (
             <div className="flex items-center justify-center py-8">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-teal-600"></div>
@@ -1617,6 +1815,41 @@ const AppointmentDetails = () => {
                               </div>
                             )}
 
+                            {/* ✅ NEW: Lab Tests section in past prescriptions */}
+                            {rx.recommendedLabTests && rx.recommendedLabTests.length > 0 && (
+                              <div className="bg-amber-50 rounded-lg p-4 border border-amber-200">
+                                <div className="flex items-start gap-3">
+                                  <FaMicroscope className="text-amber-600 text-lg mt-1 flex-shrink-0" />
+                                  <div className="flex-1">
+                                    <h6 className="font-bold text-slate-800 mb-2">Recommended Lab Tests</h6>
+                                    <div className="space-y-2">
+                                      {rx.recommendedLabTests.map((test, i) => (
+                                        <div key={i} className="bg-white p-3 rounded border border-amber-100">
+                                          <div className="flex items-center justify-between mb-1">
+                                            <span className="font-semibold text-slate-700">{test.lab_test_name}</span>
+                                            <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded">
+                                              {test.lab_test_code}
+                                            </span>
+                                          </div>
+                                          <div className="flex flex-wrap gap-2 text-xs text-slate-600 mt-1">
+                                            {test.specimen_type && (
+                                              <span className="bg-slate-100 px-2 py-0.5 rounded">Specimen: {test.specimen_type}</span>
+                                            )}
+                                            {test.fasting_required && (
+                                              <span className="bg-red-100 text-red-700 px-2 py-0.5 rounded">Fasting Required</span>
+                                            )}
+                                          </div>
+                                          {test.notes && (
+                                            <p className="text-xs text-slate-600 mt-1">{test.notes}</p>
+                                          )}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
                             {rx.items && rx.items.length > 0 && (
                               <div>
                                 <h6 className="font-bold text-slate-800 mb-3 flex items-center gap-2">
@@ -1711,7 +1944,7 @@ const AppointmentDetails = () => {
                               {apt.doctor_id && (
                                 <p className="text-sm">
                                   <span className="text-slate-600">Consulted with</span><br />
-                                  <span className="font-bold text-slate-900">Dr. {apt.doctor_id.firstName} ${apt.doctor_id.lastName}</span>
+                                  <span className="font-bold text-slate-900">Dr. {apt.doctor_id.firstName} {apt.doctor_id.lastName}</span>
                                 </p>
                               )}
                             </div>
@@ -1754,7 +1987,7 @@ const AppointmentDetails = () => {
                               <div>
                                 <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold block">Category</span>
                                 <div className="font-medium text-slate-700 mt-0.5 capitalize">
-                                  {apt.type || 'N/A'} <span className="text-slate-400">(${apt.appointment_type || 'General'})</span>
+                                  {apt.type || 'N/A'} <span className="text-slate-400">({apt.appointment_type || 'General'})</span>
                                 </div>
                               </div>
                             </div>
@@ -1845,8 +2078,7 @@ const AppointmentDetails = () => {
             </div>
           )}
 
-          {/* ... your salary card / left column / vitals / session UI remains unchanged ... */}
-
+          {/* Left column / vitals / session UI - Keep your existing code */}
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
             <div className="lg:col-span-1 space-y-4">
               {/* left column unchanged - keep your existing code */}
@@ -2086,7 +2318,7 @@ const AppointmentDetails = () => {
                                 />
                               </div>
 
-                              <div className="mb-4">
+                              {/* <div className="mb-4">
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
                                   Investigation (Lab tests / Reports)
                                 </label>
@@ -2098,7 +2330,7 @@ const AppointmentDetails = () => {
                                   rows={2}
                                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
                                 />
-                              </div>
+                              </div> */}
 
                               {/* Procedures Section */}
                               <div>
@@ -2240,6 +2472,182 @@ const AppointmentDetails = () => {
                                   </div>
                                 )}
                               </div>
+
+                              {/* ✅ NEW: Lab Tests Section */}
+                              <div>
+                                <div className="flex justify-between items-center mb-4">
+                                  <label className="text-sm font-semibold text-slate-700">Recommended Lab Tests</label>
+                                  <button
+                                    type="button"
+                                    onClick={addLabTest}
+                                    className="text-teal-600 text-sm font-semibold hover:text-teal-700 flex items-center"
+                                  >
+                                    <FaPlus className="mr-1" /> Add Lab Test
+                                  </button>
+                                </div>
+
+                                {prescription.recommendedLabTests.length > 0 && (
+                                  <div className="space-y-3 mb-4">
+                                    {prescription.recommendedLabTests.map((test, index) => {
+                                      const isExpanded = expandedLabTestIndex === index;
+                                      const isFilled = test.lab_test_code && test.lab_test_name;
+
+                                      return (
+                                        <div
+                                          key={index}
+                                          className={`rounded-lg border transition-all ${isExpanded
+                                              ? 'border-amber-200 bg-amber-50 shadow-md'
+                                              : 'border-amber-100 bg-amber-50 hover:border-amber-300'
+                                            }`}
+                                        >
+                                          {/* Header - Always visible */}
+                                          <div className="flex items-center justify-between">
+                                            <button
+                                              type="button"
+                                              onClick={() => setExpandedLabTestIndex(isExpanded ? -1 : index)}
+                                              className="flex-1 px-4 py-2 flex justify-between items-center hover:bg-amber-100 rounded-lg transition-colors text-left"
+                                            >
+                                              <div className="flex items-center gap-3 flex-1">
+                                                <div className={`h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold ${isExpanded ? 'bg-amber-100 text-amber-600' : 'bg-slate-200 text-slate-600'
+                                                  }`}>
+                                                  {index + 1}
+                                                </div>
+                                                {isExpanded ? (
+                                                  <div className="text-xs font-bold text-amber-400 uppercase">Lab Test #{index + 1}</div>
+                                                ) : (
+                                                  <div className="flex-1 min-w-0">
+                                                    {isFilled ? (
+                                                      <div className="flex flex-wrap items-center gap-2">
+                                                        <span className="font-medium text-slate-800 truncate">{test.lab_test_code}</span>
+                                                        <span className="text-xs bg-slate-200 text-slate-700 px-2 py-0.5 rounded">{test.lab_test_name}</span>
+                                                        {test.fasting_required && (
+                                                          <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded">Fasting</span>
+                                                        )}
+                                                        {test.notes && (
+                                                          <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded truncate">{test.notes}</span>
+                                                        )}
+                                                      </div>
+                                                    ) : (
+                                                      <span className="text-sm text-slate-500 italic">Empty - Click to fill</span>
+                                                    )}
+                                                  </div>
+                                                )}
+                                              </div>
+                                              <div className={`text-slate-400 transition-transform ml-2 flex-shrink-0 ${isExpanded ? 'rotate-180' : ''}`}>
+                                                <FaChevronDown size={14} />
+                                              </div>
+                                            </button>
+                                            {!isExpanded && prescription.recommendedLabTests.length > 0 && (
+                                              <button
+                                                type="button"
+                                                onClick={() => removeLabTest(index)}
+                                                className="text-slate-400 hover:text-red-500 transition-colors p-2 flex-shrink-0"
+                                              >
+                                                <FaTrash size={14} />
+                                              </button>
+                                            )}
+                                          </div>
+
+                                          {/* Expanded Content */}
+                                          {isExpanded && (
+                                            <div className="border-t border-amber-200 p-3 rounded-b-lg">
+                                              <div className="flex justify-between items-start mb-2">
+                                                <button onClick={() => removeLabTest(index)} className="text-amber-400 hover:text-red-500 transition-colors ml-auto">
+                                                  <FaTrash size={14} />
+                                                </button>
+                                              </div>
+
+                                              <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+                                                <div className="md:col-span-5">
+                                                  <SearchableFormSelect
+                                                    label="Lab Test Name/Code"
+                                                    value={test.lab_test_code}
+                                                    onChange={(e) => handleLabTestChange(index, e)}
+                                                    options={labTestOptions}
+                                                    placeholder="Search lab test..."
+                                                    type="labtest"
+                                                    name="lab_test_code"
+                                                    loading={searchingLabTests}
+                                                    error={labTestErrors[index]}
+                                                    onSearch={fetchLabTests}
+                                                    debounceDelay={1000}
+                                                    minSearchChars={0}
+                                                    allowCustom={true}
+                                                    freeSolo={true}
+                                                  />
+                                                </div>
+
+                                                <div className="md:col-span-4">
+                                                  <div className="mb-0">
+                                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                                                      Details
+                                                    </label>
+                                                    <input
+                                                      type="text"
+                                                      value={test.lab_test_name || ''}
+                                                      readOnly={true}
+                                                      placeholder="Auto-fill"
+                                                      className="w-full mt-1 px-3 py-3 text-sm border border-gray-300 rounded-lg bg-white focus:ring-1 focus:ring-teal-500 transition-colors"
+                                                    />
+                                                  </div>
+                                                </div>
+
+                                                <div className="md:col-span-3">
+                                                  <div className="mb-0">
+                                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                                                      Specimen Type
+                                                    </label>
+                                                    <input
+                                                      type="text"
+                                                      value={test.specimen_type || ''}
+                                                      readOnly={true}
+                                                      placeholder="Auto-fill"
+                                                      className="w-full mt-1 px-3 py-3 text-sm border border-gray-300 rounded-lg bg-white focus:ring-1 focus:ring-teal-500 transition-colors"
+                                                    />
+                                                  </div>
+                                                </div>
+
+                                                <div className="md:col-span-12">
+                                                  <div className="flex items-center mb-3">
+                                                    <input
+                                                      type="checkbox"
+                                                      id={`fasting-${index}`}
+                                                      name="fasting_required"
+                                                      checked={test.fasting_required || false}
+                                                      onChange={(e) => handleLabTestChange(index, e)}
+                                                      className="h-4 w-4 text-teal-600 focus:ring-teal-500 border-gray-300 rounded"
+                                                    />
+                                                    <label htmlFor={`fasting-${index}`} className="ml-2 block text-sm text-slate-700">
+                                                      Fasting Required
+                                                    </label>
+                                                  </div>
+                                                </div>
+
+                                                <div className="md:col-span-12">
+                                                  <div className="mb-0">
+                                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                                                      Notes / Instructions
+                                                    </label>
+                                                    <textarea
+                                                      name="notes"
+                                                      value={test.notes || ''}
+                                                      onChange={(e) => handleLabTestChange(index, e)}
+                                                      placeholder="e.g. First morning void, 8-12 hour fasting required, etc."
+                                                      rows={2}
+                                                      className="w-full px-3 py-3 text-sm border border-gray-300 rounded-lg focus:ring-1 focus:ring-teal-500 transition-colors bg-white"
+                                                    />
+                                                  </div>
+                                                </div>
+                                              </div>
+                                            </div>
+                                          )}
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </div>
+
                               {/* Medicines Section */}
                               <div>
                                 <div className="flex justify-between items-center mb-4">
@@ -2266,7 +2674,7 @@ const AppointmentDetails = () => {
                                             : 'border-teal-100 bg-teal-50 hover:border-teal-300'
                                           }`}
                                       >
-                                        {/* Header - Always visible - Compact padding */}
+                                        {/* Header - Always visible */}
                                         <div className="flex items-center justify-between">
                                           <button
                                             type="button"
@@ -2312,7 +2720,7 @@ const AppointmentDetails = () => {
                                           )}
                                         </div>
 
-                                        {/* Expanded Content - Compacted */}
+                                        {/* Expanded Content */}
                                         {isExpanded && (
                                           <div className="border-t border-slate-200 p-3 rounded-b-lg">
                                             <div className="flex justify-between items-start mb-2">
@@ -2449,7 +2857,7 @@ const AppointmentDetails = () => {
                                 </div>
                               </div>
 
-                              {/* Image Upload Section (unchanged) */}
+                              {/* Image Upload Section */}
                               <div className="bg-slate-50 rounded-lg border-2 border-dashed border-slate-300 p-6 text-center hover:bg-slate-100 transition-colors">
                                 {!prescription.prescriptionImage ? (
                                   <div className="relative">
