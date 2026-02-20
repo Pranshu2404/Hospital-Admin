@@ -36,18 +36,18 @@ const DoctorAppointments = () => {
 
   const formatStoredTime = (utcTimeString) => {
     if (!utcTimeString) return 'N/A';
-    
+
     try {
       const date = new Date(utcTimeString);
-      
+
       // Get UTC hours and minutes directly (since the time is stored in UTC but represents IST)
       const hours = date.getUTCHours();
       const minutes = date.getUTCMinutes();
-      
+
       // Format as 12-hour time
       const hour12 = hours % 12 || 12;
       const ampm = hours >= 12 ? 'PM' : 'AM';
-      
+
       return `${hour12}:${minutes.toString().padStart(2, '0')} ${ampm}`;
     } catch (error) {
       console.error('Error formatting time:', error);
@@ -58,9 +58,19 @@ const DoctorAppointments = () => {
   // Parse a UTC time string to Date object
   const parseStoredTime = (utcTimeString) => {
     if (!utcTimeString) return null;
-    
+
     try {
-      return new Date(utcTimeString);
+      const date = new Date(utcTimeString);
+      // The time is stored in UTC but represents local time
+      // So we extract UTC components and create a local Date
+      return new Date(
+        date.getUTCFullYear(),
+        date.getUTCMonth(),
+        date.getUTCDate(),
+        date.getUTCHours(),
+        date.getUTCMinutes(),
+        date.getUTCSeconds()
+      );
     } catch (error) {
       console.error('Error parsing time:', error);
       return null;
@@ -71,11 +81,11 @@ const DoctorAppointments = () => {
   const checkAppointmentTime = (appointment) => {
     const appointmentTime = parseStoredTime(appointment.start_time);
     if (!appointmentTime) return { isValid: true, minutes: 0, isEarly: false }; // If no time, allow
-    
+
     const now = new Date();
     const timeDiff = appointmentTime.getTime() - now.getTime();
     const minutesDiff = Math.round(timeDiff / (1000 * 60));
-    
+
     return {
       isValid: Math.abs(minutesDiff) <= 15,
       minutes: Math.abs(minutesDiff),
@@ -127,27 +137,27 @@ const DoctorAppointments = () => {
   };
 
   const hasVitals = (appointment) => {
-    if (!vitalsEnabled) return true; 
+    if (!vitalsEnabled) return true;
     if (appointment.vitals) {
-      const vitalFields = ['bp', 'weight', 'pulse', 'spo2', 'temperature', 
-                          'respiratory_rate', 'random_blood_sugar', 'height'];
-      
+      const vitalFields = ['bp', 'weight', 'pulse', 'spo2', 'temperature',
+        'respiratory_rate', 'random_blood_sugar', 'height'];
+
       return vitalFields.some(field => {
         const value = appointment.vitals[field];
         return value !== undefined && value !== null && value !== '' && value.trim() !== '';
       });
     }
-    
+
     if (appointment.vitals_id) {
-      const vitalFields = ['bp', 'weight', 'pulse', 'spo2', 'temperature', 
-                          'respiratory_rate', 'random_blood_sugar', 'height'];
-      
+      const vitalFields = ['bp', 'weight', 'pulse', 'spo2', 'temperature',
+        'respiratory_rate', 'random_blood_sugar', 'height'];
+
       return vitalFields.some(field => {
         const value = appointment.vitals_id?.[field];
         return value !== undefined && value !== null && value !== '' && value.trim() !== '';
       });
     }
-    
+
     return false;
   };
 
@@ -164,7 +174,7 @@ const DoctorAppointments = () => {
 
     // Vitals filtering logic
     const appointmentHasVitals = hasVitals(appt);
-    
+
     let meetsVitalsRequirement;
     if (!vitalsEnabled) {
       // If vitals are disabled, show all
@@ -203,7 +213,7 @@ const DoctorAppointments = () => {
 
     // Check appointment time
     const timeCheck = checkAppointmentTime(appointment);
-    
+
     if (!timeCheck.isValid) {
       // Show warning modal
       setSelectedAppointment(appointment);
@@ -254,11 +264,11 @@ const DoctorAppointments = () => {
     return (
       <div className="fixed inset-0 z-50 overflow-y-auto">
         {/* Backdrop */}
-        <div 
+        <div
           className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
           onClick={handleCancelStart}
         />
-        
+
         {/* Modal */}
         <div className="flex min-h-full items-center justify-center p-4">
           <div className="relative bg-white rounded-xl shadow-xl max-w-md w-full transform transition-all">
@@ -275,7 +285,7 @@ const DoctorAppointments = () => {
                 <FaTimes className="text-lg" />
               </button>
             </div>
-            
+
             {/* Body */}
             <div className="p-6">
               <div className="text-center">
@@ -292,7 +302,7 @@ const DoctorAppointments = () => {
                   </span>
                 </p>
                 <div className={`text-2xl font-bold mb-4 ${timeDifference.isEarly ? 'text-blue-600' : 'text-red-600'}`}>
-                  {timeDifference.isEarly 
+                  {timeDifference.isEarly
                     ? `${TimeIndicator2(selectedAppointment)} minutes early`
                     : `${TimeIndicator2(selectedAppointment)} minutes late`
                   }
@@ -306,7 +316,7 @@ const DoctorAppointments = () => {
                 </p>
               </div>
             </div>
-            
+
             {/* Footer */}
             <div className="flex justify-end p-6 border-t border-gray-200 space-x-3">
               <button
@@ -317,11 +327,10 @@ const DoctorAppointments = () => {
               </button>
               <button
                 onClick={handleConfirmStart}
-                className={`px-5 py-2.5 text-white rounded-lg font-medium transition-colors ${
-                  timeDifference.isEarly 
-                    ? 'bg-blue-600 hover:bg-blue-700' 
+                className={`px-5 py-2.5 text-white rounded-lg font-medium transition-colors ${timeDifference.isEarly
+                    ? 'bg-blue-600 hover:bg-blue-700'
                     : 'bg-red-600 hover:bg-red-700'
-                }`}
+                  }`}
               >
                 Start Appointment Anyway
               </button>
@@ -351,7 +360,7 @@ const DoctorAppointments = () => {
 
   const VitalsIndicator = ({ appointment }) => {
     const hasVitalsData = hasVitals(appointment);
-    
+
     if (!vitalsEnabled) {
       return null;
     }
@@ -373,9 +382,9 @@ const DoctorAppointments = () => {
     );
   };
 
-    const TimeIndicator2 = (appointment) => {
+  const TimeIndicator2 = (appointment) => {
     const timeCheck = checkAppointmentTime(appointment);
-    
+
     if (appointment.status !== 'Scheduled' || timeCheck.isValid) {
       return null;
     }
@@ -402,7 +411,7 @@ const DoctorAppointments = () => {
 
   const TimeIndicator = ({ appointment }) => {
     const timeCheck = checkAppointmentTime(appointment);
-    
+
     if (appointment.status !== 'Scheduled' || timeCheck.isValid) {
       return null;
     }
@@ -426,11 +435,10 @@ const DoctorAppointments = () => {
 
     return (
       <div className="flex items-center mt-1">
-        <span className={`text-xs px-2 py-0.5 rounded-full flex items-center ${
-          isPast 
+        <span className={`text-xs px-2 py-0.5 rounded-full flex items-center ${isPast
             ? 'bg-red-50 text-red-600'
             : 'bg-blue-50 text-blue-600'
-        }`}>
+          }`}>
           <FaExclamationCircle className="mr-1 h-2 w-2" />
           {isPast ? `Started ${timeText} ago` : `Starts in ${timeText}`}
         </span>
@@ -579,11 +587,10 @@ const DoctorAppointments = () => {
                     const timeCheck = checkAppointmentTime(appt);
 
                     return (
-                      <tr 
-                        key={appt._id} 
-                        className={`hover:bg-gray-50/80 transition-colors group ${
-                          vitalsEnabled && !hasVitalsData ? 'bg-amber-50/30' : ''
-                        }`}
+                      <tr
+                        key={appt._id}
+                        className={`hover:bg-gray-50/80 transition-colors group ${vitalsEnabled && !hasVitalsData ? 'bg-amber-50/30' : ''
+                          }`}
                       >
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
@@ -636,22 +643,21 @@ const DoctorAppointments = () => {
                             {isScheduled && (
                               <button
                                 onClick={() => handleStartClick(appt)}
-                                className={`flex items-center px-3 py-1.5 rounded-md transition-colors shadow-sm text-xs font-semibold tracking-wide ${
-                                  vitalsEnabled && !hasVitalsData
+                                className={`flex items-center px-3 py-1.5 rounded-md transition-colors shadow-sm text-xs font-semibold tracking-wide ${vitalsEnabled && !hasVitalsData
                                     ? 'bg-amber-100 text-amber-700 hover:bg-amber-200 cursor-not-allowed'
                                     : !timeCheck.isValid
-                                    ? 'bg-purple-600 text-white hover:bg-purple-700'
-                                    : 'bg-teal-600 text-white hover:bg-teal-700'
-                                }`}
+                                      ? 'bg-purple-600 text-white hover:bg-purple-700'
+                                      : 'bg-teal-600 text-white hover:bg-teal-700'
+                                  }`}
                                 title={
                                   vitalsEnabled && !hasVitalsData ? "Vitals required before starting" :
-                                  !timeCheck.isValid ? `Appointment ${timeCheck.isEarly ? 'starts' : 'started'} ${timeCheck.minutes} minutes ${timeCheck.isEarly ? 'later' : 'ago'}` :
-                                  "Start appointment"
+                                    !timeCheck.isValid ? `Appointment ${timeCheck.isEarly ? 'starts' : 'started'} ${timeCheck.minutes} minutes ${timeCheck.isEarly ? 'later' : 'ago'}` :
+                                      "Start appointment"
                                 }
                               >
-                                <FaPlay className="mr-1.5 h-2.5 w-2.5" /> 
-                                {vitalsEnabled && !hasVitalsData ? 'NEEDS VITALS' : 
-                                 !timeCheck.isValid ? 'START' : 'START'}
+                                <FaPlay className="mr-1.5 h-2.5 w-2.5" />
+                                {vitalsEnabled && !hasVitalsData ? 'NEEDS VITALS' :
+                                  !timeCheck.isValid ? 'START' : 'START'}
                               </button>
                             )}
                             {(appt.status === "In Progress" || appt.status === "Completed") && (
@@ -675,7 +681,7 @@ const DoctorAppointments = () => {
                         <FaUser className="h-12 w-12 mb-3 opacity-20" />
                         <p className="text-lg font-medium text-gray-500">No appointments found</p>
                         <p className="text-sm">
-                          {vitalsEnabled && !showWithoutVitals 
+                          {vitalsEnabled && !showWithoutVitals
                             ? "Try enabling 'Show without vitals' or adjust your search"
                             : "Try adjusting your search or filters"}
                         </p>

@@ -79,10 +79,10 @@ const ExpiryAlertBar = ({ medicines }) => {
   if (!medicines || medicines.length === 0) {
     return null;
   }
-  
+
   const medicineNames = medicines.slice(0, 3).map(med => med.name).join(', ');
   const remainingCount = medicines.length - 3;
-  
+
   return (
     <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-red-50 to-orange-50 border border-red-200 p-4 mb-8 shadow-sm">
       <div className="flex items-start gap-4">
@@ -156,7 +156,7 @@ const PharmacyDashboard = () => {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
-      legend: { 
+      legend: {
         position: 'top',
         labels: {
           usePointStyle: true,
@@ -176,7 +176,7 @@ const PharmacyDashboard = () => {
         boxPadding: 10,
         usePointStyle: true,
         callbacks: {
-          label: function(context) {
+          label: function (context) {
             return `₹${context.parsed.y.toLocaleString('en-IN')}`;
           }
         }
@@ -202,7 +202,7 @@ const PharmacyDashboard = () => {
         },
         ticks: {
           color: '#64748b',
-          callback: function(value) {
+          callback: function (value) {
             return '₹' + (value / 1000) + 'k';
           },
           font: {
@@ -214,7 +214,7 @@ const PharmacyDashboard = () => {
   };
 
   const categoryColors = [
-    '#0d9488', '#2dd4bf', '#f59e0b', '#ef4444', '#3b82f6', 
+    '#0d9488', '#2dd4bf', '#f59e0b', '#ef4444', '#3b82f6',
     '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#84cc16'
   ];
 
@@ -247,7 +247,7 @@ const PharmacyDashboard = () => {
           apiClient.get('/medicines/expired'),
           apiClient.get('/orders/sale?limit=5&page=1'),
           apiClient.get('/prescriptions?limit=5&page=1'),
-          apiClient.get('/invoices/stats/pharmacy-monthly'),
+          apiClient.get('/invoices/stats/pharmacy-daily'),
           apiClient.get('/medicines/low-stock')
         ]);
 
@@ -263,9 +263,9 @@ const PharmacyDashboard = () => {
         const expiringThisMonth = medicines.filter(med => {
           if (!med.expiry_date) return false;
           const expiryDate = new Date(med.expiry_date);
-          return expiryDate.getMonth() === today.getMonth() && 
-                 expiryDate.getFullYear() === today.getFullYear() &&
-                 expiryDate >= today;
+          return expiryDate.getMonth() === today.getMonth() &&
+            expiryDate.getFullYear() === today.getFullYear() &&
+            expiryDate >= today;
         });
 
         const twoDaysFromNow = new Date();
@@ -330,7 +330,7 @@ const PharmacyDashboard = () => {
   const StatCard = ({ title, value, icon: Icon, color, onClick, linkTo, change, changeColor = 'text-slate-500' }) => {
     const CardComponent = linkTo ? Link : 'div';
     const cardProps = linkTo ? { to: linkTo } : onClick ? { onClick } : {};
-    
+
     const colorClasses = {
       teal: 'bg-teal-50 text-teal-600 border-teal-100',
       blue: 'bg-blue-50 text-blue-600 border-blue-100',
@@ -376,7 +376,7 @@ const PharmacyDashboard = () => {
     <>
       <style>{chartStyles}</style>
       <div className="min-h-screen bg-slate-50/50 p-6 font-sans">
-        
+
         {/* Header */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-8">
           <div>
@@ -388,14 +388,14 @@ const PharmacyDashboard = () => {
               <FaCalendarTimes className="text-teal-500" />
               <span className="font-medium text-sm">{dayjs().format('dddd, MMMM D, YYYY')}</span>
             </div>
-            <Link 
-              to="/dashboard/pharmacy/add-medicine" 
+            <Link
+              to="/dashboard/pharmacy/add-medicine"
               className="flex items-center gap-2 bg-white text-slate-700 font-semibold px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 transition-colors shadow-sm"
             >
               <FaPlus /> Add Medicine
             </Link>
-            <Link 
-              to="/dashboard/pharmacy/pos" 
+            <Link
+              to="/dashboard/pharmacy/pos"
               className="flex items-center gap-2 bg-teal-600 text-white font-semibold px-5 py-2.5 rounded-xl hover:bg-teal-700 shadow-lg shadow-teal-600/20 transition-all hover:-translate-y-0.5"
             >
               <FaShoppingCart /> POS System
@@ -408,69 +408,69 @@ const PharmacyDashboard = () => {
 
         {/* Statistics Grid - 8 Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <StatCard 
-            title="Total Medicines" 
-            value={dashboardData.stats.totalMedicines} 
-            icon={FaBoxes} 
+          <StatCard
+            title="Total Medicines"
+            value={dashboardData.stats.totalMedicines}
+            icon={FaBoxes}
             color="indigo"
             linkTo="/dashboard/pharmacy/medicine-list"
             change={`${dashboardData.lowStockMedicines.length} low stock`}
           />
-          <StatCard 
-            title="Total Suppliers" 
-            value={dashboardData.stats.totalSuppliers} 
-            icon={FaTruck} 
+          <StatCard
+            title="Total Suppliers"
+            value={dashboardData.stats.totalSuppliers}
+            icon={FaTruck}
             color="blue"
             linkTo="/dashboard/pharmacy/suppliers"
             change="Active suppliers"
           />
-          <StatCard 
-            title="Expiring Soon" 
-            value={dashboardData.stats.expiringThisMonthCount} 
-            icon={FaExclamationTriangle} 
+          <StatCard
+            title="Expiring Soon"
+            value={dashboardData.stats.expiringThisMonthCount}
+            icon={FaExclamationTriangle}
             color="orange"
             onClick={() => setIsModalOpen(true)}
             change="View details"
             changeColor="text-orange-600"
           />
-          <StatCard 
-            title="Today's Revenue" 
-            value={formatCurrency(dashboardData.stats.todaysRevenue)} 
-            icon={FaMoneyBillWave} 
+          <StatCard
+            title="Today's Revenue"
+            value={formatCurrency(dashboardData.stats.todaysRevenue)}
+            icon={FaMoneyBillWave}
             color="teal"
             linkTo="/dashboard/pharmacy/history"
             change="Sales performance"
             changeColor="text-teal-600"
           />
-          <StatCard 
-            title="Total Sales" 
-            value={dashboardData.stats.totalSales} 
-            icon={FaShoppingCart} 
+          <StatCard
+            title="Total Sales"
+            value={dashboardData.stats.totalSales}
+            icon={FaShoppingCart}
             color="purple"
             linkTo="/dashboard/pharmacy/history"
             change="Transactions today"
           />
-          <StatCard 
-            title="Prescriptions" 
-            value={dashboardData.stats.totalPrescriptions} 
-            icon={FaPrescription} 
+          <StatCard
+            title="Prescriptions"
+            value={dashboardData.stats.totalPrescriptions}
+            icon={FaPrescription}
             color="indigo"
             linkTo="/dashboard/pharmacy/prescriptions/list"
             change="Active prescriptions"
           />
-          <StatCard 
-            title="Low Stock" 
-            value={dashboardData.stats.lowStockCount} 
-            icon={FaExclamationTriangle} 
+          <StatCard
+            title="Low Stock"
+            value={dashboardData.stats.lowStockCount}
+            icon={FaExclamationTriangle}
             color="red"
             linkTo="/dashboard/pharmacy/low-stock"
             change="Need restocking"
             changeColor="text-red-600"
           />
-          <StatCard 
-            title="Expired Stock" 
-            value={dashboardData.stats.expiredStockCount} 
-            icon={FaFileInvoiceDollar} 
+          <StatCard
+            title="Expired Stock"
+            value={dashboardData.stats.expiredStockCount}
+            icon={FaFileInvoiceDollar}
             color="gray"
             linkTo="/dashboard/pharmacy/expired"
             change="Needs attention"
@@ -504,10 +504,10 @@ const PharmacyDashboard = () => {
               <h3 className="text-lg font-bold text-slate-800 mb-4">Quick Actions</h3>
               <QuickActions />
             </div>
-            
+
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
               <h3 className="text-lg font-bold text-slate-800 mb-4">Stock Alerts</h3>
-              <StockAlerts 
+              <StockAlerts
                 lowStockCount={dashboardData.stats.lowStockCount}
                 expiringCount={dashboardData.stats.expiringThisMonthCount}
                 expiredCount={dashboardData.stats.expiredStockCount}
@@ -560,7 +560,7 @@ const PharmacyDashboard = () => {
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <div className="h-[300px]">
-              <Doughnut 
+              <Doughnut
                 data={categoryChartData}
                 options={{
                   responsive: true,
@@ -586,7 +586,7 @@ const PharmacyDashboard = () => {
                       borderWidth: 1,
                       usePointStyle: true,
                       callbacks: {
-                        label: function(context) {
+                        label: function (context) {
                           const total = context.dataset.data.reduce((a, b) => a + b, 0);
                           const percentage = ((context.parsed / total) * 100).toFixed(1);
                           return `${context.label}: ${context.parsed} (${percentage}%)`;
@@ -598,15 +598,15 @@ const PharmacyDashboard = () => {
                 }}
               />
             </div>
-            
+
             {/* Category Breakdown List */}
             <div>
               <div className="space-y-4">
                 {dashboardData.categoryDistribution.map((category, index) => (
                   <div key={index} className="flex items-center justify-between p-3 rounded-xl bg-slate-50/50 border border-slate-100 hover:bg-slate-50 transition-colors group">
                     <div className="flex items-center gap-3">
-                      <div 
-                        className="w-3 h-3 rounded-full" 
+                      <div
+                        className="w-3 h-3 rounded-full"
                         style={{ backgroundColor: category.color || categoryColors[index % categoryColors.length] }}
                       />
                       <div>
@@ -632,9 +632,9 @@ const PharmacyDashboard = () => {
 
       {/* Modals */}
       {isModalOpen && (
-        <ExpiredStockModal 
+        <ExpiredStockModal
           expiringThisMonth={dashboardData.expiringThisMonth}
-          onClose={() => setIsModalOpen(false)} 
+          onClose={() => setIsModalOpen(false)}
         />
       )}
     </>
