@@ -1,3 +1,4 @@
+// pages/index.jsx (Login page)
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
@@ -50,15 +51,17 @@ export default function Login() {
       const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/auth/login`, { email, password });
 
       let { token, role } = res.data;
-      const { staffId } = res.data;
-      console.log(role)
-      if (res.data.doctorId) localStorage.setItem("doctorId", res.data.doctorId);
+      const { staffId, doctorId, pharmacyId, pathologyStaffId, hospitalId } = res.data;
+      
+      console.log('Login response:', res.data);
+      console.log('User role:', role);
 
-      if (res.data.hospitalID) localStorage.setItem("hospitalId", res.data.hospitalID);
-
+      // Store IDs in localStorage based on role
+      if (doctorId) localStorage.setItem("doctorId", doctorId);
+      if (hospitalId) localStorage.setItem("hospitalId", res.data.hospitalID);
       if (staffId) localStorage.setItem("staffId", staffId);
-
-      if (res.data.pharmacyId) localStorage.setItem("pharmacyId", res.data.pharmacyId);
+      if (pharmacyId) localStorage.setItem("pharmacyId", pharmacyId);
+      if (pathologyStaffId) localStorage.setItem("pathologyStaffId", pathologyStaffId);
 
       // Fix for incorrect role assignment in backend users collection
       if ((role === 'staff' || role === 'receptionist' || role === 'registrar') && staffId) {
@@ -74,6 +77,9 @@ export default function Login() {
           console.error("Failed to verify staff role", roleErr);
         }
       }
+
+      // Handle pathology staff role - already correct from backend
+      // No additional verification needed as it's a dedicated role
 
       login({ token, role });
     } catch (err) {

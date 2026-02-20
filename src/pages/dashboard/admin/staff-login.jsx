@@ -1,7 +1,18 @@
+// pages/dashboard/admin/staff-login.jsx
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUserMd, faUserNurse, faUserTie, faCheckCircle, faSearch, faKey, faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
+import { 
+  faUserMd, 
+  faUserNurse, 
+  faUserTie, 
+  faCheckCircle, 
+  faSearch, 
+  faKey, 
+  faEye, 
+  faEyeSlash,
+  faFlask
+} from "@fortawesome/free-solid-svg-icons";
 import Layout from '../../../components/Layout';
 import { adminSidebar } from '../../../constants/sidebarItems/adminSidebar';
 
@@ -19,6 +30,14 @@ const StaffLoginPage = () => {
     const [loading, setLoading] = useState(false);
     const [fetchingList, setFetchingList] = useState(false);
 
+    // Role options with icons and colors
+    const roleOptions = [
+        { id: 'doctor', label: 'Doctor', icon: faUserMd, color: 'teal', apiEndpoint: 'doctors' },
+        { id: 'nurse', label: 'Nurse', icon: faUserNurse, color: 'purple', apiEndpoint: 'staff', filter: (s) => s.role && s.role.toLowerCase() === 'nurse' },
+        { id: 'registrar', label: 'Registrar', icon: faUserTie, color: 'blue', apiEndpoint: 'staff', filter: (s) => s.role && ['receptionist', 'registrar'].includes(s.role.toLowerCase()) },
+        { id: 'pathology_staff', label: 'Pathology Staff', icon: faFlask, color: 'amber', apiEndpoint: 'pathology-staff' }
+    ];
+
     // Fetch list when role changes
     useEffect(() => {
         const fetchData = async () => {
@@ -27,29 +46,29 @@ const StaffLoginPage = () => {
             setSelectedId('');
             setSearchQuery('');
             setDetails({ email: '', department: '', name: '', phone: '' });
+            
             try {
-                let url = '';
-                if (role === 'doctor') {
-                    url = `${import.meta.env.VITE_BACKEND_URL}/doctors`;
-                } else {
-                    url = `${import.meta.env.VITE_BACKEND_URL}/staff`;
-                }
+                const selectedRole = roleOptions.find(r => r.id === role);
+                if (!selectedRole) return;
 
+                let url = `${import.meta.env.VITE_BACKEND_URL}/${selectedRole.apiEndpoint}`;
                 const res = await axios.get(url);
 
                 let filtered = [];
                 if (role === 'doctor') {
-                    filtered = res.data;
+                    filtered = res.data.data || res.data;
                 } else if (role === 'nurse') {
-                    filtered = res.data.filter(s =>
-                        (s.role && s.role.toLowerCase() === 'nurse') ||
-                        (s.role && s.role.toLowerCase() === 'staff')
+                    filtered = (res.data.data || res.data).filter(s =>
+                        s.role && s.role.toLowerCase() === 'nurse'
                     );
                 } else if (role === 'registrar') {
-                    filtered = res.data.filter(s =>
-                        (s.role && ['receptionist', 'registrar', 'admin', 'staff', 'other'].includes(s.role.toLowerCase()))
+                    filtered = (res.data.data || res.data).filter(s =>
+                        s.role && ['receptionist', 'registrar'].includes(s.role.toLowerCase())
                     );
+                } else if (role === 'pathology_staff') {
+                    filtered = res.data.data || res.data;
                 }
+                
                 setList(filtered);
                 setFilteredList(filtered);
             } catch (err) {
@@ -73,10 +92,13 @@ const StaffLoginPage = () => {
                 if (!name) {
                     const f = item.firstName || item.first_name || '';
                     const l = item.lastName || item.last_name || '';
-                    name = `${f} ${l}`;
+                    name = `${f} ${l}`.trim();
                 }
+                const email = item.email || '';
                 const phone = item.phone || '';
-                return name.toLowerCase().includes(lower) || phone.includes(lower);
+                return name.toLowerCase().includes(lower) || 
+                       email.toLowerCase().includes(lower) || 
+                       phone.includes(lower);
             });
             setFilteredList(filtered);
         }
@@ -97,9 +119,16 @@ const StaffLoginPage = () => {
                 name = `${f} ${l}`.trim();
             }
 
+            let department = '';
+            if (person.department) {
+                department = typeof person.department === 'object' 
+                    ? person.department.name || person.department 
+                    : person.department;
+            }
+
             setDetails({
                 email: person.email || '',
-                department: person.department?.name || person.department || '',
+                department: department,
                 name: name,
                 phone: person.phone || ''
             });
@@ -119,25 +148,44 @@ const StaffLoginPage = () => {
 
         setLoading(true);
         try {
-            const endpoint = role === 'doctor' ? 'doctors' : 'staff';
-            const payload = {
-                password: password,
-                email: details.email,
-                fullName: details.name,
-            };
+            const selectedRole = roleOptions.find(r => r.id === role);
+            if (!selectedRole) return;
+
+            const endpoint = selectedRole.apiEndpoint;
+            
+            // Different payload structure based on role
+            let payload = {};
+            
+            if (role === 'pathology_staff') {
+                payload = {
+                    password: password,
+                    email: details.email
+                };
+            } else {
+                payload = {
+                    password: password,
+                    email: details.email,
+                    fullName: details.name,
+                };
+            }
 
             await axios.put(`${import.meta.env.VITE_BACKEND_URL}/${endpoint}/${selectedId}`, payload);
 
-            alert("Credential created/updated successfully!");
-            setPassword(''); // Clear password after success
-            setConfirmPassword(''); // Clear confirm password after success
+            alert("Login credentials created/updated successfully!");
+            setPassword('');
+            setConfirmPassword('');
 
         } catch (err) {
             console.error("Error creating login:", err);
-            alert(err.response?.data?.error || "Failed to create login credential.");
+            alert(err.response?.data?.error || err.response?.data?.message || "Failed to create login credential.");
         } finally {
             setLoading(false);
         }
+    };
+
+    const getRoleColor = (roleId) => {
+        const role = roleOptions.find(r => r.id === roleId);
+        return role?.color || 'teal';
     };
 
     return (
@@ -158,12 +206,8 @@ const StaffLoginPage = () => {
                         <div className="lg:col-span-2 space-y-6">
 
                             {/* Role Cards */}
-                            <div className="grid grid-cols-3 gap-4">
-                                {[
-                                    { id: 'doctor', label: 'Doctor', icon: faUserMd, color: 'teal' },
-                                    { id: 'nurse', label: 'Nurse', icon: faUserNurse, color: 'teal' },
-                                    { id: 'registrar', label: 'Registrar', icon: faUserTie, color: 'teal' }
-                                ].map((r) => (
+                            <div className="grid grid-cols-4 gap-4">
+                                {roleOptions.map((r) => (
                                     <button
                                         key={r.id}
                                         onClick={() => setRole(r.id)}
@@ -193,7 +237,7 @@ const StaffLoginPage = () => {
                                         <FontAwesomeIcon icon={faSearch} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
                                         <input
                                             type="text"
-                                            placeholder={`Search ${role}...`}
+                                            placeholder={`Search ${roleOptions.find(r => r.id === role)?.label.toLowerCase()}...`}
                                             value={searchQuery}
                                             onChange={(e) => setSearchQuery(e.target.value)}
                                             className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all"
@@ -216,6 +260,7 @@ const StaffLoginPage = () => {
                                                 name = `${f} ${l}`.trim();
                                             }
                                             const isSelected = selectedId === item._id;
+                                            const roleColor = getRoleColor(role);
 
                                             return (
                                                 <button
@@ -223,15 +268,15 @@ const StaffLoginPage = () => {
                                                     onClick={() => setSelectedId(item._id)}
                                                     className={`w-full text-left p-3 rounded-xl transition-all flex items-center justify-between group
                                                     ${isSelected
-                                                            ? 'bg-teal-50 border border-teal-100 shadow-sm'
+                                                            ? `bg-${roleColor}-50 border border-${roleColor}-100 shadow-sm`
                                                             : 'hover:bg-slate-50 border border-transparent'
                                                         }`}
                                                 >
                                                     <div>
-                                                        <p className={`font-semibold text-sm ${isSelected ? 'text-teal-900' : 'text-slate-700'}`}>{name}</p>
+                                                        <p className={`font-semibold text-sm ${isSelected ? `text-${roleColor}-900` : 'text-slate-700'}`}>{name}</p>
                                                         <p className="text-xs text-slate-500 mt-0.5">{item.email}</p>
                                                     </div>
-                                                    {isSelected && <FontAwesomeIcon icon={faCheckCircle} className="text-teal-500" />}
+                                                    {isSelected && <FontAwesomeIcon icon={faCheckCircle} className={`text-${roleColor}-500`} />}
                                                 </button>
                                             );
                                         })
@@ -274,7 +319,7 @@ const StaffLoginPage = () => {
 
                                             <div className="space-y-1.5">
                                                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-wide ml-1">
-                                                   Enter  Password <span className="text-rose-500">*</span>
+                                                   Enter Password <span className="text-rose-500">*</span>
                                                 </label>
                                                 <div className="relative">
                                                     <input

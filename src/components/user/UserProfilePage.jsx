@@ -5,9 +5,10 @@ import SecurityTab from './SecurityTab';
 import NotificationTab from './NotificationTab';
 import ChargesDiscountTab from './ChargesDiscountTab';
 import VitalsTab from './VitalsTab';
-import ProcedureManagementTab from './ProcedureManagementTab'; // NEW
+import ProcedureManagementTab from './ProcedureManagementTab';
+import LabTestsManagementTab from './LabTestsManagementTab'; // NEW
 import { PersonIcon, SettingsIcon, BellIcon, DollarIcon } from '../common/Icons';
-import { FaHeartbeat, FaProcedures } from 'react-icons/fa';
+import { FaHeartbeat, FaProcedures, FaFlask } from 'react-icons/fa'; // Add FaFlask
 
 const UserProfilePage = () => {
   const [activeTab, setActiveTab] = useState('personal');
@@ -19,7 +20,8 @@ const UserProfilePage = () => {
     { id: 'notifications', label: 'Notifications', icon: <BellIcon />, component: NotificationTab },
     { id: 'charges', label: 'Charges & Discounts', icon: <DollarIcon />, component: ChargesDiscountTab },
     { id: 'vitals', label: 'Vitals', icon: <FaHeartbeat className="w-5 h-5" />, component: VitalsTab },
-    { id: 'procedures', label: 'Procedure Management', icon: <FaProcedures className="w-5 h-5" />, component: ProcedureManagementTab } // NEW
+    { id: 'procedures', label: 'Procedure Management', icon: <FaProcedures className="w-5 h-5" />, component: ProcedureManagementTab },
+    { id: 'labtests', label: 'Lab Tests Management', icon: <FaFlask className="w-5 h-5" />, component: LabTestsManagementTab } // NEW
   ];
 
   useEffect(() => {
@@ -58,16 +60,17 @@ const UserProfilePage = () => {
           </div>
 
           {/* Tab Navigation */}
-          <div className="mt-6">
-            <nav className="flex space-x-8" aria-label="Tabs">
+          <div className="mt-6 overflow-x-auto">
+            <nav className="flex space-x-8 min-w-max" aria-label="Tabs">
               {tabs.map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center py-2 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === tab.id
+                  className={`flex items-center py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+                    activeTab === tab.id
                       ? 'border-teal-500 text-teal-600'
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
+                  }`}
                 >
                   <span className="mr-2">{tab.icon}</span>
                   {tab.label}

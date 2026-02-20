@@ -1,3 +1,4 @@
+// context/AuthContext.jsx
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -34,28 +35,31 @@ export const AuthProvider = ({ children }) => {
     else if (role && role.toLowerCase() === 'nurse') navigate('/dashboard/nurse');
     else if (role === 'staff' || role === 'registrar' || role === 'receptionist') navigate('/dashboard/staff');
     else if (role === 'pharmacy') navigate('/dashboard/pharmacy');
+    else if (role === 'pathology_staff') navigate('/dashboard/pathology'); // Add pathology dashboard route
     else navigate('/');
   };
 
   // Logout function
   const logout = () => {
-    localStorage.removeItem('hospitalUser');
-
+    // Get user role before clearing
+    const userRole = user?.role;
+    
     // Selective cleanup based on role
-    if (user?.role === 'doctor') {
+    if (userRole === 'doctor') {
       localStorage.removeItem('doctorId');
-    } else if (user?.role === 'staff' || user?.role === 'nurse') {
+    } else if (userRole === 'staff' || userRole === 'nurse' || userRole === 'registrar' || userRole === 'receptionist') {
       localStorage.removeItem('staffId');
-    } else if (user?.role === 'pharmacy') {
+    } else if (userRole === 'pharmacy') {
       localStorage.removeItem('pharmacyId');
+    } else if (userRole === 'pathology_staff') {
+      localStorage.removeItem('pathologyStaffId');
     }
-    // hospitalId is usually preserved or handled separately, user didn't ask to clear it specifically on role logout, 
-    // but often it's associated with the session. For now, I'll leave it or remove it? 
-    // The user said "not the doctor id".
-    // I will NOT remove hospitalId linearly unless required. 
-    // Actually, previously I was removing it. If I stop removing it, it persists. 
-    // I'll leave hospitalId alone for now as it wasn't the main complaint.
-
+    
+    // hospitalId is usually preserved across sessions
+    // Don't remove hospitalId as it's needed for hospital context
+    
+    // Clear user data
+    localStorage.removeItem('hospitalUser');
     setUser(null);
     navigate('/');
   };

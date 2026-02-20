@@ -40,7 +40,6 @@ import AdminGuidePage from './pages/dashboard/admin/guidePage.jsx';
 import UpdatePatientProfile from './pages/dashboard/admin/UpdatePatientProfile';
 import EditDoctor from './pages/dashboard/admin/EditDoctor';
 import AddHodMain from './pages/dashboard/admin/add-Hod-main';
-
 // Doctor pages
 import DoctorDashboard from './pages/dashboard/doctor/index';
 import Appointments from './pages/dashboard/doctor/appointments';
@@ -127,6 +126,18 @@ import StaffLoginPage from './pages/dashboard/admin/staff-login';
 import NurseDashboard from './pages/dashboard/nurse/index';
 import NursePrescriptions from './pages/dashboard/nurse/prescriptions';
 import ProcedureManagement from './pages/dashboard/staff/ProcedureManagement';
+import LabTestsList from './pages/dashboard/admin/lab-tests';
+import AddLabTest from './pages/dashboard/admin/lab-tests/add';
+import LabTestCategories from './pages/dashboard/admin/lab-tests/categories';
+import PathologyStaffList from './pages/dashboard/admin/pathology-staff';
+import AddPathologyStaff from './pages/dashboard/admin/add-pathology-staff';
+import PathologyDashboard from './pages/dashboard/pathology';
+import NewReport from './pages/dashboard/pathology/new-reports';
+import InProgressTests from './pages/dashboard/pathology/in-progress';
+import CompletedTests from './pages/dashboard/pathology/completed';
+import LabReports from './pages/dashboard/pathology/reports';
+import TestRequests from './pages/dashboard/pathology/requests';
+import PathologyPrescriptions from './pages/dashboard/pathology/prescriptions';
 
 // Custom Layout Wrappers
 const AdminLayout = ({ children }) => (
@@ -159,6 +170,13 @@ const PharmacyLayout = ({ children }) => (
 
 const NurseLayout = ({ children }) => (
   <SetupTrackerProvider userRole="nurse">
+    {children}
+    <SetupTracker />
+  </SetupTrackerProvider>
+);
+
+const PathologyLayout = ({ children }) => (
+  <SetupTrackerProvider userRole="pathology_staff">
     {children}
     <SetupTracker />
   </SetupTrackerProvider>
@@ -552,6 +570,56 @@ export default function App() {
               <ProtectedRoute role="admin">
                 <AdminLayout>
                   <DepartmentList />
+                </AdminLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/admin/lab-tests"
+            element={
+              <ProtectedRoute role="admin">
+                <AdminLayout>
+                  <LabTestsList />
+                </AdminLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/admin/lab-tests/add"
+            element={
+              <ProtectedRoute role="admin">
+                <AdminLayout>
+                  <AddLabTest />
+                </AdminLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/admin/lab-tests/categories"
+            element={
+              <ProtectedRoute role="admin">
+                <AdminLayout>
+                  <LabTestCategories />
+                </AdminLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/admin/pathology-staff"
+            element={
+              <ProtectedRoute role="admin">
+                <AdminLayout>
+                  <PathologyStaffList />
+                </AdminLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/admin/pathology-staff/add"
+            element={
+              <ProtectedRoute role="admin">
+                <AdminLayout>
+                  <AddPathologyStaff />
                 </AdminLayout>
               </ProtectedRoute>
             }
@@ -1284,6 +1352,77 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/dashboard/pathology"
+            element={
+              <ProtectedRoute role="pathology_staff">
+                <PathologyLayout>
+                  <PathologyDashboard />
+                </PathologyLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+  path="/dashboard/pathology/prescriptions"
+  element={
+    <ProtectedRoute role="pathology_staff">
+      <PathologyLayout>
+        <PathologyPrescriptions />
+      </PathologyLayout>
+    </ProtectedRoute>
+  }
+/>
+<Route
+  path="/dashboard/pathology/requests"
+  element={
+    <ProtectedRoute role="pathology_staff">
+      <PathologyLayout>
+        <TestRequests />
+      </PathologyLayout>
+    </ProtectedRoute>
+  }
+/>
+<Route
+  path="/dashboard/pathology/in-progress"
+  element={
+    <ProtectedRoute role="pathology_staff">
+      <PathologyLayout>
+        <InProgressTests />
+      </PathologyLayout>
+    </ProtectedRoute>
+  }
+/>
+<Route
+  path="/dashboard/pathology/completed"
+  element={
+    <ProtectedRoute role="pathology_staff">
+      <PathologyLayout>
+        <CompletedTests />
+      </PathologyLayout>
+    </ProtectedRoute>
+  }
+/>
+<Route
+  path="/dashboard/pathology/reports"
+  element={
+    <ProtectedRoute role="pathology_staff">
+      <PathologyLayout>
+        <LabReports />
+      </PathologyLayout>
+    </ProtectedRoute>
+  }
+/>
+<Route
+  path="/dashboard/pathology/reports/new"
+  element={
+    <ProtectedRoute role="pathology_staff">
+      <PathologyLayout>
+        <NewReport />
+      </PathologyLayout>
+    </ProtectedRoute>
+  }
+/>
+          
         </Routes>
       </AuthProvider>
     </Router>

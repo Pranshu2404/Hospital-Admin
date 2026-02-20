@@ -134,7 +134,7 @@ const Sidebar = ({ sidebarItems, onCloseMobile }) => {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-3 lg:p-4 overflow-y-auto space-y-1 lg:space-y-2">
+      <nav className="flex-1 p-3 lg:p-4 overflow-y-auto space-y-1 lg:space-y-3">
         {filteredSidebarItems.map((item, idx) => (
           <div key={item.label || item.text || idx}>
             <SidebarItem
