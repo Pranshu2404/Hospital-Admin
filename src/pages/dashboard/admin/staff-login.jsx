@@ -154,21 +154,13 @@ const StaffLoginPage = () => {
             const endpoint = selectedRole.apiEndpoint;
             
             // Different payload structure based on role
-            let payload = {};
-            
-            if (role === 'pathology_staff') {
-                payload = {
-                    password: password,
-                    email: details.email
-                };
-            } else {
-                payload = {
+            let payload = {
                     password: password,
                     email: details.email,
                     fullName: details.name,
                 };
-            }
-
+            console.log("Submitting payload:", payload);
+            console.log("PUT URL:", `${import.meta.env.VITE_BACKEND_URL}/${endpoint}/${selectedId}`);
             await axios.put(`${import.meta.env.VITE_BACKEND_URL}/${endpoint}/${selectedId}`, payload);
 
             alert("Login credentials created/updated successfully!");
