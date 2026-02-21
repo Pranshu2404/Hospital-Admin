@@ -20,7 +20,10 @@ import {
   FaSyringe,
   FaHospital,
   FaClipboardList,
-  FaStethoscope
+  FaStethoscope,
+  FaFlask,  // New icon for lab tests
+  FaMicroscope, // New icon for lab tests
+  FaVial // New icon for lab tests
 } from 'react-icons/fa';
 import {
   BarChart,
@@ -78,13 +81,21 @@ const RevenueStats = () => {
 
     // Procedure specific filters
     procedureCode: 'all',
-    procedureCategory: 'all'
+    procedureCategory: 'all',
+
+    // Lab Test specific filters
+    labTestCode: 'all',
+    labTestCategory: 'all',
+    labTestStatus: 'all'
   });
 
   const [doctors, setDoctors] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [procedureCodes, setProcedureCodes] = useState([]);
   const [procedureCategories, setProcedureCategories] = useState([]);
+  const [labTestCodes, setLabTestCodes] = useState([]);
+  const [labTestCategories, setLabTestCategories] = useState([]);
+  const [labTestStatuses, setLabTestStatuses] = useState([]);
 
   // ---------- Helpers ----------
   const formatCurrency = (amount) => {
@@ -116,9 +127,8 @@ const RevenueStats = () => {
 
       // Reset pagination if changing filters relevant to detailed report
       if (
-        ['startDate', 'endDate', 'doctorId', 'departmentId', 'invoiceType', 'invoiceStatus', 'minAmount', 'maxAmount', 'procedureCode', 'procedureCategory'].includes(
-          key
-        )
+        ['startDate', 'endDate', 'doctorId', 'departmentId', 'invoiceType', 'invoiceStatus', 'minAmount', 'maxAmount', 
+         'procedureCode', 'procedureCategory', 'labTestCode', 'labTestCategory', 'labTestStatus'].includes(key)
       ) {
         next.page = 1;
       }
@@ -164,10 +174,28 @@ const RevenueStats = () => {
     }
   };
 
+  const fetchLabTestData = async () => {
+    try {
+      const res = await axios.get(`${baseUrl}/labtests/all?limit=1000`);
+      if (res.data.success) {
+        const labTests = res.data.data || [];
+        const codes = [...new Set(labTests.map(lt => lt.code))].filter(Boolean);
+        const categories = [...new Set(labTests.map(lt => lt.category))].filter(Boolean);
+        const statuses = ['Pending', 'Sample Collected', 'Processing', 'Completed', 'Cancelled'];
+        setLabTestCodes(codes);
+        setLabTestCategories(categories);
+        setLabTestStatuses(statuses);
+      }
+    } catch (err) {
+      console.error('Error fetching lab test data:', err);
+    }
+  };
+
   useEffect(() => {
     fetchDoctors();
     fetchDepartments();
     fetchProcedureData();
+    fetchLabTestData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -248,6 +276,19 @@ const RevenueStats = () => {
         };
         break;
 
+      case 'labtests':
+        url = `${baseUrl}/revenue/labtests`;
+        params = {
+          startDate: filters.startDate,
+          endDate: filters.endDate,
+          doctorId: filters.doctorId,
+          departmentId: filters.departmentId,
+          labTestCode: filters.labTestCode !== 'all' ? filters.labTestCode : undefined,
+          labTestCategory: filters.labTestCategory !== 'all' ? filters.labTestCategory : undefined,
+          status: filters.labTestStatus !== 'all' ? filters.labTestStatus : undefined
+        };
+        break;
+
       case 'detailed':
         url = `${baseUrl}/revenue/detailed`;
         params = {
@@ -307,7 +348,7 @@ const RevenueStats = () => {
 
   // Fetch when tab changes OR pagination changes in detailed
   useEffect(() => {
-    if (activeTab === 'detailed' || activeTab === 'procedures') {
+    if (activeTab === 'detailed' || activeTab === 'procedures' || activeTab === 'labtests') {
       fetchData();
       return;
     }
@@ -424,6 +465,21 @@ const RevenueStats = () => {
           filename = `Procedure_Revenue_${filters.startDate}_to_${filters.endDate}`;
           break;
 
+        case 'labtests':
+          exportUrl = `${baseUrl}/revenue/export/labtests`;
+          exportParams = {
+            startDate: filters.startDate,
+            endDate: filters.endDate,
+            doctorId: filters.doctorId,
+            departmentId: filters.departmentId,
+            labTestCode: filters.labTestCode !== 'all' ? filters.labTestCode : undefined,
+            labTestCategory: filters.labTestCategory !== 'all' ? filters.labTestCategory : undefined,
+            status: filters.labTestStatus !== 'all' ? filters.labTestStatus : undefined,
+            exportType: type
+          };
+          filename = `LabTest_Revenue_${filters.startDate}_to_${filters.endDate}`;
+          break;
+
         case 'detailed':
           exportUrl = `${baseUrl}/revenue/export/detailed`;
           exportParams = {
@@ -498,7 +554,7 @@ const RevenueStats = () => {
 
   // ---------- Charts colors ----------
   const pieColors = useMemo(
-    () => ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#FF6B6B', '#4ECDC4', '#45B7D1'],
+    () => ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#FF6B6B', '#4ECDC4', '#45B7D1', '#A05195', '#D45087'],
     []
   );
 
@@ -520,9 +576,14 @@ const RevenueStats = () => {
     const procedureRevenue = summary.procedureRevenue ||
       breakdown.bySource?.procedures?.amount || 0;
 
+    // Get lab test revenue from summary or breakdown
+    const labTestRevenue = summary.labTestRevenue ||
+      breakdown.bySource?.labTests?.amount || 0;
+
     // Get doctor commission from topPerformers
     let totalDoctorCommission = 0;
     let procedureDoctorCommission = 0;
+    let labTestDoctorCommission = 0;
 
     if (topPerformers.doctors && topPerformers.doctors.length > 0) {
       totalDoctorCommission = topPerformers.doctors.reduce((sum, doc) => {
@@ -530,12 +591,19 @@ const RevenueStats = () => {
         if (doc.procedureRevenue && doc.procedureRevenue > 0) {
           procedureDoctorCommission += doc.commission * (doc.procedureRevenue / doc.revenue);
         }
+        // Check if doctor has lab test revenue
+        if (doc.labTestRevenue && doc.labTestRevenue > 0) {
+          labTestDoctorCommission += doc.commission * (doc.labTestRevenue / doc.revenue);
+        }
         return sum + (doc.commission || 0);
       }, 0);
     }
 
     // Calculate procedure hospital share
     const procedureHospitalShare = procedureRevenue - procedureDoctorCommission;
+
+    // Calculate lab test hospital share
+    const labTestHospitalShare = labTestRevenue - labTestDoctorCommission;
 
     // Use actual data if available, otherwise fallback to estimates
     const displayDoctorRevenue = doctorRevenue > 0 ? doctorRevenue : totalRevenue * 0.3;
@@ -556,7 +624,8 @@ const RevenueStats = () => {
             <p className="text-2xl font-bold text-gray-800">{formatCurrency(totalRevenue)}</p>
             <div className="mt-2 text-xs text-gray-500">
               <span className="text-blue-600">Appt:</span> {formatCurrency(summary.appointmentRevenue || 0)} |
-              <span className="text-indigo-600 ml-1">Proc:</span> {formatCurrency(procedureRevenue)}
+              <span className="text-indigo-600 ml-1">Proc:</span> {formatCurrency(procedureRevenue)} |
+              <span className="text-purple-600 ml-1">Lab:</span> {formatCurrency(labTestRevenue)}
             </div>
             <div className="mt-2 h-2 bg-gray-200 rounded-full overflow-hidden">
               <div className="h-full bg-blue-500 rounded-full" style={{ width: '100%' }}></div>
@@ -571,10 +640,10 @@ const RevenueStats = () => {
               </span>
             </div>
             <p className="text-2xl font-bold text-gray-800">{formatCurrency(displayDoctorRevenue)}</p>
-            <div className="mt-2 text-xs text-gray-500">
+            <div className="mt-2 text-xs text-gray-500 max-h-24 overflow-y-auto">
               {topPerformers.doctors?.map(doc => (
-                <div key={doc.doctorId} className="flex justify-between">
-                  <span>{doc.name}:</span>
+                <div key={doc.doctorId} className="flex justify-between text-xs">
+                  <span className="truncate max-w-[100px]">{doc.name}:</span>
                   <span className="font-medium">{formatCurrency(doc.commission || 0)}</span>
                 </div>
               ))}
@@ -641,6 +710,10 @@ const RevenueStats = () => {
                 <span className="font-medium text-indigo-600">{formatCurrency(procedureRevenue)}</span>
               </div>
               <div className="flex justify-between">
+                <span>Lab Tests:</span>
+                <span className="font-medium text-purple-600">{formatCurrency(labTestRevenue)}</span>
+              </div>
+              <div className="flex justify-between">
                 <span>Pharmacy:</span>
                 <span className="font-medium">{formatCurrency(summary.pharmacyRevenue || 0)}</span>
               </div>
@@ -653,19 +726,22 @@ const RevenueStats = () => {
 
           <div className="bg-white p-3 rounded-lg border border-green-100">
             <h5 className="text-sm font-semibold text-green-700 mb-2">Doctor Details</h5>
-            <div className="space-y-1 text-sm">
+            <div className="space-y-1 text-sm max-h-32 overflow-y-auto">
               {topPerformers.doctors && topPerformers.doctors.length > 0 ? (
                 topPerformers.doctors.map(doc => (
-                  <div key={doc.doctorId} className="flex justify-between">
-                    <span>{doc.name}:</span>
-                    <span>
+                  <div key={doc.doctorId} className="flex flex-col text-xs border-b pb-1 last:border-0">
+                    <div className="flex justify-between">
+                      <span className="font-medium">{doc.name}:</span>
                       <span className="font-medium">{formatCurrency(doc.commission || 0)}</span>
+                    </div>
+                    <div className="flex justify-between text-gray-500">
                       {doc.procedureRevenue > 0 && (
-                        <span className="text-xs text-indigo-600 ml-1">
-                          (Proc: {formatCurrency(doc.procedureRevenue)})
-                        </span>
+                        <span>Proc: {formatCurrency(doc.procedureRevenue)}</span>
                       )}
-                    </span>
+                      {doc.labTestRevenue > 0 && (
+                        <span>Lab: {formatCurrency(doc.labTestRevenue)}</span>
+                      )}
+                    </div>
                   </div>
                 ))
               ) : (
@@ -693,7 +769,7 @@ const RevenueStats = () => {
           </div>
         </div>
 
-        {/* Procedure Revenue Highlight - Show only if there are procedures */}
+        {/* Procedure Revenue Highlight */}
         {procedureRevenue > 0 && (
           <div className="mt-4 p-3 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg border border-indigo-200">
             <h4 className="text-sm font-bold text-indigo-700 mb-2 flex items-center gap-2">
@@ -727,8 +803,67 @@ const RevenueStats = () => {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                   {breakdown.bySource.procedures.byProcedure.slice(0, 4).map((proc, idx) => (
                     <div key={idx} className="text-xs bg-white p-1 rounded flex justify-between">
-                      <span>{proc.code}:</span>
+                      <span className="truncate">{proc.code}:</span>
                       <span className="font-medium">{formatCurrency(proc.revenue)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Lab Test Revenue Highlight */}
+        {labTestRevenue > 0 && (
+          <div className="mt-4 p-3 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border border-purple-200">
+            <h4 className="text-sm font-bold text-purple-700 mb-2 flex items-center gap-2">
+              <FaFlask /> Lab Test Revenue Breakdown
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+              <div className="flex justify-between items-center bg-white p-2 rounded">
+                <span className="text-sm text-gray-600">Lab Test Revenue</span>
+                <span className="font-medium text-gray-800">{formatCurrency(labTestRevenue)}</span>
+              </div>
+              <div className="flex justify-between items-center bg-white p-2 rounded">
+                <span className="text-sm text-gray-600">Doctor's Commission</span>
+                <span className="font-medium text-green-600">{formatCurrency(labTestDoctorCommission)}</span>
+              </div>
+              <div className="flex justify-between items-center bg-white p-2 rounded">
+                <span className="text-sm text-gray-600">Hospital's Share</span>
+                <span className="font-medium text-blue-600">{formatCurrency(labTestHospitalShare)}</span>
+              </div>
+              <div className="flex justify-between items-center bg-white p-2 rounded">
+                <span className="text-sm text-gray-600">% of Total</span>
+                <span className="font-medium text-pink-600">
+                  {totalRevenue > 0 ? ((labTestRevenue / totalRevenue) * 100).toFixed(1) : 0}%
+                </span>
+              </div>
+            </div>
+
+            {/* Top Lab Tests Preview */}
+            {breakdown.bySource?.labTests?.byLabTest && breakdown.bySource.labTests.byLabTest.length > 0 && (
+              <div className="mt-3 pt-2 border-t border-purple-200">
+                <h5 className="text-xs font-semibold text-purple-600 mb-2">Top Lab Tests:</h5>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                  {breakdown.bySource.labTests.byLabTest.slice(0, 4).map((test, idx) => (
+                    <div key={idx} className="text-xs bg-white p-1 rounded flex justify-between">
+                      <span className="truncate">{test.code}:</span>
+                      <span className="font-medium">{formatCurrency(test.revenue)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Status Breakdown */}
+            {breakdown.bySource?.labTests?.byStatus && breakdown.bySource.labTests.byStatus.length > 0 && (
+              <div className="mt-3 pt-2 border-t border-purple-200">
+                <h5 className="text-xs font-semibold text-purple-600 mb-2">By Status:</h5>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+                  {breakdown.bySource.labTests.byStatus.map((status, idx) => (
+                    <div key={idx} className="text-xs bg-white p-1 rounded flex justify-between">
+                      <span>{status.status}:</span>
+                      <span className="font-medium">{formatCurrency(status.revenue)}</span>
                     </div>
                   ))}
                 </div>
@@ -804,7 +939,6 @@ const RevenueStats = () => {
   };
 
   // ---------- Render: Procedure Revenue Analytics ----------
-  // Updated renderProcedureRevenue function
   const renderProcedureRevenue = () => {
     if (!data) return null;
 
@@ -817,7 +951,6 @@ const RevenueStats = () => {
     const averageProcedureValue = summary.averageProcedureValue || 0;
 
     // Calculate commission based on doctor data (default 30% if not specified)
-    // In a real scenario, this would come from doctor's revenuePercentage
     const defaultCommissionPercent = 30;
 
     // Group by doctor to calculate commissions
@@ -1096,6 +1229,310 @@ const RevenueStats = () => {
     );
   };
 
+  // ---------- NEW: Render Lab Test Revenue Analytics ----------
+  const renderLabTestRevenue = () => {
+    if (!data) return null;
+
+    // Get data from the backend response structure
+    const summary = data.summary || {};
+    const breakdown = data.breakdown || {};
+
+    const totalLabTestRevenue = summary.totalLabTestRevenue || 0;
+    const totalLabTests = summary.totalLabTests || 0;
+    const averageLabTestValue = summary.averageLabTestValue || 0;
+
+    // Calculate commission based on doctor data (default 30% if not specified)
+    const defaultCommissionPercent = 30;
+
+    // Group by doctor to calculate commissions
+    const doctorCommissions = {};
+    (breakdown.byDoctor || []).forEach(item => {
+      if (!doctorCommissions[item.doctorId]) {
+        doctorCommissions[item.doctorId] = {
+          doctorName: item.doctorName,
+          totalRevenue: 0,
+          totalCommission: 0,
+          labTests: []
+        };
+      }
+      doctorCommissions[item.doctorId].totalRevenue += item.revenue;
+      doctorCommissions[item.doctorId].totalCommission += item.commission || (item.revenue * defaultCommissionPercent / 100);
+      doctorCommissions[item.doctorId].labTests.push(item);
+    });
+
+    const totalDoctorCommission = Object.values(doctorCommissions).reduce((sum, doc) => sum + doc.totalCommission, 0);
+    const totalHospitalShare = totalLabTestRevenue - totalDoctorCommission;
+
+    return (
+      <div className="space-y-6">
+        {/* Lab Test Revenue Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="bg-gradient-to-r from-purple-50 to-purple-100 p-4 rounded-lg border border-purple-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-purple-600 font-medium">Lab Test Revenue</p>
+                <p className="text-2xl font-bold text-gray-800">
+                  {formatCurrency(totalLabTestRevenue)}
+                </p>
+              </div>
+              <FaFlask className="text-purple-500 text-2xl" />
+            </div>
+            <p className="text-xs text-gray-600 mt-1">
+              {totalLabTests} tests performed
+            </p>
+          </div>
+
+          <div className="bg-gradient-to-r from-green-50 to-green-100 p-4 rounded-lg border border-green-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-green-600 font-medium">Avg. Test Value</p>
+                <p className="text-2xl font-bold text-gray-800">
+                  {formatCurrency(averageLabTestValue)}
+                </p>
+              </div>
+              <FaChartLine className="text-green-500 text-2xl" />
+            </div>
+            <p className="text-xs text-gray-600 mt-1">
+              Across {summary.uniqueLabTests || 0} unique tests
+            </p>
+          </div>
+
+          <div className="bg-gradient-to-r from-pink-50 to-pink-100 p-4 rounded-lg border border-pink-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-pink-600 font-medium">Doctor's Commission</p>
+                <p className="text-2xl font-bold text-gray-800">
+                  {formatCurrency(totalDoctorCommission)}
+                </p>
+              </div>
+              <FaUserMd className="text-pink-500 text-2xl" />
+            </div>
+            <p className="text-xs text-gray-600 mt-1">
+              {totalLabTestRevenue > 0 ? ((totalDoctorCommission / totalLabTestRevenue) * 100).toFixed(1) : 0}% of revenue
+            </p>
+          </div>
+
+          <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-4 rounded-lg border border-blue-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-blue-600 font-medium">Hospital's Share</p>
+                <p className="text-2xl font-bold text-gray-800">
+                  {formatCurrency(totalHospitalShare)}
+                </p>
+              </div>
+              <FaHospital className="text-blue-500 text-2xl" />
+            </div>
+            <p className="text-xs text-gray-600 mt-1">
+              Net after doctor commissions
+            </p>
+          </div>
+        </div>
+
+        {/* Status Summary Cards */}
+        {breakdown.byStatus && breakdown.byStatus.length > 0 && (
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+            {breakdown.byStatus.map((status, idx) => (
+              <div key={idx} className="bg-white p-3 rounded-lg shadow border text-center">
+                <p className="text-xs text-gray-500 uppercase">{status.status}</p>
+                <p className="text-lg font-bold text-gray-800">{formatCurrency(status.revenue)}</p>
+                <p className="text-xs text-gray-500">{status.count} tests</p>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Top Lab Tests */}
+        <div className="bg-white p-4 rounded-lg shadow border">
+          <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+            <FaClipboardList className="text-purple-500" /> Top Performing Lab Tests
+          </h3>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Test</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Code</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Revenue</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Count</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Avg Price</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">% of Total</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Doctor's Share</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Hospital's Share</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {(breakdown.byLabTest || []).map((test, idx) => {
+                  // Find doctor commission for this test
+                  const testDoctors = (breakdown.byDoctor || []).filter(
+                    d => d.labTestCode === test.code
+                  );
+                  const testCommission = testDoctors.reduce((sum, d) => sum + (d.commission || 0), 0);
+                  const testHospitalShare = test.revenue - testCommission;
+
+                  return (
+                    <tr key={test.code || idx} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 text-sm font-medium text-gray-900">{test.name}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">{test.code}</td>
+                      <td className="px-4 py-3 text-sm font-bold text-gray-900">{formatCurrency(test.revenue)}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">{test.count}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">{formatCurrency(test.averagePrice)}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">
+                        {test.percentage?.toFixed(1)}%
+                      </td>
+                      <td className="px-4 py-3 text-sm text-green-600">{formatCurrency(testCommission)}</td>
+                      <td className="px-4 py-3 text-sm text-blue-600">{formatCurrency(testHospitalShare)}</td>
+                    </tr>
+                  );
+                })}
+                {!breakdown.byLabTest?.length && (
+                  <tr>
+                    <td colSpan={8} className="px-4 py-3 text-sm text-gray-500">
+                      No lab test data for selected period
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Lab Tests by Doctor */}
+        <div className="bg-white p-4 rounded-lg shadow border">
+          <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+            <FaUserMd className="text-purple-500" /> Lab Test Revenue by Doctor
+          </h3>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Doctor</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Lab Test</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Revenue</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Commission</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Commission %</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Hospital Share</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Count</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">% of Total</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {(breakdown.byDoctor || []).map((item, idx) => (
+                  <tr key={`${item.doctorId}-${item.labTestCode}-${idx}`} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 text-sm font-medium text-gray-900">{item.doctorName}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">
+                      {item.labTestCode} - {item.labTestName}
+                    </td>
+                    <td className="px-4 py-3 text-sm font-bold text-gray-900">{formatCurrency(item.revenue)}</td>
+                    <td className="px-4 py-3 text-sm text-green-600">{formatCurrency(item.commission)}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{item.commissionPercentage}%</td>
+                    <td className="px-4 py-3 text-sm text-blue-600">{formatCurrency(item.hospitalShare)}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{item.count}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{item.percentage?.toFixed(1)}%</td>
+                  </tr>
+                ))}
+                {!breakdown.byDoctor?.length && (
+                  <tr>
+                    <td colSpan={8} className="px-4 py-3 text-sm text-gray-500">
+                      No doctor lab test data for selected period
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Lab Tests by Department */}
+        <div className="bg-white p-4 rounded-lg shadow border">
+          <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+            <FaBuilding className="text-purple-500" /> Lab Test Revenue by Department
+          </h3>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Department</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Revenue</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">% of Total</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tests Count</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Avg per Test</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {(breakdown.byDepartment || []).map((dept, idx) => (
+                  <tr key={dept.departmentId || idx} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 text-sm font-medium text-gray-900">{dept.departmentName}</td>
+                    <td className="px-4 py-3 text-sm font-bold text-gray-900">{formatCurrency(dept.revenue)}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{dept.percentage?.toFixed(1)}%</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{dept.count}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">
+                      {formatCurrency(dept.revenue / dept.count)}
+                    </td>
+                  </tr>
+                ))}
+                {!breakdown.byDepartment?.length && (
+                  <tr>
+                    <td colSpan={5} className="px-4 py-3 text-sm text-gray-500">
+                      No department lab test data for selected period
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Lab Test Trend Chart */}
+        <div className="bg-white p-4 rounded-lg shadow border">
+          <h3 className="font-semibold text-gray-800 mb-4">Lab Test Revenue Trend</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={breakdown.daily || []}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="date" />
+              <YAxis yAxisId="left" tickFormatter={(v) => `₹${Math.round(v / 1000)}k`} />
+              <YAxis yAxisId="right" orientation="right" />
+              <Tooltip
+                formatter={(value, name) => {
+                  if (name === 'revenue') return [formatCurrency(value), 'Revenue'];
+                  if (name === 'count') return [value, 'Count'];
+                  return [value, name];
+                }}
+              />
+              <Legend />
+              <Line
+                yAxisId="left"
+                type="monotone"
+                dataKey="revenue"
+                stroke="#9C27B0"
+                name="Revenue"
+                strokeWidth={2}
+              />
+              <Line
+                yAxisId="right"
+                type="monotone"
+                dataKey="count"
+                stroke="#FF9800"
+                name="Count"
+                strokeWidth={2}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Period Summary */}
+        <div className="bg-gray-50 p-4 rounded-lg border text-sm text-gray-600">
+          <p>
+            Showing data from <span className="font-medium">{data.period?.start}</span> to{' '}
+            <span className="font-medium">{data.period?.end}</span>
+          </p>
+          <p className="mt-1">
+            Total unique lab tests: <span className="font-medium">{summary.uniqueLabTests || 0}</span>
+          </p>
+        </div>
+      </div>
+    );
+  };
+
   // ---------- Render: Overview ----------
   const renderOverview = () => {
     if (!data) return null;
@@ -1106,6 +1543,7 @@ const RevenueStats = () => {
       { name: 'Appointments', value: data.summary?.appointmentRevenue || 0 },
       { name: 'Pharmacy', value: data.summary?.pharmacyRevenue || 0 },
       { name: 'Procedures', value: data.summary?.procedureRevenue || 0 },
+      { name: 'Lab Tests', value: data.summary?.labTestRevenue || 0 },
       { name: 'Other', value: data.summary?.otherRevenue || 0 }
     ].filter((x) => Number(x.value) > 0);
 
@@ -1214,18 +1652,21 @@ const RevenueStats = () => {
                 {data.breakdown?.daily?.[0]?.procedureRevenue && (
                   <Line type="monotone" dataKey="procedureRevenue" stroke="#8884D8" name="Procedure Revenue" />
                 )}
+                {data.breakdown?.daily?.[0]?.labTestRevenue && (
+                  <Line type="monotone" dataKey="labTestRevenue" stroke="#9C27B0" name="Lab Test Revenue" />
+                )}
               </LineChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         {/* Top Performers */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="bg-white p-4 rounded-lg shadow border">
             <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
               <FaUserMd className="text-blue-500" /> Top Performing Doctors
             </h3>
-            <div className="space-y-3">
+            <div className="space-y-3 max-h-80 overflow-y-auto">
               {(data.topPerformers?.doctors || []).map((doctor, index) => (
                 <div
                   key={doctor.doctorId || index}
@@ -1247,14 +1688,19 @@ const RevenueStats = () => {
                   <div className="text-right">
                     <p className="font-bold text-gray-900">{formatCurrency(doctor.revenue)}</p>
                     <p className="text-xs text-gray-500">
-                      {doctor.procedureRevenue && (
+                      {doctor.procedureRevenue > 0 && (
                         <span className="text-indigo-600 mr-2">
                           Proc: {formatCurrency(doctor.procedureRevenue)}
                         </span>
                       )}
-                      {doctor.commission
-                        ? `Commission: ${formatCurrency(doctor.commission)}`
-                        : doctor.specialization || 'N/A'}
+                      {doctor.labTestRevenue > 0 && (
+                        <span className="text-purple-600">
+                          Lab: {formatCurrency(doctor.labTestRevenue)}
+                        </span>
+                      )}
+                      <div className="text-xs">
+                        Comm: {formatCurrency(doctor.commission || 0)}
+                      </div>
                     </p>
                   </div>
                 </div>
@@ -1267,16 +1713,16 @@ const RevenueStats = () => {
 
           <div className="bg-white p-4 rounded-lg shadow border">
             <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
-              <FaSyringe className="text-purple-500" /> Top Procedures
+              <FaSyringe className="text-indigo-500" /> Top Procedures
             </h3>
-            <div className="space-y-3">
+            <div className="space-y-3 max-h-80 overflow-y-auto">
               {(data.topPerformers?.procedures || []).slice(0, 5).map((proc, index) => (
                 <div
                   key={proc.code || index}
                   className="flex items-center justify-between p-3 hover:bg-gray-50 rounded"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center font-semibold">
+                    <div className="w-8 h-8 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center font-semibold">
                       {index + 1}
                     </div>
                     <div>
@@ -1296,6 +1742,41 @@ const RevenueStats = () => {
               ))}
               {!data.topPerformers?.procedures?.length && (
                 <div className="text-sm text-gray-500">No procedure data for selected filters.</div>
+              )}
+            </div>
+          </div>
+
+          <div className="bg-white p-4 rounded-lg shadow border">
+            <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+              <FaFlask className="text-purple-500" /> Top Lab Tests
+            </h3>
+            <div className="space-y-3 max-h-80 overflow-y-auto">
+              {(data.topPerformers?.labTests || []).slice(0, 5).map((test, index) => (
+                <div
+                  key={test.code || index}
+                  className="flex items-center justify-between p-3 hover:bg-gray-50 rounded"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center font-semibold">
+                      {index + 1}
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-800">{test.name || test.labTestName}</p>
+                      <p className="text-xs text-gray-500">
+                        Code: {test.code || test.labTestCode} • {test.count || 0} performed
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-bold text-gray-900">{formatCurrency(test.revenue)}</p>
+                    <p className="text-xs text-gray-500">
+                      Avg: {formatCurrency(test.averagePrice || test.revenue / test.count)}
+                    </p>
+                  </div>
+                </div>
+              ))}
+              {!data.topPerformers?.labTests?.length && (
+                <div className="text-sm text-gray-500">No lab test data for selected filters.</div>
               )}
             </div>
           </div>
@@ -1375,6 +1856,9 @@ const RevenueStats = () => {
               {data.breakdown?.hourly?.[0]?.procedureRevenue && (
                 <Bar dataKey="procedureRevenue" fill="#8884D8" name="Procedure Revenue" />
               )}
+              {data.breakdown?.hourly?.[0]?.labTestRevenue && (
+                <Bar dataKey="labTestRevenue" fill="#9C27B0" name="Lab Test Revenue" />
+              )}
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -1389,6 +1873,7 @@ const RevenueStats = () => {
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Department</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total Revenue</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Procedure Revenue</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Lab Test Revenue</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Doctor's Share</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Hospital's Share</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Invoices</th>
@@ -1407,20 +1892,23 @@ const RevenueStats = () => {
                       {formatCurrency(doc.revenue)}
                     </td>
                     <td className="px-4 py-3 text-sm text-indigo-600">
-                      {formatCurrency(doc.procedureRevenue || doc.revenue * 0.3)}
+                      {formatCurrency(doc.procedureRevenue || 0)}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-purple-600">
+                      {formatCurrency(doc.labTestRevenue || 0)}
                     </td>
                     <td className="px-4 py-3 text-sm text-green-600">
-                      {formatCurrency(doc.commission || doc.revenue * 0.3)}
+                      {formatCurrency(doc.commission || 0)}
                     </td>
                     <td className="px-4 py-3 text-sm text-blue-600">
-                      {formatCurrency(doc.hospitalShare || doc.revenue * 0.7)}
+                      {formatCurrency(doc.hospitalShare || doc.revenue - (doc.commission || 0))}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-600">{doc.invoices || 0}</td>
                   </tr>
                 ))}
                 {!data.breakdown?.byDoctor?.length && (
                   <tr>
-                    <td colSpan={7} className="px-4 py-3 text-sm text-gray-500">
+                    <td colSpan={8} className="px-4 py-3 text-sm text-gray-500">
                       No doctor breakdown for selected filters.
                     </td>
                   </tr>
@@ -1446,6 +1934,11 @@ const RevenueStats = () => {
                   {inv.type === 'Procedure' && (
                     <span className="text-xs bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded mt-1 inline-block">
                       Procedure
+                    </span>
+                  )}
+                  {inv.type === 'Lab Test' && (
+                    <span className="text-xs bg-purple-100 text-purple-800 px-2 py-0.5 rounded mt-1 inline-block">
+                      Lab Test
                     </span>
                   )}
                 </div>
@@ -1518,6 +2011,9 @@ const RevenueStats = () => {
                     Procedure: {formatCurrency(week.procedureRevenue || 0)}
                   </p>
                   <p className="text-xs text-gray-500">
+                    Lab: {formatCurrency(week.labTestRevenue || 0)}
+                  </p>
+                  <p className="text-xs text-gray-500">
                     Days {week.startDay}-{week.endDay}
                   </p>
                 </div>
@@ -1542,6 +2038,9 @@ const RevenueStats = () => {
                 {data.breakdown?.daily?.[0]?.procedureRevenue && (
                   <Line type="monotone" dataKey="procedureRevenue" stroke="#8884D8" name="Procedure Revenue" />
                 )}
+                {data.breakdown?.daily?.[0]?.labTestRevenue && (
+                  <Line type="monotone" dataKey="labTestRevenue" stroke="#9C27B0" name="Lab Test Revenue" />
+                )}
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -1549,7 +2048,7 @@ const RevenueStats = () => {
           {/* Top Doctors in Month */}
           <div className="bg-white p-4 rounded-lg border mt-6">
             <h4 className="font-semibold text-gray-800 mb-4">Top Doctors (Month)</h4>
-            <div className="space-y-2">
+            <div className="space-y-2 max-h-96 overflow-y-auto">
               {(data.breakdown?.byDoctor || []).slice(0, 8).map((d) => (
                 <div key={d.doctorId} className="flex justify-between items-center p-2 hover:bg-gray-50 rounded">
                   <div>
@@ -1562,12 +2061,15 @@ const RevenueStats = () => {
                   <div className="text-right">
                     <div className="font-bold">{formatCurrency(d.revenue)}</div>
                     <div className="text-xs text-gray-500">
-                      <span className="text-green-600">Doctor: {formatCurrency(d.commission || d.revenue * 0.3)}</span>
-                      {' • '}
-                      <span className="text-blue-600">Hospital: {formatCurrency(d.hospitalShare || d.revenue * 0.7)}</span>
+                      <span className="text-green-600">Comm: {formatCurrency(d.commission || 0)}</span>
                       {d.procedureRevenue > 0 && (
                         <span className="ml-2 text-indigo-600">
                           Proc: {formatCurrency(d.procedureRevenue)}
+                        </span>
+                      )}
+                      {d.labTestRevenue > 0 && (
+                        <span className="ml-2 text-purple-600">
+                          Lab: {formatCurrency(d.labTestRevenue)}
                         </span>
                       )}
                     </div>
@@ -1619,11 +2121,11 @@ const RevenueStats = () => {
           {/* Doctor Revenue Bifurcation */}
           <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
             <h4 className="text-lg font-bold text-blue-800 mb-4">Revenue Distribution</h4>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
               <div className="text-center p-3 bg-white rounded border">
                 <p className="text-sm text-gray-600">Doctor's Commission</p>
                 <p className="text-2xl font-bold text-green-600">
-                  {formatCurrency(data.summary?.doctorCommission || data.summary?.totalRevenue * 0.3)}
+                  {formatCurrency(data.summary?.doctorCommission || 0)}
                 </p>
                 <p className="text-xs text-gray-500">
                   {data.doctor.revenuePercentage
@@ -1641,24 +2143,30 @@ const RevenueStats = () => {
                 </p>
               </div>
               <div className="text-center p-3 bg-white rounded border">
-                <p className="text-sm text-gray-600">Procedure Commission</p>
-                <p className="text-2xl font-bold text-green-600">
-                  {formatCurrency(data.summary?.procedureCommission || data.summary?.procedureRevenue * 0.3)}
+                <p className="text-sm text-gray-600">Lab Test Revenue</p>
+                <p className="text-2xl font-bold text-purple-600">
+                  {formatCurrency(data.summary?.labTestRevenue || 0)}
+                </p>
+                <p className="text-xs text-gray-500">
+                  {data.breakdown?.byService?.filter(s => s.service === 'Lab Test')?.[0]?.percentage || 0}% of total
                 </p>
               </div>
               <div className="text-center p-3 bg-white rounded border">
-                <p className="text-sm text-gray-600">Commission Rate</p>
-                <p className="text-2xl font-bold text-purple-600">
-                  {data.doctor.revenuePercentage || 30}%
+                <p className="text-sm text-gray-600">Procedure Commission</p>
+                <p className="text-2xl font-bold text-indigo-600">
+                  {formatCurrency(data.summary?.procedureCommission || 0)}
                 </p>
-                <p className="text-xs text-gray-500">
-                  {data.doctor.isFullTime ? 'Full-time Salary' : 'Part-time Commission'}
+              </div>
+              <div className="text-center p-3 bg-white rounded border">
+                <p className="text-sm text-gray-600">Lab Test Commission</p>
+                <p className="text-2xl font-bold text-purple-600">
+                  {formatCurrency(data.summary?.labTestCommission || 0)}
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
             <div className="text-center p-3 bg-blue-50 rounded">
               <p className="text-sm text-blue-600">Total Invoices</p>
               <p className="text-xl font-bold text-gray-800">{data.summary?.totalInvoices || 0}</p>
@@ -1667,12 +2175,16 @@ const RevenueStats = () => {
               <p className="text-sm text-green-600">Unique Patients</p>
               <p className="text-xl font-bold text-gray-800">{data.summary?.uniquePatients || 0}</p>
             </div>
-            <div className="text-center p-3 bg-purple-50 rounded">
-              <p className="text-sm text-purple-600">Procedures Performed</p>
+            <div className="text-center p-3 bg-indigo-50 rounded">
+              <p className="text-sm text-indigo-600">Procedures</p>
               <p className="text-xl font-bold text-gray-800">{data.summary?.procedureCount || 0}</p>
             </div>
-            <div className="text-center p-3 bg-indigo-50 rounded">
-              <p className="text-sm text-indigo-600">Avg/Procedure</p>
+            <div className="text-center p-3 bg-purple-50 rounded">
+              <p className="text-sm text-purple-600">Lab Tests</p>
+              <p className="text-xl font-bold text-gray-800">{data.summary?.labTestCount || 0}</p>
+            </div>
+            <div className="text-center p-3 bg-teal-50 rounded">
+              <p className="text-sm text-teal-600">Avg/Procedure</p>
               <p className="text-xl font-bold text-gray-800">
                 {formatCurrency(data.summary?.averageProcedureValue || 0)}
               </p>
@@ -1686,6 +2198,7 @@ const RevenueStats = () => {
                 <div key={`${s.service}-${idx}`} className="flex items-center justify-between p-2 hover:bg-gray-50 rounded">
                   <span className="text-gray-700 flex items-center gap-2">
                     {s.service === 'Procedure' && <FaSyringe className="text-indigo-500" />}
+                    {s.service === 'Lab Test' && <FaFlask className="text-purple-500" />}
                     {s.service}
                   </span>
                   <div className="text-right">
@@ -1693,11 +2206,16 @@ const RevenueStats = () => {
                     <p className="text-xs text-gray-500">
                       {s.percentage}% of total •
                       <span className="ml-2 text-green-600">
-                        Doctor: {formatCurrency(s.revenue * (data.doctor.revenuePercentage || 30) / 100)}
+                        Commission: {formatCurrency(s.commission || 0)}
                       </span>
-                      {s.service === 'Procedure' && (
+                      {s.service === 'Procedure' && s.count && (
                         <span className="ml-2 text-indigo-600">
-                          ({s.count || 0} procedures)
+                          ({s.count} procedures)
+                        </span>
+                      )}
+                      {s.service === 'Lab Test' && s.count && (
+                        <span className="ml-2 text-purple-600">
+                          ({s.count} tests)
                         </span>
                       )}
                     </p>
@@ -1767,6 +2285,15 @@ const RevenueStats = () => {
                 </p>
               </div>
               <div className="text-center p-3 bg-white rounded border">
+                <p className="text-sm text-gray-600">Lab Test Revenue</p>
+                <p className="text-2xl font-bold text-purple-600">
+                  {formatCurrency(data.summary?.labTestRevenue || 0)}
+                </p>
+                <p className="text-xs text-gray-500">
+                  {data.breakdown?.bySource?.labTests?.percentage?.toFixed(1) || 0}% of total
+                </p>
+              </div>
+              <div className="text-center p-3 bg-white rounded border">
                 <p className="text-sm text-gray-600">Hospital Net Revenue</p>
                 <p className="text-2xl font-bold text-blue-600">
                   {formatCurrency(data.summary?.hospitalNetRevenue || data.summary?.totalRevenue * 0.65)}
@@ -1775,19 +2302,10 @@ const RevenueStats = () => {
                   After deducting doctor commissions
                 </p>
               </div>
-              <div className="text-center p-3 bg-white rounded border">
-                <p className="text-sm text-gray-600">Avg Commission Rate</p>
-                <p className="text-2xl font-bold text-purple-600">
-                  {data.summary?.averageCommissionRate || 35}%
-                </p>
-                <p className="text-xs text-gray-500">
-                  Average across all doctors
-                </p>
-              </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
             <div className="text-center p-3 bg-blue-50 rounded">
               <p className="text-sm text-blue-600">Total Invoices</p>
               <p className="text-xl font-bold text-gray-800">{data.summary?.totalInvoices || 0}</p>
@@ -1796,12 +2314,16 @@ const RevenueStats = () => {
               <p className="text-sm text-green-600">Active Doctors</p>
               <p className="text-xl font-bold text-gray-800">{data.summary?.activeDoctors || 0}</p>
             </div>
-            <div className="text-center p-3 bg-purple-50 rounded">
-              <p className="text-sm text-purple-600">Procedures</p>
+            <div className="text-center p-3 bg-indigo-50 rounded">
+              <p className="text-sm text-indigo-600">Procedures</p>
               <p className="text-xl font-bold text-gray-800">{data.summary?.procedureCount || 0}</p>
             </div>
-            <div className="text-center p-3 bg-indigo-50 rounded">
-              <p className="text-sm text-indigo-600">Total Doctors</p>
+            <div className="text-center p-3 bg-purple-50 rounded">
+              <p className="text-sm text-purple-600">Lab Tests</p>
+              <p className="text-xl font-bold text-gray-800">{data.summary?.labTestCount || 0}</p>
+            </div>
+            <div className="text-center p-3 bg-teal-50 rounded">
+              <p className="text-sm text-teal-600">Total Doctors</p>
               <p className="text-xl font-bold text-gray-800">{data.summary?.totalDoctors || 0}</p>
             </div>
           </div>
@@ -1816,6 +2338,7 @@ const RevenueStats = () => {
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Specialization</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Revenue</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Procedure Revenue</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Lab Test Revenue</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Commission</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Commission %</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Invoices</th>
@@ -1828,6 +2351,7 @@ const RevenueStats = () => {
                       <td className="px-4 py-3 text-sm text-gray-600">{d.specialization || 'N/A'}</td>
                       <td className="px-4 py-3 text-sm font-bold text-gray-900">{formatCurrency(d.revenue)}</td>
                       <td className="px-4 py-3 text-sm text-indigo-600">{formatCurrency(d.procedureRevenue || 0)}</td>
+                      <td className="px-4 py-3 text-sm text-purple-600">{formatCurrency(d.labTestRevenue || 0)}</td>
                       <td className="px-4 py-3 text-sm text-green-600">{formatCurrency(d.commission || d.revenue * 0.3)}</td>
                       <td className="px-4 py-3 text-sm text-gray-600">{d.commissionPercentage || '30%'}</td>
                       <td className="px-4 py-3 text-sm text-gray-600">{d.invoices || 0}</td>
@@ -1835,7 +2359,7 @@ const RevenueStats = () => {
                   ))}
                   {!data.breakdown?.byDoctor?.length && (
                     <tr>
-                      <td colSpan={7} className="px-4 py-3 text-sm text-gray-500">
+                      <td colSpan={8} className="px-4 py-3 text-sm text-gray-500">
                         No doctor data found for this department/period.
                       </td>
                     </tr>
@@ -1889,7 +2413,7 @@ const RevenueStats = () => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Patient</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Doctor</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Procedure</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Procedure/Lab</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Commission</th>
@@ -1899,6 +2423,9 @@ const RevenueStats = () => {
               <tbody className="bg-white divide-y divide-gray-200">
                 {(data.transactions || []).map((t, idx) => {
                   const procedureInfo = t.procedure_items?.[0];
+                  const labTestInfo = t.lab_test_items?.[0];
+                  const serviceType = procedureInfo ? 'Procedure' : (labTestInfo ? 'Lab Test' : 'Other');
+                  
                   return (
                     <tr key={t.invoice_number || idx} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
@@ -1915,31 +2442,39 @@ const RevenueStats = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span
-                          className={`px-2 py-1 text-xs rounded-full ${t.invoice_type === 'Appointment'
-                            ? 'bg-blue-100 text-blue-800'
-                            : t.invoice_type === 'Pharmacy'
-                              ? 'bg-purple-100 text-purple-800'
-                              : t.invoice_type === 'Procedure'
-                                ? 'bg-indigo-100 text-indigo-800'
-                                : 'bg-gray-100 text-gray-800'
-                            }`}
+                          className={`px-2 py-1 text-xs rounded-full ${
+                            t.invoice_type === 'Appointment' ? 'bg-blue-100 text-blue-800' :
+                            t.invoice_type === 'Pharmacy' ? 'bg-purple-100 text-purple-800' :
+                            t.invoice_type === 'Procedure' ? 'bg-indigo-100 text-indigo-800' :
+                            t.invoice_type === 'Lab Test' ? 'bg-pink-100 text-pink-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}
                         >
                           {t.invoice_type}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                        {t.invoice_type === 'Procedure' && procedureInfo ? (
+                        {t.invoice_type === 'Procedure' && procedureInfo && (
                           <span title={procedureInfo.procedure_name}>
                             {procedureInfo.procedure_code}
                           </span>
-                        ) : '-'}
+                        )}
+                        {t.invoice_type === 'Lab Test' && labTestInfo && (
+                          <span title={labTestInfo.lab_test_name}>
+                            {labTestInfo.lab_test_code}
+                          </span>
+                        )}
+                        {t.invoice_type !== 'Procedure' && t.invoice_type !== 'Lab Test' && '-'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span
-                          className={`px-2 py-1 text-xs rounded-full ${t.status === 'Paid' ? 'bg-green-100 text-green-800' :
+                          className={`px-2 py-1 text-xs rounded-full ${
+                            t.status === 'Paid' ? 'bg-green-100 text-green-800' :
                             t.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
-                              'bg-gray-100 text-gray-800'
-                            }`}
+                            t.status === 'Partial' ? 'bg-orange-100 text-orange-800' :
+                            t.status === 'Issued' ? 'bg-blue-100 text-blue-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}
                         >
                           {t.status}
                         </span>
@@ -1980,18 +2515,20 @@ const RevenueStats = () => {
                 <button
                   onClick={() => handleFilterChange('page', Math.max(1, filters.page - 1))}
                   disabled={filters.page <= 1}
-                  className={`px-3 py-1 text-sm rounded border ${filters.page <= 1 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'
-                    }`}
+                  className={`px-3 py-1 text-sm rounded border ${
+                    filters.page <= 1 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'
+                  }`}
                 >
                   Previous
                 </button>
                 <button
                   onClick={() => handleFilterChange('page', filters.page + 1)}
                   disabled={filters.page >= data.pagination.totalPages}
-                  className={`px-3 py-1 text-sm rounded border ${filters.page >= data.pagination.totalPages
-                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                    : 'bg-white text-gray-700 hover:bg-gray-50'
-                    }`}
+                  className={`px-3 py-1 text-sm rounded border ${
+                    filters.page >= data.pagination.totalPages
+                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                      : 'bg-white text-gray-700 hover:bg-gray-50'
+                  }`}
                 >
                   Next
                 </button>
@@ -2017,6 +2554,8 @@ const RevenueStats = () => {
         return renderDepartmentRevenue();
       case 'procedures':
         return renderProcedureRevenue();
+      case 'labtests':
+        return renderLabTestRevenue();
       case 'detailed':
         return renderDetailedReport();
       default:
@@ -2071,6 +2610,7 @@ const RevenueStats = () => {
           <option value="Appointment">Appointment</option>
           <option value="Pharmacy">Pharmacy</option>
           <option value="Procedure">Procedure</option>
+          <option value="Lab Test">Lab Test</option>
         </select>
       </div>
     </>
@@ -2101,6 +2641,50 @@ const RevenueStats = () => {
           <option value="all">All Categories</option>
           {procedureCategories.map((cat) => (
             <option key={cat} value={cat}>{cat}</option>
+          ))}
+        </select>
+      </div>
+    </>
+  );
+
+  const labTestFilters = (
+    <>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Lab Test Code</label>
+        <select
+          value={filters.labTestCode}
+          onChange={(e) => handleFilterChange('labTestCode', e.target.value)}
+          className="w-full p-2 border border-gray-300 rounded-lg text-sm"
+        >
+          <option value="all">All Lab Tests</option>
+          {labTestCodes.map((code) => (
+            <option key={code} value={code}>{code}</option>
+          ))}
+        </select>
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Lab Test Category</label>
+        <select
+          value={filters.labTestCategory}
+          onChange={(e) => handleFilterChange('labTestCategory', e.target.value)}
+          className="w-full p-2 border border-gray-300 rounded-lg text-sm"
+        >
+          <option value="all">All Categories</option>
+          {labTestCategories.map((cat) => (
+            <option key={cat} value={cat}>{cat}</option>
+          ))}
+        </select>
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Test Status</label>
+        <select
+          value={filters.labTestStatus}
+          onChange={(e) => handleFilterChange('labTestStatus', e.target.value)}
+          className="w-full p-2 border border-gray-300 rounded-lg text-sm"
+        >
+          <option value="all">All Statuses</option>
+          {labTestStatuses.map((status) => (
+            <option key={status} value={status}>{status}</option>
           ))}
         </select>
       </div>
@@ -2304,6 +2888,46 @@ const RevenueStats = () => {
           </div>
         );
 
+      case 'labtests':
+        return (
+          <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+              <input
+                type="date"
+                value={filters.startDate}
+                onChange={(e) => handleFilterChange('startDate', e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded-lg text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+              <input
+                type="date"
+                value={filters.endDate}
+                onChange={(e) => handleFilterChange('endDate', e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded-lg text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Doctor</label>
+              <select
+                value={filters.doctorId}
+                onChange={(e) => handleFilterChange('doctorId', e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded-lg text-sm"
+              >
+                <option value="all">All Doctors</option>
+                {doctors.map((d) => (
+                  <option key={d._id} value={d._id}>
+                    {d.firstName} {d.lastName}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {labTestFilters}
+          </div>
+        );
+
       case 'doctor':
         return (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -2350,6 +2974,7 @@ const RevenueStats = () => {
                 <option value="all">All Types</option>
                 <option value="Appointment">Appointment</option>
                 <option value="Procedure">Procedure</option>
+                <option value="Lab Test">Lab Test</option>
                 <option value="Pharmacy">Pharmacy</option>
               </select>
             </div>
@@ -2476,7 +3101,10 @@ const RevenueStats = () => {
       selectedDoctor: '',
       selectedDepartment: '',
       procedureCode: 'all',
-      procedureCategory: 'all'
+      procedureCategory: 'all',
+      labTestCode: 'all',
+      labTestCategory: 'all',
+      labTestStatus: 'all'
     });
     setData(null);
   };
@@ -2547,7 +3175,7 @@ const RevenueStats = () => {
             <FaChartLine className="text-teal-600" />
             Revenue Analytics Dashboard
           </h1>
-          <p className="text-gray-600">Comprehensive revenue analysis with procedure revenue tracking and bifurcation</p>
+          <p className="text-gray-600">Comprehensive revenue analysis with procedures and lab tests tracking</p>
         </div>
         <div className="flex gap-2">
           <ExportDropdown />
@@ -2562,6 +3190,7 @@ const RevenueStats = () => {
             { id: 'daily', label: 'Daily Report', icon: <FaCalendarAlt /> },
             { id: 'monthly', label: 'Monthly Report', icon: <FaChartLine /> },
             { id: 'procedures', label: 'Procedure Revenue', icon: <FaSyringe /> },
+            { id: 'labtests', label: 'Lab Test Revenue', icon: <FaFlask /> },
             { id: 'doctor', label: 'Doctor Wise', icon: <FaUserMd /> },
             { id: 'department', label: 'Department Wise', icon: <FaBuilding /> },
             { id: 'detailed', label: 'Detailed Report', icon: <FaFileInvoice /> }
@@ -2572,10 +3201,11 @@ const RevenueStats = () => {
                 setActiveTab(tab.id);
                 handleFilterChange('page', 1);
               }}
-              className={`flex items-center gap-1 px-6 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === tab.id
-                ? 'border-teal-600 text-teal-600 bg-teal-50'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-                }`}
+              className={`flex items-center gap-1 px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === tab.id
+                  ? 'border-teal-600 text-teal-600 bg-teal-50'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+              }`}
             >
               {tab.icon}
               {tab.label}

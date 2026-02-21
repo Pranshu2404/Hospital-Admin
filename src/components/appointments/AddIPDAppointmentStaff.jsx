@@ -3,10 +3,11 @@ import axios from 'axios';
 import { FormInput, FormSelect, FormTextarea, Button, SearchableFormSelect } from '../common/FormElements';
 import { useNavigate } from 'react-router-dom';
 import AppointmentSlipModal from './AppointmentSlipModal';
+import AppointmentInvoiceModal from './AppointmentInvoiceModal';
 import QRCodeModal from './QRCodeModal';
 import PaymentPendingModal from './PaymentPendingModal';
 import SuccessModal from './SuccessModal';
-import { FaUser, FaCloudUploadAlt, FaTimes, FaIdCard, FaCalendarAlt, FaClock, FaUserPlus, FaCheckCircle, FaArrowLeft, FaMoneyBillWave } from 'react-icons/fa';
+import { FaUser, FaCloudUploadAlt, FaTimes, FaIdCard, FaCalendarAlt, FaClock, FaUserPlus, FaCheckCircle, FaArrowLeft, FaMoneyBillWave, FaFileInvoice, FaPrint } from 'react-icons/fa';
 
 const appointmentTypeOptions = [
   { value: 'consultation', label: 'Consultation' },
@@ -209,8 +210,10 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
   const [autoAssignedTime, setAutoAssignedTime] = useState(null);
   const [showErrors, setShowErrors] = useState(false);
   const [slipModal, setSlipModal] = useState(false);
+  const [invoiceModal, setInvoiceModal] = useState(false);
   const [hospitalInfo, setHospitalInfo] = useState(null);
   const [submitDetails, setSubmitDetails] = useState(null);
+  const [invoiceDetails, setInvoiceDetails] = useState(null);
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
   const [qrData, setQrData] = useState({ imageUrl: '', orderId: '' });
   const [paymentStatus, setPaymentStatus] = useState('pending');
@@ -222,6 +225,7 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
   const [newPatientData, setNewPatientData] = useState(null);
   const [autoSwitchMessage, setAutoSwitchMessage] = useState('');
   const [previousDoctorId, setPreviousDoctorId] = useState('');
+  const [showActionModal, setShowActionModal] = useState(false);
 
   // New States for CSC API and Image Upload
   const [states, setStates] = useState([]);
@@ -437,18 +441,6 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
             amount: consultationFee
           });
           total += consultationFee;
-
-          // Add hospital service charge for OPD (from hospital charges)
-          // const opdServiceFee = hospitalCharges?.opdCharges?.serviceCharge || 
-          //                      hospitalCharges?.opdCharges?.consultationFee || 
-          //                      0;
-          // if (opdServiceFee > 0) {
-          //   charges.push({
-          //     description: "Hospital Service Charge",
-          //     amount: opdServiceFee
-          //   });
-          //   total += opdServiceFee;
-          // }
         } else {
           // For full-time doctors, use hospital's consultation fee
           consultationFee = hospitalCharges?.opdCharges?.consultationFee || 0;
@@ -1248,6 +1240,27 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
     }
   };
 
+  const fetchInvoiceDetails = async (appointmentId) => {
+    try {
+      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/billing/appointment/${appointmentId}`);
+      if (response.data.success && response.data.bill) {
+        const bill = response.data.bill;
+        setInvoiceDetails({
+          ...bill,
+          patientName: bill.patient_id ? 
+            `${bill.patient_id.salutation || ''} ${bill.patient_id.first_name || ''} ${bill.patient_id.last_name || ''}`.trim() : 
+            'Unknown Patient',
+          doctorName: `Dr. ${bill.appointment_id?.doctor_id?.firstName || ''} ${bill.appointment_id?.doctor_id?.lastName || ''}`.trim(),
+          departmentName: bill.appointment_id?.department_id?.name || 'N/A',
+          invoiceNumber: bill.invoice_id?.invoice_number || 'N/A',
+          invoiceId: bill.invoice_id?._id
+        });
+      }
+    } catch (err) {
+      console.error('Error fetching invoice details:', err);
+    }
+  };
+
   const handleSubmit = async (e, paymentInfo = null, forcePending = false) => {
     if (e) e.preventDefault();
     setIsLoading(true);
@@ -1328,7 +1341,7 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
 
       const appointmentId = appointmentRes.data._id;
 
-      await axios.post(`${import.meta.env.VITE_BACKEND_URL}/billing`, {
+      const billRes = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/billing`, {
         patient_id: formData.patientId,
         appointment_id: appointmentId,
         total_amount: totalAmount,
@@ -1337,6 +1350,9 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
         items: chargesSummary,
         transaction_id: paymentInfo ? paymentInfo.transactionId : null,
       });
+
+      // Fetch invoice details
+      await fetchInvoiceDetails(appointmentId);
 
       // Show appointment success modal
       const selectedPatient = filteredPatients.find(p => p._id === formData.patientId);
@@ -1361,13 +1377,10 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
       };
       setSubmitDetails(enriched);
 
-      // Close success modal after a delay and show slip
+      // Instead of immediately showing slip, show action modal after success modal closes
       setTimeout(() => {
         setShowSuccessModal(false);
-        setSlipModal(true); // Show slip modal
-
-        // Reset form for next appointment
-        resetFormForNextAppointment();
+        setShowActionModal(true); // Show action modal with options
       }, 2000);
 
     } catch (err) {
@@ -1472,6 +1485,72 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
           background-color: #fef3c7;
           color: #92400e;
           border: 1px solid #fde68a;
+        }
+
+        .action-modal-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0, 0, 0, 0.5);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 1000;
+          backdrop-filter: blur(5px);
+        }
+
+        .action-modal {
+          background: white;
+          border-radius: 16px;
+          padding: 32px;
+          max-width: 500px;
+          width: 90%;
+          text-align: center;
+          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        .action-buttons {
+          display: flex;
+          gap: 16px;
+          margin-top: 24px;
+          justify-content: center;
+        }
+
+        .action-button {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          padding: 20px;
+          border-radius: 12px;
+          border: 2px solid #e2e8f0;
+          background: white;
+          cursor: pointer;
+          transition: all 0.2s;
+          flex: 1;
+        }
+
+        .action-button:hover {
+          border-color: #0d9488;
+          background: #f0fdfa;
+        }
+
+        .action-button svg {
+          font-size: 32px;
+          margin-bottom: 8px;
+        }
+
+        .action-button .title {
+          font-weight: 600;
+          font-size: 16px;
+          color: #1e293b;
+        }
+
+        .action-button .description {
+          font-size: 12px;
+          color: #64748b;
+          margin-top: 4px;
         }
       `}</style>
 
@@ -2197,21 +2276,88 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
           onContinue={() => {
             setShowSuccessModal(false);
             if (!newPatientData) {
-              setSlipModal(true); // Show slip for appointments
+              // Show action modal instead of directly showing slip
+              setShowActionModal(true);
             } else {
               handleSelectPatientAfterSuccess();
             }
           }}
-          showSlipButton={!newPatientData} // Show slip button only for appointments, not new patients
+          showSlipButton={false} // Changed to false since we show action modal
         />
+      )}
+
+      {/* Action Modal - Choose between Slip and Invoice */}
+      {showActionModal && submitDetails && (
+        <div className="action-modal-overlay">
+          <div className="action-modal">
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">Appointment Created!</h3>
+            <p className="text-gray-600 mb-6">What would you like to do next?</p>
+            
+            <div className="action-buttons">
+              <div
+                className="action-button"
+                onClick={() => {
+                  setShowActionModal(false);
+                  setSlipModal(true);
+                }}
+              >
+                <FaPrint className="text-teal-600" size={32} />
+                <span className="title">View Appointment Slip</span>
+                <span className="description">Print or download appointment details</span>
+              </div>
+              
+              {invoiceDetails && (
+                <div
+                  className="action-button"
+                  onClick={() => {
+                    setShowActionModal(false);
+                    setInvoiceModal(true);
+                  }}
+                >
+                  <FaFileInvoice className="text-teal-600" size={32} />
+                  <span className="title">View Invoice</span>
+                  <span className="description">View or print generated invoice</span>
+                </div>
+              )}
+            </div>
+            
+            <div className="mt-6">
+              <button
+                onClick={() => {
+                  setShowActionModal(false);
+                  resetFormForNextAppointment();
+                }}
+                className="text-sm text-gray-500 hover:text-gray-700"
+              >
+                Create Another Appointment
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Appointment Slip Modal */}
       {slipModal && submitDetails && (
         <AppointmentSlipModal
           isOpen={slipModal}
-          onClose={() => setSlipModal(false)}
+          onClose={() => {
+            setSlipModal(false);
+            resetFormForNextAppointment();
+          }}
           appointmentData={submitDetails}
+          hospitalInfo={hospitalInfo}
+        />
+      )}
+
+      {/* Appointment Invoice Modal */}
+      {invoiceModal && invoiceDetails && (
+        <AppointmentInvoiceModal
+          isOpen={invoiceModal}
+          onClose={() => {
+            setInvoiceModal(false);
+            resetFormForNextAppointment();
+          }}
+          invoiceData={invoiceDetails}
           hospitalInfo={hospitalInfo}
         />
       )}

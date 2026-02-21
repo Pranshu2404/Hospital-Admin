@@ -20,7 +20,9 @@ import {
   FaUpload,
   FaTimes,
   FaHourglassHalf,
-  FaThermometerHalf
+  FaThermometerHalf,
+  FaMoneyBillWave, // Added for payment
+  FaLock // Added for locked tests
 } from 'react-icons/fa';
 
 const PathologyPrescriptions = () => {
@@ -35,6 +37,7 @@ const PathologyPrescriptions = () => {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showCollectSampleModal, setShowCollectSampleModal] = useState(false);
   const [showUploadReportModal, setShowUploadReportModal] = useState(false);
+  const [showPaymentWarningModal, setShowPaymentWarningModal] = useState(false); // New modal for payment warning
   const [updateStatusData, setUpdateStatusData] = useState({
     notes: ''
   });
@@ -46,7 +49,8 @@ const PathologyPrescriptions = () => {
     scheduled: 0,
     collected: 0,
     processing: 0,
-    completed: 0
+    completed: 0,
+    unpaid: 0 // Added unpaid count
   });
 
   // Get current pathology staff ID from localStorage
@@ -93,13 +97,18 @@ const PathologyPrescriptions = () => {
       const processingRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/prescriptions/lab-tests/status/Processing`);
       const completedRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/prescriptions/lab-tests/status/Completed`);
 
+      // Get unpaid tests (is_billed = false)
+      const allTests = [...(pendingRes.data.labTests || []), ...(scheduledRes.data.labTests || [])];
+      const unpaidTests = allTests.filter(test => !test.is_billed).length;
+
       setStats({
         total: pendingRes.data.count + scheduledRes.data.count + collectedRes.data.count + processingRes.data.count + completedRes.data.count,
         pending: pendingRes.data.count || 0,
         scheduled: scheduledRes.data.count || 0,
         collected: collectedRes.data.count || 0,
         processing: processingRes.data.count || 0,
-        completed: completedRes.data.count || 0
+        completed: completedRes.data.count || 0,
+        unpaid: unpaidTests || 0
       });
     } catch (error) {
       console.error('Error fetching stats:', error);
@@ -171,6 +180,30 @@ const PathologyPrescriptions = () => {
     }
   };
 
+  const handleCollectSampleClick = (item) => {
+    // Check if the test is billed (payment received)
+    if (!item.is_billed) {
+      // Show payment warning modal
+      setSelectedPrescription(item);
+      setSelectedLabTest({
+        _id: item._id,
+        lab_test_code: item.lab_test_code,
+        lab_test_name: item.lab_test_name,
+        cost: item.cost
+      });
+      setShowPaymentWarningModal(true);
+    } else {
+      // Proceed with sample collection
+      setSelectedPrescription(item);
+      setSelectedLabTest({
+        _id: item._id,
+        lab_test_code: item.lab_test_code,
+        lab_test_name: item.lab_test_name
+      });
+      setShowCollectSampleModal(true);
+    }
+  };
+
   const handleCollectSample = async () => {
     await handleUpdateStatus('Sample Collected');
   };
@@ -192,7 +225,6 @@ const PathologyPrescriptions = () => {
     formData.append('notes', updateStatusData.notes || '');
 
     try {
-      // API: POST /lab-reports/upload (you'll need to create this endpoint)
       const uploadResponse = await axios.post(
         `${import.meta.env.VITE_BACKEND_URL}/lab-reports/upload`,
         formData,
@@ -259,6 +291,20 @@ const PathologyPrescriptions = () => {
     );
   };
 
+  const getPaymentBadge = (isBilled) => {
+    return isBilled ? (
+      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 ml-2">
+        <FaCheckCircle className="mr-1" size={8} />
+        Paid
+      </span>
+    ) : (
+      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800 ml-2">
+        <FaMoneyBillWave className="mr-1" size={8} />
+        Unpaid
+      </span>
+    );
+  };
+
   const getFastingBadge = (fasting) => {
     return fasting ? (
       <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">
@@ -291,8 +337,8 @@ const PathologyPrescriptions = () => {
           <p className="text-gray-500 mt-1">View and process lab tests prescribed by doctors</p>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+        {/* Stats Cards - Added Unpaid card */}
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-7 gap-3 mb-6">
           <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
             <p className="text-xs text-gray-500">Total</p>
             <p className="text-xl font-bold text-gray-800">{stats.total}</p>
@@ -316,6 +362,10 @@ const PathologyPrescriptions = () => {
           <div className="bg-green-50 p-4 rounded-lg shadow-sm border border-green-200">
             <p className="text-xs text-green-700">Completed</p>
             <p className="text-xl font-bold text-green-800">{stats.completed}</p>
+          </div>
+          <div className="bg-red-50 p-4 rounded-lg shadow-sm border border-red-200">
+            <p className="text-xs text-red-700">Unpaid</p>
+            <p className="text-xl font-bold text-red-800">{stats.unpaid}</p>
           </div>
         </div>
 
@@ -378,10 +428,14 @@ const PathologyPrescriptions = () => {
             {filteredPrescriptions.map((item, index) => (
               <div
                 key={`${item.prescription_id}-${item._id}-${index}`}
-                className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow"
+                className={`bg-white rounded-xl shadow-sm border overflow-hidden hover:shadow-md transition-shadow ${
+                  !item.is_billed && item.status === 'Pending' ? 'border-red-200 bg-red-50/30' : 'border-gray-200'
+                }`}
               >
                 {/* Header */}
-                <div className="px-6 py-4 bg-gray-50 border-b border-gray-200 flex flex-wrap items-center justify-between gap-4">
+                <div className={`px-6 py-4 border-b flex flex-wrap items-center justify-between gap-4 ${
+                  !item.is_billed && item.status === 'Pending' ? 'bg-red-50 border-red-200' : 'bg-gray-50 border-gray-200'
+                }`}>
                   <div className="flex items-center gap-3">
                     <span className="text-sm font-mono text-teal-600 bg-teal-50 px-2 py-1 rounded">
                       {item.prescription_number}
@@ -392,6 +446,7 @@ const PathologyPrescriptions = () => {
                   </div>
                   <div className="flex items-center gap-2">
                     {getStatusBadge(item.status)}
+                    {getPaymentBadge(item.is_billed)}
                     {getFastingBadge(item.fasting_required)}
                   </div>
                 </div>
@@ -451,6 +506,18 @@ const PathologyPrescriptions = () => {
                     </div>
                   </div>
 
+                  {/* Payment Warning for Unpaid Tests */}
+                  {!item.is_billed && item.status === 'Pending' && (
+                    <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                      <div className="flex items-center gap-2 text-red-700">
+                        <FaLock className="text-lg" />
+                        <p className="text-sm font-medium">
+                          ⚠️ Payment pending (₹{item.cost || 0}). Sample collection is locked until payment is received.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Additional Info */}
                   <div className="mt-4 pt-4 border-t border-gray-200 grid grid-cols-1 md:grid-cols-2 gap-4">
                     {item.notes && (
@@ -503,18 +570,17 @@ const PathologyPrescriptions = () => {
 
                     {item.status === 'Pending' && (
                       <button
-                        onClick={() => {
-                          setSelectedPrescription(item);
-                          setSelectedLabTest({
-                            _id: item._id,
-                            lab_test_code: item.lab_test_code,
-                            lab_test_name: item.lab_test_name
-                          });
-                          setShowCollectSampleModal(true);
-                        }}
-                        className="px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors flex items-center gap-2 text-sm"
+                        onClick={() => handleCollectSampleClick(item)}
+                        className={`px-3 py-2 rounded-lg flex items-center gap-2 text-sm ${
+                          item.is_billed 
+                            ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' 
+                            : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                        }`}
+                        disabled={!item.is_billed}
+                        title={!item.is_billed ? 'Payment required before sample collection' : 'Collect Sample'}
                       >
-                        <FaVial size={14} /> Collect Sample
+                        <FaVial size={14} /> 
+                        {item.is_billed ? 'Collect Sample' : 'Payment Required'}
                       </button>
                     )}
 
@@ -531,7 +597,7 @@ const PathologyPrescriptions = () => {
                         }}
                         className="px-3 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors flex items-center gap-2 text-sm"
                       >
-                        <FaUpload size={14} /> Upload Report
+                        <FaUpload size={14} /> Complete Test
                       </button>
                     )}
 
@@ -557,6 +623,46 @@ const PathologyPrescriptions = () => {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Payment Warning Modal */}
+        {showPaymentWarningModal && selectedPrescription && selectedLabTest && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl max-w-md w-full p-6">
+              <div className="text-center mb-4">
+                <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <FaLock className="text-red-600 text-xl" />
+                </div>
+                <h3 className="text-lg font-bold text-gray-900">Payment Required</h3>
+                <p className="text-sm text-gray-500 mt-1">
+                  This lab test requires payment before sample collection
+                </p>
+              </div>
+
+              <div className="bg-red-50 p-4 rounded-lg mb-4 border border-red-200">
+                <p className="text-sm font-medium text-red-800 mb-2">Test Details:</p>
+                <p className="text-sm text-gray-700"><span className="font-medium">Test:</span> {selectedLabTest.lab_test_name}</p>
+                <p className="text-sm text-gray-700"><span className="font-medium">Code:</span> {selectedLabTest.lab_test_code}</p>
+                <p className="text-lg font-bold text-red-600 mt-2">Amount Due: ₹{selectedLabTest.cost || 0}</p>
+              </div>
+
+              <div className="bg-amber-50 p-3 rounded-lg mb-4">
+                <p className="text-sm text-amber-800">
+                  <FaExclamationTriangle className="inline mr-1" />
+                  Please complete the payment at the billing counter to proceed with sample collection.
+                </p>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowPaymentWarningModal(false)}
+                  className="flex-1 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
@@ -623,6 +729,10 @@ const PathologyPrescriptions = () => {
                     <div>
                       <p className="text-xs text-gray-500">Status</p>
                       <div>{getStatusBadge(selectedPrescription.status)}</div>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Payment Status</p>
+                      <div>{getPaymentBadge(selectedPrescription.is_billed)}</div>
                     </div>
                     <div>
                       <p className="text-xs text-gray-500">Fasting Required</p>
@@ -700,6 +810,9 @@ const PathologyPrescriptions = () => {
                 {selectedPrescription.fasting_required && (
                   <p className="text-xs text-amber-600 mt-2">⚠️ Fasting required for this test</p>
                 )}
+                <div className="mt-2 pt-2 border-t border-gray-200">
+                  <p className="text-xs text-green-600 font-medium">✓ Payment received</p>
+                </div>
               </div>
 
               <div className="mb-4">
@@ -756,7 +869,7 @@ const PathologyPrescriptions = () => {
                 <p className="text-sm"><span className="font-medium">Test:</span> {selectedLabTest.lab_test_name}</p>
               </div>
 
-              <div className="mb-4">
+              {/* <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Select Report File
                 </label>
@@ -769,7 +882,7 @@ const PathologyPrescriptions = () => {
                 <p className="text-xs text-gray-500 mt-1">
                   Supported formats: PDF, DOC, DOCX, JPG, PNG (Max 10MB)
                 </p>
-              </div>
+              </div> */}
 
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -813,8 +926,8 @@ const PathologyPrescriptions = () => {
                   Cancel
                 </button>
                 <button
-                  onClick={handleUploadReport}
-                  disabled={!reportFile}
+                  onClick={handleUpdateStatus('Completed')}
+                  // disabled={!reportFile}
                   className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Upload & Complete

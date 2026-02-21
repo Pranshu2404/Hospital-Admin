@@ -1,5 +1,6 @@
+// constants/sidebarItems/staffSidebar.js
 import { 
- FaChartLine, // Dashboard
+  FaChartLine, // Dashboard
   FaBook,          // Staff Guide
   FaCalendarCheck, // Appointments
   FaUserInjured,   // Patients
@@ -9,6 +10,7 @@ import {
   FaSignOutAlt,     // Discharges
   FaUserCog,
   FaProcedures,
+  FaFlask, // Add this for Lab Tests
 } from 'react-icons/fa';
 
 export const staffSidebar = [
@@ -39,6 +41,11 @@ export const staffSidebar = [
     label: 'Procedures',
     icon: FaProcedures,
     path: '/dashboard/staff/procedure',
+  },
+  {
+    label: 'Lab Tests', // New Lab Tests page
+    icon: FaFlask,
+    path: '/dashboard/staff/lab-tests',
   },
   {
     label: 'Billing',

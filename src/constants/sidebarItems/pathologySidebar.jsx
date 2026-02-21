@@ -28,11 +28,11 @@ export const pathologySidebar = [
     icon: FaClipboardList,
     path: '/dashboard/pathology/requests',
   },
-  {
-    label: 'Pending Tests',
-    icon: FaMicroscope,
-    path: '/dashboard/pathology/pending',
-  },
+  // {
+  //   label: 'Pending Tests',
+  //   icon: FaMicroscope,
+  //   path: '/dashboard/pathology/pending',
+  // },
   {
     label: 'In Progress',
     icon: FaVial,

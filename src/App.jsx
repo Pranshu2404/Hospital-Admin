@@ -138,6 +138,8 @@ import CompletedTests from './pages/dashboard/pathology/completed';
 import LabReports from './pages/dashboard/pathology/reports';
 import TestRequests from './pages/dashboard/pathology/requests';
 import PathologyPrescriptions from './pages/dashboard/pathology/prescriptions';
+import PathologyProfile from './pages/dashboard/pathology/profile';
+import LabTestsManagement from './pages/dashboard/staff/LabTestsManagement';
 
 // Custom Layout Wrappers
 const AdminLayout = ({ children }) => (
@@ -991,6 +993,16 @@ export default function App() {
             }
           />
           <Route
+            path="/dashboard/staff/lab-tests"
+            element={
+              <ProtectedRoute role="staff">
+                <StaffLayout>
+                  <LabTestsManagement />
+                </StaffLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/dashboard/staff/update-patient/:id"
             element={
               <ProtectedRoute role="staff">
@@ -1363,66 +1375,76 @@ export default function App() {
             }
           />
           <Route
-  path="/dashboard/pathology/prescriptions"
-  element={
-    <ProtectedRoute role="pathology_staff">
-      <PathologyLayout>
-        <PathologyPrescriptions />
-      </PathologyLayout>
-    </ProtectedRoute>
-  }
-/>
-<Route
-  path="/dashboard/pathology/requests"
-  element={
-    <ProtectedRoute role="pathology_staff">
-      <PathologyLayout>
-        <TestRequests />
-      </PathologyLayout>
-    </ProtectedRoute>
-  }
-/>
-<Route
-  path="/dashboard/pathology/in-progress"
-  element={
-    <ProtectedRoute role="pathology_staff">
-      <PathologyLayout>
-        <InProgressTests />
-      </PathologyLayout>
-    </ProtectedRoute>
-  }
-/>
-<Route
-  path="/dashboard/pathology/completed"
-  element={
-    <ProtectedRoute role="pathology_staff">
-      <PathologyLayout>
-        <CompletedTests />
-      </PathologyLayout>
-    </ProtectedRoute>
-  }
-/>
-<Route
-  path="/dashboard/pathology/reports"
-  element={
-    <ProtectedRoute role="pathology_staff">
-      <PathologyLayout>
-        <LabReports />
-      </PathologyLayout>
-    </ProtectedRoute>
-  }
-/>
-<Route
-  path="/dashboard/pathology/reports/new"
-  element={
-    <ProtectedRoute role="pathology_staff">
-      <PathologyLayout>
-        <NewReport />
-      </PathologyLayout>
-    </ProtectedRoute>
-  }
-/>
-          
+            path="/dashboard/pathology/profile"
+            element={
+              <ProtectedRoute role="pathology_staff">
+                <PathologyLayout>
+                  <PathologyProfile />
+                </PathologyLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/pathology/prescriptions"
+            element={
+              <ProtectedRoute role="pathology_staff">
+                <PathologyLayout>
+                  <PathologyPrescriptions />
+                </PathologyLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/pathology/requests"
+            element={
+              <ProtectedRoute role="pathology_staff">
+                <PathologyLayout>
+                  <TestRequests />
+                </PathologyLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/pathology/in-progress"
+            element={
+              <ProtectedRoute role="pathology_staff">
+                <PathologyLayout>
+                  <InProgressTests />
+                </PathologyLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/pathology/completed"
+            element={
+              <ProtectedRoute role="pathology_staff">
+                <PathologyLayout>
+                  <CompletedTests />
+                </PathologyLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/pathology/reports"
+            element={
+              <ProtectedRoute role="pathology_staff">
+                <PathologyLayout>
+                  <LabReports />
+                </PathologyLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/pathology/reports/new"
+            element={
+              <ProtectedRoute role="pathology_staff">
+                <PathologyLayout>
+                  <NewReport />
+                </PathologyLayout>
+              </ProtectedRoute>
+            }
+          />
+
         </Routes>
       </AuthProvider>
     </Router>

@@ -152,7 +152,7 @@ const PathologyDashboard = () => {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between">
               <div>
@@ -195,21 +195,6 @@ const PathologyDashboard = () => {
             </div>
             <Link to="/dashboard/pathology/prescriptions?status=Completed" className="text-sm text-teal-600 hover:text-teal-700 mt-4 inline-block">
               View Details →
-            </Link>
-          </div>
-
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500 font-medium">Total Tests</p>
-                <p className="text-3xl font-bold text-gray-800 mt-2">{stats.totalTests}</p>
-              </div>
-              <div className="p-3 bg-purple-100 rounded-lg">
-                <FaFlask className="text-purple-600 text-2xl" />
-              </div>
-            </div>
-            <Link to="/dashboard/pathology/catalog" className="text-sm text-teal-600 hover:text-teal-700 mt-4 inline-block">
-              View Catalog →
             </Link>
           </div>
         </div>
@@ -282,31 +267,6 @@ const PathologyDashboard = () => {
               ) : (
                 <p className="text-gray-500 text-center py-4">No pending tests</p>
               )}
-            </div>
-
-            {/* Quick Actions */}
-            <div className="bg-gradient-to-br from-teal-600 to-teal-700 rounded-xl shadow-lg p-6 text-white">
-              <h3 className="font-semibold text-lg mb-3">Quick Actions</h3>
-              <div className="space-y-3">
-                <Link 
-                  to="/dashboard/pathology/prescriptions?status=Pending" 
-                  className="block px-4 py-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors"
-                >
-                  📋 View Pending Requests
-                </Link>
-                <Link 
-                  to="/dashboard/pathology/prescriptions" 
-                  className="block px-4 py-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors"
-                >
-                  🔬 Process Lab Tests
-                </Link>
-                <Link 
-                  to="/dashboard/pathology/reports" 
-                  className="block px-4 py-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors"
-                >
-                  📄 View Reports
-                </Link>
-              </div>
             </div>
           </div>
         </div>
