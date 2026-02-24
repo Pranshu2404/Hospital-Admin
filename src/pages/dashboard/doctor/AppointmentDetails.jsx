@@ -78,20 +78,67 @@ const SearchableFormSelect = ({
       return;
     }
 
-    const filtered = normalizedOptions.filter(opt => {
-      const haystack = [
-        opt.label,
-        opt.value,
-        opt.name,
-        opt.category,
-        opt.specimen_type,
-        opt.description
-      ].filter(Boolean).join(' ').toLowerCase();
+    // Split search term into words for better matching
+    const searchWords = term.split(/\s+/).filter(word => word.length > 0);
+    
+    // Filter and score options
+    const filtered = normalizedOptions
+      .map(opt => {
+        const haystack = [
+          opt.label,
+          opt.value,
+          opt.name,
+          opt.category,
+          opt.specimen_type,
+          opt.description
+        ].filter(Boolean).join(' ').toLowerCase();
 
-      return haystack.includes(term);
-    });
+        // Calculate score: higher score means better match
+        let score = 0;
+        
+        // Check if starts with search term (highest priority)
+        if (haystack.startsWith(term)) {
+          score += 100;
+        }
+        // Check if any word starts with search term
+        else if (haystack.split(/\s+/).some(word => word.startsWith(term))) {
+          score += 50;
+        }
+        // Check if contains search term
+        else if (haystack.includes(term)) {
+          score += 25;
+        }
+        
+        // Check for word boundary matches
+        searchWords.forEach(word => {
+          if (word.length > 0) {
+            if (haystack.startsWith(word)) {
+              score += 10;
+            } else if (haystack.includes(` ${word}`)) {
+              score += 5;
+            } else if (haystack.includes(word)) {
+              score += 1;
+            }
+          }
+        });
 
-    setFilteredOptions(filtered.slice(0, 20));
+        return {
+          ...opt,
+          score
+        };
+      })
+      .filter(opt => opt.score > 0) // Only keep matches
+      .sort((a, b) => {
+        // Sort by score (highest first)
+        if (b.score !== a.score) {
+          return b.score - a.score;
+        }
+        // If scores are equal, sort alphabetically
+        return (a.label || '').localeCompare(b.label || '');
+      })
+      .slice(0, 20);
+
+    setFilteredOptions(filtered);
   }, [searchTerm, normalizedOptions]);
 
   useEffect(() => {
@@ -328,6 +375,11 @@ const SearchableFormSelect = ({
                         {opt.fasting_required && <span>• Fasting Required</span>}
                       </div>
                     )}
+                    
+                    {/* Show match indicator for debugging (remove in production) */}
+                    {/* {opt.score && (
+                      <div className="text-[8px] text-gray-300 mt-0.5">Score: {opt.score}</div>
+                    )} */}
                   </div>
                 </div>
               ))}
