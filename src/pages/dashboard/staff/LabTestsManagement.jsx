@@ -640,7 +640,7 @@ function LabTestsManagement() {
         discount: billData.discount,
         tax_amount: billData.tax,
         payment_method: billData.payment_method,
-        status: billData.status,
+        status: 'Paid',
         notes: billData.notes
       });
 
