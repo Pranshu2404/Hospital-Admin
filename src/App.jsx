@@ -140,6 +140,7 @@ import TestRequests from './pages/dashboard/pathology/requests';
 import PathologyPrescriptions from './pages/dashboard/pathology/prescriptions';
 import PathologyProfile from './pages/dashboard/pathology/profile';
 import LabTestsManagement from './pages/dashboard/staff/LabTestsManagement';
+import PathologyInvoice from './pages/dashboard/pathology/invoices';
 
 // Custom Layout Wrappers
 const AdminLayout = ({ children }) => (
@@ -1440,6 +1441,16 @@ export default function App() {
               <ProtectedRoute role="pathology_staff">
                 <PathologyLayout>
                   <NewReport />
+                </PathologyLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/pathology/invoices"
+            element={
+              <ProtectedRoute role="pathology_staff">
+                <PathologyLayout>
+                  <PathologyInvoice />
                 </PathologyLayout>
               </ProtectedRoute>
             }

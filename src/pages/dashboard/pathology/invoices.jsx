@@ -1,21 +1,21 @@
 import React, { useState } from 'react';
 import Layout from '../../../components/Layout';
-import { pharmacySidebar } from '@/constants/sidebarItems/pharmacySidebar';
-import InvoiceListPage from './InvoiceListPage';
 import InvoiceDetailsPage from '../../../components/finance/InvoiceDetailsPage';
+import { pathologySidebar } from '@/constants/sidebarItems/pathologySidebar';
+import PathologyInvoiceListPage from './invoicelist';
 
-const Invoice = () => {
+const PathologyInvoice = () => {
   const [selectedInvoiceId, setSelectedInvoiceId] = useState(null);
 
   return (
-    <Layout sidebarItems={pharmacySidebar}>
+    <Layout sidebarItems={pathologySidebar}>
       {selectedInvoiceId ? (
         <InvoiceDetailsPage
           invoiceId={selectedInvoiceId}
           onBack={() => setSelectedInvoiceId(null)}
         />
       ) : (
-        <InvoiceListPage
+        <PathologyInvoiceListPage
           onViewDetails={(id) => setSelectedInvoiceId(id)}
         />
       )}
@@ -23,4 +23,4 @@ const Invoice = () => {
   );
 };
 
-export default Invoice;
+export default PathologyInvoice;
