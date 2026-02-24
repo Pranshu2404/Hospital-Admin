@@ -1,19 +1,29 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { FaHeartbeat, FaCheckCircle, FaTimesCircle, FaSave, FaNotesMedical, FaWeight, FaThermometerHalf, FaLungs } from 'react-icons/fa';
+import { 
+  FaHeartbeat, FaCheckCircle, FaTimesCircle, FaSave, 
+  FaNotesMedical, FaWeight, FaThermometerHalf, FaLungs,
+  FaUserMd, FaUserNurse, FaUserTie 
+} from 'react-icons/fa';
 import { MdBloodtype } from 'react-icons/md';
 
 const VitalsTab = ({ hospitalData }) => {
     const [loading, setLoading] = useState(false);
     const [vitalsEnabled, setVitalsEnabled] = useState(true);
+    const [vitalsController, setVitalsController] = useState('nurse'); // Default to nurse
     const [message, setMessage] = useState({ type: '', text: '' });
 
     // Initialize state from hospitalData or local storage
     useEffect(() => {
         if (hospitalData) {
             const isEnabled = hospitalData.vitalsEnabled !== undefined ? hospitalData.vitalsEnabled : true;
+            const controller = hospitalData.vitalsController || 'nurse';
+            
             setVitalsEnabled(isEnabled);
+            setVitalsController(controller);
+            
             localStorage.setItem('vitalsEnabled', isEnabled);
+            localStorage.setItem('vitalsController', controller);
         }
     }, [hospitalData]);
 
@@ -26,12 +36,14 @@ const VitalsTab = ({ hospitalData }) => {
             await axios.patch(
                 `${import.meta.env.VITE_BACKEND_URL}/hospitals/${hospitalData._id}/details`,
                 {
-                    vitalsEnabled: vitalsEnabled
+                    vitalsEnabled: vitalsEnabled,
+                    vitalsController: vitalsController
                 }
             );
 
             // Update local storage
             localStorage.setItem('vitalsEnabled', vitalsEnabled);
+            localStorage.setItem('vitalsController', vitalsController);
 
             // Notify other components (Sidebar, etc.)
             window.dispatchEvent(new Event('vitals-updated'));
@@ -47,6 +59,31 @@ const VitalsTab = ({ hospitalData }) => {
         }
     };
 
+    // Controller options with icons and descriptions
+    const controllerOptions = [
+        { 
+            value: 'doctor', 
+            label: 'Doctor', 
+            icon: FaUserMd,
+            description: 'Doctors will have full control to add and manage vitals',
+            color: 'blue'
+        },
+        { 
+            value: 'nurse', 
+            label: 'Nurse', 
+            icon: FaUserNurse,
+            description: 'Nurses will be responsible for recording and managing vitals',
+            color: 'green'
+        },
+        { 
+            value: 'registrar', 
+            label: 'Registrar', 
+            icon: FaUserTie,
+            description: 'Registrars can record vitals during patient registration',
+            color: 'purple'
+        }
+    ];
+
     // List of standard vitals fields that are part of the system
     const vitalsFields = [
         { name: 'Blood Pressure', icon: FaHeartbeat, unit: 'mmHg', description: 'Systolic and Diastolic pressure' },
@@ -54,9 +91,15 @@ const VitalsTab = ({ hospitalData }) => {
         { name: 'Body Temperature', icon: FaThermometerHalf, unit: '°F/°C', description: 'Body temperature reading' },
         { name: 'Weight', icon: FaWeight, unit: 'kg', description: 'Patient body weight' },
         { name: 'SpO2', icon: FaLungs, unit: '%', description: 'Oxygen saturation level' },
-        // { name: 'Respiratory Rate', icon: FaLungs, unit: 'breath/min', description: 'Breaths per minute' },
-        // { name: 'Sugar (RBS/FBS)', icon: MdBloodtype, unit: 'mg/dL', description: 'Blood glucose levels' },
+        { name: 'Respiratory Rate', icon: FaLungs, unit: 'breath/min', description: 'Breaths per minute' },
+        { name: 'Sugar (RBS/FBS)', icon: MdBloodtype, unit: 'mg/dL', description: 'Blood glucose levels' },
     ];
+
+    // Get controller icon color
+    const getControllerColor = (controller) => {
+        const option = controllerOptions.find(opt => opt.value === controller);
+        return option?.color || 'gray';
+    };
 
     return (
         <div className="font-sans">
@@ -66,7 +109,7 @@ const VitalsTab = ({ hospitalData }) => {
                         <FaHeartbeat className="text-rose-500" />
                         Vitals Configuration
                     </h3>
-                    <p className="text-sm text-gray-500 mt-1">Manage patient vitals data collection settings</p>
+                    <p className="text-sm text-gray-500 mt-1">Manage patient vitals data collection settings and access control</p>
                 </div>
             </div>
 
@@ -83,21 +126,85 @@ const VitalsTab = ({ hospitalData }) => {
 
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                 <div className="p-6">
+                    {/* Enable/Disable Toggle */}
                     <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-200 mb-6">
                         <div>
                             <h4 className="font-semibold text-slate-800">Enable Vitals Collection</h4>
-                            <p className="text-sm text-slate-500">If disabled, the Nurses section will be hidden and doctors won't be required to check vitals.</p>
+                            <p className="text-sm text-slate-500">If disabled, vitals section will be hidden throughout the system.</p>
                         </div>
                         <label className="relative inline-flex items-center cursor-pointer">
                             <input
                                 type="checkbox"
-                                value=""
                                 className="sr-only peer"
                                 checked={vitalsEnabled}
                                 onChange={(e) => setVitalsEnabled(e.target.checked)}
                             />
                             <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-teal-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600"></div>
                         </label>
+                    </div>
+
+                    {/* Controller Selection - New Section */}
+                    <div className={`mb-8 transition-opacity duration-300 ${vitalsEnabled ? 'opacity-100' : 'opacity-50 pointer-events-none'}`}>
+                        <h4 className="font-semibold text-slate-800 mb-4 flex items-center gap-2">
+                            <FaUserMd className="text-teal-500" />
+                            Assign Vitals Control To:
+                        </h4>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            {controllerOptions.map((option) => {
+                                const Icon = option.icon;
+                                const isSelected = vitalsController === option.value;
+                                const colorClasses = {
+                                    blue: isSelected ? 'border-blue-500 bg-blue-50' : 'border-slate-200 hover:border-blue-200',
+                                    green: isSelected ? 'border-green-500 bg-green-50' : 'border-slate-200 hover:border-green-200',
+                                    purple: isSelected ? 'border-purple-500 bg-purple-50' : 'border-slate-200 hover:border-purple-200'
+                                };
+
+                                return (
+                                    <div
+                                        key={option.value}
+                                        onClick={() => setVitalsController(option.value)}
+                                        className={`relative p-4 border-2 rounded-xl cursor-pointer transition-all ${colorClasses[option.color]}`}
+                                    >
+                                        {isSelected && (
+                                            <div className="absolute top-2 right-2">
+                                                <FaCheckCircle className={`text-${option.color}-500`} size={16} />
+                                            </div>
+                                        )}
+                                        <div className="flex items-start gap-3">
+                                            <div className={`p-3 rounded-lg bg-${option.color}-100 text-${option.color}-600`}>
+                                                <Icon size={20} />
+                                            </div>
+                                            <div>
+                                                <h5 className="font-semibold text-slate-800">{option.label}</h5>
+                                                <p className="text-xs text-slate-500 mt-1">{option.description}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        {/* Current Controller Badge */}
+                        {vitalsEnabled && (
+                            <div className="mt-4 p-3 bg-teal-50 border border-teal-100 rounded-lg">
+                                <p className="text-sm text-teal-700 flex items-center gap-2">
+                                    <span className="font-medium">Current Controller:</span>
+                                    <span className="flex items-center gap-1 px-2 py-1 bg-white rounded-full">
+                                        {controllerOptions.find(opt => opt.value === vitalsController)?.icon && 
+                                            (() => {
+                                                const Icon = controllerOptions.find(opt => opt.value === vitalsController).icon;
+                                                return <Icon size={14} className={`text-${getControllerColor(vitalsController)}-600`} />;
+                                            })()
+                                        }
+                                        <span className="capitalize">{vitalsController}</span>
+                                    </span>
+                                    <span className="text-xs text-teal-600">
+                                        will have full control to add, edit, and manage patient vitals
+                                    </span>
+                                </p>
+                            </div>
+                        )}
                     </div>
 
                     {/* Save Button */}
@@ -111,6 +218,7 @@ const VitalsTab = ({ hospitalData }) => {
                         </button>
                     </div>
 
+                    {/* Vitals Fields Display */}
                     <div className={`transition-opacity duration-300 ${vitalsEnabled ? 'opacity-100' : 'opacity-50 grayscale pointer-events-none'}`}>
                         <h4 className="text-md font-semibold text-slate-700 mb-4 flex items-center gap-2">
                             <FaNotesMedical className="text-teal-500" />

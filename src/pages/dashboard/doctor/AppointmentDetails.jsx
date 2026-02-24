@@ -7,7 +7,8 @@ import {
   FaArrowLeft, FaFilePrescription, FaCloudUploadAlt, FaTrash,
   FaHistory, FaCalendarCheck, FaPrescriptionBottleAlt,
   FaFlask, FaFileAlt, FaChevronDown, FaChevronUp, FaCapsules, FaHeartbeat, FaMagic, FaTimesCircle,
-  FaProcedures, FaSearch, FaVial, FaMicroscope, FaThermometerHalf, FaDna
+  FaProcedures, FaSearch, FaVial, FaMicroscope, FaThermometerHalf, FaDna,
+  FaUserMd, FaUserNurse, FaUserTie, FaExclamationTriangle, FaEdit
 } from 'react-icons/fa';
 import { summarizePatientHistory } from '@/utils/geminiService';
 import Layout from '@/components/Layout';
@@ -30,7 +31,7 @@ const SearchableFormSelect = ({
   debounceDelay = 2000,
   allowCustom = true,
   freeSolo = false,
-  minSearchChars = 0, // Minimum characters before API call
+  minSearchChars = 0,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isOpen, setIsOpen] = useState(false);
@@ -42,9 +43,8 @@ const SearchableFormSelect = ({
   const inputRef = useRef(null);
   const searchTimeoutRef = useRef(null);
   const lastValueRef = useRef(value);
-  const searchCacheRef = useRef(new Map()); // Cache for search results
+  const searchCacheRef = useRef(new Map());
 
-  // Normalize options once
   const normalizedOptions = useMemo(() => {
     return options.map(opt =>
       typeof opt === 'object' ? opt : { label: String(opt), value: String(opt) }
@@ -70,7 +70,6 @@ const SearchableFormSelect = ({
     }
   }, [value, isFocused, syncFromValue]);
 
-  // Local filtering
   useEffect(() => {
     const term = searchTerm.trim().toLowerCase();
 
@@ -95,22 +94,18 @@ const SearchableFormSelect = ({
     setFilteredOptions(filtered.slice(0, 20));
   }, [searchTerm, normalizedOptions]);
 
-  // Immediate search on typing (with small delay for rapid typing)
   useEffect(() => {
     if (!onSearch) return;
 
-    // Clear any pending timeout
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current);
     }
 
-    // Only search when input is focused AND user has typed enough characters
     if (isFocused && searchTerm.length >= minSearchChars) {
-      // Check cache first
       const cachedResult = searchCacheRef.current.get(searchTerm);
       if (cachedResult) {
         console.log(`Using cached results for "${searchTerm}"`);
-        return; // Don't call API if we have cached results
+        return;
       }
 
       searchCacheRef.current.set(searchTerm, 'pending');
@@ -121,7 +116,6 @@ const SearchableFormSelect = ({
         onSearch(searchTerm);
       }, rapidTypingDelay);
     }
-    // Clear results when input is empty AND focused
     else if (isFocused && searchTerm.length === 0) {
       onSearch('');
     }
@@ -132,25 +126,6 @@ const SearchableFormSelect = ({
       }
     };
   }, [searchTerm, onSearch, isFocused, minSearchChars, debounceDelay]);
-
-  // Function to update cache with API results (call this from parent component)
-  const updateSearchCache = useCallback((searchTerm, results) => {
-    if (searchTerm && results) {
-      searchCacheRef.current.set(searchTerm, results);
-      // Optional: Set cache expiration
-      setTimeout(() => {
-        searchCacheRef.current.delete(searchTerm);
-      }, 5 * 60 * 1000); // 5 minutes
-    }
-  }, []);
-
-  // Expose cache update function (optional)
-  useEffect(() => {
-    if (onSearch && typeof onSearch === 'function') {
-      // You could wrap the onSearch function to include cache updates
-      // This is optional and depends on your implementation
-    }
-  }, [onSearch]);
 
   const emitChange = (nextValue, selectedOption = null) => {
     if (!onChange) return;
@@ -169,12 +144,10 @@ const SearchableFormSelect = ({
     setIsOpen(false);
     setActiveIndex(0);
 
-    // Cache the selected option
     if (opt.value && opt.label) {
       searchCacheRef.current.set(opt.label, [opt]);
     }
 
-    // keep focus
     setTimeout(() => inputRef.current?.focus(), 0);
   };
 
@@ -183,10 +156,6 @@ const SearchableFormSelect = ({
     setIsOpen(false);
     setActiveIndex(0);
     emitChange('', null);
-
-    // Clear cache for this field if needed
-    // searchCacheRef.current.clear();
-
     setTimeout(() => inputRef.current?.focus(), 0);
   };
 
@@ -206,11 +175,9 @@ const SearchableFormSelect = ({
     if (next.trim()) setIsOpen(true);
     else {
       setIsOpen(false);
-      // Clear parent value when input is cleared
       emitChange('', null);
     }
 
-    // If freeSolo, typing should update parent continuously
     if (freeSolo) {
       emitChange(next, null);
     }
@@ -233,12 +200,10 @@ const SearchableFormSelect = ({
           handleSelect(filteredOptions[activeIndex]);
           return;
         }
-        // Allow custom commit
         if (allowCustom && freeSolo && searchTerm.trim() && !hasExactMatch) {
           emitChange(searchTerm.trim(), null);
           setIsOpen(false);
 
-          // Cache the custom entry
           const customOption = {
             label: searchTerm.trim(),
             value: searchTerm.trim(),
@@ -252,7 +217,6 @@ const SearchableFormSelect = ({
       }
       case 'Escape':
         setIsOpen(false);
-        // If not freeSolo, revert display back to selected value on escape
         if (!freeSolo) syncFromValue();
         break;
       default:
@@ -266,11 +230,9 @@ const SearchableFormSelect = ({
   };
 
   const handleInputBlur = () => {
-    // delay to allow clicking dropdown items
     setTimeout(() => {
       setIsFocused(false);
       setIsOpen(false);
-      // If not freeSolo, revert display to selected value
       if (!freeSolo) syncFromValue();
     }, 120);
   };
@@ -322,7 +284,6 @@ const SearchableFormSelect = ({
             {getIcon()}
           </div>
 
-          {/* Clear + Loading */}
           <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center gap-2">
             {!!searchTerm && !disabled && (
               <button
@@ -346,7 +307,7 @@ const SearchableFormSelect = ({
               {filteredOptions.map((opt, index) => (
                 <div
                   key={`${opt.value}-${index}`}
-                  onMouseDown={(e) => e.preventDefault()} // prevent blur before click
+                  onMouseDown={(e) => e.preventDefault()}
                   onClick={() => handleSelect(opt)}
                   onMouseEnter={() => setActiveIndex(index)}
                   className={`px-4 py-2 text-sm cursor-pointer transition-colors border-b border-gray-50 last:border-0 ${index === activeIndex ? 'bg-emerald-50 text-emerald-900 font-semibold' : 'text-gray-700'
@@ -358,7 +319,6 @@ const SearchableFormSelect = ({
                       {opt.isCustom && <span className="ml-2 text-xs text-gray-500">(Custom)</span>}
                     </div>
 
-                    {/* Extra meta */}
                     {(opt.name || opt.specimen_type || opt.category || opt.base_price) && (
                       <div className="text-xs text-gray-500 mt-0.5">
                         {opt.name && <span>{opt.name} </span>}
@@ -372,7 +332,6 @@ const SearchableFormSelect = ({
                 </div>
               ))}
 
-              {/* Custom option */}
               {allowCustom && freeSolo && searchTerm.trim() && !hasExactMatch && (
                 <div
                   onMouseDown={(e) => e.preventDefault()}
@@ -415,6 +374,31 @@ const AppointmentDetails = () => {
   const [expandedPrescription, setExpandedPrescription] = useState(null);
   const [currentDoctorDept, setCurrentDoctorDept] = useState(null);
 
+  // Vitals configuration state
+  const [vitalsConfig, setVitalsConfig] = useState({
+    vitalsEnabled: true,
+    vitalsController: 'doctor'
+  });
+  const [configLoading, setConfigLoading] = useState(true);
+  const [hospitalId, setHospitalId] = useState(null);
+  const [userRole, setUserRole] = useState('doctor');
+  const [isVitalsModalOpen, setIsVitalsModalOpen] = useState(false);
+
+  // Default Vitals
+  const defaultVitals = {
+    bp: '120/80',
+    weight: '70',
+    pulse: '72',
+    spo2: '98',
+    temperature: '98.6',
+    respiratory_rate: '16',
+    random_blood_sugar: '100',
+    height: '170'
+  };
+
+  // Vitals Form State
+  const [vitals, setVitals] = useState(defaultVitals);
+
   // State for medicine search
   const [medicineOptions, setMedicineOptions] = useState([]);
   const [loadingMedicines, setLoadingMedicines] = useState(false);
@@ -427,22 +411,18 @@ const AppointmentDetails = () => {
   const [searchingProcedures, setSearchingProcedures] = useState(false);
   const [procedureErrors, setProcedureErrors] = useState({});
 
-  // ✅ NEW: State for lab test search
+  // State for lab test search
   const [labTestOptions, setLabTestOptions] = useState([]);
   const [loadingLabTests, setLoadingLabTests] = useState(false);
   const [searchingLabTests, setSearchingLabTests] = useState(false);
   const [labTestErrors, setLabTestErrors] = useState({});
 
-  // State to track expanded medicine index
+  // State to track expanded indexes
   const [expandedMedicineIndex, setExpandedMedicineIndex] = useState(0);
-
-  // State to track expanded procedure index
   const [expandedProcedureIndex, setExpandedProcedureIndex] = useState(0);
-
-  // ✅ NEW: State to track expanded lab test index
   const [expandedLabTestIndex, setExpandedLabTestIndex] = useState(0);
 
-  // Frequency options with common medical abbreviations
+  // Frequency options
   const frequencyOptions = [
     { value: 'OD', label: 'Once daily' },
     { value: 'BD', label: 'Twice daily' },
@@ -464,13 +444,13 @@ const AppointmentDetails = () => {
     { value: 'q.o.d.', label: 'Every other day' }
   ];
 
-  // Duration options (1-30 days)
+  // Duration options
   const durationOptions = Array.from({ length: 30 }, (_, i) => ({
     value: `${i + 1} days`,
     label: `${i + 1} day${i > 0 ? 's' : ''}`
   }));
 
-  // Route of administration options
+  // Route options
   const routeOptions = [
     { value: "Oral", label: "Oral" },
     { value: "Sublingual", label: "Sublingual" },
@@ -508,13 +488,11 @@ const AppointmentDetails = () => {
     investigation: '',
     presenting_complaint: '',
     history_of_presenting_complaint: '',
-    // Add one default procedure box open by default
     recommendedProcedures: [{
       procedure_code: '',
       procedure_name: '',
       notes: ''
     }],
-    // ✅ NEW: Add one default lab test box open by default
     recommendedLabTests: [{
       lab_test_code: '',
       lab_test_name: '',
@@ -540,7 +518,153 @@ const AppointmentDetails = () => {
   const [summarizing, setSummarizing] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
 
-  // ✅ Fetch medicines from backend
+  useEffect(() => {
+    // Get hospital ID from localStorage
+    const hospitalID = localStorage.getItem('hospitalId');
+    const userData = JSON.parse(localStorage.getItem('user') || '{}');
+    
+    if (hospitalID) {
+      setHospitalId(hospitalID);
+      fetchVitalsConfig(hospitalID);
+    }
+    
+    if (userData.role) {
+      setUserRole(userData.role);
+    }
+  }, []);
+
+  // Fetch vitals configuration
+  const fetchVitalsConfig = async (hospitalId) => {
+    try {
+      setConfigLoading(true);
+      const token = localStorage.getItem('token');
+      const response = await axios.get(
+        `${import.meta.env.VITE_BACKEND_URL}/hospitals/${hospitalId}/vitals-config`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setVitalsConfig(response.data);
+    } catch (err) {
+      console.error('Error fetching vitals config:', err);
+      setVitalsConfig({
+        vitalsEnabled: true,
+        vitalsController: 'doctor'
+      });
+    } finally {
+      setConfigLoading(false);
+    }
+  };
+
+  // Listen for vitals config updates
+  useEffect(() => {
+    const handleVitalsUpdate = () => {
+      if (hospitalId) {
+        fetchVitalsConfig(hospitalId);
+      }
+    };
+
+    window.addEventListener('vitals-updated', handleVitalsUpdate);
+    return () => window.removeEventListener('vitals-updated', handleVitalsUpdate);
+  }, [hospitalId]);
+
+  // Check if doctor can access vitals
+  const canAccessVitals = () => {
+    return vitalsConfig.vitalsEnabled && vitalsConfig.vitalsController === 'doctor';
+  };
+
+  // Get vitals access message
+  const getVitalsAccessMessage = () => {
+    if (!vitalsConfig.vitalsEnabled) {
+      return {
+        message: 'Vitals collection is currently disabled',
+        color: 'gray',
+        icon: FaExclamationTriangle
+      };
+    }
+
+    switch(vitalsConfig.vitalsController) {
+      case 'doctor':
+        return {
+          message: 'You have full access to manage vitals',
+          color: 'blue',
+          icon: FaUserMd
+        };
+      case 'nurse':
+        return {
+          message: 'Vitals are managed by Nurses',
+          color: 'green',
+          icon: FaUserNurse
+        };
+      case 'registrar':
+        return {
+          message: 'Vitals are managed by Registrars',
+          color: 'purple',
+          icon: FaUserTie
+        };
+      default:
+        return {
+          message: 'Vitals access information',
+          color: 'gray',
+          icon: FaExclamationTriangle
+        };
+    }
+  };
+
+  // Vitals handlers
+  const handleVitalsClick = () => {
+    if (!canAccessVitals()) {
+      alert('You do not have permission to manage vitals.');
+      return;
+    }
+    
+    // Pre-fill with existing vitals if available
+    setVitals({
+      bp: appointment.vitals?.bp || defaultVitals.bp,
+      weight: appointment.vitals?.weight || defaultVitals.weight,
+      pulse: appointment.vitals?.pulse || defaultVitals.pulse,
+      spo2: appointment.vitals?.spo2 || defaultVitals.spo2,
+      temperature: appointment.vitals?.temperature || defaultVitals.temperature,
+      respiratory_rate: appointment.vitals?.respiratory_rate || defaultVitals.respiratory_rate,
+      random_blood_sugar: appointment.vitals?.random_blood_sugar || defaultVitals.random_blood_sugar,
+      height: appointment.vitals?.height || defaultVitals.height
+    });
+    setIsVitalsModalOpen(true);
+  };
+
+  const handleVitalsChange = (e) => {
+    setVitals({ ...vitals, [e.target.name]: e.target.value });
+  };
+
+  const submitVitals = async (e) => {
+    e.preventDefault();
+    
+    if (!canAccessVitals()) {
+      alert('Vitals access has been revoked or reassigned.');
+      setIsVitalsModalOpen(false);
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      await axios.put(
+        `${import.meta.env.VITE_BACKEND_URL}/appointments/${appointment._id}/vitals`,
+        { ...vitals },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      setMessage('Vitals updated successfully!');
+      setIsVitalsModalOpen(false);
+      
+      // Refresh appointment data to show updated vitals
+      fetchAppointment();
+      
+      setTimeout(() => setMessage(''), 3000);
+    } catch (err) {
+      console.error('Error updating vitals:', err);
+      alert('Failed to update vitals.');
+    }
+  };
+
+  // Fetch medicines
   const fetchMedicines = async (searchTerm = '') => {
     if (searchTerm.length < 2 && searchTerm !== '') return;
 
@@ -570,7 +694,7 @@ const AppointmentDetails = () => {
     }
   };
 
-  // ✅ Fetch procedures from backend
+  // Fetch procedures
   const fetchProcedures = async (searchTerm = '') => {
     if (searchTerm.length < 2 && searchTerm !== '') return;
 
@@ -600,7 +724,7 @@ const AppointmentDetails = () => {
     }
   };
 
-  // ✅ NEW: Fetch lab tests from backend
+  // Fetch lab tests
   const fetchLabTests = async (searchTerm = '') => {
     if (searchTerm.length < 2 && searchTerm !== '') return;
 
@@ -632,7 +756,7 @@ const AppointmentDetails = () => {
     }
   };
 
-  // Load initial medicines, procedures, and lab tests
+  // Load initial data
   useEffect(() => {
     const loadInitialData = async () => {
       setLoadingMedicines(true);
@@ -655,7 +779,7 @@ const AppointmentDetails = () => {
     loadInitialData();
   }, []);
 
-  // ✅ Fetch current doctor's department (Added to fix history loading)
+  // Fetch current doctor's department
   useEffect(() => {
     const fetchCurrentDoctorDept = async () => {
       const doctorId = localStorage.getItem('doctorId');
@@ -839,7 +963,6 @@ const AppointmentDetails = () => {
         quantity: ''
       }]
     }));
-    // Close all previous items and expand only the new one
     setExpandedMedicineIndex(newIndex);
   };
 
@@ -860,7 +983,6 @@ const AppointmentDetails = () => {
         notes: ''
       }]
     }));
-    // Close all previous items and expand only the new one
     setExpandedProcedureIndex(newIndex);
   };
 
@@ -870,7 +992,6 @@ const AppointmentDetails = () => {
     setPrescription(prev => ({ ...prev, recommendedProcedures: newProcedures }));
   };
 
-  // ✅ NEW: Add lab test
   const addLabTest = () => {
     const newIndex = prescription.recommendedLabTests.length;
     setPrescription(prev => ({
@@ -883,18 +1004,15 @@ const AppointmentDetails = () => {
         specimen_type: ''
       }]
     }));
-    // Close all previous items and expand only the new one
     setExpandedLabTestIndex(newIndex);
   };
 
-  // ✅ NEW: Remove lab test
   const removeLabTest = (index) => {
     const newLabTests = [...prescription.recommendedLabTests];
     newLabTests.splice(index, 1);
     setPrescription(prev => ({ ...prev, recommendedLabTests: newLabTests }));
   };
 
-  // ✅ Procedure change (UPDATED: uses _selectedOption and clears properly)
   const handleProcedureChange = (index, e) => {
     const { name, value, _selectedOption } = e.target;
     const newProcedures = [...prescription.recommendedProcedures];
@@ -919,7 +1037,6 @@ const AppointmentDetails = () => {
           notes: newProcedures[index].notes || ''
         };
       } else {
-        // free typing (code)
         newProcedures[index] = {
           ...newProcedures[index],
           procedure_code: value
@@ -932,7 +1049,6 @@ const AppointmentDetails = () => {
     setPrescription(prev => ({ ...prev, recommendedProcedures: newProcedures }));
   };
 
-  // ✅ NEW: Lab test change
   const handleLabTestChange = (index, e) => {
     const { name, value, _selectedOption } = e.target;
     const newLabTests = [...prescription.recommendedLabTests];
@@ -962,7 +1078,6 @@ const AppointmentDetails = () => {
           notes: newLabTests[index].notes || ''
         };
       } else {
-        // free typing (code)
         newLabTests[index] = {
           ...newLabTests[index],
           lab_test_code: value
@@ -977,13 +1092,11 @@ const AppointmentDetails = () => {
     setPrescription(prev => ({ ...prev, recommendedLabTests: newLabTests }));
   };
 
-  // ✅ Medicine change
   const handleMedicineChange = (index, e) => {
     const { name, value, _selectedOption } = e.target;
     const newItems = [...prescription.items];
     const item = { ...newItems[index], [name]: value };
 
-    // When medicine cleared -> reset type + dosage (and route + instructions)
     if (name === 'medicine_name') {
       if (!value) {
         item.medicine_type = '';
@@ -993,19 +1106,16 @@ const AppointmentDetails = () => {
         item.frequency = '';
         item.quantity = '';
         item.duration = '';
-        // keep frequency/duration; quantity depends on them
         newItems[index] = item;
         setPrescription(prev => ({ ...prev, items: newItems }));
         return;
       }
 
-      // Only auto-fill when actually selected from dropdown
       if (_selectedOption) {
         setMedicineErrors(prev => ({ ...prev, [index]: false }));
 
         const selectedMedicine = _selectedOption;
 
-        // dosage form -> type
         if (selectedMedicine.dosage) {
           const dosageToTypeMap = {
             'Tablet': 'Tablet',
@@ -1036,7 +1146,6 @@ const AppointmentDetails = () => {
           item.medicine_type = dosageToTypeMap[selectedMedicine.dosage] || selectedMedicine.dosage;
         }
 
-        // strength -> dosage (but user can still edit afterward)
         if (selectedMedicine.strength) {
           item.dosage = selectedMedicine.strength;
         } else if (selectedMedicine.dosage) {
@@ -1056,7 +1165,6 @@ const AppointmentDetails = () => {
           item.dosage = defaultDosageMap[selectedMedicine.dosage] || '';
         }
 
-        // dosage form -> route
         if (selectedMedicine.dosage) {
           const dosageToRouteMap = {
             'Tablet': 'Oral',
@@ -1089,7 +1197,6 @@ const AppointmentDetails = () => {
           item.route_of_administration = dosageToRouteMap[selectedMedicine.dosage] || 'Oral';
         }
 
-        // dosage form -> instructions
         if (selectedMedicine.dosage) {
           const dosageToInstructionsMap = {
             'Tablet': 'After food with water',
@@ -1109,7 +1216,6 @@ const AppointmentDetails = () => {
       }
     }
 
-    // Quantity calculation
     if (name === 'frequency' || name === 'duration') {
       const frequency = name === 'frequency' ? value : item.frequency;
       const duration = name === 'duration' ? value : item.duration;
@@ -1199,7 +1305,6 @@ const AppointmentDetails = () => {
     });
     setProcedureErrors(procedureErrorsLocal);
 
-    // ✅ Validate lab tests
     const labTestErrorsLocal = {};
     let hasLabTestErrors = false;
     prescription.recommendedLabTests.forEach((test, index) => {
@@ -1275,7 +1380,6 @@ const AppointmentDetails = () => {
           })
       );
 
-      // ✅ NEW: Fetch lab tests with costs
       const labTestsWithCosts = await Promise.all(
         prescription.recommendedLabTests
           .filter(test => test.lab_test_code && test.lab_test_name)
@@ -1565,7 +1669,7 @@ const AppointmentDetails = () => {
           </nav>
         </div>
 
-        {/* Patient History Tabs Content - Keep your existing content unchanged */}
+        {/* Patient History Tabs Content - Keep existing content */}
         <div className="p-4">
           {loadingHistory ? (
             <div className="flex items-center justify-center py-8">
@@ -1576,6 +1680,7 @@ const AppointmentDetails = () => {
             <>
               {activeTab === 'summary' && (
                 <div className="space-y-4">
+                  {/* Keep existing summary content */}
                   <div className="mb-6">
                     {!showSummary ? (
                       <div className="text-center py-8">
@@ -1703,6 +1808,7 @@ const AppointmentDetails = () => {
 
               {activeTab === 'prescriptions' && (
                 <div className="space-y-4">
+                  {/* Keep existing prescriptions content */}
                   {pastPrescriptions.length > 0 ? (
                     pastPrescriptions.map((rx, idx) => (
                       <div key={rx._id} className="bg-gradient-to-br from-slate-50 to-white border border-slate-200 rounded-xl overflow-hidden hover:shadow-md transition-all duration-200">
@@ -1732,6 +1838,7 @@ const AppointmentDetails = () => {
 
                         {expandedPrescription === rx._id && (
                           <div className="px-6 py-5 space-y-5">
+                            {/* Keep existing expanded prescription content */}
                             {rx.presenting_complaint && (
                               <div className="bg-rose-50 rounded-lg p-4 border border-rose-200">
                                 <div className="flex items-start gap-3">
@@ -1815,7 +1922,6 @@ const AppointmentDetails = () => {
                               </div>
                             )}
 
-                            {/* ✅ NEW: Lab Tests section in past prescriptions */}
                             {rx.recommendedLabTests && rx.recommendedLabTests.length > 0 && (
                               <div className="bg-amber-50 rounded-lg p-4 border border-amber-200">
                                 <div className="flex items-start gap-3">
@@ -1914,6 +2020,7 @@ const AppointmentDetails = () => {
 
               {activeTab === 'appointments' && (
                 <div className="space-y-4">
+                  {/* Keep existing appointments content */}
                   {pastAppointments.length > 0 ? (
                     pastAppointments.map((apt, idx) => (
                       <div key={apt._id} className="bg-gradient-to-br from-slate-50 to-white border border-slate-200 rounded-xl overflow-hidden hover:shadow-md transition-all duration-200">
@@ -2032,12 +2139,28 @@ const AppointmentDetails = () => {
     );
   };
 
+  // Show loading state while fetching config
+  if (configLoading) {
+    return (
+      <Layout sidebarItems={doctorSidebar} section={'Doctor'}>
+        <div className="min-h-screen bg-slate-50/50 p-6 md:p-2 font-sans flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading configuration...</p>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-4 border-teal-200 border-t-teal-600 mb-4"></div>
-        <p className="text-gray-500 font-medium">Loading details...</p>
-      </div>
+      <Layout sidebarItems={doctorSidebar} section={'Doctor'}>
+        <div className="min-h-screen bg-slate-50/50 p-6 md:p-2 font-sans flex items-center justify-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-teal-200 border-t-teal-600 mb-4"></div>
+          <p className="text-gray-500 font-medium">Loading details...</p>
+        </div>
+      </Layout>
     );
   }
 
@@ -2046,6 +2169,9 @@ const AppointmentDetails = () => {
   const patientName = appointment.patient_id
     ? `${appointment.patient_id.first_name || ''} ${appointment.patient_id.last_name || ''}`.trim()
     : 'Unknown Patient';
+
+  const vitalsInfo = getVitalsAccessMessage();
+  const VitalsIcon = vitalsInfo.icon;
 
   return (
     <Layout sidebarItems={doctorSidebar} section={'Doctor'}>
@@ -2078,10 +2204,38 @@ const AppointmentDetails = () => {
             </div>
           )}
 
-          {/* Left column / vitals / session UI - Keep your existing code */}
+          {/* Vitals Access Banner */}
+          {!vitalsConfig.vitalsEnabled ? (
+            <div className="bg-gray-50 border-l-4 border-gray-400 p-4 rounded-lg mb-6">
+              <div className="flex items-center gap-3">
+                <FaExclamationTriangle className="text-gray-500" size={24} />
+                <div>
+                  <h3 className="font-semibold text-gray-700">Vitals Collection Disabled</h3>
+                  <p className="text-gray-600 text-sm">
+                    The hospital administrator has disabled vitals collection.
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : vitalsConfig.vitalsController !== 'doctor' && (
+            <div className={`bg-${vitalsInfo.color}-50 border-l-4 border-${vitalsInfo.color}-400 p-4 rounded-lg mb-6`}>
+              <div className="flex items-center gap-3">
+                <VitalsIcon className={`text-${vitalsInfo.color}-600`} size={24} />
+                <div>
+                  <h3 className={`font-semibold text-${vitalsInfo.color}-700`}>
+                    {vitalsInfo.message}
+                  </h3>
+                  <p className={`text-${vitalsInfo.color}-600 text-sm`}>
+                    You have view-only access to vitals. Vitals can only be recorded by {vitalsConfig.vitalsController}s.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
             <div className="lg:col-span-1 space-y-4">
-              {/* left column unchanged - keep your existing code */}
+              {/* Patient Info Card */}
               <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                 <div className="bg-slate-50 px-4 py-3 border-b border-slate-100 flex items-center">
                   {appointment.patient_id?.patient_image ? (
@@ -2125,60 +2279,88 @@ const AppointmentDetails = () => {
                 </div>
               </div>
 
-              {appointment.vitals && (appointment.vitals.bp || appointment.vitals.pulse || appointment.vitals.weight || appointment.vitals.spo2 || appointment.vitals.temperature || appointment.vitals.respiratory_rate || appointment.vitals.random_blood_sugar || appointment.vitals.height) && (
-                <div className="bg-white rounded-xl shadow-sm border border-teal-100 overflow-hidden">
-                  <div className="bg-teal-50 px-4 py-3 border-b border-teal-100 flex items-center">
+              {/* Vitals Card */}
+              <div className="bg-white rounded-xl shadow-sm border border-teal-100 overflow-hidden">
+                <div className="bg-teal-50 px-4 py-3 border-b border-teal-100 flex items-center justify-between">
+                  <div className="flex items-center">
                     <div className="h-8 w-8 rounded-full bg-teal-100 flex items-center justify-center text-teal-600 mr-2 text-sm">
                       <FaHeartbeat />
                     </div>
                     <h3 className="font-semibold text-slate-800 text-md">Vitals</h3>
-                    <span className="text-xs text-slate-500 ml-auto font-normal">
-                      {appointment.vitals?.recorded_at
-                        ? new Date(appointment.vitals.recorded_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                        : ''}
-                    </span>
                   </div>
-                  <div className="p-4 grid grid-cols-2 gap-3">
-                    <div className="text-center p-2 bg-slate-50 rounded border border-slate-100">
-                      <span className="block text-xs text-slate-500 uppercase font-bold mb-1">Height</span>
-                      <span className="text-md font-bold text-slate-800">{appointment.vitals?.height || '--'} <span className="text-[10px] text-slate-400">cm</span></span>
-                    </div>
-                    <div className="text-center p-2 bg-slate-50 rounded border border-slate-100">
-                      <span className="block text-xs text-slate-500 uppercase font-bold mb-1">Weight</span>
-                      <span className="text-md font-bold text-slate-800">{appointment.vitals?.weight || '--'} <span className="text-[10px] text-slate-400">kg</span></span>
-                    </div>
-                    <div className="text-center p-2 bg-slate-50 rounded border border-slate-100">
-                      <span className="block text-xs text-slate-500 uppercase font-bold mb-1">BP</span>
-                      <span className="text-md font-bold text-slate-800">{appointment.vitals?.bp || '--'}</span>
-                    </div>
-                    <div className="text-center p-2 bg-slate-50 rounded border border-slate-100">
-                      <span className="block text-xs text-slate-500 uppercase font-bold mb-1">Pulse</span>
-                      <span className="text-md font-bold text-slate-800">{appointment.vitals?.pulse || '--'} <span className="text-[10px] text-slate-400">bpm</span></span>
-                    </div>
-
-                    <div className="text-center p-2 bg-slate-50 rounded border border-slate-100">
-                      <span className="block text-xs text-slate-500 uppercase font-bold mb-1">SPO2</span>
-                      <span className="text-md font-bold text-slate-800">{appointment.vitals?.spo2 || '--'} <span className="text-[10px] text-slate-400">%</span></span>
-                    </div>
-                    <div className="text-center p-2 bg-slate-50 rounded border border-slate-100">
-                      <span className="block text-xs text-slate-500 uppercase font-bold mb-1">RR</span>
-                      <span className="text-md font-bold text-slate-800">{appointment.vitals?.respiratory_rate || '--'} <span className="text-[10px] text-slate-400">/min</span></span>
-                    </div>
-                    <div className="text-center p-2 bg-slate-50 rounded border border-slate-100">
-                      <span className="block text-xs text-slate-500 uppercase font-bold mb-1">RBS</span>
-                      <span className="text-md font-bold text-slate-800">{appointment.vitals?.random_blood_sugar || '--'} <span className="text-[10px] text-slate-400">mg/dL</span></span>
-                    </div>
-
-                    {appointment.vitals?.temperature && (
+                  {canAccessVitals() && (
+                    <button
+                      onClick={handleVitalsClick}
+                      className="p-1.5 text-teal-600 hover:bg-teal-200 rounded-lg transition-colors"
+                      title="Update Vitals"
+                    >
+                      <FaEdit size={16} />
+                    </button>
+                  )}
+                </div>
+                
+                {appointment.vitals && (appointment.vitals.bp || appointment.vitals.pulse || appointment.vitals.weight || appointment.vitals.spo2 || appointment.vitals.temperature || appointment.vitals.respiratory_rate || appointment.vitals.random_blood_sugar || appointment.vitals.height) ? (
+                  <div className="p-4">
+                    <div className="grid grid-cols-2 gap-3">
                       <div className="text-center p-2 bg-slate-50 rounded border border-slate-100">
-                        <span className="block text-xs text-slate-500 uppercase font-bold mb-1">Temp</span>
-                        <span className="text-md font-bold text-slate-800">{appointment.vitals.temperature} <span className="text-[10px] text-slate-400">°F</span></span>
+                        <span className="block text-xs text-slate-500 uppercase font-bold mb-1">Height</span>
+                        <span className="text-md font-bold text-slate-800">{appointment.vitals?.height || '--'} <span className="text-[10px] text-slate-400">cm</span></span>
                       </div>
+                      <div className="text-center p-2 bg-slate-50 rounded border border-slate-100">
+                        <span className="block text-xs text-slate-500 uppercase font-bold mb-1">Weight</span>
+                        <span className="text-md font-bold text-slate-800">{appointment.vitals?.weight || '--'} <span className="text-[10px] text-slate-400">kg</span></span>
+                      </div>
+                      <div className="text-center p-2 bg-slate-50 rounded border border-slate-100">
+                        <span className="block text-xs text-slate-500 uppercase font-bold mb-1">BP</span>
+                        <span className="text-md font-bold text-slate-800">{appointment.vitals?.bp || '--'}</span>
+                      </div>
+                      <div className="text-center p-2 bg-slate-50 rounded border border-slate-100">
+                        <span className="block text-xs text-slate-500 uppercase font-bold mb-1">Pulse</span>
+                        <span className="text-md font-bold text-slate-800">{appointment.vitals?.pulse || '--'} <span className="text-[10px] text-slate-400">bpm</span></span>
+                      </div>
+
+                      <div className="text-center p-2 bg-slate-50 rounded border border-slate-100">
+                        <span className="block text-xs text-slate-500 uppercase font-bold mb-1">SPO2</span>
+                        <span className="text-md font-bold text-slate-800">{appointment.vitals?.spo2 || '--'} <span className="text-[10px] text-slate-400">%</span></span>
+                      </div>
+                      <div className="text-center p-2 bg-slate-50 rounded border border-slate-100">
+                        <span className="block text-xs text-slate-500 uppercase font-bold mb-1">RR</span>
+                        <span className="text-md font-bold text-slate-800">{appointment.vitals?.respiratory_rate || '--'} <span className="text-[10px] text-slate-400">/min</span></span>
+                      </div>
+                      <div className="text-center p-2 bg-slate-50 rounded border border-slate-100">
+                        <span className="block text-xs text-slate-500 uppercase font-bold mb-1">RBS</span>
+                        <span className="text-md font-bold text-slate-800">{appointment.vitals?.random_blood_sugar || '--'} <span className="text-[10px] text-slate-400">mg/dL</span></span>
+                      </div>
+
+                      {appointment.vitals?.temperature && (
+                        <div className="text-center p-2 bg-slate-50 rounded border border-slate-100">
+                          <span className="block text-xs text-slate-500 uppercase font-bold mb-1">Temp</span>
+                          <span className="text-md font-bold text-slate-800">{appointment.vitals.temperature} <span className="text-[10px] text-slate-400">°F</span></span>
+                        </div>
+                      )}
+                    </div>
+                    {appointment.vitals?.recorded_at && (
+                      <p className="text-xs text-slate-400 mt-2 text-right">
+                        Recorded: {new Date(appointment.vitals.recorded_at).toLocaleString()}
+                      </p>
                     )}
                   </div>
-                </div>
-              )}
+                ) : (
+                  <div className="p-6 text-center">
+                    <p className="text-sm text-slate-400">No vitals recorded yet</p>
+                    {canAccessVitals() && (
+                      <button
+                        onClick={handleVitalsClick}
+                        className="mt-2 text-teal-600 text-sm font-medium hover:underline flex items-center justify-center gap-1 mx-auto"
+                      >
+                        <FaPlus size={12} /> Add Vitals
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
 
+              {/* Session Card */}
               <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                 <div className="bg-slate-50 px-4 py-3 border-b border-slate-100 flex items-center">
                   <div className="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 mr-2 text-sm">
@@ -2261,6 +2443,7 @@ const AppointmentDetails = () => {
                             </div>
 
                             <div className="p-6 space-y-6 flex-grow">
+                              {/* Keep all existing prescription form fields */}
                               <div className="mb-4">
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
                                   Presenting Complaint
@@ -2318,20 +2501,6 @@ const AppointmentDetails = () => {
                                 />
                               </div>
 
-                              {/* <div className="mb-4">
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                  Investigation (Lab tests / Reports)
-                                </label>
-                                <textarea
-                                  name="investigation"
-                                  value={prescription.investigation}
-                                  onChange={handleInputChange}
-                                  placeholder="Write any lab tests or report requests here..."
-                                  rows={2}
-                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
-                                />
-                              </div> */}
-
                               {/* Procedures Section */}
                               <div>
                                 <div className="flex justify-between items-center mb-4">
@@ -2359,7 +2528,7 @@ const AppointmentDetails = () => {
                                               : 'border-blue-100 bg-blue-50 hover:border-blue-300'
                                             }`}
                                         >
-                                          {/* Header - Always visible - Compact padding */}
+                                          {/* Procedure header and content */}
                                           <div className="flex items-center justify-between">
                                             <button
                                               type="button"
@@ -2404,7 +2573,6 @@ const AppointmentDetails = () => {
                                             )}
                                           </div>
 
-                                          {/* Expanded Content - Compacted */}
                                           {isExpanded && (
                                             <div className="border-t border-blue-200 p-3 rounded-b-lg">
                                               <div className="flex justify-between items-start mb-2">
@@ -2473,7 +2641,7 @@ const AppointmentDetails = () => {
                                 )}
                               </div>
 
-                              {/* ✅ NEW: Lab Tests Section */}
+                              {/* Lab Tests Section */}
                               <div>
                                 <div className="flex justify-between items-center mb-4">
                                   <label className="text-sm font-semibold text-slate-700">Recommended Lab Tests</label>
@@ -2500,7 +2668,7 @@ const AppointmentDetails = () => {
                                               : 'border-amber-100 bg-amber-50 hover:border-amber-300'
                                             }`}
                                         >
-                                          {/* Header - Always visible */}
+                                          {/* Lab test header and content */}
                                           <div className="flex items-center justify-between">
                                             <button
                                               type="button"
@@ -2548,7 +2716,6 @@ const AppointmentDetails = () => {
                                             )}
                                           </div>
 
-                                          {/* Expanded Content */}
                                           {isExpanded && (
                                             <div className="border-t border-amber-200 p-3 rounded-b-lg">
                                               <div className="flex justify-between items-start mb-2">
@@ -2674,7 +2841,7 @@ const AppointmentDetails = () => {
                                             : 'border-teal-100 bg-teal-50 hover:border-teal-300'
                                           }`}
                                       >
-                                        {/* Header - Always visible */}
+                                        {/* Medicine header and content */}
                                         <div className="flex items-center justify-between">
                                           <button
                                             type="button"
@@ -2720,7 +2887,6 @@ const AppointmentDetails = () => {
                                           )}
                                         </div>
 
-                                        {/* Expanded Content */}
                                         {isExpanded && (
                                           <div className="border-t border-slate-200 p-3 rounded-b-lg">
                                             <div className="flex justify-between items-start mb-2">
@@ -2803,7 +2969,6 @@ const AppointmentDetails = () => {
                                                 />
                                               </div>
 
-                                              {/* Row 2 */}
                                               <div className="md:col-span-2">
                                                 <SearchableFormSelect
                                                   label="Duration"
@@ -2933,6 +3098,111 @@ const AppointmentDetails = () => {
           </div>
         </div>
       </div>
+
+      {/* Vitals Modal */}
+      {isVitalsModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold text-gray-800">Update Vitals</h2>
+              <button
+                onClick={() => setIsVitalsModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <FaTimes size={20} />
+              </button>
+            </div>
+            <p className="text-sm text-gray-500 mb-6">
+              Patient: {patientName}
+            </p>
+
+            <form onSubmit={submitVitals} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Height (cm)</label>
+                  <input
+                    type="text" name="height" value={vitals.height} onChange={handleVitalsChange}
+                    placeholder="e.g. 170"
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Weight (kg)</label>
+                  <input
+                    type="text" name="weight" value={vitals.weight} onChange={handleVitalsChange}
+                    placeholder="e.g. 70"
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Blood Pressure</label>
+                  <input
+                    type="text" name="bp" value={vitals.bp} onChange={handleVitalsChange}
+                    placeholder="e.g. 120/80"
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Pulse (bpm)</label>
+                  <input
+                    type="text" name="pulse" value={vitals.pulse} onChange={handleVitalsChange}
+                    placeholder="e.g. 72"
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">SPO2 (%)</label>
+                  <input
+                    type="text" name="spo2" value={vitals.spo2} onChange={handleVitalsChange}
+                    placeholder="e.g. 98"
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Temperature (°F)</label>
+                  <input
+                    type="text" name="temperature" value={vitals.temperature} onChange={handleVitalsChange}
+                    placeholder="e.g. 98.6"
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">RR (breaths/min)</label>
+                  <input
+                    type="text" name="respiratory_rate" value={vitals.respiratory_rate} onChange={handleVitalsChange}
+                    placeholder="e.g. 16"
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">RBS (mg/dL)</label>
+                  <input
+                    type="text" name="random_blood_sugar" value={vitals.random_blood_sugar} onChange={handleVitalsChange}
+                    placeholder="e.g. 100"
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 mt-6">
+                <button
+                  type="button"
+                  onClick={() => setIsVitalsModalOpen(false)}
+                  className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700"
+                >
+                  Save Vitals
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 };

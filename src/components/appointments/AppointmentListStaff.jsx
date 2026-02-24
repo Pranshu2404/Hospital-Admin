@@ -5,7 +5,8 @@ import {
   Eye, Edit2, Trash2, User, Stethoscope,
   CheckCircle, AlertCircle, X, ChevronDown,
   Activity, Building, CheckSquare, Clock as ClockIcon,
-  ChevronUp, ChevronRight, ArrowUp, ArrowDown
+  ChevronUp, ChevronRight, ArrowUp, ArrowDown,
+  Heart, Shield, UserCog, UserPlus
 } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import AddIPDAppointment from './AddIPDAppointment';
@@ -21,28 +22,147 @@ const AppointmentListStaff = () => {
   const [appointments, setAppointments] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
-  // Replaced simple filterDate with robust date range filtering
   const [dateFilter, setDateFilter] = useState('all');
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
   const [appointmentType, setAppointmentType] = useState(null);
   const [completedCollapsed, setCompletedCollapsed] = useState(false);
 
+  // Vitals configuration state
+  const [vitalsConfig, setVitalsConfig] = useState({
+    vitalsEnabled: true,
+    vitalsController: 'nurse'
+  });
+  const [configLoading, setConfigLoading] = useState(true);
+  const [hospitalId, setHospitalId] = useState(null);
+  const [userRole, setUserRole] = useState('staff');
+
   // Modal States
   const [chooserOpen, setChooserOpen] = useState(false);
-  const [selectedType, setSelectedType] = useState(null);
+  const [selectedType, setSelectedType] = useState('opd'); // Default to OPD
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [isCompletionModalOpen, setIsCompletionModalOpen] = useState(false);
+  const [isVitalsModalOpen, setIsVitalsModalOpen] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [hospitalInfo, setHospitalInfo] = useState(null);
 
+  // Default Vitals (Normal Range / Standard placeholders)
+  const defaultVitals = {
+    bp: '120/80',
+    weight: '70',
+    pulse: '72',
+    spo2: '98',
+    temperature: '98.6',
+    respiratory_rate: '16',
+    random_blood_sugar: '100',
+    height: '170'
+  };
+
+  // Vitals Form State
+  const [vitals, setVitals] = useState(defaultVitals);
+
   useEffect(() => {
+    // Get user data from localStorage
+    const userData = JSON.parse(localStorage.getItem('user') || '{}');
+    const hospitalID = localStorage.getItem('hospitalId') || userData.hospitalID;
+    
+    if (hospitalID) {
+      setHospitalId(hospitalID);
+      fetchVitalsConfig(hospitalID);
+    }
+    
+    // Get user role
+    if (userData.role) {
+      setUserRole(userData.role);
+    }
+
     if (patientType) {
       setAppointmentType(patientType);
     }
   }, [patientType]);
+
+  // Fetch vitals configuration
+  const fetchVitalsConfig = async (hospitalId) => {
+    try {
+      setConfigLoading(true);
+      const response = await axios.get(
+        `${import.meta.env.VITE_BACKEND_URL}/hospitals/${hospitalId}/vitals-config`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`
+          }
+        }
+      );
+      setVitalsConfig(response.data);
+    } catch (err) {
+      console.error('Error fetching vitals config:', err);
+      // Default to enabled if API fails
+      setVitalsConfig({
+        vitalsEnabled: true,
+        vitalsController: 'nurse'
+      });
+    } finally {
+      setConfigLoading(false);
+    }
+  };
+
+  // Listen for vitals config updates
+  useEffect(() => {
+    const handleVitalsUpdate = () => {
+      if (hospitalId) {
+        fetchVitalsConfig(hospitalId);
+      }
+    };
+
+    window.addEventListener('vitals-updated', handleVitalsUpdate);
+    return () => window.removeEventListener('vitals-updated', handleVitalsUpdate);
+  }, [hospitalId]);
+
+  // Check if current user can access vitals
+  const canAccessVitals = () => {
+    if (!vitalsConfig.vitalsEnabled) return false;
+    return vitalsConfig.vitalsController === userRole;
+  };
+
+  // Get vitals access message
+  const getVitalsAccessMessage = () => {
+    if (!vitalsConfig.vitalsEnabled) {
+      return {
+        message: 'Vitals collection is currently disabled',
+        color: 'gray',
+        icon: Shield
+      };
+    }
+
+    switch(vitalsConfig.vitalsController) {
+      case 'doctor':
+        return {
+          message: 'Vitals are managed by Doctors',
+          color: 'blue',
+          icon: UserCog
+        };
+      case 'nurse':
+        return {
+          message: userRole === 'nurse' ? 'You have access to manage vitals' : 'Vitals are managed by Nurses',
+          color: 'green',
+          icon: UserPlus
+        };
+      // case 'registrar':
+      //   return {
+      //     message: userRole === 'registrar' ? 'You have access to manage vitals' : 'Vitals are managed by Registrars',
+      //     color: 'purple',
+      //     icon: User
+      //   };
+      default:
+        return {
+          message: 'Vitals access information',
+          color: 'gray',
+          icon: Shield
+        };
+    }
+  };
 
   const getDateRangeFromFilter = () => {
     const today = new Date();
@@ -52,7 +172,7 @@ const AppointmentListStaff = () => {
       return { start: new Date(today), end: new Date(today) };
     } else if (dateFilter === 'week') {
       const weekStart = new Date(today);
-      weekStart.setDate(today.getDate() - today.getDay()); // Sunday as start of week
+      weekStart.setDate(today.getDate() - today.getDay());
       return { start: weekStart, end: new Date(today) };
     } else if (dateFilter === 'month') {
       const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -70,18 +190,14 @@ const AppointmentListStaff = () => {
     return { start: null, end: null };
   };
 
-  // Helper function to format stored UTC time as local time (treat UTC as IST)
+  // Helper function to format stored UTC time as local time
   const formatStoredTime = (utcTimeString) => {
     if (!utcTimeString) return 'N/A';
 
     try {
       const date = new Date(utcTimeString);
-
-      // Get UTC hours and minutes directly (since the time is stored in UTC but represents IST)
       const hours = date.getUTCHours();
       const minutes = date.getUTCMinutes();
-
-      // Format as 12-hour time
       const hour12 = hours % 12 || 12;
       const ampm = hours >= 12 ? 'PM' : 'AM';
 
@@ -98,7 +214,7 @@ const AppointmentListStaff = () => {
 
     try {
       const date = new Date(startTimeString);
-      const hours = date.getUTCHours(); // Using UTC hours since time is stored as UTC
+      const hours = date.getUTCHours();
       const minutes = date.getUTCMinutes();
       return hours * 60 + minutes;
     } catch (error) {
@@ -107,7 +223,7 @@ const AppointmentListStaff = () => {
     }
   };
 
-  // Check if appointment is upcoming (not completed and date/time is in future)
+  // Check if appointment is upcoming
   const isAppointmentUpcoming = (appointment) => {
     if (appointment.status === 'Completed' || appointment.status === 'Cancelled') {
       return false;
@@ -115,8 +231,6 @@ const AppointmentListStaff = () => {
 
     const now = new Date();
     const appointmentDate = new Date(appointment.appointment_date);
-
-    // Set current time to compare with appointment time
     const nowHours = now.getHours();
     const nowMinutes = now.getMinutes();
     appointmentDate.setHours(nowHours, nowMinutes, 0, 0);
@@ -132,8 +246,11 @@ const AppointmentListStaff = () => {
     const fetchData = async () => {
       setLoading(true);
       try {
+        const token = localStorage.getItem('token');
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
         const [appointmentRes, hospitalRes] = await Promise.all([
-          axios.get(`${import.meta.env.VITE_BACKEND_URL}/appointments`),
+          axios.get(`${import.meta.env.VITE_BACKEND_URL}/appointments`, { headers }),
           axios.get(`${import.meta.env.VITE_BACKEND_URL}/hospitals`)
         ]);
 
@@ -154,14 +271,10 @@ const AppointmentListStaff = () => {
               year: 'numeric'
             }),
             rawDate: appt.appointment_date,
-            // Use the formatStoredTime helper for proper time display
             time: formatStoredTime(appt.start_time),
             patientId: appt.patient_id?.patientId,
-            // Fallback type if not present
             type: appt.type || 'Consultation',
-            // Store time in minutes for sorting
             timeInMinutes: timeInMinutes,
-            // Create a proper datetime for sorting
             datetime: new Date(appointmentDate.setHours(
               Math.floor(timeInMinutes / 60),
               timeInMinutes % 60,
@@ -194,7 +307,6 @@ const AppointmentListStaff = () => {
       } else if (isAppointmentUpcoming(appt)) {
         upcoming.push(appt);
       } else {
-        // For appointments that are not completed but also not upcoming (like past appointments with other statuses)
         completed.push(appt);
       }
     });
@@ -202,30 +314,24 @@ const AppointmentListStaff = () => {
     return { completed, upcoming };
   };
 
-  // Sort upcoming appointments by increasing time (earliest first)
+  // Sort upcoming appointments by increasing time
   const sortUpcomingAppointments = (upcomingApps) => {
     return [...upcomingApps].sort((a, b) => {
-      // First sort by date (earliest date first)
       const dateA = new Date(a.rawDate);
       const dateB = new Date(b.rawDate);
       const dateDiff = dateA.getTime() - dateB.getTime();
       if (dateDiff !== 0) return dateDiff;
-
-      // If same date, sort by time (earliest time first)
       return a.timeInMinutes - b.timeInMinutes;
     });
   };
 
-  // Sort completed appointments by decreasing time (most recent first)
+  // Sort completed appointments by decreasing time
   const sortCompletedAppointments = (completedApps) => {
     return [...completedApps].sort((a, b) => {
-      // First sort by date (most recent date first)
       const dateA = new Date(a.rawDate);
       const dateB = new Date(b.rawDate);
       const dateDiff = dateB.getTime() - dateA.getTime();
       if (dateDiff !== 0) return dateDiff;
-
-      // If same date, sort by time (latest time first)
       return b.timeInMinutes - a.timeInMinutes;
     });
   };
@@ -242,7 +348,6 @@ const AppointmentListStaff = () => {
       if (appointment.rawDate) {
         const appDate = new Date(appointment.rawDate);
         appDate.setHours(0, 0, 0, 0);
-        // Compare dates (ensure start and end are set to midnight as well)
         if (start && appDate < start) matchesDateFilter = false;
         if (end && appDate > end) matchesDateFilter = false;
       }
@@ -251,10 +356,7 @@ const AppointmentListStaff = () => {
     return matchesSearch && matchesStatus && matchesDateFilter;
   });
 
-  // Separate the filtered appointments
   const { completed: filteredCompleted, upcoming: filteredUpcoming } = separateAppointments(filteredAppointments);
-
-  // Apply sorting
   const sortedUpcoming = sortUpcomingAppointments(filteredUpcoming);
   const sortedCompleted = sortCompletedAppointments(filteredCompleted);
 
@@ -265,6 +367,59 @@ const AppointmentListStaff = () => {
     pending: appointments.filter(a => a.status === 'Scheduled').length,
     upcoming: filteredUpcoming.length,
     completed: filteredCompleted.length
+  };
+
+  // Vitals handlers
+  const handleVitalsClick = (appointment) => {
+    if (!canAccessVitals()) {
+      alert('You do not have permission to manage vitals.');
+      return;
+    }
+    setSelectedAppointment(appointment);
+    setVitals({
+      bp: appointment.vitals?.bp || defaultVitals.bp,
+      weight: appointment.vitals?.weight || defaultVitals.weight,
+      pulse: appointment.vitals?.pulse || defaultVitals.pulse,
+      spo2: appointment.vitals?.spo2 || defaultVitals.spo2,
+      temperature: appointment.vitals?.temperature || defaultVitals.temperature,
+      respiratory_rate: appointment.vitals?.respiratory_rate || defaultVitals.respiratory_rate,
+      random_blood_sugar: appointment.vitals?.random_blood_sugar || defaultVitals.random_blood_sugar,
+      height: appointment.vitals?.height || defaultVitals.height
+    });
+    setIsVitalsModalOpen(true);
+  };
+
+  const handleVitalsChange = (e) => {
+    setVitals({ ...vitals, [e.target.name]: e.target.value });
+  };
+
+  const submitVitals = async (e) => {
+    e.preventDefault();
+    
+    if (!canAccessVitals()) {
+      alert('Vitals access has been revoked or reassigned.');
+      setIsVitalsModalOpen(false);
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      await axios.put(
+        `${import.meta.env.VITE_BACKEND_URL}/appointments/${selectedAppointment._id}/vitals`,
+        { ...vitals },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      alert('Vitals updated successfully!');
+      setIsVitalsModalOpen(false);
+      
+      // Refresh appointments to show updated vitals
+      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/appointments`);
+      setAppointments(response.data);
+    } catch (err) {
+      console.error('Error updating vitals:', err);
+      alert('Failed to update vitals.');
+    }
   };
 
   const getStatusBadge = (status) => {
@@ -288,28 +443,10 @@ const AppointmentListStaff = () => {
     setSelectedAppointment(appointment);
     setIsViewModalOpen(true);
   };
-  // ... (rest of rendering code)
-  // Make sure to render the new filtering UI below in the next chunk call if this exceeds typical replacement size. 
-  // This chunk handles state, logic updates. Next chunk will handle UI update.
-
-  // NOTE: The user requested replacing the UI too. I need to make sure I update the Filter UI part.
-  // The current view shows logic update mixed with lines 23-156 replacement.
-  // I will submit this big chunk updating state and logic first.
-  // Then I will do a smaller chunk to update the UI elements (inputs).
-  // Wait, I can do it all since I have the filteredAppointments logic here too.
-  // I need to be careful about not breaking the file structure.
-
-  // Actually, I can replace the logic block first, then do the UI block.
-  // The block selected covers state declarations and useEffects up to filteredAppointments logic.
-  // That seems safe.
-
 
   const handleAppointmentSuccess = (newAppointment) => {
-    // Add to list immediately
     setAppointments([newAppointment, ...appointments]);
-    // Close creation modal
     setChooserOpen(false);
-    // Show slip
     setSelectedAppointment(newAppointment);
     setIsViewModalOpen(true);
   };
@@ -317,105 +454,138 @@ const AppointmentListStaff = () => {
   const handleCompleteClick = async (appointment, e) => {
     e.stopPropagation();
     if (appointment.status !== 'Completed') {
-      // if (window.confirm('Mark this appointment as Completed and generate Completion Slip?')) {
-      //   try {
-      //     await axios.patch(`${import.meta.env.VITE_BACKEND_URL}/appointments/${appointment._id}`, { status: 'Completed' });
-
-      //     // Update local state
-      //     setAppointments(prev => prev.map(a => a._id === appointment._id ? { ...a, status: 'Completed' } : a));
-
-      //     // Open completion slip
-      //     setSelectedAppointment({ ...appointment, status: 'Completed' });
-      //     setIsCompletionModalOpen(true);
-      //   } catch (error) {
-      //     console.error('Error completing appointment:', error);
-      //     alert('Failed to update status. Please try again.');
-      //   }
-      // }
+      // Handle completion logic here
     } else {
-      // Already completed, just show slip
       setSelectedAppointment(appointment);
       setIsCompletionModalOpen(true);
     }
   };
 
-  // Updated renderAppointmentRow function to accept index parameter
-  const renderAppointmentRow = (appointment, isUpcoming = false, index = 0) => (
-    <tr key={appointment._id} className="hover:bg-slate-50/80 transition-colors group">
-      <td className="px-6 py-4 whitespace-nowrap">
-        <div className="flex items-center">
-          <div className="h-10 w-10 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs border border-indigo-100 mr-3 overflow-hidden">
-            {appointment.patientImage ? (
-              <img src={appointment.patientImage} alt={appointment.patientName} className="h-full w-full object-cover" />
-            ) : (
-              getInitials(appointment.patientName)
-            )}
+  const renderAppointmentRow = (appointment, isUpcoming = false, index = 0) => {
+    const vitalsAccess = canAccessVitals();
+    const vitalsInfo = getVitalsAccessMessage();
+    const vitalsFilled = appointment.vitals && Object.keys(appointment.vitals).length > 0;
+
+    return (
+      <tr key={appointment._id} className="hover:bg-slate-50/80 transition-colors group">
+        <td className="px-6 py-4 whitespace-nowrap">
+          <div className="flex items-center">
+            <div className="h-10 w-10 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs border border-indigo-100 mr-3 overflow-hidden">
+              {appointment.patientImage ? (
+                <img src={appointment.patientImage} alt={appointment.patientName} className="h-full w-full object-cover" />
+              ) : (
+                getInitials(appointment.patientName)
+              )}
+            </div>
+            <div>
+              <div className="text-sm font-bold text-slate-800">{appointment.patientName}</div>
+              <div className="text-xs text-slate-500 font-mono">ID: {appointment.patientId || 'N/A'}</div>
+            </div>
           </div>
-          <div>
-            <div className="text-sm font-bold text-slate-800">{appointment.patientName}</div>
-            <div className="text-xs text-slate-500 font-mono">ID: {appointment.patientId || 'N/A'}</div>
+        </td>
+        <td className="px-6 py-4 whitespace-nowrap">
+          <div className="flex items-center">
+            <div className="mr-2 text-slate-400"><Stethoscope size={14} /></div>
+            <span className="text-sm text-slate-700 font-medium">{appointment.doctorName}</span>
           </div>
-        </div>
-      </td>
-      <td className="px-6 py-4 whitespace-nowrap">
-        <div className="flex items-center">
-          <div className="mr-2 text-slate-400"><Stethoscope size={14} /></div>
-          <span className="text-sm text-slate-700 font-medium">{appointment.doctorName}</span>
-        </div>
-        <div className="text-xs text-slate-400 ml-6">{appointment.departmentName}</div>
-      </td>
-      <td className="px-6 py-4 whitespace-nowrap">
-        <div className="flex flex-col">
-          <span className="text-sm font-medium text-slate-700 flex items-center gap-2">
-            <Calendar size={12} className="text-slate-400" /> {appointment.date}
+          <div className="text-xs text-slate-400 ml-6">{appointment.departmentName}</div>
+        </td>
+        <td className="px-6 py-4 whitespace-nowrap">
+          <div className="flex flex-col">
+            <span className="text-sm font-medium text-slate-700 flex items-center gap-2">
+              <Calendar size={12} className="text-slate-400" /> {appointment.date}
+            </span>
+            <span className="text-xs text-slate-500 flex items-center gap-2 mt-0.5">
+              {appointment.type === 'number-based' ? (
+                <span className="font-bold text-slate-700">#{appointment.serial_number} (Queue)</span>
+              ) : (
+                <>
+                  <Clock size={12} className="text-slate-400" /> {appointment.time}
+                </>
+              )}
+              {isUpcoming && index === 0 && (
+                <span className="inline-flex items-center gap-0.5 bg-teal-50 text-teal-600 text-xs px-1.5 py-0.5 rounded border border-teal-100">
+                  <ArrowUp size={10} /> Next
+                </span>
+              )}
+            </span>
+          </div>
+        </td>
+        <td className="px-6 py-4 whitespace-nowrap">
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200 capitalize">
+            {appointment.type}
           </span>
-          <span className="text-xs text-slate-500 flex items-center gap-2 mt-0.5">
-            {appointment.type === 'number-based' ? (
-              <span className="font-bold text-slate-700">#{appointment.serial_number} (Queue)</span>
-            ) : (
-              <>
-                <Clock size={12} className="text-slate-400" /> {appointment.time}
-              </>
+        </td>
+        <td className="px-6 py-4 whitespace-nowrap">
+          {getStatusBadge(appointment.status)}
+        </td>
+        <td className="px-6 py-4 whitespace-nowrap">
+          <div className="flex items-center gap-1">
+            <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
+              vitalsFilled 
+                ? 'bg-green-100 text-green-700' 
+                : 'bg-yellow-100 text-yellow-700'
+            }`}>
+              <Heart size={12} className="mr-1" />
+              {vitalsFilled ? 'Vitals Done' : 'Vitals Pending'}
+            </span>
+          </div>
+        </td>
+        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+          <div className="flex justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
+            <button
+              onClick={() => handleViewClick(appointment)}
+              className="p-2 text-slate-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-colors"
+              title="View Slip"
+            >
+              <Eye size={20} />
+            </button>
+            
+            {vitalsAccess && (
+              <button
+                onClick={() => handleVitalsClick(appointment)}
+                className={`p-2 rounded-lg transition-colors ${
+                  vitalsFilled
+                    ? 'text-green-600 bg-green-50 hover:bg-green-100'
+                    : 'text-amber-600 bg-amber-50 hover:bg-amber-100'
+                }`}
+                title={vitalsFilled ? 'Update Vitals' : 'Add Vitals'}
+              >
+                <Heart size={20} />
+              </button>
             )}
-            {isUpcoming && index === 0 && (
-              <span className="inline-flex items-center gap-0.5 bg-teal-50 text-teal-600 text-xs px-1.5 py-0.5 rounded border border-teal-100">
-                <ArrowUp size={10} /> Next
-              </span>
-            )}
-          </span>
-        </div>
-      </td>
-      <td className="px-6 py-4 whitespace-nowrap">
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200 capitalize">
-          {appointment.type}
-        </span>
-      </td>
-      <td className="px-6 py-4 whitespace-nowrap">
-        {getStatusBadge(appointment.status)}
-      </td>
-      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-        <div className="flex justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
-          <button
-            onClick={() => handleViewClick(appointment)}
-            className="p-2 text-slate-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-colors"
-            title="View Slip"
-          >
-            <Eye size={20} />
-          </button>
-          <button
-            onClick={(e) => handleCompleteClick(appointment, e)}
-            className={`p-2 rounded-lg transition-colors ${appointment.status === 'Completed'
-              ? 'text-green-600 bg-green-50 hover:bg-green-100'
-              : 'text-slate-400 hover:text-green-600 hover:bg-green-50'
+            
+            <button
+              onClick={(e) => handleCompleteClick(appointment, e)}
+              className={`p-2 rounded-lg transition-colors ${
+                appointment.status === 'Completed'
+                  ? 'text-purple-600 bg-purple-50 hover:bg-purple-100'
+                  : 'text-slate-400 hover:text-purple-600 hover:bg-purple-50'
               }`}
-            title={appointment.status === 'Completed' ? "View Doctor's Prescription" : "Doctor's Prescription"}
-          >
-            <CheckCircle size={20} />
-          </button>
+              title={appointment.status === 'Completed' ? "View Prescription" : "Complete Appointment"}
+            >
+              <CheckCircle size={20} />
+            </button>
+          </div>
+        </td>
+      </tr>
+    );
+  };
+
+  // Show loading state while fetching config
+  if (configLoading) {
+    return (
+      <div className="p-8 flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading configuration...</p>
         </div>
-      </td>
-    </tr>
-  );
+      </div>
+    );
+  }
+
+  const vitalsInfo = getVitalsAccessMessage();
+  const VitalsIcon = vitalsInfo.icon;
 
   return (
     <div className="p-2 bg-slate-50 min-h-screen font-sans">
@@ -521,7 +691,7 @@ const AppointmentListStaff = () => {
             </div>
 
             <button
-              onClick={() => { setChooserOpen(true); setSelectedType(null); }}
+              onClick={() => { setChooserOpen(true); setSelectedType('opd'); }} // Default to OPD
               className="flex items-center gap-2 bg-teal-600 hover:bg-teal-700 text-white px-5 py-2.5 rounded-lg font-medium transition-all shadow-sm hover:shadow-md active:scale-95"
             >
               <Plus size={18} /> New Appointment
@@ -539,8 +709,6 @@ const AppointmentListStaff = () => {
                       <ClockIcon size={16} className="text-teal-600" />
                       <h3 className="font-bold text-teal-700 text-sm uppercase tracking-wider">Upcoming Appointments ({sortedUpcoming.length})</h3>
                     </div>
-                    <div className="flex items-center gap-2">
-                    </div>
                   </div>
                 </div>
                 <table className="w-full">
@@ -556,23 +724,13 @@ const AppointmentListStaff = () => {
                       </th>
                       <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Type</th>
                       <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Vitals</th>
                       <th className="px-6 py-4 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {sortedUpcoming.map((appointment, index) => (
-                      <React.Fragment key={appointment._id}>
-                        {renderAppointmentRow(appointment, true, index)}
-                        {index === 0 && sortedUpcoming.length > 1 && (
-                          <tr className="border-t-2 border-teal-100">
-                            <td colSpan="6" className="px-6 py-1 bg-teal-25">
-                              <div className="text-xs text-teal-500 font-medium">
-                                ↑ Earliest appointment today
-                              </div>
-                            </td>
-                          </tr>
-                        )}
-                      </React.Fragment>
+                      renderAppointmentRow(appointment, true, index)
                     ))}
                   </tbody>
                 </table>
@@ -616,6 +774,7 @@ const AppointmentListStaff = () => {
                           </th>
                           <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Type</th>
                           <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
+                          <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Vitals</th>
                           <th className="px-6 py-4 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">Actions</th>
                         </tr>
                       </thead>
@@ -624,7 +783,6 @@ const AppointmentListStaff = () => {
                       </tbody>
                     </table>
 
-                    {/* Collapse Footer */}
                     <div className="px-6 py-2 border-t border-slate-100 bg-green-25 flex justify-center">
                       <button
                         onClick={() => setCompletedCollapsed(true)}
@@ -655,21 +813,6 @@ const AppointmentListStaff = () => {
                 </div>
               </div>
             )}
-
-            {/* Only Completed Section is collapsed and no upcoming appointments */}
-            {sortedUpcoming.length === 0 && sortedCompleted.length > 0 && completedCollapsed && (
-              <div className="px-6 py-8 text-center">
-                <div className="flex flex-col items-center justify-center">
-                  <div className="bg-green-50 p-4 rounded-full mb-3">
-                    <CheckSquare size={32} className="text-green-300" />
-                  </div>
-                  <h3 className="text-slate-800 font-medium mb-1">Completed Appointments Collapsed</h3>
-                  <p className="text-slate-500 text-sm">
-                    Click on the "Completed Appointments" header above to expand and view {sortedCompleted.length} completed appointments
-                  </p>
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Pagination Footer */}
@@ -680,9 +823,6 @@ const AppointmentListStaff = () => {
                 <span className="ml-2">
                   (<span className="text-teal-600">{sortedUpcoming.length} upcoming</span>,
                   <span className="text-green-600"> {sortedCompleted.length} completed</span>)
-                  {completedCollapsed && sortedCompleted.length > 0 && (
-                    <span className="text-green-400 ml-2"></span>
-                  )}
                 </span>
               )}
             </p>
@@ -694,76 +834,28 @@ const AppointmentListStaff = () => {
         </div>
       </div>
 
-      {/* --- Type Selection Modal --- */}
+      {/* Appointment Creation Modal - Simplified (No Type Selection) */}
       {chooserOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
-          <div className={`bg-white rounded-2xl shadow-2xl w-full overflow-hidden transform transition-all ${selectedType ? "max-w-5xl" : "max-w-3xl"}`}>
-
-            {!selectedType ? (
-              <div className="p-8">
-                <div className="text-center mb-8">
-                  <h3 className="text-2xl font-bold text-slate-800">New Appointment</h3>
-                  <p className="text-slate-500 mt-1">Select the type of appointment you want to schedule</p>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <button
-                    onClick={() => setSelectedType('opd')}
-                    className="group relative p-6 rounded-xl border-2 border-slate-100 hover:border-blue-500 bg-white hover:bg-blue-50/30 transition-all duration-300 text-left"
-                  >
-                    <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                      <Stethoscope size={24} />
-                    </div>
-                    <h4 className="text-lg font-bold text-slate-800 mb-2">OPD Appointment</h4>
-                    <p className="text-sm text-slate-500 leading-relaxed">Outpatient Department consultation for general checkups and visits.</p>
-                  </button>
-
-                  {/* <button
-                    onClick={() => setSelectedType('ipd')}
-                    className="group relative p-6 rounded-xl border-2 border-slate-100 hover:border-teal-500 bg-white hover:bg-teal-50/30 transition-all duration-300 text-left"
-                  >
-                    <div className="w-12 h-12 bg-teal-100 text-teal-600 rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                      <Building size={24} />
-                    </div>
-                    <h4 className="text-lg font-bold text-slate-800 mb-2">IPD Admission</h4>
-                    <p className="text-sm text-slate-500 leading-relaxed">Inpatient Department admission for surgeries, wards, and long-term care.</p>
-                  </button> */}
-                </div>
-
-                <button
-                  onClick={() => setChooserOpen(false)}
-                  className="mt-8 mx-auto block text-sm font-medium text-slate-400 hover:text-slate-600 transition-colors"
-                >
-                  Cancel
-                </button>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+              <div>
+                <h3 className="font-bold text-lg text-slate-800">Schedule New Appointment</h3>
+                <p className="text-xs text-slate-500">Fill in the details below</p>
               </div>
-            ) : (
-              <div className="flex flex-col h-[80vh]">
-                <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                  <div className="flex items-center gap-3">
-                    <button onClick={() => setSelectedType(null)} className="text-slate-400 hover:text-slate-600 transition-colors">
-                      <ChevronDown className="rotate-90" size={20} />
-                    </button>
-                    <div>
-                      <h3 className="font-bold text-lg text-slate-800">Schedule {selectedType.toUpperCase()}</h3>
-                      <p className="text-xs text-slate-500">Fill in the details below</p>
-                    </div>
-                  </div>
-                  <button onClick={() => setChooserOpen(false)} className="p-2 text-slate-400 hover:bg-slate-200 rounded-full transition">
-                    <X size={20} />
-                  </button>
-                </div>
+              <button onClick={() => setChooserOpen(false)} className="p-2 text-slate-400 hover:bg-slate-200 rounded-full transition">
+                <X size={20} />
+              </button>
+            </div>
 
-                <div className="flex-1 overflow-y-auto p-6 bg-white">
-                  <AddIPDAppointmentStaff
-                    embedded={true}
-                    type={selectedType}
-                    onClose={() => setChooserOpen(false)}
-                    onSuccess={handleAppointmentSuccess}
-                  />
-                </div>
-              </div>
-            )}
+            <div className="flex-1 overflow-y-auto p-6 bg-white" style={{ maxHeight: '80vh' }}>
+              <AddIPDAppointmentStaff
+                embedded={true}
+                type="opd" // Always OPD
+                onClose={() => setChooserOpen(false)}
+                onSuccess={handleAppointmentSuccess}
+              />
+            </div>
           </div>
         </div>
       )}
@@ -783,6 +875,103 @@ const AppointmentListStaff = () => {
         appointmentData={selectedAppointment}
         hospitalInfo={hospitalInfo}
       />
+
+      {/* Vitals Modal */}
+      {isVitalsModalOpen && selectedAppointment && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+            <h2 className="text-xl font-bold text-gray-800 mb-4">Update Vitals</h2>
+            <p className="text-sm text-gray-500 mb-6">
+              Patient: {selectedAppointment.patientName}
+            </p>
+
+            <form onSubmit={submitVitals} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Height (cm)</label>
+                  <input
+                    type="text" name="height" value={vitals.height} onChange={handleVitalsChange}
+                    placeholder="e.g. 170"
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Weight (kg)</label>
+                  <input
+                    type="text" name="weight" value={vitals.weight} onChange={handleVitalsChange}
+                    placeholder="e.g. 70"
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Blood Pressure</label>
+                  <input
+                    type="text" name="bp" value={vitals.bp} onChange={handleVitalsChange}
+                    placeholder="e.g. 120/80"
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Pulse (bpm)</label>
+                  <input
+                    type="text" name="pulse" value={vitals.pulse} onChange={handleVitalsChange}
+                    placeholder="e.g. 72"
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">SPO2 (%)</label>
+                  <input
+                    type="text" name="spo2" value={vitals.spo2} onChange={handleVitalsChange}
+                    placeholder="e.g. 98"
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Temperature (°F)</label>
+                  <input
+                    type="text" name="temperature" value={vitals.temperature} onChange={handleVitalsChange}
+                    placeholder="e.g. 98.6"
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">RR (breaths/min)</label>
+                  <input
+                    type="text" name="respiratory_rate" value={vitals.respiratory_rate} onChange={handleVitalsChange}
+                    placeholder="e.g. 16"
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">RBS (mg/dL)</label>
+                  <input
+                    type="text" name="random_blood_sugar" value={vitals.random_blood_sugar} onChange={handleVitalsChange}
+                    placeholder="e.g. 100"
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 mt-6">
+                <button
+                  type="button"
+                  onClick={() => setIsVitalsModalOpen(false)}
+                  className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700"
+                >
+                  Save Vitals
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
