@@ -31,52 +31,52 @@ const AddHodPage = () => {
   const [loading, setLoading] = useState(!!deptIdFromQuery);
 
   useEffect(() => {
-  if (deptIdFromQuery) {
-    axios.get(`${import.meta.env.VITE_BACKEND_URL}/departments/${deptIdFromQuery}`)
-      .then(res => {
-        const dept = res.data;
-        setDeptName(dept.name);
-        setExistingDept(dept);
+    if (deptIdFromQuery) {
+      axios.get(`${import.meta.env.VITE_BACKEND_URL}/departments/${deptIdFromQuery}`)
+        .then(res => {
+          const dept = res.data;
+          setDeptName(dept.name);
+          setExistingDept(dept);
 
-        const hod = dept.head_doctor_id;
+          const hod = dept.head_doctor_id;
 
-        if (hod) {
-          setFormData({
-            firstName: hod.firstName || '',
-            lastName: hod.lastName || '',
-            email: hod.email || '',
-            password: '', // Keep blank for security
-            phone: hod.phone || '',
-            dateOfBirth: hod.dateOfBirth?.slice(0, 10) || '',
-            gender: hod.gender || '',
-            address: hod.address || '',
-            city: hod.city || '',
-            state: hod.state || '',
-            zipCode: hod.zipCode || '',
-            role: hod.role || 'Doctor',
-            department: dept.name || '',
-            specialization: hod.specialization || '',
-            licenseNumber: hod.licenseNumber || '',
-            experience: hod.experience || '',
-            education: hod.education || '',
-            shift: hod.shift || '',
-            emergencyContact: hod.emergencyContact || '',
-            emergencyPhone: hod.emergencyPhone || '',
-            startDate: hod.startDate?.slice(0, 10) || '',
-            salary: hod.salary || '',
-            isFullTime: hod.isFullTime ?? true,
-            hasInsurance: hod.hasInsurance ?? true,
-            notes: hod.notes || ''
-          });
-        } else {
-          // Department has no HOD, just prefill department
-          setFormData(prev => ({ ...prev, department: dept.name }));
-        }
-      })
-      .catch(err => console.error('Error fetching department:', err))
-      .finally(() => setLoading(false));
-  }
-}, [deptIdFromQuery]);
+          if (hod) {
+            setFormData({
+              firstName: hod.firstName || '',
+              lastName: hod.lastName || '',
+              email: hod.email || '',
+              password: '', // Keep blank for security
+              phone: hod.phone || '',
+              dateOfBirth: hod.dateOfBirth?.slice(0, 10) || '',
+              gender: hod.gender || '',
+              address: hod.address || '',
+              city: hod.city || '',
+              state: hod.state || '',
+              zipCode: hod.zipCode || '',
+              role: hod.role || 'Doctor',
+              department: dept.name || '',
+              specialization: hod.specialization || '',
+              licenseNumber: hod.licenseNumber || '',
+              experience: hod.experience || '',
+              education: hod.education || '',
+              shift: hod.shift || '',
+              emergencyContact: hod.emergencyContact || '',
+              emergencyPhone: hod.emergencyPhone || '',
+              startDate: hod.startDate?.slice(0, 10) || '',
+              salary: hod.salary || '',
+              isFullTime: hod.isFullTime ?? true,
+              hasInsurance: hod.hasInsurance ?? true,
+              notes: hod.notes || ''
+            });
+          } else {
+            // Department has no HOD, just prefill department
+            setFormData(prev => ({ ...prev, department: dept.name }));
+          }
+        })
+        .catch(err => console.error('Error fetching department:', err))
+        .finally(() => setLoading(false));
+    }
+  }, [deptIdFromQuery]);
 
 
   const handleInputChange = (field, value) => {

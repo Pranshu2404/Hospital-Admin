@@ -61,15 +61,15 @@ export const adminSidebar = [
     icon: FaLock,
     path: '/dashboard/admin/staff-login',
   },
-  {
-    label: 'Rooms',
-    icon: RoomIcon,
-    path: '/dashboard/admin/room-list',
-    submenu: [
-      { label: 'Add Room', path: '/dashboard/admin/add-room' },
-      { label: 'Room List', path: '/dashboard/admin/room-list' },
-    ],
-  },
+  // {
+  //   label: 'Rooms',
+  //   icon: RoomIcon,
+  //   path: '/dashboard/admin/room-list',
+  //   submenu: [
+  //     { label: 'Add Room', path: '/dashboard/admin/add-room' },
+  //     { label: 'Room List', path: '/dashboard/admin/room-list' },
+  //   ],
+  // },
   {
     label: 'Patients',
     icon: PatientIcon,

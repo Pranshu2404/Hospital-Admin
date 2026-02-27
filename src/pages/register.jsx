@@ -48,32 +48,31 @@ const BackIcon = () => (
   </svg>
 );
 
-const FormInput = ({ 
-  label, 
-  name, 
-  type = "text", 
-  placeholder, 
-  required = false, 
-  pattern, 
-  title, 
-  value, 
-  onChange, 
-  autoFocus, 
-  maxLength, 
-  inputMode, 
-  icon, 
-  error, 
+const FormInput = ({
+  label,
+  name,
+  type = "text",
+  placeholder,
+  required = false,
+  pattern,
+  title,
+  value,
+  onChange,
+  autoFocus,
+  maxLength,
+  inputMode,
+  icon,
+  error,
   as, // 'input', 'select', or 'textarea'
   children, // For select options
   rows, // For textarea
-  ...rest 
+  ...rest
 }) => {
-  const baseClassName = `block w-full px-4 py-3 bg-gray-50 border ${
-    error ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20' : 'border-gray-200 focus:border-emerald-500 focus:ring-emerald-500/20'
-  } text-gray-900 text-sm rounded-xl focus:outline-none focus:ring-2 focus:bg-white transition-all duration-200 placeholder-gray-400 ${icon ? 'pl-10' : ''}`;
+  const baseClassName = `block w-full px-4 py-3 bg-gray-50 border ${error ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20' : 'border-gray-200 focus:border-emerald-500 focus:ring-emerald-500/20'
+    } text-gray-900 text-sm rounded-xl focus:outline-none focus:ring-2 focus:bg-white transition-all duration-200 placeholder-gray-400 ${icon ? 'pl-10' : ''}`;
 
   const InputElement = as || 'input';
-  
+
   return (
     <div className="space-y-1">
       <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide ml-1">
@@ -85,7 +84,7 @@ const FormInput = ({
             {icon}
           </div>
         )}
-        
+
         {InputElement === 'textarea' ? (
           <textarea
             name={name}
@@ -127,7 +126,7 @@ const FormInput = ({
             {...rest}
           />
         )}
-        
+
         {InputElement === 'select' && (
           <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none text-gray-400">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -135,7 +134,7 @@ const FormInput = ({
             </svg>
           </div>
         )}
-        
+
         {error && InputElement !== 'select' && (
           <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
             <svg className="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 20 20">
@@ -152,22 +151,22 @@ const FormInput = ({
 };
 
 // Updated Input component with icons support
-const InputWithIcon = ({ 
-  label, 
-  name, 
-  type = "text", 
-  placeholder, 
-  required = false, 
-  pattern, 
-  title, 
-  value, 
-  onChange, 
+const InputWithIcon = ({
+  label,
+  name,
+  type = "text",
+  placeholder,
+  required = false,
+  pattern,
+  title,
+  value,
+  onChange,
   onBlur,
-  autoFocus, 
-  maxLength, 
-  inputMode, 
-  icon, 
-  error, 
+  autoFocus,
+  maxLength,
+  inputMode,
+  icon,
+  error,
   disabled,
   className = ""
 }) => {
@@ -182,7 +181,7 @@ const InputWithIcon = ({
             {icon}
           </div>
         )}
-        
+
         <input
           type={type}
           name={name}
@@ -197,11 +196,10 @@ const InputWithIcon = ({
           maxLength={maxLength}
           inputMode={inputMode}
           disabled={disabled}
-          className={`block w-full px-4 py-3 bg-gray-50 border ${
-            error ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20' : 'border-gray-200 focus:border-emerald-500 focus:ring-emerald-500/20'
-          } text-gray-900 text-sm rounded-xl focus:outline-none focus:ring-2 focus:bg-white transition-all duration-200 placeholder-gray-400 ${icon ? 'pl-10' : ''}`}
+          className={`block w-full px-4 py-3 bg-gray-50 border ${error ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20' : 'border-gray-200 focus:border-emerald-500 focus:ring-emerald-500/20'
+            } text-gray-900 text-sm rounded-xl focus:outline-none focus:ring-2 focus:bg-white transition-all duration-200 placeholder-gray-400 ${icon ? 'pl-10' : ''}`}
         />
-        
+
         {error && (
           <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
             <svg className="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 20 20">
@@ -250,7 +248,7 @@ const PreviewDetails = ({ form, isdCode, stateName, cityName, pincode }) => {
   console.log(form)
   return (
     <div className="space-y-2 animate-fade-in-right">
-        <h3 className="text-lg font-bold text-center text-green-800">Review Your Details</h3>
+      <h3 className="text-lg font-bold text-center text-green-800">Review Your Details</h3>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Hospital Details */}
@@ -409,7 +407,7 @@ export default function Register() {
 
   const [form, setForm] = useState({
     // Step 1
-    hospitalName: '', hospitalID: '', registryNo: '', address: '', 
+    hospitalName: '', hospitalID: '', registryNo: '', address: '',
     companyName: '', companyNumber: '', logo: null,
     pinCode: '', city: '', state: '',
     // Step 2
@@ -470,7 +468,7 @@ export default function Register() {
           foundState = state.value;
           setDetectedState(state.label);
           setForm(prev => ({ ...prev, state: state.value }));
-          
+
           // Fetch cities for this state
           fetchCities(state.value);
           break;
@@ -493,11 +491,11 @@ export default function Register() {
   // Handle ISD code detection based on state
   const detectIsdCode = (stateName) => {
     if (!stateName) return;
-    
-    const isdEntry = ISD_CODES.find(entry => 
+
+    const isdEntry = ISD_CODES.find(entry =>
       entry.states.some(s => stateName.toLowerCase().includes(s.toLowerCase()))
     );
-    
+
     if (isdEntry) {
       setIsdCode(isdEntry.code);
       setManualIsdCode(isdEntry.code);
@@ -510,7 +508,7 @@ export default function Register() {
   // Validate individual field
   const validateField = (name, value) => {
     let error = '';
-    
+
     switch (name) {
       case 'contact':
         if (phoneType === 'mobile') {
@@ -542,18 +540,18 @@ export default function Register() {
       default:
         break;
     }
-    
+
     return error;
   };
 
   // Handle field blur
   const handleBlur = (e) => {
     const { name, value } = e.target;
-    
+
     if (name === 'hospitalID') {
       setHospitalIDTouched(true);
     }
-    
+
     const error = validateField(name, value);
     setFieldErrors(prev => ({
       ...prev,
@@ -564,12 +562,12 @@ export default function Register() {
   // -- Handlers --
   const handleChange = (e) => {
     const { name, value } = e.target;
-    
+
     if (name === 'logo') {
       setForm({ ...form, logo: e.target.files[0] });
     } else {
       let newValue = value;
-      
+
       // Format hospital ID to uppercase
       if (name === 'hospitalID') {
         newValue = value.toUpperCase();
@@ -578,7 +576,7 @@ export default function Register() {
         // Limit to 6 characters
         if (newValue.length > 6) newValue = newValue.slice(0, 6);
       }
-      
+
       // Handle contact number based on phone type
       if (name === 'contact') {
         newValue = value.replace(/\D/g, '');
@@ -588,13 +586,13 @@ export default function Register() {
           newValue = newValue.slice(0, 8);
         }
       }
-      
+
       // Handle pincode
       if (name === 'pinCode') {
         newValue = value.replace(/\D/g, '');
         if (newValue.length > 6) newValue = newValue.slice(0, 6);
       }
-      
+
       const newForm = { ...form, [name]: newValue };
       setForm(newForm);
 
@@ -635,7 +633,7 @@ export default function Register() {
     // Reset contact number when switching types
     setForm(prev => ({ ...prev, contact: '' }));
     setFieldErrors(prev => ({ ...prev, contact: '' }));
-    
+
     // Set appropriate prefix
     if (type === 'mobile') {
       setForm(prev => ({ ...prev, contactPrefix: '+91' }));
@@ -658,23 +656,23 @@ export default function Register() {
   // Validate Step 1 before moving to Step 2
   const validateStep1 = () => {
     const errors = {};
-    
+
     if (!form.hospitalName) errors.hospitalName = 'Hospital Name is required';
     if (!form.hospitalID) errors.hospitalID = 'Hospital ID is required';
     if (!form.registryNo) errors.registryNo = 'Registry Number is required';
     if (!form.address) errors.address = 'Address is required';
-    
+
     // Validate Hospital ID format
     if (form.hospitalID && !/^[A-Za-z]{2}\d{4}$/.test(form.hospitalID)) {
       errors.hospitalID = 'Hospital ID must be 2 letters followed by 4 numbers';
     }
-    
+
     setFieldErrors(errors);
-    
+
     if (Object.keys(errors).length > 0) {
       return false;
     }
-    
+
     setError("");
     return true;
   };
@@ -682,17 +680,17 @@ export default function Register() {
   // Validate Step 2 before moving to Step 3
   const validateStep2 = () => {
     const errors = {};
-    
+
     if (!form.name) errors.name = 'Admin Name is required';
     if (!form.email) errors.email = 'Email is required';
     if (!form.password) errors.password = 'Password is required';
     if (!form.contact) errors.contact = 'Contact Number is required';
-    
+
     // Validate email
     if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
       errors.email = 'Please enter a valid email address';
     }
-    
+
     // Validate contact number based on type
     if (form.contact) {
       if (phoneType === 'mobile') {
@@ -709,18 +707,18 @@ export default function Register() {
         }
       }
     }
-    
+
     // Validate password strength
     if (form.password && form.password.length < 8) {
       errors.password = 'Password must be at least 8 characters long';
     }
-    
+
     setFieldErrors(errors);
-    
+
     if (Object.keys(errors).length > 0) {
       return false;
     }
-    
+
     setError("");
     return true;
   };
@@ -734,7 +732,7 @@ export default function Register() {
 
     try {
       const formData = new FormData();
-      
+
       // Hospital details
       formData.append('hospitalName', form.hospitalName);
       formData.append('hospitalID', form.hospitalID);
@@ -745,11 +743,11 @@ export default function Register() {
       formData.append('pinCode', form.pinCode || '');
       formData.append('city', form.city || '');
       formData.append('state', form.state || '');
-      
+
       if (form.logo) {
         formData.append('logo', form.logo);
       }
-      
+
       // Admin details
       formData.append('name', form.name);
       formData.append('email', form.email);
@@ -759,7 +757,7 @@ export default function Register() {
       const fullContact = form.contactPrefix ? `${form.contactPrefix} ${form.contact}` : form.contact;
       formData.append('fullContact', fullContact);
       formData.append('role', form.role);
-      
+
       // Additional details
       formData.append('fireNOC', form.fireNOC || '');
       formData.append('additionalInfo', form.additionalInfo || '');
@@ -823,53 +821,53 @@ export default function Register() {
             {step === 1 && (
               <div className="space-y-3 animate-fade-in-right">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <InputWithIcon 
-                    label="Hospital Name" 
-                    name="hospitalName" 
-                    placeholder="e.g. City Care Hospital" 
-                    value={form.hospitalName} 
-                    onChange={handleChange} 
+                  <InputWithIcon
+                    label="Hospital Name"
+                    name="hospitalName"
+                    placeholder="e.g. City Care Hospital"
+                    value={form.hospitalName}
+                    onChange={handleChange}
                     onBlur={handleBlur}
-                    required 
-                    autoFocus 
+                    required
+                    autoFocus
                     error={fieldErrors.hospitalName}
                   />
-                  <InputWithIcon 
-                    label="Registry No." 
-                    name="registryNo" 
-                    placeholder="REG-123456" 
-                    value={form.registryNo} 
-                    onChange={handleChange} 
+                  <InputWithIcon
+                    label="Registry No."
+                    name="registryNo"
+                    placeholder="REG-123456"
+                    value={form.registryNo}
+                    onChange={handleChange}
                     onBlur={handleBlur}
-                    required 
+                    required
                     error={fieldErrors.registryNo}
                   />
-                  <InputWithIcon 
-                    label="Hospital ID" 
-                    name="hospitalID" 
-                    placeholder="AB1234" 
-                    pattern="^[A-Za-z]{2}\d{4}$" 
-                    title="2 letters + 4 numbers" 
-                    value={form.hospitalID} 
-                    onChange={handleChange} 
+                  <InputWithIcon
+                    label="Hospital ID"
+                    name="hospitalID"
+                    placeholder="AB1234"
+                    pattern="^[A-Za-z]{2}\d{4}$"
+                    title="2 letters + 4 numbers"
+                    value={form.hospitalID}
+                    onChange={handleChange}
                     onBlur={handleBlur}
-                    required 
+                    required
                     error={fieldErrors.hospitalID}
                     maxLength="6"
                   />
-                  <InputWithIcon 
-                    label="Company Name" 
-                    name="companyName" 
-                    placeholder="Optional Company Name" 
-                    value={form.companyName} 
-                    onChange={handleChange} 
+                  <InputWithIcon
+                    label="Company Name"
+                    name="companyName"
+                    placeholder="Optional Company Name"
+                    value={form.companyName}
+                    onChange={handleChange}
                   />
-                  <InputWithIcon 
-                    label="License No." 
-                    name="companyNumber" 
-                    placeholder="Optional License Number" 
-                    value={form.companyNumber} 
-                    onChange={handleChange} 
+                  <InputWithIcon
+                    label="License No."
+                    name="companyNumber"
+                    placeholder="Optional License Number"
+                    value={form.companyNumber}
+                    onChange={handleChange}
                   />
 
                   {/* Logo Upload */}
@@ -949,22 +947,22 @@ export default function Register() {
                         className="mt-0"
                       />
                       <FormInput
-                          label="City"
-                          name="city"
-                          value={form.city}
-                          onChange={handleChange}
-                          required
-                          as="select"
-                          error={fieldErrors.city}
-                        >
-                          <option value="">Select City</option>
-                          {cities.map((city) => (
-                            <option key={city.name} value={city.name}>
-                              {city.name}
-                            </option>
-                          ))}
-                        </FormInput>
-                      <InputWithIcon 
+                        label="City"
+                        name="city"
+                        value={form.city}
+                        onChange={handleChange}
+                        required
+                        as="select"
+                        error={fieldErrors.city}
+                      >
+                        <option value="">Select City</option>
+                        {cities.map((city) => (
+                          <option key={city.name} value={city.name}>
+                            {city.name}
+                          </option>
+                        ))}
+                      </FormInput>
+                      <InputWithIcon
                         label="Pincode"
                         name="pinCode"
                         placeholder="6-digit Pincode"
@@ -986,15 +984,15 @@ export default function Register() {
             {step === 2 && (
               <div className="space-y-2 animate-fade-in-right">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <InputWithIcon 
-                    label="Admin Name" 
-                    name="name" 
-                    placeholder="Dr. John Doe" 
-                    value={form.name} 
-                    onChange={handleChange} 
+                  <InputWithIcon
+                    label="Admin Name"
+                    name="name"
+                    placeholder="Dr. John Doe"
+                    value={form.name}
+                    onChange={handleChange}
                     onBlur={handleBlur}
-                    required 
-                    autoFocus 
+                    required
+                    autoFocus
                     error={fieldErrors.name}
                     icon={
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1002,17 +1000,17 @@ export default function Register() {
                       </svg>
                     }
                   />
-                  
+
                   {/* Contact Number with Phone Type Selection */}
                   <div className="space-y-1">
-                    <InputWithIcon 
-                      label="Contact Number" 
-                      name="contact" 
-                      placeholder={phoneType === 'mobile' ? '10-digit Mobile Number' : '6-8 digit Landline Number'} 
-                      value={form.contact}  
-                      onChange={handleChange} 
+                    <InputWithIcon
+                      label="Contact Number"
+                      name="contact"
+                      placeholder={phoneType === 'mobile' ? '10-digit Mobile Number' : '6-8 digit Landline Number'}
+                      value={form.contact}
+                      onChange={handleChange}
                       onBlur={handleBlur}
-                      required 
+                      required
                       error={fieldErrors.contact}
                       icon={
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1022,22 +1020,22 @@ export default function Register() {
                     />
                     <div className="flex items-center gap-4 mt-2">
                       <label className={`flex items-center gap-2 text-sm cursor-pointer ${phoneType === 'mobile' ? 'font-bold text-emerald-600' : 'text-gray-600'}`}>
-                        <input 
-                          type="radio" 
-                          name="phoneType" 
-                          value="mobile" 
-                          checked={phoneType === 'mobile'} 
+                        <input
+                          type="radio"
+                          name="phoneType"
+                          value="mobile"
+                          checked={phoneType === 'mobile'}
                           onChange={() => handlePhoneTypeChange('mobile')}
                           className="w-4 h-4 text-emerald-600 border-gray-300 focus:ring-emerald-500"
                         />
                         Mobile
                       </label>
                       <label className={`flex items-center gap-2 text-sm cursor-pointer ${phoneType === 'landline' ? 'font-bold text-emerald-600' : 'text-gray-600'}`}>
-                        <input 
-                          type="radio" 
-                          name="phoneType" 
-                          value="landline" 
-                          checked={phoneType === 'landline'} 
+                        <input
+                          type="radio"
+                          name="phoneType"
+                          value="landline"
+                          checked={phoneType === 'landline'}
                           onChange={() => handlePhoneTypeChange('landline')}
                           className="w-4 h-4 text-emerald-600 border-gray-300 focus:ring-emerald-500"
                         />
@@ -1055,17 +1053,17 @@ export default function Register() {
                       )}
                     </div>
                   </div>
-                  
+
                   <div className="md:col-span-2">
-                    <InputWithIcon 
-                      label="Email Address" 
-                      name="email" 
-                      type="email" 
-                      placeholder="admin@hospital.com" 
-                      value={form.email} 
-                      onChange={handleChange} 
+                    <InputWithIcon
+                      label="Email Address"
+                      name="email"
+                      type="email"
+                      placeholder="admin@hospital.com"
+                      value={form.email}
+                      onChange={handleChange}
                       onBlur={handleBlur}
-                      required 
+                      required
                       error={fieldErrors.email}
                       icon={
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1074,17 +1072,17 @@ export default function Register() {
                       }
                     />
                   </div>
-                  
+
                   <div className="md:col-span-2">
-                    <InputWithIcon 
-                      label="Password" 
-                      name="password" 
-                      type="password" 
-                      placeholder="Create a strong password (min. 8 characters)" 
-                      value={form.password} 
-                      onChange={handleChange} 
+                    <InputWithIcon
+                      label="Password"
+                      name="password"
+                      type="password"
+                      placeholder="Create a strong password (min. 8 characters)"
+                      value={form.password}
+                      onChange={handleChange}
                       onBlur={handleBlur}
-                      required 
+                      required
                       error={fieldErrors.password}
                       icon={
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1099,15 +1097,15 @@ export default function Register() {
                     )}
                   </div>
                 </div>
-                
+
                 {/* Additional Details */}
                 <div className="space-y-4 mt-6">
-                  <InputWithIcon 
-                    label="Fire NOC Details (Optional)" 
-                    name="fireNOC" 
-                    placeholder="Enter Fire NOC Number/Details" 
-                    value={form.fireNOC} 
-                    onChange={handleChange} 
+                  <InputWithIcon
+                    label="Fire NOC Details (Optional)"
+                    name="fireNOC"
+                    placeholder="Enter Fire NOC Number/Details"
+                    value={form.fireNOC}
+                    onChange={handleChange}
                   />
                   <FormTextarea
                     label="Additional Information (Optional)"
@@ -1123,7 +1121,7 @@ export default function Register() {
 
             {/* --- STEP 3: PREVIEW --- */}
             {step === 3 && (
-              <PreviewDetails 
+              <PreviewDetails
                 form={form}
                 isdCode={manualIsdCode || isdCode}
                 stateName={detectedState}
@@ -1185,7 +1183,7 @@ export default function Register() {
                   </span>
                 ) : (
                   step === 1 ? 'Continue to Admin Details' :
-                  step === 2 ? 'Preview & Submit' : 'Complete Registration'
+                    step === 2 ? 'Preview & Submit' : 'Complete Registration'
                 )}
               </Button>
             </div>

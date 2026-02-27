@@ -16,8 +16,8 @@ const UserProfilePage = () => {
 
   const tabs = [
     { id: 'personal', label: 'Personal Info', icon: <PersonIcon />, component: PersonalProfileTab },
-    { id: 'security', label: 'Security', icon: <SettingsIcon />, component: SecurityTab },
-    { id: 'notifications', label: 'Notifications', icon: <BellIcon />, component: NotificationTab },
+    // { id: 'security', label: 'Security', icon: <SettingsIcon />, component: SecurityTab },
+    // { id: 'notifications', label: 'Notifications', icon: <BellIcon />, component: NotificationTab },
     { id: 'charges', label: 'Charges & Discounts', icon: <DollarIcon />, component: ChargesDiscountTab },
     { id: 'vitals', label: 'Vitals', icon: <FaHeartbeat className="w-5 h-5" />, component: VitalsTab },
     { id: 'procedures', label: 'Procedure Management', icon: <FaProcedures className="w-5 h-5" />, component: ProcedureManagementTab },

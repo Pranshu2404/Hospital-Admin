@@ -43,18 +43,18 @@ const AddRegistrarForm = () => {
   }, []);
 
   useEffect(() => {
-  if (selectedStaffId) {
-    const selectedStaff = staffOptions.find(s => s._id === selectedStaffId);
+    if (selectedStaffId) {
+      const selectedStaff = staffOptions.find(s => s._id === selectedStaffId);
 
-    if (selectedStaff) {
-      setEmail(selectedStaff.email || '');
-      setDepartment(selectedStaff.department || '');
+      if (selectedStaff) {
+        setEmail(selectedStaff.email || '');
+        setDepartment(selectedStaff.department || '');
+      }
+    } else {
+      setEmail('');
+      setDepartment('');
     }
-  } else {
-    setEmail('');
-    setDepartment('');
-  }
-}, [selectedStaffId, staffOptions]);
+  }, [selectedStaffId, staffOptions]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -130,7 +130,7 @@ const AddRegistrarForm = () => {
             onChange={(e) => setJoiningDate(e.target.value)}
             required
           />
-          
+
           <input
             type="password"
             className="form-input border rounded px-3 py-2 md:col-span-2"

@@ -369,7 +369,7 @@ const Dashboard = () => {
 
           {/* Today's Pending Payments Card */}
           <div
-            onClick={() => navigate('/dashboard/admin/invoices?status=pending')}
+            onClick={() => navigate('/dashboard/admin/invoices', { state: { status: 'Pending' } })}
             className="relative overflow-hidden rounded-3xl p-6 cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-xl bg-gradient-to-br from-amber-50 to-amber-100 border border-white/50 shadow-sm group"
           >
             <div className="flex items-start justify-between relative z-10">

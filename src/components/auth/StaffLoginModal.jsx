@@ -182,8 +182,8 @@ const StaffLoginModal = ({ isOpen, onClose }) => {
                                         type="button"
                                         onClick={() => setRole(r.id)}
                                         className={`flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all ${role === r.id
-                                                ? `${r.color} shadow-sm ring-2 ring-offset-1 ring-gray-100`
-                                                : 'border-slate-100 text-slate-500 hover:bg-slate-50'
+                                            ? `${r.color} shadow-sm ring-2 ring-offset-1 ring-gray-100`
+                                            : 'border-slate-100 text-slate-500 hover:bg-slate-50'
                                             }`}
                                     >
                                         <FontAwesomeIcon icon={r.icon} className={`text-xl mb-2 ${role === r.id ? '' : 'text-slate-400'}`} />

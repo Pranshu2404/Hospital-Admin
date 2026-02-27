@@ -33,6 +33,7 @@ import {
   FaUserShield,
   FaExclamationTriangle
 } from 'react-icons/fa';
+import { useLocation } from 'react-router-dom';
 
 const InvoiceListPage = ({ onViewDetails, defaultType }) => {
   const [invoices, setInvoices] = useState([]);
@@ -51,8 +52,10 @@ const InvoiceListPage = ({ onViewDetails, defaultType }) => {
   const [deleteReason, setDeleteReason] = useState('');
   const [userRole, setUserRole] = useState('admin'); // This should come from your auth context
 
+  const location = useLocation();
+
   const [filters, setFilters] = useState({
-    status: 'all',
+    status: location.state?.status || 'all',
     type: defaultType || 'all',
     paymentMethod: 'all',
     dateRange: 'all',
@@ -191,7 +194,7 @@ const InvoiceListPage = ({ onViewDetails, defaultType }) => {
       await apiClient.delete(`/billing/${selectedInvoiceForDelete._id}`, {
         data: { reason: deleteReason }
       });
-      
+
       alert('Bill and associated invoice deleted successfully');
       setShowDirectDeleteModal(false);
       setSelectedInvoiceForDelete(null);
@@ -713,7 +716,7 @@ const InvoiceListPage = ({ onViewDetails, defaultType }) => {
           </div>
         </div>
       )}
-      
+
       {/* Header */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
         <div>
@@ -732,11 +735,10 @@ const InvoiceListPage = ({ onViewDetails, defaultType }) => {
           {stats.pendingDeletions > 0 && (
             <button
               onClick={() => setShowDeletionRequests(!showDeletionRequests)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-                showDeletionRequests 
-                  ? 'bg-teal-600 text-white' 
-                  : 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
-              }`}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${showDeletionRequests
+                ? 'bg-teal-600 text-white'
+                : 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
+                }`}
             >
               <FaTrash />
               Pending Deletions ({stats.pendingDeletions})
@@ -1359,8 +1361,8 @@ const InvoiceListPage = ({ onViewDetails, defaultType }) => {
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg">
             <div className="p-6 border-b border-gray-200 flex justify-between items-center">
               <h3 className="text-xl font-bold text-gray-800">Review Deletion Request</h3>
-              <button 
-                onClick={() => { setShowRequestModal(false); setSelectedRequest(null); setReviewNotes(''); }} 
+              <button
+                onClick={() => { setShowRequestModal(false); setSelectedRequest(null); setReviewNotes(''); }}
                 className="text-gray-400 hover:text-gray-600 text-2xl"
               >
                 &times;
@@ -1374,14 +1376,14 @@ const InvoiceListPage = ({ onViewDetails, defaultType }) => {
                 <div className="space-y-2 text-sm">
                   <p><span className="font-medium">Invoice:</span> {selectedRequest.invoice_number || 'N/A'}</p>
                   <p><span className="font-medium">Patient:</span> {
-                    selectedRequest.patient_id 
+                    selectedRequest.patient_id
                       ? `${selectedRequest.patient_id.first_name} ${selectedRequest.patient_id.last_name}`
                       : selectedRequest.customer_name || 'Unknown'
                   }</p>
                   <p><span className="font-medium">Amount:</span> {formatCurrency(selectedRequest.total)}</p>
                   <p><span className="font-medium">Reason:</span> {selectedRequest.deletion_request?.reason || 'No reason provided'}</p>
                   <p><span className="font-medium">Requested On:</span> {
-                    selectedRequest.deletion_request?.requested_at 
+                    selectedRequest.deletion_request?.requested_at
                       ? new Date(selectedRequest.deletion_request.requested_at).toLocaleString()
                       : 'N/A'
                   }</p>
@@ -1425,7 +1427,7 @@ const InvoiceListPage = ({ onViewDetails, defaultType }) => {
                     <p><span className="font-medium">Review Notes:</span> {selectedRequest.deletion_request?.review_notes || 'No notes'}</p>
                     <p><span className="font-medium">Reviewed By:</span> {selectedRequest.deletion_request?.reviewed_by?.name || 'Unknown'}</p>
                     <p><span className="font-medium">Reviewed On:</span> {
-                      selectedRequest.deletion_request?.reviewed_at 
+                      selectedRequest.deletion_request?.reviewed_at
                         ? new Date(selectedRequest.deletion_request.reviewed_at).toLocaleString()
                         : 'N/A'
                     }</p>
