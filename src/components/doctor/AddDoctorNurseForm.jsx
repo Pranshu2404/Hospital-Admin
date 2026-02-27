@@ -446,12 +446,12 @@ const AddDoctorNurseForm = () => {
               <p className="text-slate-500 text-sm mt-1">Complete the details to onboard a new medical professional.</p>
 
               {/* Hospital Info Badge */}
-              {hospitalInfo && (
+              {/* {hospitalInfo && (
                 <div className="mt-3 inline-flex items-center px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium border border-blue-200">
                   <Icons.Building className="w-4 h-4 mr-2" />
                   {hospitalInfo.name}
                 </div>
-              )}
+              )} */}
             </div>
           </div>
           <StepIndicator />
@@ -919,7 +919,7 @@ const AddDoctorNurseForm = () => {
                 )}
 
                 {/* Hospital Info Display */}
-                {hospitalInfo && (
+                {/* {hospitalInfo && (
                   <div className="mt-8 p-4 bg-slate-50 rounded-xl border border-slate-200">
                     <div className="flex items-center gap-3 mb-2">
                       <Icons.Building className="w-5 h-5 text-slate-600" />
@@ -930,7 +930,7 @@ const AddDoctorNurseForm = () => {
                       <p className="text-slate-500 text-xs ml-8 mt-1">{hospitalInfo.address}</p>
                     )}
                   </div>
-                )}
+                )} */}
               </div>
             )}
 
