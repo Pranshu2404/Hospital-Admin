@@ -4,21 +4,20 @@ import axios from 'axios';
 import { toast } from 'react-toastify';
 import { Button } from '../common/FormElements';
 import { EditIcon } from '../common/Icons';
-import { 
-  FaFlask, 
-  FaMoneyBillWave, 
-  FaToggleOn, 
-  FaToggleOff, 
-  FaSort, 
-  FaSortUp, 
+import {
+  FaFlask,
+  FaMoneyBillWave,
+  FaToggleOn,
+  FaToggleOff,
+  FaSort,
+  FaSortUp,
   FaSortDown,
   FaVial,
   FaClock,
   FaExclamationTriangle,
   FaDollarSign
 } from 'react-icons/fa';
-import { MdFreeCancellation } from 'react-icons/md';
-import { RefreshCw, Save, Search } from 'lucide-react';
+import { RefreshCw, Search, Check, X } from 'lucide-react';
 
 const LabTestsManagementTab = ({ hospitalData }) => {
   const [loading, setLoading] = useState(false);
@@ -30,7 +29,7 @@ const LabTestsManagementTab = ({ hospitalData }) => {
   const [specimenFilter, setSpecimenFilter] = useState('all');
   const [editingTest, setEditingTest] = useState(null);
   const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'asc' });
-  
+
   // Fetch lab tests on component mount
   useEffect(() => {
     fetchLabTests();
@@ -63,7 +62,7 @@ const LabTestsManagementTab = ({ hospitalData }) => {
     // Apply search filter
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(test => 
+      filtered = filtered.filter(test =>
         test.code?.toLowerCase().includes(term) ||
         test.name?.toLowerCase().includes(term) ||
         test.description?.toLowerCase().includes(term) ||
@@ -124,8 +123,8 @@ const LabTestsManagementTab = ({ hospitalData }) => {
 
   const getSortIcon = (key) => {
     if (sortConfig.key !== key) return <FaSort className="text-gray-400" />;
-    return sortConfig.direction === 'asc' ? 
-      <FaSortUp className="text-teal-600" /> : 
+    return sortConfig.direction === 'asc' ?
+      <FaSortUp className="text-teal-600" /> :
       <FaSortDown className="text-teal-600" />;
   };
 
@@ -142,7 +141,7 @@ const LabTestsManagementTab = ({ hospitalData }) => {
 
     try {
       setLoading(true);
-      
+
       // Update lab test
       const response = await axios.put(
         `${import.meta.env.VITE_BACKEND_URL}/labtests/${editingTest._id}`,
@@ -157,12 +156,12 @@ const LabTestsManagementTab = ({ hospitalData }) => {
 
       if (response.data.success) {
         toast.success('Lab test updated successfully');
-        
+
         // Update local state
-        setLabTests(prev => prev.map(test => 
+        setLabTests(prev => prev.map(test =>
           test._id === editingTest._id ? response.data.data : test
         ));
-        
+
         setEditingTest(null);
       }
     } catch (error) {
@@ -189,7 +188,7 @@ const LabTestsManagementTab = ({ hospitalData }) => {
 
   const handleInputChange = (field, value) => {
     if (!editingTest) return;
-    
+
     setEditingTest(prev => ({
       ...prev,
       [field]: field === 'base_price' || field === 'turnaround_time_hours' ? Number(value) || 0 : value
@@ -198,7 +197,7 @@ const LabTestsManagementTab = ({ hospitalData }) => {
 
   // Get unique categories for filter dropdown
   const categories = ['all', ...new Set(labTests.map(t => t.category).filter(Boolean))];
-  
+
   // Get unique specimen types for filter dropdown
   const specimenTypes = ['all', ...new Set(labTests.map(t => t.specimen_type).filter(Boolean))];
 
@@ -304,8 +303,8 @@ const LabTestsManagementTab = ({ hospitalData }) => {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th 
-                    scope="col" 
+                  <th
+                    scope="col"
                     className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
                     onClick={() => handleSort('code')}
                   >
@@ -314,8 +313,8 @@ const LabTestsManagementTab = ({ hospitalData }) => {
                       <span className="ml-2">{getSortIcon('code')}</span>
                     </div>
                   </th>
-                  <th 
-                    scope="col" 
+                  <th
+                    scope="col"
                     className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
                     onClick={() => handleSort('name')}
                   >
@@ -324,8 +323,8 @@ const LabTestsManagementTab = ({ hospitalData }) => {
                       <span className="ml-2">{getSortIcon('name')}</span>
                     </div>
                   </th>
-                  <th 
-                    scope="col" 
+                  <th
+                    scope="col"
                     className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
                     onClick={() => handleSort('category')}
                   >
@@ -337,8 +336,8 @@ const LabTestsManagementTab = ({ hospitalData }) => {
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Specimen
                   </th>
-                  <th 
-                    scope="col" 
+                  <th
+                    scope="col"
                     className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
                     onClick={() => handleSort('base_price')}
                   >
@@ -387,21 +386,22 @@ const LabTestsManagementTab = ({ hospitalData }) => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {editingTest && editingTest._id === test._id ? (
-                        <div className="flex items-center">
-                          <span className="mr-1 text-gray-600">₹</span>
+                        <div className="relative rounded-md shadow-sm w-32">
+                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <span className="text-gray-500 sm:text-sm">₹</span>
+                          </div>
                           <input
                             type="number"
                             value={editingTest.base_price}
                             onChange={(e) => handleInputChange('base_price', e.target.value)}
-                            className="w-24 px-2 py-1 border border-gray-300 rounded text-sm"
+                            className="focus:ring-teal-500 focus:border-teal-500 block w-full pl-7 pr-3 py-1.5 sm:text-sm border-gray-300 rounded-md transition-shadow"
                             min="0"
                             step="0.01"
                           />
                         </div>
                       ) : (
-                        <div className="flex items-center">
-                          <FaMoneyBillWave className="text-green-500 mr-2" />
-                          <span className="text-sm font-medium text-gray-900">
+                        <div className="flex items-center text-gray-900 group-hover:text-teal-700 transition-colors">
+                          <span className="font-semibold">
                             {formatCurrency(test.base_price)}
                           </span>
                         </div>
@@ -411,26 +411,25 @@ const LabTestsManagementTab = ({ hospitalData }) => {
                       {editingTest && editingTest._id === test._id ? (
                         <button
                           onClick={() => handleToggleFasting(test)}
-                          className={`px-3 py-1 rounded-full text-xs font-medium ${
-                            editingTest.fasting_required
-                              ? 'bg-amber-100 text-amber-800'
-                              : 'bg-gray-100 text-gray-800'
-                          }`}
+                          title={editingTest.fasting_required ? 'Toggle to Non-Fasting' : 'Toggle to Fasting'}
+                          className={`relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 ${editingTest.fasting_required ? 'bg-amber-500' : 'bg-gray-200'
+                            }`}
                         >
-                          {editingTest.fasting_required ? (
-                            <>Fasting</>
-                          ) : (
-                            <>Non-Fasting</>
-                          )}
+                          <span className="sr-only">Toggle fasting</span>
+                          <span
+                            aria-hidden="true"
+                            className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition ease-in-out duration-200 ${editingTest.fasting_required ? 'translate-x-5' : 'translate-x-0'
+                              }`}
+                          />
                         </button>
                       ) : (
                         test.fasting_required ? (
-                          <span className="px-3 py-1 inline-flex items-center text-xs leading-5 font-semibold rounded-full bg-amber-100 text-amber-800">
-                            <FaExclamationTriangle className="mr-1" size={10} />
+                          <span className="px-2.5 py-1 inline-flex items-center text-xs leading-5 font-semibold rounded-full border bg-amber-50 text-amber-700 border-amber-200">
+                            <FaExclamationTriangle className="mr-1.5 text-amber-500" size={10} />
                             Fasting
                           </span>
                         ) : (
-                          <span className="text-xs text-gray-500">No</span>
+                          <span className="inline-flex text-xs font-medium text-gray-400">No</span>
                         )
                       )}
                     </td>
@@ -438,55 +437,52 @@ const LabTestsManagementTab = ({ hospitalData }) => {
                       {editingTest && editingTest._id === test._id ? (
                         <button
                           onClick={() => handleToggleStatus(test)}
-                          className={`flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-                            editingTest.is_active
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-red-100 text-red-800'
-                          }`}
+                          title={editingTest.is_active ? 'Toggle to Inactive' : 'Toggle to Active'}
+                          className={`relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 ${editingTest.is_active ? 'bg-teal-500' : 'bg-gray-200'
+                            }`}
                         >
-                          {editingTest.is_active ? (
-                            <>
-                              <FaToggleOn className="mr-1" /> Active
-                            </>
-                          ) : (
-                            <>
-                              <FaToggleOff className="mr-1" /> Inactive
-                            </>
-                          )}
+                          <span className="sr-only">Toggle status</span>
+                          <span
+                            aria-hidden="true"
+                            className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition ease-in-out duration-200 ${editingTest.is_active ? 'translate-x-5' : 'translate-x-0'
+                              }`}
+                          />
                         </button>
                       ) : (
-                        <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          test.is_active
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-red-100 text-red-800'
-                        }`}>
+                        <span className={`px-2.5 py-1 inline-flex text-xs leading-5 font-semibold rounded-full border ${test.is_active
+                          ? 'bg-green-50 text-green-700 border-green-200'
+                          : 'bg-red-50 text-red-700 border-red-200'
+                          }`}>
                           {test.is_active ? 'Active' : 'Inactive'}
                         </span>
                       )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       {editingTest && editingTest._id === test._id ? (
-                        <div className="flex space-x-2">
+                        <div className="flex items-center gap-2">
                           <button
                             onClick={handleSave}
                             disabled={loading}
-                            className="text-green-600 hover:text-green-900 px-3 py-1 rounded-md bg-green-50 hover:bg-green-100 disabled:opacity-50 flex items-center"
+                            className="inline-flex items-center justify-center w-8 h-8 rounded-md bg-green-50 text-green-600 border border-green-200 hover:bg-green-100 hover:border-green-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all shadow-sm"
+                            title="Save Changes"
                           >
-                            <Save className="mr-1" size={14} /> Save
+                            <Check size={18} strokeWidth={2.5} />
                           </button>
                           <button
                             onClick={handleCancelEdit}
-                            className="text-red-600 hover:text-red-900 px-3 py-1 rounded-md bg-red-50 hover:bg-red-100 flex items-center"
+                            className="inline-flex items-center justify-center w-8 h-8 rounded-md bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 hover:border-red-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-all shadow-sm"
+                            title="Cancel"
                           >
-                            <MdFreeCancellation className="mr-1" size={14} /> Cancel
+                            <X size={18} strokeWidth={2.5} />
                           </button>
                         </div>
                       ) : (
                         <button
                           onClick={() => handleEdit(test)}
-                          className="text-teal-600 hover:text-teal-900 px-3 py-1 rounded-md bg-teal-50 hover:bg-teal-100 flex items-center"
+                          className="inline-flex items-center justify-center w-8 h-8 rounded-md bg-white text-gray-500 border border-gray-200 hover:bg-teal-50 hover:text-teal-600 hover:border-teal-200 focus:outline-none transition-all shadow-sm"
+                          title="Edit Lab Test"
                         >
-                          <EditIcon className="mr-1" /> Edit
+                          <EditIcon size={16} />
                         </button>
                       )}
                     </td>
