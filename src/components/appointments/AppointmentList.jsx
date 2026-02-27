@@ -19,9 +19,11 @@ const AppointmentList = () => {
   const [appointments, setAppointments] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
-  const [filterDate, setFilterDate] = useState('');
+  const [dateFilter, setDateFilter] = useState('today');
+  const [customStartDate, setCustomStartDate] = useState('');
+  const [customEndDate, setCustomEndDate] = useState('');
   const [appointmentType, setAppointmentType] = useState(null);
-  const [completedCollapsed, setCompletedCollapsed] = useState(false);
+  const [completedCollapsed, setCompletedCollapsed] = useState(true);
 
   // Modal States
   const [chooserOpen, setChooserOpen] = useState(false);
@@ -41,7 +43,7 @@ const AppointmentList = () => {
   // Get time in minutes from start_time string
   const getTimeInMinutes = (startTimeString) => {
     if (!startTimeString) return 0;
-    
+
     try {
       const date = new Date(startTimeString);
       // Use getHours() and getMinutes() for local time
@@ -65,11 +67,11 @@ const AppointmentList = () => {
         return 'N/A';
       }
     }
-    
+
     if (typeof timeSlot === 'string') {
       return timeSlot.split(' - ')[0];
     }
-    
+
     if (timeSlot && timeSlot.start_time) {
       try {
         const date = new Date(timeSlot.start_time);
@@ -79,7 +81,7 @@ const AppointmentList = () => {
         return 'N/A';
       }
     }
-    
+
     return 'N/A';
   };
 
@@ -88,19 +90,19 @@ const AppointmentList = () => {
     if (appointment.status === 'Completed' || appointment.status === 'Cancelled') {
       return false;
     }
-    
+
     const now = new Date();
     const appointmentDate = new Date(appointment.appointment_date);
-    
+
     // Set current time to compare with appointment time
     const nowHours = now.getHours();
     const nowMinutes = now.getMinutes();
     appointmentDate.setHours(nowHours, nowMinutes, 0, 0);
-    
+
     const appointmentTime = getTimeInMinutes(appointment.start_time || appointment.time_slot?.start_time);
     const appointmentDateTime = new Date(appointment.appointment_date);
     appointmentDateTime.setHours(Math.floor(appointmentTime / 60), appointmentTime % 60, 0, 0);
-    
+
     return appointmentDateTime > now;
   };
 
@@ -117,17 +119,17 @@ const AppointmentList = () => {
         const enriched = appointmentRes.data.map((appt) => {
           const timeInMinutes = getTimeInMinutes(appt.start_time || appt.time_slot?.start_time);
           const appointmentDate = new Date(appt.appointment_date);
-          
+
           return {
             ...appt,
             patientName: `${appt.patient_id?.first_name || ''} ${appt.patient_id?.last_name || ''}`.trim(),
             patientImage: appt.patient_id?.patient_image || null,
             doctorName: `Dr. ${appt.doctor_id?.firstName || ''} ${appt.doctor_id?.lastName || ''}`.trim(),
             departmentName: appt.department_id?.name || 'N/A',
-            date: appointmentDate.toLocaleDateString('en-US', { 
-              month: 'short', 
-              day: 'numeric', 
-              year: 'numeric' 
+            date: appointmentDate.toLocaleDateString('en-US', {
+              month: 'short',
+              day: 'numeric',
+              year: 'numeric'
             }),
             rawDate: appt.appointment_date,
             time: formatTime(appt.start_time, appt.time_slot),
@@ -161,7 +163,7 @@ const AppointmentList = () => {
   const separateAppointments = (appts) => {
     const completed = [];
     const upcoming = [];
-    
+
     appts.forEach(appt => {
       if (appt.status === 'Completed' || appt.status === 'Cancelled') {
         completed.push(appt);
@@ -172,7 +174,7 @@ const AppointmentList = () => {
         completed.push(appt);
       }
     });
-    
+
     return { completed, upcoming };
   };
 
@@ -184,7 +186,7 @@ const AppointmentList = () => {
       const dateB = new Date(b.rawDate);
       const dateDiff = dateA.getTime() - dateB.getTime();
       if (dateDiff !== 0) return dateDiff;
-      
+
       // If same date, sort by time (earliest time first)
       return a.timeInMinutes - b.timeInMinutes;
     });
@@ -198,10 +200,37 @@ const AppointmentList = () => {
       const dateB = new Date(b.rawDate);
       const dateDiff = dateB.getTime() - dateA.getTime();
       if (dateDiff !== 0) return dateDiff;
-      
+
       // If same date, sort by time (latest time first)
       return b.timeInMinutes - a.timeInMinutes;
     });
+  };
+
+  const getDateRangeFromFilter = () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (dateFilter === 'today') {
+      return { start: new Date(today), end: new Date(today) };
+    } else if (dateFilter === 'week') {
+      const weekStart = new Date(today);
+      weekStart.setDate(today.getDate() - today.getDay());
+      return { start: weekStart, end: new Date(today) };
+    } else if (dateFilter === 'month') {
+      const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+      const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+      return { start: monthStart, end: monthEnd };
+    } else if (dateFilter === 'last30days') {
+      const start = new Date(today);
+      start.setDate(today.getDate() - 30);
+      return { start: start, end: new Date(today) };
+    } else if (dateFilter === 'custom') {
+      return {
+        start: customStartDate ? new Date(customStartDate) : null,
+        end: customEndDate ? new Date(customEndDate) : null,
+      };
+    }
+    return { start: null, end: null };
   };
 
   const filteredAppointments = appointments.filter((appointment) => {
@@ -209,8 +238,19 @@ const AppointmentList = () => {
       appointment.patientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       appointment.doctorName.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = filterStatus === 'all' || appointment.status === filterStatus;
-    const matchesDate = !filterDate || new Date(appointment.rawDate).toISOString().slice(0, 10) === filterDate;
-    return matchesSearch && matchesStatus && matchesDate;
+
+    let matchesDateFilter = true;
+    if (dateFilter !== 'all') {
+      const { start, end } = getDateRangeFromFilter();
+      if (appointment.rawDate) {
+        const appDate = new Date(appointment.rawDate);
+        appDate.setHours(0, 0, 0, 0);
+        if (start && appDate < start) matchesDateFilter = false;
+        if (end && appDate > end) matchesDateFilter = false;
+      }
+    }
+
+    return matchesSearch && matchesStatus && matchesDateFilter;
   });
 
   // Separate the filtered appointments
@@ -380,20 +420,47 @@ const AppointmentList = () => {
                 <Filter className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={14} />
               </div>
 
-              <input
-                type="date"
-                value={filterDate}
-                onChange={(e) => setFilterDate(e.target.value)}
-                className="px-3 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-500/20 cursor-pointer"
-              />
+              <div className="flex flex-col sm:flex-row gap-2">
+                <select
+                  value={dateFilter}
+                  onChange={(e) => setDateFilter(e.target.value)}
+                  className="appearance-none pl-4 pr-10 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-500/20 cursor-pointer hover:bg-slate-50 transition-colors"
+                >
+                  <option value="all">All Dates</option>
+                  <option value="today">Today</option>
+                  <option value="week">This Week</option>
+                  <option value="month">This Month</option>
+                  <option value="last30days">Last 30 Days</option>
+                  <option value="custom">Custom Range</option>
+                </select>
+
+                {dateFilter === 'custom' && (
+                  <div className="flex gap-2">
+                    <input
+                      type="date"
+                      value={customStartDate}
+                      onChange={(e) => setCustomStartDate(e.target.value)}
+                      className="px-3 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+                      placeholder="Start"
+                    />
+                    <input
+                      type="date"
+                      value={customEndDate}
+                      onChange={(e) => setCustomEndDate(e.target.value)}
+                      className="px-3 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+                      placeholder="End"
+                    />
+                  </div>
+                )}
+              </div>
             </div>
 
-            <button
+            {/* <button
               onClick={() => { setChooserOpen(true); setSelectedType(null); }}
               className="flex items-center gap-2 bg-teal-600 hover:bg-teal-700 text-white px-5 py-2.5 rounded-lg font-medium transition-all shadow-sm hover:shadow-md active:scale-95"
             >
               <Plus size={18} /> New Appointment
-            </button>
+            </button> */}
           </div>
 
           {/* Table Container */}
@@ -408,7 +475,7 @@ const AppointmentList = () => {
                       <h3 className="font-bold text-teal-700 text-sm uppercase tracking-wider">Upcoming Appointments ({sortedUpcoming.length})</h3>
                     </div>
                     <div className="flex items-center gap-2">
-                      
+
                     </div>
                   </div>
                 </div>
@@ -462,7 +529,7 @@ const AppointmentList = () => {
                     </h3>
                   </div>
                   <div className="flex items-center gap-2">
-      
+
                     {completedCollapsed ? (
                       <ChevronRight size={20} className="text-green-500 group-hover:text-green-600 transition-colors ml-2" />
                     ) : (
@@ -470,7 +537,7 @@ const AppointmentList = () => {
                     )}
                   </div>
                 </button>
-                
+
                 {!completedCollapsed && (
                   <>
                     <table className="w-full">
@@ -493,7 +560,7 @@ const AppointmentList = () => {
                         {sortedCompleted.map((appointment, index) => renderAppointmentRow(appointment, false, index))}
                       </tbody>
                     </table>
-                    
+
                     {/* Collapse Footer */}
                     <div className="px-6 py-2 border-t border-slate-100 bg-green-25 flex justify-center">
                       <button
@@ -519,13 +586,13 @@ const AppointmentList = () => {
                     </div>
                     <h3 className="text-slate-800 font-medium mb-1">No appointments found</h3>
                     <p className="text-slate-500 text-sm">
-                      {searchTerm || filterDate ? 'Try adjusting your filters' : 'Get started by creating a new appointment'}
+                      {searchTerm || dateFilter !== 'all' ? 'Try adjusting your filters' : 'Get started by creating a new appointment'}
                     </p>
                   </div>
                 </div>
               </div>
             )}
-            
+
             {/* Only Completed Section is collapsed and no upcoming appointments */}
             {sortedUpcoming.length === 0 && sortedCompleted.length > 0 && completedCollapsed && (
               <div className="px-6 py-8 text-center">
@@ -548,7 +615,7 @@ const AppointmentList = () => {
               Showing <span className="font-bold text-slate-700">{filteredAppointments.length}</span> results
               {sortedUpcoming.length > 0 && sortedCompleted.length > 0 && (
                 <span className="ml-2">
-                  (<span className="text-teal-600">{sortedUpcoming.length} upcoming</span>, 
+                  (<span className="text-teal-600">{sortedUpcoming.length} upcoming</span>,
                   <span className="text-green-600"> {sortedCompleted.length} completed</span>)
                   {completedCollapsed && sortedCompleted.length > 0 && (
                     <span className="text-green-400 ml-2"></span>

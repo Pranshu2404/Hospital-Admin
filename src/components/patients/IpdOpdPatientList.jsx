@@ -17,7 +17,7 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient, updatePatientBa
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
   const [patients, setPatients] = useState([]);
-  const [dateFilter, setDateFilter] = useState('all');
+  const [dateFilter, setDateFilter] = useState(location.state?.dateFilter || 'all');
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
 
@@ -49,9 +49,9 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient, updatePatientBa
         email: p.email,
         type: p.patient_type ? p.patient_type.toUpperCase() : 'OPD',
         bloodGroup: p.blood_group || 'N/A',
-        lastVisit: p.lastVisitDate
-          ? new Date(p.lastVisitDate).toISOString().split('T')[0]
-          : (p.registered_at ? new Date(p.registered_at).toISOString().split('T')[0] : 'N/A'),
+        lastVisit: (p.lastVisitDate || p.registered_at || p.createdAt)
+          ? new Date(p.lastVisitDate || p.registered_at || p.createdAt).toISOString().split('T')[0]
+          : 'N/A',
         status: 'Active',
         image: p.patient_image,
         aadhaar_number: p.aadhaar_number || 'N/A',
@@ -314,7 +314,8 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient, updatePatientBa
       return { start: weekStart, end: new Date(today) };
     } else if (dateFilter === 'month') {
       const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-      return { start: monthStart, end: new Date(today) };
+      const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+      return { start: monthStart, end: monthEnd };
     } else if (dateFilter === 'last30days') {
       const start = new Date(today);
       start.setDate(today.getDate() - 30);

@@ -106,7 +106,7 @@ const Dashboard = () => {
       // Calculate pending payments from invoices
       const invoicePayload = invoicesRes.data;
       const invoiceList = invoicePayload?.invoices || [];
-      
+
       // Sum up pending/unpaid invoices
       const pendingTotal = invoiceList
         .filter(inv => inv.status === 'Pending' || inv.status === 'pending')
@@ -124,9 +124,9 @@ const Dashboard = () => {
           : 'N/A'
       }));
 
-      setFinanceStats({ 
-        dailyIncome, 
-        pendingPayments: pendingTotal 
+      setFinanceStats({
+        dailyIncome,
+        pendingPayments: pendingTotal
       });
       setRecentInvoices(invoices);
     } catch (err) {
@@ -160,13 +160,14 @@ const Dashboard = () => {
 
         setStats([
           {
-            title: 'Total Patients',
-            value: patients.length,
+            title: "This Month's Patients",
+            value: patients.filter(p => dayjs(p.lastVisitDate || p.registered_at || p.createdAt).isSame(dayjs(), 'month')).length,
             icon: Icons.Patient,
             bgGradient: 'bg-gradient-to-br from-blue-50 to-blue-100',
             iconBg: 'bg-blue-600',
             textColor: 'text-blue-900',
-            route: '/dashboard/admin/patient-list'
+            route: '/dashboard/admin/patient-list',
+            state: { dateFilter: 'month' }
           },
           {
             title: "Today's Visits",
@@ -263,9 +264,8 @@ const Dashboard = () => {
       Completed: 'bg-slate-100 text-slate-700 border-slate-200 ring-slate-500/30',
       Cancelled: 'bg-red-50 text-red-700 border-red-200 ring-red-500/30'
     };
-    return `inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ring-1 ring-inset ${
-      styles[status] || styles.Completed
-    }`;
+    return `inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ring-1 ring-inset ${styles[status] || styles.Completed
+      }`;
   };
 
   const formatCurrency = (amount) => {
@@ -300,13 +300,13 @@ const Dashboard = () => {
             </div>
           </div>
         </div>
-        <button
+        {/* <button
           onClick={() => navigate('/dashboard/admin/appointments')}
           className="mt-4 md:mt-0 bg-teal-600 hover:bg-teal-700 text-white px-5 py-2.5 rounded-xl text-sm font-semibold shadow-lg shadow-teal-600/20 transition-all flex items-center gap-2 transform active:scale-95"
         >
           <Icons.Plus />
           New Appointment
-        </button>
+        </button> */}
       </div>
 
       {/* Stats Cards */}
@@ -314,7 +314,7 @@ const Dashboard = () => {
         {stats.map((stat, idx) => (
           <div
             key={idx}
-            onClick={() => navigate(stat.route)}
+            onClick={() => stat.state ? navigate(stat.route, { state: stat.state }) : navigate(stat.route)}
             className={`relative overflow-hidden rounded-3xl p-6 cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-xl ${stat.bgGradient} border border-white/50 shadow-sm group`}
           >
             <div className="flex items-start justify-between relative z-10">

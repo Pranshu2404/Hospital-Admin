@@ -742,12 +742,12 @@ const InvoiceListPage = ({ onViewDetails, defaultType }) => {
               Pending Deletions ({stats.pendingDeletions})
             </button>
           )}
-          <Link
+          {/* <Link
             to="/dashboard/finance/create-invoice"
             className="flex items-center gap-2 bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700"
           >
             <FaPlus /> Create Invoice
-          </Link>
+          </Link> */}
         </div>
       </div>
 
