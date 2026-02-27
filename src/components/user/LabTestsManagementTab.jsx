@@ -346,9 +346,9 @@ const LabTestsManagementTab = ({ hospitalData }) => {
                       <span className="ml-2">{getSortIcon('base_price')}</span>
                     </div>
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  {/* <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Fasting
-                  </th>
+                  </th> */}
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status
                   </th>
@@ -407,7 +407,7 @@ const LabTestsManagementTab = ({ hospitalData }) => {
                         </div>
                       )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    {/* <td className="px-6 py-4 whitespace-nowrap">
                       {editingTest && editingTest._id === test._id ? (
                         <button
                           onClick={() => handleToggleFasting(test)}
@@ -432,7 +432,7 @@ const LabTestsManagementTab = ({ hospitalData }) => {
                           <span className="inline-flex text-xs font-medium text-gray-400">No</span>
                         )
                       )}
-                    </td>
+                    </td> */}
                     <td className="px-6 py-4 whitespace-nowrap">
                       {editingTest && editingTest._id === test._id ? (
                         <button
