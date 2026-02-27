@@ -1257,7 +1257,7 @@ const InvoiceListPage = ({ onViewDetails, defaultType }) => {
                       >
                         <FaPrint />
                       </button>
-                      {invoice.status !== 'Paid' && !invoice.is_deleted && (
+                      {/* {invoice.status !== 'Paid' && !invoice.is_deleted && (
                         <button
                           onClick={() => handleMarkAsPaid(invoice._id, invoice.balance_due)}
                           className="text-green-600 hover:text-green-800"
@@ -1265,8 +1265,8 @@ const InvoiceListPage = ({ onViewDetails, defaultType }) => {
                         >
                           <FaCheckCircle />
                         </button>
-                      )}
-                      {invoice.deletion_request && invoice.deletion_request.status === 'pending' && (
+                      )} */}
+                      {/* {invoice.deletion_request && invoice.deletion_request.status === 'pending' && (
                         <button
                           onClick={() => {
                             setSelectedRequest(invoice);
@@ -1277,9 +1277,9 @@ const InvoiceListPage = ({ onViewDetails, defaultType }) => {
                         >
                           <FaClock />
                         </button>
-                      )}
+                      )} */}
                       {/* Admin Direct Delete Button */}
-                      {userRole === 'admin' && !invoice.is_deleted && !invoice.deletion_request && (
+                      {/* {userRole === 'admin' && !invoice.is_deleted && !invoice.deletion_request && (
                         <button
                           onClick={() => {
                             setSelectedInvoiceForDelete(invoice);
@@ -1290,7 +1290,7 @@ const InvoiceListPage = ({ onViewDetails, defaultType }) => {
                         >
                           <FaTrash />
                         </button>
-                      )}
+                      )} */}
                       <button
                         onClick={(e) => {
                           e.preventDefault();
