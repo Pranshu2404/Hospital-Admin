@@ -100,18 +100,24 @@ export const SearchableFormSelect = ({
     );
   }, [options]);
 
-  // 2. Sort/Filter based on Normalized Options
   const displayedOptions = useMemo(() => {
-    if (!searchTerm) return normalizedOptions;
+    if (!searchTerm) {
+      return [...normalizedOptions].sort((a, b) => 
+        (a.label || '').localeCompare(b.label || '')
+      );
+    }
+    
     const lowerSearch = searchTerm.toLowerCase();
     
-    return [...normalizedOptions].sort((a, b) => {
-      const aMatch = a.label.toLowerCase().includes(lowerSearch);
-      const bMatch = b.label.toLowerCase().includes(lowerSearch);
-      if (aMatch && !bMatch) return -1;
-      if (!aMatch && bMatch) return 1;
-      return 0;
-    });
+    // Filter options that match the search term
+    const matchingOptions = normalizedOptions.filter(opt => 
+      opt.label.toLowerCase().includes(lowerSearch)
+    );
+    
+    // Sort matching options alphabetically
+    return matchingOptions.sort((a, b) => 
+      (a.label || '').localeCompare(b.label || '')
+    );
   }, [searchTerm, normalizedOptions]);
 
   // 3. Sync search term when value changes externally

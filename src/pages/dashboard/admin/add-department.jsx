@@ -59,12 +59,12 @@ const Icons = {
   )
 };
 
-// Searchable Department Select Component
-const SearchableDepartmentSelect = ({ 
-  value, 
-  onChange, 
-  options = [], 
-  placeholder = "Search departments...",
+// Combined Search and Add Department Component
+const DepartmentSearchAdd = ({ 
+  onSelect, 
+  onAddNew, 
+  existingDepartments = [], 
+  placeholder = "Search or add new department...",
   disabled = false,
   className = ""
 }) => {
@@ -73,12 +73,13 @@ const SearchableDepartmentSelect = ({
   const [activeIndex, setActiveIndex] = useState(0);
   const wrapperRef = useRef(null);
 
-  // Normalize options
+  // Normalize existing departments
   const normalizedOptions = useMemo(() => {
-    return options.map(opt => 
-      typeof opt === 'object' ? opt : { value: opt, label: opt }
-    );
-  }, [options]);
+    return existingDepartments.map(dept => ({
+      value: dept._id,
+      label: dept.name
+    }));
+  }, [existingDepartments]);
 
   // Filter and sort options based on search term
   const filteredOptions = useMemo(() => {
@@ -92,24 +93,27 @@ const SearchableDepartmentSelect = ({
         const bStarts = b.label.toLowerCase().startsWith(lowerSearch);
         if (aStarts && !bStarts) return -1;
         if (!aStarts && bStarts) return 1;
-        return 0;
+        return a.label.localeCompare(b.label);
       });
   }, [searchTerm, normalizedOptions]);
 
-  // Find selected option
-  const selectedOption = useMemo(() => 
-    normalizedOptions.find(opt => opt.value === value),
-    [value, normalizedOptions]
-  );
+  // Check if search term matches any existing department
+  const hasExactMatch = useMemo(() => {
+    const lowerSearch = searchTerm.toLowerCase().trim();
+    if (!lowerSearch) return false;
+    return normalizedOptions.some(opt => 
+      opt.label.toLowerCase() === lowerSearch
+    );
+  }, [searchTerm, normalizedOptions]);
 
-  // Update search term when value changes
-  useEffect(() => {
-    if (selectedOption) {
-      setSearchTerm(selectedOption.label);
-    } else if (!value) {
-      setSearchTerm('');
-    }
-  }, [value, selectedOption]);
+  // Check if search term exists in suggestions
+  const existsInSuggestions = useMemo(() => {
+    const lowerSearch = searchTerm.toLowerCase().trim();
+    if (!lowerSearch) return false;
+    return hospitalDepartmentSuggestions.some(suggestion => 
+      suggestion.toLowerCase() === lowerSearch
+    );
+  }, [searchTerm]);
 
   // Handle keyboard navigation
   const handleKeyDown = (e) => {
@@ -131,7 +135,11 @@ const SearchableDepartmentSelect = ({
       case 'Enter':
         e.preventDefault();
         if (isOpen && filteredOptions[activeIndex]) {
+          // Select existing department
           handleSelect(filteredOptions[activeIndex]);
+        } else if (searchTerm.trim() && !hasExactMatch) {
+          // Add new department
+          handleAddNew();
         }
         break;
       case 'Escape':
@@ -145,10 +153,20 @@ const SearchableDepartmentSelect = ({
 
   // Handle option selection
   const handleSelect = (option) => {
-    onChange(option.value);
+    onSelect(option.value, option.label);
     setSearchTerm(option.label);
     setIsOpen(false);
     setActiveIndex(0);
+  };
+
+  // Handle adding new department
+  const handleAddNew = () => {
+    const trimmed = searchTerm.trim();
+    if (trimmed) {
+      onAddNew(trimmed);
+      setSearchTerm(trimmed);
+      setIsOpen(false);
+    }
   };
 
   // Handle input change
@@ -156,11 +174,6 @@ const SearchableDepartmentSelect = ({
     setSearchTerm(e.target.value);
     setActiveIndex(0);
     setIsOpen(true);
-    
-    // Clear selection if search doesn't match selected
-    if (selectedOption && e.target.value !== selectedOption.label) {
-      onChange('');
-    }
   };
 
   // Handle click outside
@@ -168,17 +181,12 @@ const SearchableDepartmentSelect = ({
     const handleClickOutside = (event) => {
       if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
         setIsOpen(false);
-        
-        // Reset search term if no value selected
-        if (!value && searchTerm) {
-          setSearchTerm('');
-        }
       }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [value, searchTerm]);
+  }, []);
 
   return (
     <div className={`relative ${className}`} ref={wrapperRef}>
@@ -201,13 +209,12 @@ const SearchableDepartmentSelect = ({
           autoComplete="off"
         />
 
-        {/* Clear/Chevron Icon */}
+        {/* Clear Button */}
         {searchTerm && !disabled && (
           <button
             type="button"
             onClick={() => {
               setSearchTerm('');
-              onChange('');
               setIsOpen(false);
             }}
             className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600"
@@ -220,30 +227,74 @@ const SearchableDepartmentSelect = ({
       {/* Dropdown */}
       {isOpen && !disabled && (
         <div className="absolute z-50 w-full mt-2 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden animate-fade-in-down">
-          {filteredOptions.length > 0 ? (
-            <div className="max-h-60 overflow-y-auto overflow-x-hidden">
-              {filteredOptions.map((option, index) => (
-                <div
-                  key={option.value}
-                  onClick={() => handleSelect(option)}
-                  onMouseEnter={() => setActiveIndex(index)}
-                  className={`px-4 py-3 cursor-pointer transition-colors ${
-                    index === activeIndex 
-                      ? 'bg-emerald-50 text-emerald-700' 
-                      : 'text-slate-600 hover:bg-slate-50'
-                  } ${option.value === value ? 'bg-emerald-100/50 font-medium' : ''}`}
-                >
-                  <div className="flex items-center gap-2">
-                    <Icons.Building className="w-4 h-4 flex-shrink-0" />
-                    <span className="text-sm">{option.label}</span>
+          {/* Existing Departments */}
+          {filteredOptions.length > 0 && (
+            <>
+              <div className="px-4 py-2 bg-slate-50 border-b border-slate-200">
+                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                  Existing Departments
+                </span>
+              </div>
+              <div className="max-h-48 overflow-y-auto overflow-x-hidden">
+                {filteredOptions.map((option, index) => (
+                  <div
+                    key={option.value}
+                    onClick={() => handleSelect(option)}
+                    onMouseEnter={() => setActiveIndex(index)}
+                    className={`px-4 py-3 cursor-pointer transition-colors ${
+                      index === activeIndex 
+                        ? 'bg-emerald-50 text-emerald-700' 
+                        : 'text-slate-600 hover:bg-slate-50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Icons.Building className="w-4 h-4 flex-shrink-0" />
+                      <span className="text-sm">{option.label}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          {/* Add New Department Option */}
+          {searchTerm.trim() && !hasExactMatch && (
+            <>
+              {(filteredOptions.length > 0) && (
+                <div className="border-t border-slate-200"></div>
+              )}
+              <div
+                onClick={handleAddNew}
+                onMouseEnter={() => setActiveIndex(filteredOptions.length)}
+                className={`px-4 py-3 cursor-pointer transition-colors ${
+                  activeIndex === filteredOptions.length
+                    ? 'bg-emerald-50 text-emerald-700'
+                    : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <div className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">
+                    <Icons.Plus className="w-3 h-3" />
+                  </div>
+                  <div className="flex-1">
+                    <span className="text-sm font-medium">
+                      Add new department: <span className="font-bold">"{searchTerm.trim()}"</span>
+                    </span>
+                    {existsInSuggestions && (
+                      <span className="ml-2 text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">
+                        Suggested
+                      </span>
+                    )}
                   </div>
                 </div>
-              ))}
-            </div>
-          ) : (
+              </div>
+            </>
+          )}
+
+          {/* No Results */}
+          {filteredOptions.length === 0 && !searchTerm.trim() && (
             <div className="px-4 py-8 text-center">
-              <p className="text-sm text-slate-500">No departments found</p>
-              <p className="text-xs text-slate-400 mt-1">Try a different search term</p>
+              <p className="text-sm text-slate-500">Type to search or add a new department</p>
             </div>
           )}
         </div>
@@ -549,71 +600,27 @@ const hospitalDepartmentSuggestions = [
   'Neonatal Intensive Care Unit (NICU)', 'Coronary Care Unit (CCU)', 'Trauma Center',
   'Physical Therapy', 'Occupational Therapy', 'Speech-Language Pathology', 'Nutrition and Dietetics', 'Pharmacy',
   'Patient Registration / Admissions', 'Medical Records', 'Billing and Insurance', 'Information Technology (IT)',
-  'Biomedical Engineering', 'Housekeeping / Environmental Services', 'Security', 'Human Resources', 'Administration', 'Dental','Allergy and Immunology',
-'Hematology',
-'Hepatology (Liver Unit)',
-'Radiation Oncology',
-'Medical Oncology',
-'Surgical Oncology',
-'Hemato-Oncology',
-'Bone Marrow Transplant Unit',
-'Electrophysiology Lab',
-'Cardiac Rehabilitation',
-'Heart Failure Clinic',
-'Hypertension Clinic',
-'Sleep Medicine',
-'Pain Management',
-'Sports Medicine',
-'Preventive Medicine',
-'Lifestyle Medicine',
-'Reproductive Medicine / IVF Center',
-'Maternal-Fetal Medicine',
-'Family Planning Clinic',
-'Lactation Clinic',
-'Pediatric Cardiology',
-'Pediatric Neurology',
-'Pediatric Surgery',
-'Pediatric Endocrinology',
-'Pediatric Nephrology',
-'Pediatric Gastroenterology',
-'Spine Surgery Unit',
-'Joint Replacement Center',
-'Arthroscopy Unit',
-'Sports Injury Clinic',
-'Clinical Biochemistry',
-'Microbiology Lab',
-'Molecular Diagnostics',
-'Genetic Testing Lab',
-'Blood Bank / Transfusion Medicine',
-'Cytogenetics',
-'Dialysis Center',
-'Burn Unit',
-'Organ Transplant Unit',
-'Liver Transplant Unit',
-'Kidney Transplant Unit',
-'Heart Transplant Unit',
-'Hyperbaric Oxygen Therapy',
-'Rehabilitation Medicine',
-'Prosthetics and Orthotics',
-'Stroke Rehabilitation Unit',
-'Clinical Psychology',
-'De-addiction Center',
-'Child Psychiatry',
-'Counseling Services',
-'Vaccination Center',
-'Travel Medicine Clinic',
-'Occupational Health Services',
-'Community Health and Outreach',
-'Research and Clinical Trials Unit',
-'Medical Education Department',
-'Ethics Committee',
-'Simulation Lab'
+  'Biomedical Engineering', 'Housekeeping / Environmental Services', 'Security', 'Human Resources', 'Administration', 'Dental',
+  'Allergy and Immunology', 'Hematology', 'Hepatology (Liver Unit)', 'Radiation Oncology', 'Medical Oncology',
+  'Surgical Oncology', 'Hemato-Oncology', 'Bone Marrow Transplant Unit', 'Electrophysiology Lab',
+  'Cardiac Rehabilitation', 'Heart Failure Clinic', 'Hypertension Clinic', 'Sleep Medicine', 'Pain Management',
+  'Sports Medicine', 'Preventive Medicine', 'Lifestyle Medicine', 'Reproductive Medicine / IVF Center',
+  'Maternal-Fetal Medicine', 'Family Planning Clinic', 'Lactation Clinic', 'Pediatric Cardiology',
+  'Pediatric Neurology', 'Pediatric Surgery', 'Pediatric Endocrinology', 'Pediatric Nephrology',
+  'Pediatric Gastroenterology', 'Spine Surgery Unit', 'Joint Replacement Center', 'Arthroscopy Unit',
+  'Sports Injury Clinic', 'Clinical Biochemistry', 'Microbiology Lab', 'Molecular Diagnostics',
+  'Genetic Testing Lab', 'Blood Bank / Transfusion Medicine', 'Cytogenetics', 'Dialysis Center',
+  'Burn Unit', 'Organ Transplant Unit', 'Liver Transplant Unit', 'Kidney Transplant Unit',
+  'Heart Transplant Unit', 'Hyperbaric Oxygen Therapy', 'Rehabilitation Medicine', 'Prosthetics and Orthotics',
+  'Stroke Rehabilitation Unit', 'Clinical Psychology', 'De-addiction Center', 'Child Psychiatry',
+  'Counseling Services', 'Vaccination Center', 'Travel Medicine Clinic', 'Occupational Health Services',
+  'Community Health and Outreach', 'Research and Clinical Trials Unit', 'Medical Education Department',
+  'Ethics Committee', 'Simulation Lab'
 ];
 
 // --- Main Component ---
 const SelectDepartment = () => {
   const [departments, setDepartments] = useState([]);
-  const [newDeptName, setNewDeptName] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState(null);
   const [showPopup, setShowPopup] = useState(false);
   const [showAssignPrompt, setShowAssignPrompt] = useState(false);
@@ -632,23 +639,19 @@ const SelectDepartment = () => {
     fetchDepartments();
   }, []);
 
-  const handleInputChange = (e) => {
-    setNewDeptName(e.target.value);
-  };
-
-  const handleAddDepartment = async (e) => {
-    e.preventDefault();
-    const trimmed = newDeptName.trim();
+  const handleAddDepartment = async (deptName) => {
+    const trimmed = deptName.trim();
     if (!trimmed) return;
+    
     if (departments.some(d => d.name.toLowerCase() === trimmed.toLowerCase())) {
       alert('This department name already exists on the list.');
       return;
     }
+    
     try {
       const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/departments`, { name: trimmed });
       const newDept = res.data;
       setDepartments((prev) => [...prev, newDept]);
-      setNewDeptName('');
       setNewlyAddedDept(newDept);
       setShowAssignPrompt(true);
     } catch (err) {
@@ -662,6 +665,13 @@ const SelectDepartment = () => {
       }
       alert(`Error: ${errorMessage}`);
       console.error('❌ Failed to add department:', err);
+    }
+  };
+
+  const handleSelectDepartment = (deptId, deptName) => {
+    const selectedDept = departments.find(d => d._id === deptId);
+    if (selectedDept) {
+      handleDepartmentClick(selectedDept);
     }
   };
 
@@ -703,12 +713,6 @@ const SelectDepartment = () => {
     setShowAssignPrompt(false);
   };
 
-  // Prepare department options for the searchable select
-  const departmentOptions = departments.map(dept => ({
-    value: dept._id,
-    label: dept.name
-  }));
-
   return (
     <Layout sidebarItems={adminSidebar}>
       <div className="p-8 min-h-screen bg-slate-50/50 font-sans text-slate-800">
@@ -719,92 +723,58 @@ const SelectDepartment = () => {
           <p className="text-slate-500 mt-2 font-medium">Add, edit, or remove hospital departments</p>
         </div>
 
-        {/* Add Department Section */}
+        {/* Add/Search Department Section - Single Unified Field */}
         <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-8 mb-10">
           <div className="flex items-center gap-3 mb-6">
             <div className="p-2 bg-emerald-100 rounded-lg text-emerald-600">
               <Icons.Plus />
             </div>
-            <h2 className="text-xl font-bold text-slate-900">Add New Department</h2>
+            <h2 className="text-xl font-bold text-slate-900">Add or Search Department</h2>
           </div>
 
-          <form onSubmit={handleAddDepartment} className="relative">
-            <div className="flex flex-col sm:flex-row gap-4 items-start">
-              <div className="relative w-full flex-1">
-                {/* Replace the input with SearchableDepartmentSelect if you want to search existing departments */}
-                <SearchableDepartmentSelect
-                  value=""
-                  onChange={(value) => {
-                    // If you want to allow selecting existing departments to edit
-                    const selectedDept = departments.find(d => d._id === value);
-                    if (selectedDept) {
-                      handleDepartmentClick(selectedDept);
-                    }
-                  }}
-                  options={departmentOptions}
-                  placeholder="Search existing departments..."
-                  className="mb-2"
-                />
-                
-                <input
-                  type="text"
-                  placeholder="Or add new department name..."
-                  value={newDeptName}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 text-slate-900 text-sm rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:bg-white transition-all duration-200 placeholder-slate-400"
-                  autoComplete="off"
-                />
-
-                {/* Suggestions List */}
-                {newDeptName && (
-                  <ul className="absolute z-40 w-full bg-white border border-slate-200 rounded-xl shadow-xl mt-2 max-h-60 overflow-y-auto overflow-x-hidden animate-fade-in-down">
-                    {hospitalDepartmentSuggestions
-                      .filter(suggestion => 
-                        suggestion.toLowerCase().includes(newDeptName.toLowerCase()) &&
-                        !departments.some(d => d.name.toLowerCase() === suggestion.toLowerCase())
-                      )
-                      .map((name, index) => (
-                        <li
-                          key={`${name}-${index}`}
-                          className="px-4 py-3 cursor-pointer hover:bg-emerald-50 hover:text-emerald-700 text-sm font-medium text-slate-600 transition-colors border-b border-slate-50 last:border-b-0"
-                          onClick={() => setNewDeptName(name)}
-                        >
-                          {name}
-                        </li>
-                      ))}
-                  </ul>
-                )}
-              </div>
-
-              <button
-                type="submit"
-                className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl text-sm font-bold shadow-lg shadow-emerald-600/20 transition-all flex items-center gap-2 transform active:scale-95 whitespace-nowrap"
-              >
-                <Icons.Plus />
-                Add Department
-              </button>
+          <div className="relative">
+            <DepartmentSearchAdd
+              existingDepartments={departments}
+              onSelect={handleSelectDepartment}
+              onAddNew={handleAddDepartment}
+              placeholder="Search existing departments or type new name to add..."
+            />
+            
+            {/* Quick Suggestions */}
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <span className="text-xs text-slate-400 font-medium">Quick add:</span>
+              {['Emergency', 'Cardiology', 'Pediatrics', 'Neurology', 'Orthopedics'].map((suggestion) => {
+                const exists = departments.some(d => d.name.toLowerCase().includes(suggestion.toLowerCase()));
+                return (
+                  <button
+                    key={suggestion}
+                    onClick={() => {
+                      if (!exists) {
+                        handleAddDepartment(suggestion);
+                      } else {
+                        alert(`"${suggestion}" department already exists`);
+                      }
+                    }}
+                    disabled={exists}
+                    className={`text-xs px-3 py-1.5 rounded-full transition-colors ${
+                      exists 
+                        ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                        : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                    }`}
+                  >
+                    {exists ? '✓ ' : '+ '}{suggestion}
+                  </button>
+                );
+              })}
             </div>
-          </form>
+          </div>
         </div>
 
         {/* Departments Grid */}
         <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-8">
-          <div className="flex items-center gap-4 mb-8">
+          <div className="flex items-center justify-between mb-8">
             <h2 className="text-xl font-bold text-slate-900">Existing Departments</h2>
-            <div className="flex-1 max-w-md">
-              <SearchableDepartmentSelect
-                value=""
-                onChange={(value) => {
-                  const selectedDept = departments.find(d => d._id === value);
-                  if (selectedDept) {
-                    handleDepartmentClick(selectedDept);
-                  }
-                }}
-                options={departmentOptions}
-                placeholder="Search departments..."
-              />
-            </div>
-            <span className="bg-slate-100 text-slate-600 text-sm font-bold px-3 py-1 rounded-full ml-auto">
+            <span className="bg-slate-100 text-slate-600 text-sm font-bold px-3 py-1 rounded-full">
               Total: {departments.length}
             </span>
           </div>
@@ -822,7 +792,7 @@ const SelectDepartment = () => {
                       <Icons.Building />
                     </div>
                     <div className="flex-grow">
-                      <h3 className="text-sm text-wrap font-bold text-slate-700 group-hover:text-slate-900 truncate" title={dept.name}>
+                      <h3 className="text-sm font-bold text-slate-700 group-hover:text-slate-900 truncate" title={dept.name}>
                         {dept.name}
                       </h3>
                       <p className="text-xs text-slate-400 mt-1">
@@ -856,7 +826,7 @@ const SelectDepartment = () => {
                 <Icons.Building className="w-8 h-8 text-slate-400" />
               </div>
               <p className="text-slate-500 font-medium">No departments added yet.</p>
-              <p className="text-slate-400 text-sm mt-1">Start by adding a department above.</p>
+              <p className="text-slate-400 text-sm mt-1">Start by adding a department using the search field above.</p>
             </div>
           )}
         </div>
