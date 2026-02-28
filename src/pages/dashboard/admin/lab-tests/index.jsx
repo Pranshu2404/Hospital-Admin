@@ -387,7 +387,7 @@ const LabTestsList = () => {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
             <div className="flex items-center justify-between">
               <div>
@@ -424,7 +424,7 @@ const LabTestsList = () => {
             </div>
           </div>
           
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+          {/* <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-slate-500 font-medium">Est. Revenue</p>
@@ -434,7 +434,7 @@ const LabTestsList = () => {
                 <FaDollarSign size={24} />
               </div>
             </div>
-          </div>
+          </div> */}
         </div>
 
         {/* Filters */}

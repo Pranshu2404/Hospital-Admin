@@ -61,7 +61,7 @@ const LabTestCategories = () => {
     try {
       const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/labtests/all?limit=1000`);
       const tests = response.data.data || [];
-      
+
       // Group by category
       const categoryMap = {};
       tests.forEach(test => {
@@ -98,7 +98,7 @@ const LabTestCategories = () => {
 
       const sortedCategories = Object.values(categoryMap).sort((a, b) => b.count - a.count);
       setCategories(sortedCategories);
-      
+
       if (sortedCategories.length > 0) {
         setSelectedCategory(sortedCategories[0].name);
         setCategoryTests(sortedCategories[0].tests);
@@ -156,11 +156,10 @@ const LabTestCategories = () => {
                 <button
                   key={cat.name}
                   onClick={() => handleCategoryClick(cat)}
-                  className={`w-full p-4 rounded-xl border-2 transition-all text-left ${
-                    selectedCategory === cat.name
-                      ? `${categoryColors[cat.name]} border-emerald-500 shadow-md`
-                      : 'bg-white border-slate-200 hover:border-emerald-300'
-                  }`}
+                  className={`w-full p-4 rounded-xl border-2 transition-all text-left ${selectedCategory === cat.name
+                    ? `${categoryColors[cat.name]} border-emerald-500 shadow-md`
+                    : 'bg-white border-slate-200 hover:border-emerald-300'
+                    }`}
                 >
                   <div className="flex items-center gap-3">
                     <div className="flex-shrink-0">
@@ -176,7 +175,7 @@ const LabTestCategories = () => {
                     </div>
                     <div className="text-right">
                       <div className="text-sm font-semibold text-slate-900">{cat.usageCount}</div>
-                      <div className="text-xs text-slate-500">total uses</div>
+                      <div className="text-xs text-slate-500">Total Tests Conducted</div>
                     </div>
                   </div>
                 </button>
@@ -216,9 +215,9 @@ const LabTestCategories = () => {
                             </p>
                           </div>
                           <div>
-                            <p className="text-sm text-slate-600">Avg. Price</p>
+                            <p className="text-sm text-slate-600">Active Tests</p>
                             <p className="text-xl font-bold text-slate-900">
-                              {formatCurrency(categories.find(c => c.name === selectedCategory)?.avgPrice || 0)}
+                              {categories.find(c => c.name === selectedCategory)?.activeCount || 0}
                             </p>
                           </div>
                         </div>
@@ -229,14 +228,13 @@ const LabTestCategories = () => {
                   {/* Tests List */}
                   <div className="p-6">
                     <h3 className="font-semibold text-slate-800 mb-4">Tests in this Category</h3>
-                    
+
                     {categoryTests.length > 0 ? (
                       <div className="space-y-3">
                         {categoryTests.map((test) => (
                           <div
                             key={test.id}
-                            className="flex items-center justify-between p-4 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
-                            onClick={() => navigate(`/dashboard/admin/lab-tests/${test.id}`)}
+                            className="flex items-center justify-between p-4 bg-slate-50 rounded-lg"
                           >
                             <div className="flex-1">
                               <div className="flex items-center gap-2">
@@ -248,16 +246,15 @@ const LabTestCategories = () => {
                               <div className="flex items-center gap-3 mt-1 text-sm">
                                 <span className="text-slate-600">Uses: {test.usage || 0}</span>
                                 <span className="w-1 h-1 rounded-full bg-slate-300"></span>
-                                <span className={`px-2 py-0.5 rounded text-xs ${
-                                  test.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
-                                }`}>
+                                <span className={`px-2 py-0.5 rounded text-xs ${test.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
+                                  }`}>
                                   {test.is_active ? 'Active' : 'Inactive'}
                                 </span>
                               </div>
                             </div>
                             <div className="text-right">
                               <div className="font-semibold text-slate-900">{formatCurrency(test.price)}</div>
-                              <button
+                              {/* <button
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   navigate(`/dashboard/admin/lab-tests/${test.id}`);
@@ -265,7 +262,7 @@ const LabTestCategories = () => {
                                 className="text-sm text-emerald-600 hover:underline"
                               >
                                 View Details
-                              </button>
+                              </button> */}
                             </div>
                           </div>
                         ))}
