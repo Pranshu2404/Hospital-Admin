@@ -2151,11 +2151,11 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
                               <FaMoneyBillWave className="mr-2" size={14} />
                               Consultation Fee: {getDoctorFeeDisplay()}
                             </p>
-                            {doctorDetails.revenuePercentage && doctorDetails.revenuePercentage < 100 && (
+                            {/* {doctorDetails.revenuePercentage && doctorDetails.revenuePercentage < 100 && (
                               <p className="text-xs text-blue-600 mt-1">
                                 Doctor's revenue share: {doctorDetails.revenuePercentage}%
                               </p>
-                            )}
+                            )} */}
                           </div>
                         )}
                       </div>
