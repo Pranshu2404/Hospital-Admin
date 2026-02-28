@@ -1340,7 +1340,7 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
       );
 
       const appointmentId = appointmentRes.data._id;
-
+      console.log('Appointment scheduled with ID:', appointmentId, 'and status:', finalBillStatus);
       const billRes = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/billing`, {
         patient_id: formData.patientId,
         appointment_id: appointmentId,
@@ -1424,7 +1424,7 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
         .fixed-calendar {
           position: fixed;
           top: 50%;
-          right: 20px;
+          right: 20%;
           transform: translateY(-50%);
           width: 350px;
           max-height: 80vh;
@@ -1568,7 +1568,7 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
           </div>
 
           {/* Main Content */}
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+          <div className="relative grid grid-cols-1 lg:grid-cols-5 gap-8">
             {/* Left Column - Form */}
             <div className={`col-span-1 ${showFields ? 'lg:col-span-5' : 'lg:col-span-3'}`}>
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">

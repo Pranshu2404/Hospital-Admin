@@ -115,7 +115,7 @@ const AppointmentList = () => {
           axios.get(`${import.meta.env.VITE_BACKEND_URL}/hospitals`)
         ]);
 
-        // Add enriched data for display
+        console.log(appointmentRes)
         const enriched = appointmentRes.data.map((appt) => {
           const timeInMinutes = getTimeInMinutes(appt.start_time || appt.time_slot?.start_time);
           const appointmentDate = new Date(appt.appointment_date);
