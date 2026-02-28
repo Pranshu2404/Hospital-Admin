@@ -20,10 +20,7 @@ import {
   FaSyringe,
   FaHospital,
   FaClipboardList,
-  FaStethoscope,
-  FaFlask,  // New icon for lab tests
-  FaMicroscope, // New icon for lab tests
-  FaVial // New icon for lab tests
+  FaFlask
 } from 'react-icons/fa';
 import {
   BarChart,
@@ -108,11 +105,9 @@ const RevenueStats = () => {
     }).format(n);
   };
 
-  const safeDiv = (a, b) => {
-    const x = Number(a || 0);
-    const y = Number(b || 0);
-    if (!y) return 0;
-    return x / y;
+  const formatPercentage = (value) => {
+    const num = Number(value || 0);
+    return num.toFixed(1) + '%';
   };
 
   const getDeptName = (deptIdOrUnknown) => {
@@ -335,7 +330,7 @@ const RevenueStats = () => {
     try {
       const { url, params } = buildRequest();
       const res = await axios.get(url, { params });
-      console.log(res.data)
+      console.log('Revenue Data:', res.data);
       setData(res.data);
     } catch (err) {
       console.error('Error fetching revenue data:', err);
@@ -558,7 +553,7 @@ const RevenueStats = () => {
     []
   );
 
-  // ---------- Revenue Bifurcation Display ----------
+  // ---------- Revenue Bifurcation Display (UPDATED) ----------
   const renderRevenueBifurcation = () => {
     if (!data || !data.summary) return null;
 
@@ -567,55 +562,52 @@ const RevenueStats = () => {
     const topPerformers = data.topPerformers || {};
 
     const totalRevenue = summary.totalRevenue || 0;
-    const doctorRevenue = summary.doctorRevenue || 0;
+    const doctorEarnings = summary.doctorEarnings || 0;
     const hospitalRevenue = summary.hospitalRevenue || 0;
-    const expenses = summary.totalSalaryExpenses || 0;
-    const netHospitalRevenue = hospitalRevenue - expenses;
+    const actualSalaryExpenses = summary.actualSalaryExpenses || 0;
+    const totalCommission = summary.totalCommission || 0;
+    const netHospitalRevenue = summary.actualNetHospitalRevenue || summary.netHospitalRevenue || 0;
 
-    // Get procedure revenue from summary or breakdown
-    const procedureRevenue = summary.procedureRevenue ||
-      breakdown.bySource?.procedures?.amount || 0;
+    // Get revenue by source
+    const appointmentRevenue = summary.appointmentRevenue || breakdown.bySource?.appointments?.amount || 0;
+    const procedureRevenue = summary.procedureRevenue || breakdown.bySource?.procedures?.amount || 0;
+    const labTestRevenue = summary.labTestRevenue || breakdown.bySource?.labTests?.amount || 0;
+    const pharmacyRevenue = summary.pharmacyRevenue || breakdown.bySource?.pharmacy?.amount || 0;
 
-    // Get lab test revenue from summary or breakdown
-    const labTestRevenue = summary.labTestRevenue ||
-      breakdown.bySource?.labTests?.amount || 0;
+    // Calculate commissions by service type
+    let procedureCommission = 0;
+    let labTestCommission = 0;
 
-    // Get doctor commission from topPerformers
-    let totalDoctorCommission = 0;
-    let procedureDoctorCommission = 0;
-    let labTestDoctorCommission = 0;
-
-    if (topPerformers.doctors && topPerformers.doctors.length > 0) {
-      totalDoctorCommission = topPerformers.doctors.reduce((sum, doc) => {
-        // Check if doctor has procedure revenue
-        if (doc.procedureRevenue && doc.procedureRevenue > 0) {
-          procedureDoctorCommission += doc.commission * (doc.procedureRevenue / doc.revenue);
+    if (breakdown.bySource?.procedures?.byDoctor) {
+      procedureCommission = breakdown.bySource.procedures.byDoctor.reduce((sum, doc) => {
+        if (!doc.isFullTime) {
+          return sum + (doc.earnings || doc.commission || 0);
         }
-        // Check if doctor has lab test revenue
-        if (doc.labTestRevenue && doc.labTestRevenue > 0) {
-          labTestDoctorCommission += doc.commission * (doc.labTestRevenue / doc.revenue);
-        }
-        return sum + (doc.commission || 0);
+        return sum;
       }, 0);
     }
 
-    // Calculate procedure hospital share
-    const procedureHospitalShare = procedureRevenue - procedureDoctorCommission;
+    if (breakdown.bySource?.labTests?.byDoctor) {
+      labTestCommission = breakdown.bySource.labTests.byDoctor.reduce((sum, doc) => {
+        if (!doc.isFullTime) {
+          return sum + (doc.earnings || doc.commission || 0);
+        }
+        return sum;
+      }, 0);
+    }
 
-    // Calculate lab test hospital share
-    const labTestHospitalShare = labTestRevenue - labTestDoctorCommission;
-
-    // Use actual data if available, otherwise fallback to estimates
-    const displayDoctorRevenue = doctorRevenue > 0 ? doctorRevenue : totalRevenue * 0.3;
-    const displayHospitalRevenue = hospitalRevenue > 0 ? hospitalRevenue : totalRevenue * 0.7;
+    // Calculate hospital shares
+    const procedureHospitalShare = procedureRevenue - procedureCommission;
+    const labTestHospitalShare = labTestRevenue - labTestCommission;
 
     return (
       <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-200 mb-6">
         <h3 className="text-lg font-bold text-blue-800 mb-4 flex items-center gap-2">
-          <FaMoneyBillWave /> Revenue Bifurcation
+          <FaMoneyBillWave /> Revenue & Earnings Breakdown
         </h3>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Total Revenue */}
           <div className="bg-white p-4 rounded-lg border border-blue-100 shadow-sm">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium text-gray-600">Total Revenue</span>
@@ -623,7 +615,7 @@ const RevenueStats = () => {
             </div>
             <p className="text-2xl font-bold text-gray-800">{formatCurrency(totalRevenue)}</p>
             <div className="mt-2 text-xs text-gray-500">
-              <span className="text-blue-600">Appt:</span> {formatCurrency(summary.appointmentRevenue || 0)} |
+              <span className="text-blue-600">Appt:</span> {formatCurrency(appointmentRevenue)} |
               <span className="text-indigo-600 ml-1">Proc:</span> {formatCurrency(procedureRevenue)} |
               <span className="text-purple-600 ml-1">Lab:</span> {formatCurrency(labTestRevenue)}
             </div>
@@ -632,59 +624,65 @@ const RevenueStats = () => {
             </div>
           </div>
 
+          {/* Doctor Earnings */}
           <div className="bg-white p-4 rounded-lg border border-green-100 shadow-sm">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-gray-600">Doctor's Share</span>
+              <span className="text-sm font-medium text-gray-600">Doctor Earnings</span>
               <span className="text-xs px-2 py-1 bg-green-100 text-green-800 rounded">
-                {totalRevenue > 0 ? ((displayDoctorRevenue / totalRevenue) * 100).toFixed(1) : '0'}%
+                {totalRevenue > 0 ? ((doctorEarnings / totalRevenue) * 100).toFixed(1) : '0'}%
               </span>
             </div>
-            <p className="text-2xl font-bold text-gray-800">{formatCurrency(displayDoctorRevenue)}</p>
+            <p className="text-2xl font-bold text-gray-800">{formatCurrency(doctorEarnings)}</p>
             <div className="mt-2 text-xs text-gray-500 max-h-24 overflow-y-auto">
-              {topPerformers.doctors?.map(doc => (
-                <div key={doc.doctorId} className="flex justify-between text-xs">
-                  <span className="truncate max-w-[100px]">{doc.name}:</span>
-                  <span className="font-medium">{formatCurrency(doc.commission || 0)}</span>
-                </div>
-              ))}
+              <div className="flex justify-between text-xs">
+                <span>Commission (Part-time):</span>
+                <span className="font-medium">{formatCurrency(totalCommission)}</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span>Salary (Full-time):</span>
+                <span className="font-medium">{formatCurrency(doctorEarnings - totalCommission)}</span>
+              </div>
             </div>
             <div className="mt-2 h-2 bg-gray-200 rounded-full overflow-hidden">
               <div
                 className="h-full bg-green-500 rounded-full"
-                style={{ width: totalRevenue > 0 ? `${(displayDoctorRevenue / totalRevenue) * 100}%` : '0%' }}
+                style={{ width: totalRevenue > 0 ? `${(doctorEarnings / totalRevenue) * 100}%` : '0%' }}
               ></div>
             </div>
           </div>
 
+          {/* Hospital Revenue (Before Salary) */}
           <div className="bg-white p-4 rounded-lg border border-purple-100 shadow-sm">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-gray-600">Hospital's Share</span>
+              <span className="text-sm font-medium text-gray-600">Hospital Revenue</span>
               <span className="text-xs px-2 py-1 bg-purple-100 text-purple-800 rounded">
-                {totalRevenue > 0 ? ((displayHospitalRevenue / totalRevenue) * 100).toFixed(1) : '0'}%
+                {totalRevenue > 0 ? ((hospitalRevenue / totalRevenue) * 100).toFixed(1) : '0'}%
               </span>
             </div>
-            <p className="text-2xl font-bold text-gray-800">{formatCurrency(displayHospitalRevenue)}</p>
+            <p className="text-2xl font-bold text-gray-800">{formatCurrency(hospitalRevenue)}</p>
             <div className="mt-2 text-xs text-gray-500">
-              <div>Before Expenses</div>
-              <div className="font-medium">{formatCurrency(displayHospitalRevenue)}</div>
+              <div>Before Salary Expenses</div>
+              <div className="font-medium">{formatCurrency(hospitalRevenue)}</div>
             </div>
             <div className="mt-2 h-2 bg-gray-200 rounded-full overflow-hidden">
               <div
                 className="h-full bg-purple-500 rounded-full"
-                style={{ width: totalRevenue > 0 ? `${(displayHospitalRevenue / totalRevenue) * 100}%` : '0%' }}
+                style={{ width: totalRevenue > 0 ? `${(hospitalRevenue / totalRevenue) * 100}%` : '0%' }}
               ></div>
             </div>
           </div>
 
+          {/* Net Hospital Revenue (After Salary) */}
           <div className="bg-white p-4 rounded-lg border border-teal-100 shadow-sm">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium text-gray-600">Net Hospital Revenue</span>
               <span className="text-xs px-2 py-1 bg-teal-100 text-teal-800 rounded">
-                After Expenses
+                After Salary
               </span>
             </div>
             <p className="text-2xl font-bold text-gray-800">{formatCurrency(netHospitalRevenue)}</p>
             <div className="mt-2 text-xs text-gray-500">
+              <div>Salary Expenses: {formatCurrency(actualSalaryExpenses)}</div>
               <div>Profit Margin: {summary.profitMargin?.toFixed(1) || 0}%</div>
             </div>
             <div className="mt-2 h-2 bg-gray-200 rounded-full overflow-hidden">
@@ -703,7 +701,7 @@ const RevenueStats = () => {
             <div className="space-y-1 text-sm">
               <div className="flex justify-between">
                 <span>Appointments:</span>
-                <span className="font-medium">{formatCurrency(summary.appointmentRevenue || 0)}</span>
+                <span className="font-medium">{formatCurrency(appointmentRevenue)}</span>
               </div>
               <div className="flex justify-between">
                 <span>Procedures:</span>
@@ -715,7 +713,7 @@ const RevenueStats = () => {
               </div>
               <div className="flex justify-between">
                 <span>Pharmacy:</span>
-                <span className="font-medium">{formatCurrency(summary.pharmacyRevenue || 0)}</span>
+                <span className="font-medium">{formatCurrency(pharmacyRevenue)}</span>
               </div>
               <div className="flex justify-between pt-1 border-t">
                 <span>Total:</span>
@@ -732,9 +730,10 @@ const RevenueStats = () => {
                   <div key={doc.doctorId} className="flex flex-col text-xs border-b pb-1 last:border-0">
                     <div className="flex justify-between">
                       <span className="font-medium">{doc.name}:</span>
-                      <span className="font-medium">{formatCurrency(doc.commission || 0)}</span>
+                      <span className="font-medium">{formatCurrency(doc.earnings || doc.commission || 0)}</span>
                     </div>
                     <div className="flex justify-between text-gray-500">
+                      <span>Type: {doc.isFullTime ? 'Full-time' : 'Part-time'}</span>
                       {doc.procedureRevenue > 0 && (
                         <span>Proc: {formatCurrency(doc.procedureRevenue)}</span>
                       )}
@@ -751,7 +750,7 @@ const RevenueStats = () => {
           </div>
 
           <div className="bg-white p-3 rounded-lg border border-purple-100">
-            <h5 className="text-sm font-semibold text-purple-700 mb-2">Status Breakdown</h5>
+            <h5 className="text-sm font-semibold text-purple-700 mb-2">Status & Collection</h5>
             <div className="space-y-1 text-sm">
               <div className="flex justify-between">
                 <span>Paid:</span>
@@ -781,8 +780,8 @@ const RevenueStats = () => {
                 <span className="font-medium text-gray-800">{formatCurrency(procedureRevenue)}</span>
               </div>
               <div className="flex justify-between items-center bg-white p-2 rounded">
-                <span className="text-sm text-gray-600">Doctor's Commission</span>
-                <span className="font-medium text-green-600">{formatCurrency(procedureDoctorCommission)}</span>
+                <span className="text-sm text-gray-600">Doctor Commission</span>
+                <span className="font-medium text-green-600">{formatCurrency(procedureCommission)}</span>
               </div>
               <div className="flex justify-between items-center bg-white p-2 rounded">
                 <span className="text-sm text-gray-600">Hospital's Share</span>
@@ -825,8 +824,8 @@ const RevenueStats = () => {
                 <span className="font-medium text-gray-800">{formatCurrency(labTestRevenue)}</span>
               </div>
               <div className="flex justify-between items-center bg-white p-2 rounded">
-                <span className="text-sm text-gray-600">Doctor's Commission</span>
-                <span className="font-medium text-green-600">{formatCurrency(labTestDoctorCommission)}</span>
+                <span className="text-sm text-gray-600">Doctor Commission</span>
+                <span className="font-medium text-green-600">{formatCurrency(labTestCommission)}</span>
               </div>
               <div className="flex justify-between items-center bg-white p-2 rounded">
                 <span className="text-sm text-gray-600">Hospital's Share</span>
@@ -854,44 +853,21 @@ const RevenueStats = () => {
                 </div>
               </div>
             )}
-
-            {/* Status Breakdown */}
-            {breakdown.bySource?.labTests?.byStatus && breakdown.bySource.labTests.byStatus.length > 0 && (
-              <div className="mt-3 pt-2 border-t border-purple-200">
-                <h5 className="text-xs font-semibold text-purple-600 mb-2">By Status:</h5>
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-                  {breakdown.bySource.labTests.byStatus.map((status, idx) => (
-                    <div key={idx} className="text-xs bg-white p-1 rounded flex justify-between">
-                      <span>{status.status}:</span>
-                      <span className="font-medium">{formatCurrency(status.revenue)}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
         )}
 
         {/* Detailed breakdown */}
         <div className="mt-4 pt-4 border-t border-blue-200">
-          <h4 className="text-sm font-bold text-blue-700 mb-2">Detailed Breakdown</h4>
+          <h4 className="text-sm font-bold text-blue-700 mb-2">Financial Summary</h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Doctor Commission (Consultants)</span>
-                <span className="font-medium text-gray-800">
-                  {summary.partTimeDoctorCommission
-                    ? formatCurrency(summary.partTimeDoctorCommission)
-                    : formatCurrency(displayDoctorRevenue * 0.8)}
-                </span>
+                <span className="text-sm text-gray-600">Part-time Commission Paid</span>
+                <span className="font-medium text-gray-800">{formatCurrency(totalCommission)}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Full-time Doctor Salaries</span>
-                <span className="font-medium text-gray-800">
-                  {summary.fullTimeSalaryExpenses
-                    ? formatCurrency(summary.fullTimeSalaryExpenses)
-                    : formatCurrency(displayDoctorRevenue * 0.2)}
-                </span>
+                <span className="text-sm text-gray-600">Full-time Salaries Paid</span>
+                <span className="font-medium text-gray-800">{formatCurrency(actualSalaryExpenses)}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-gray-600">Average Invoice</span>
@@ -902,15 +878,15 @@ const RevenueStats = () => {
             </div>
             <div className="space-y-2">
               <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Hospital Operational Expenses</span>
-                <span className="font-medium text-gray-800">
-                  {formatCurrency(expenses)}
+                <span className="text-sm text-gray-600">Hospital Net Profit</span>
+                <span className={`font-medium ${netHospitalRevenue > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {formatCurrency(netHospitalRevenue)}
                 </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Net Profit Margin</span>
+                <span className="text-sm text-gray-600">Profit Margin</span>
                 <span className={`font-medium ${netHospitalRevenue > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {totalRevenue > 0 ? ((netHospitalRevenue / totalRevenue) * 100).toFixed(1) : '0.0'}%
+                  {summary.profitMargin?.toFixed(1) || 0}%
                 </span>
               </div>
               <div className="flex justify-between items-center">
@@ -926,7 +902,7 @@ const RevenueStats = () => {
         {/* Period Info */}
         <div className="mt-4 text-xs text-gray-500 flex justify-between items-center">
           <span>
-            Period: {new Date(data.period?.start).toLocaleDateString()} - {new Date(data.period?.end).toLocaleDateString()}
+            Period: {data.period?.start ? new Date(data.period.start).toLocaleDateString() : 'N/A'} - {data.period?.end ? new Date(data.period.end).toLocaleDateString() : 'N/A'}
           </span>
           <span>
             Total Invoices: {data.counts?.totalInvoices || 0} |
@@ -938,39 +914,18 @@ const RevenueStats = () => {
     );
   };
 
-  // ---------- Render: Procedure Revenue Analytics ----------
+  // ---------- Render: Procedure Revenue Analytics (UPDATED) ----------
   const renderProcedureRevenue = () => {
     if (!data) return null;
 
-    // Get data from the backend response structure
     const summary = data.summary || {};
     const breakdown = data.breakdown || {};
 
     const totalProcedureRevenue = summary.totalProcedureRevenue || 0;
     const totalProcedures = summary.totalProcedures || 0;
     const averageProcedureValue = summary.averageProcedureValue || 0;
-
-    // Calculate commission based on doctor data (default 30% if not specified)
-    const defaultCommissionPercent = 30;
-
-    // Group by doctor to calculate commissions
-    const doctorCommissions = {};
-    (breakdown.byDoctor || []).forEach(item => {
-      if (!doctorCommissions[item.doctorId]) {
-        doctorCommissions[item.doctorId] = {
-          doctorName: item.doctorName,
-          totalRevenue: 0,
-          totalCommission: 0,
-          procedures: []
-        };
-      }
-      doctorCommissions[item.doctorId].totalRevenue += item.revenue;
-      doctorCommissions[item.doctorId].totalCommission += item.commission || (item.revenue * defaultCommissionPercent / 100);
-      doctorCommissions[item.doctorId].procedures.push(item);
-    });
-
-    const totalDoctorCommission = Object.values(doctorCommissions).reduce((sum, doc) => sum + doc.totalCommission, 0);
-    const totalHospitalShare = totalProcedureRevenue - totalDoctorCommission;
+    const totalDoctorCommission = summary.totalDoctorCommission || 0;
+    const totalHospitalShare = summary.totalHospitalShare || 0;
 
     return (
       <div className="space-y-6">
@@ -1009,7 +964,7 @@ const RevenueStats = () => {
           <div className="bg-gradient-to-r from-purple-50 to-purple-100 p-4 rounded-lg border border-purple-200">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-purple-600 font-medium">Doctor's Commission</p>
+                <p className="text-sm text-purple-600 font-medium">Doctor Commission</p>
                 <p className="text-2xl font-bold text-gray-800">
                   {formatCurrency(totalDoctorCommission)}
                 </p>
@@ -1024,7 +979,7 @@ const RevenueStats = () => {
           <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-4 rounded-lg border border-blue-200">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-blue-600 font-medium">Hospital's Share</p>
+                <p className="text-sm text-blue-600 font-medium">Hospital Share</p>
                 <p className="text-2xl font-bold text-gray-800">
                   {formatCurrency(totalHospitalShare)}
                 </p>
@@ -1052,34 +1007,25 @@ const RevenueStats = () => {
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Count</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Avg Price</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">% of Total</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Doctor's Share</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Hospital's Share</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Doctor Commission</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Hospital Share</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {(breakdown.byProcedure || []).map((proc, idx) => {
-                  // Find doctor commission for this procedure (if multiple doctors perform same procedure, we need to aggregate)
-                  const procedureDoctors = (breakdown.byDoctor || []).filter(
-                    d => d.procedureCode === proc.code
-                  );
-                  const procedureCommission = procedureDoctors.reduce((sum, d) => sum + (d.commission || 0), 0);
-                  const procedureHospitalShare = proc.revenue - procedureCommission;
-
-                  return (
-                    <tr key={proc.code || idx} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 text-sm font-medium text-gray-900">{proc.name}</td>
-                      <td className="px-4 py-3 text-sm text-gray-600">{proc.code}</td>
-                      <td className="px-4 py-3 text-sm font-bold text-gray-900">{formatCurrency(proc.revenue)}</td>
-                      <td className="px-4 py-3 text-sm text-gray-600">{proc.count}</td>
-                      <td className="px-4 py-3 text-sm text-gray-600">{formatCurrency(proc.averagePrice)}</td>
-                      <td className="px-4 py-3 text-sm text-gray-600">
-                        {proc.percentage?.toFixed(1)}%
-                      </td>
-                      <td className="px-4 py-3 text-sm text-green-600">{formatCurrency(procedureCommission)}</td>
-                      <td className="px-4 py-3 text-sm text-blue-600">{formatCurrency(procedureHospitalShare)}</td>
-                    </tr>
-                  );
-                })}
+                {(breakdown.byProcedure || []).map((proc, idx) => (
+                  <tr key={proc.code || idx} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 text-sm font-medium text-gray-900">{proc.name}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{proc.code}</td>
+                    <td className="px-4 py-3 text-sm font-bold text-gray-900">{formatCurrency(proc.revenue)}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{proc.count}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{formatCurrency(proc.averagePrice)}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">
+                      {proc.percentage?.toFixed(1)}%
+                    </td>
+                    <td className="px-4 py-3 text-sm text-green-600">{formatCurrency(proc.commission || 0)}</td>
+                    <td className="px-4 py-3 text-sm text-blue-600">{formatCurrency(proc.hospitalShare || 0)}</td>
+                  </tr>
+                ))}
                 {!breakdown.byProcedure?.length && (
                   <tr>
                     <td colSpan={8} className="px-4 py-3 text-sm text-gray-500">
@@ -1102,19 +1048,26 @@ const RevenueStats = () => {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Doctor</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Procedure</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Revenue</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Commission</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Commission %</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Hospital Share</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Count</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">% of Total</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
                 {(breakdown.byDoctor || []).map((item, idx) => (
                   <tr key={`${item.doctorId}-${item.procedureCode}-${idx}`} className="hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm font-medium text-gray-900">{item.doctorName}</td>
+                    <td className="px-4 py-3 text-sm">
+                      <span className={`px-2 py-1 text-xs rounded-full ${
+                        item.isFullTime ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
+                      }`}>
+                        {item.isFullTime ? 'Full-time' : 'Part-time'}
+                      </span>
+                    </td>
                     <td className="px-4 py-3 text-sm text-gray-600">
                       {item.procedureCode} - {item.procedureName}
                     </td>
@@ -1123,7 +1076,6 @@ const RevenueStats = () => {
                     <td className="px-4 py-3 text-sm text-gray-600">{item.commissionPercentage}%</td>
                     <td className="px-4 py-3 text-sm text-blue-600">{formatCurrency(item.hospitalShare)}</td>
                     <td className="px-4 py-3 text-sm text-gray-600">{item.count}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{item.percentage?.toFixed(1)}%</td>
                   </tr>
                 ))}
                 {!breakdown.byDoctor?.length && (
@@ -1149,9 +1101,10 @@ const RevenueStats = () => {
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Department</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Revenue</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Commission</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Hospital Share</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">% of Total</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Procedures Count</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Avg per Procedure</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Count</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
@@ -1159,16 +1112,15 @@ const RevenueStats = () => {
                   <tr key={dept.departmentId || idx} className="hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm font-medium text-gray-900">{dept.departmentName}</td>
                     <td className="px-4 py-3 text-sm font-bold text-gray-900">{formatCurrency(dept.revenue)}</td>
+                    <td className="px-4 py-3 text-sm text-green-600">{formatCurrency(dept.commission || 0)}</td>
+                    <td className="px-4 py-3 text-sm text-blue-600">{formatCurrency(dept.hospitalShare || 0)}</td>
                     <td className="px-4 py-3 text-sm text-gray-600">{dept.percentage?.toFixed(1)}%</td>
                     <td className="px-4 py-3 text-sm text-gray-600">{dept.count}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">
-                      {formatCurrency(dept.revenue / dept.count)}
-                    </td>
                   </tr>
                 ))}
                 {!breakdown.byDepartment?.length && (
                   <tr>
-                    <td colSpan={5} className="px-4 py-3 text-sm text-gray-500">
+                    <td colSpan={6} className="px-4 py-3 text-sm text-gray-500">
                       No department procedure data for selected period
                     </td>
                   </tr>
@@ -1179,47 +1131,49 @@ const RevenueStats = () => {
         </div>
 
         {/* Procedure Trend Chart */}
-        <div className="bg-white p-4 rounded-lg shadow border">
-          <h3 className="font-semibold text-gray-800 mb-4">Procedure Revenue Trend</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={breakdown.daily || []}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
-              <YAxis yAxisId="left" tickFormatter={(v) => `₹${Math.round(v / 1000)}k`} />
-              <YAxis yAxisId="right" orientation="right" />
-              <Tooltip
-                formatter={(value, name) => {
-                  if (name === 'revenue') return [formatCurrency(value), 'Revenue'];
-                  if (name === 'count') return [value, 'Count'];
-                  return [value, name];
-                }}
-              />
-              <Legend />
-              <Line
-                yAxisId="left"
-                type="monotone"
-                dataKey="revenue"
-                stroke="#8884D8"
-                name="Revenue"
-                strokeWidth={2}
-              />
-              <Line
-                yAxisId="right"
-                type="monotone"
-                dataKey="count"
-                stroke="#82ca9d"
-                name="Count"
-                strokeWidth={2}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
+        {breakdown.daily && breakdown.daily.length > 0 && (
+          <div className="bg-white p-4 rounded-lg shadow border">
+            <h3 className="font-semibold text-gray-800 mb-4">Procedure Revenue Trend</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={breakdown.daily}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" />
+                <YAxis yAxisId="left" tickFormatter={(v) => `₹${Math.round(v / 1000)}k`} />
+                <YAxis yAxisId="right" orientation="right" />
+                <Tooltip
+                  formatter={(value, name) => {
+                    if (name === 'revenue') return [formatCurrency(value), 'Revenue'];
+                    if (name === 'count') return [value, 'Count'];
+                    return [value, name];
+                  }}
+                />
+                <Legend />
+                <Line
+                  yAxisId="left"
+                  type="monotone"
+                  dataKey="revenue"
+                  stroke="#8884D8"
+                  name="Revenue"
+                  strokeWidth={2}
+                />
+                <Line
+                  yAxisId="right"
+                  type="monotone"
+                  dataKey="count"
+                  stroke="#82ca9d"
+                  name="Count"
+                  strokeWidth={2}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        )}
 
         {/* Period Summary */}
         <div className="bg-gray-50 p-4 rounded-lg border text-sm text-gray-600">
           <p>
-            Showing data from <span className="font-medium">{data.period?.start}</span> to{' '}
-            <span className="font-medium">{data.period?.end}</span>
+            Showing data from <span className="font-medium">{data.period?.start ? new Date(data.period.start).toLocaleDateString() : 'N/A'}</span> to{' '}
+            <span className="font-medium">{data.period?.end ? new Date(data.period.end).toLocaleDateString() : 'N/A'}</span>
           </p>
           <p className="mt-1">
             Total unique procedures: <span className="font-medium">{summary.uniqueProcedures || 0}</span>
@@ -1229,39 +1183,18 @@ const RevenueStats = () => {
     );
   };
 
-  // ---------- NEW: Render Lab Test Revenue Analytics ----------
+  // ---------- Render: Lab Test Revenue Analytics (UPDATED) ----------
   const renderLabTestRevenue = () => {
     if (!data) return null;
 
-    // Get data from the backend response structure
     const summary = data.summary || {};
     const breakdown = data.breakdown || {};
 
     const totalLabTestRevenue = summary.totalLabTestRevenue || 0;
     const totalLabTests = summary.totalLabTests || 0;
     const averageLabTestValue = summary.averageLabTestValue || 0;
-
-    // Calculate commission based on doctor data (default 30% if not specified)
-    const defaultCommissionPercent = 30;
-
-    // Group by doctor to calculate commissions
-    const doctorCommissions = {};
-    (breakdown.byDoctor || []).forEach(item => {
-      if (!doctorCommissions[item.doctorId]) {
-        doctorCommissions[item.doctorId] = {
-          doctorName: item.doctorName,
-          totalRevenue: 0,
-          totalCommission: 0,
-          labTests: []
-        };
-      }
-      doctorCommissions[item.doctorId].totalRevenue += item.revenue;
-      doctorCommissions[item.doctorId].totalCommission += item.commission || (item.revenue * defaultCommissionPercent / 100);
-      doctorCommissions[item.doctorId].labTests.push(item);
-    });
-
-    const totalDoctorCommission = Object.values(doctorCommissions).reduce((sum, doc) => sum + doc.totalCommission, 0);
-    const totalHospitalShare = totalLabTestRevenue - totalDoctorCommission;
+    const totalDoctorCommission = summary.totalDoctorCommission || 0;
+    const totalHospitalShare = summary.totalHospitalShare || 0;
 
     return (
       <div className="space-y-6">
@@ -1300,7 +1233,7 @@ const RevenueStats = () => {
           <div className="bg-gradient-to-r from-pink-50 to-pink-100 p-4 rounded-lg border border-pink-200">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-pink-600 font-medium">Doctor's Commission</p>
+                <p className="text-sm text-pink-600 font-medium">Doctor Commission</p>
                 <p className="text-2xl font-bold text-gray-800">
                   {formatCurrency(totalDoctorCommission)}
                 </p>
@@ -1315,7 +1248,7 @@ const RevenueStats = () => {
           <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-4 rounded-lg border border-blue-200">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-blue-600 font-medium">Hospital's Share</p>
+                <p className="text-sm text-blue-600 font-medium">Hospital Share</p>
                 <p className="text-2xl font-bold text-gray-800">
                   {formatCurrency(totalHospitalShare)}
                 </p>
@@ -1356,34 +1289,25 @@ const RevenueStats = () => {
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Count</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Avg Price</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">% of Total</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Doctor's Share</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Hospital's Share</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Doctor Commission</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Hospital Share</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {(breakdown.byLabTest || []).map((test, idx) => {
-                  // Find doctor commission for this test
-                  const testDoctors = (breakdown.byDoctor || []).filter(
-                    d => d.labTestCode === test.code
-                  );
-                  const testCommission = testDoctors.reduce((sum, d) => sum + (d.commission || 0), 0);
-                  const testHospitalShare = test.revenue - testCommission;
-
-                  return (
-                    <tr key={test.code || idx} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 text-sm font-medium text-gray-900">{test.name}</td>
-                      <td className="px-4 py-3 text-sm text-gray-600">{test.code}</td>
-                      <td className="px-4 py-3 text-sm font-bold text-gray-900">{formatCurrency(test.revenue)}</td>
-                      <td className="px-4 py-3 text-sm text-gray-600">{test.count}</td>
-                      <td className="px-4 py-3 text-sm text-gray-600">{formatCurrency(test.averagePrice)}</td>
-                      <td className="px-4 py-3 text-sm text-gray-600">
-                        {test.percentage?.toFixed(1)}%
-                      </td>
-                      <td className="px-4 py-3 text-sm text-green-600">{formatCurrency(testCommission)}</td>
-                      <td className="px-4 py-3 text-sm text-blue-600">{formatCurrency(testHospitalShare)}</td>
-                    </tr>
-                  );
-                })}
+                {(breakdown.byLabTest || []).map((test, idx) => (
+                  <tr key={test.code || idx} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 text-sm font-medium text-gray-900">{test.name}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{test.code}</td>
+                    <td className="px-4 py-3 text-sm font-bold text-gray-900">{formatCurrency(test.revenue)}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{test.count}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{formatCurrency(test.averagePrice)}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">
+                      {test.percentage?.toFixed(1)}%
+                    </td>
+                    <td className="px-4 py-3 text-sm text-green-600">{formatCurrency(test.commission || 0)}</td>
+                    <td className="px-4 py-3 text-sm text-blue-600">{formatCurrency(test.hospitalShare || 0)}</td>
+                  </tr>
+                ))}
                 {!breakdown.byLabTest?.length && (
                   <tr>
                     <td colSpan={8} className="px-4 py-3 text-sm text-gray-500">
@@ -1406,19 +1330,26 @@ const RevenueStats = () => {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Doctor</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Lab Test</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Revenue</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Commission</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Commission %</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Hospital Share</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Count</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">% of Total</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
                 {(breakdown.byDoctor || []).map((item, idx) => (
                   <tr key={`${item.doctorId}-${item.labTestCode}-${idx}`} className="hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm font-medium text-gray-900">{item.doctorName}</td>
+                    <td className="px-4 py-3 text-sm">
+                      <span className={`px-2 py-1 text-xs rounded-full ${
+                        item.isFullTime ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
+                      }`}>
+                        {item.isFullTime ? 'Full-time' : 'Part-time'}
+                      </span>
+                    </td>
                     <td className="px-4 py-3 text-sm text-gray-600">
                       {item.labTestCode} - {item.labTestName}
                     </td>
@@ -1427,7 +1358,6 @@ const RevenueStats = () => {
                     <td className="px-4 py-3 text-sm text-gray-600">{item.commissionPercentage}%</td>
                     <td className="px-4 py-3 text-sm text-blue-600">{formatCurrency(item.hospitalShare)}</td>
                     <td className="px-4 py-3 text-sm text-gray-600">{item.count}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{item.percentage?.toFixed(1)}%</td>
                   </tr>
                 ))}
                 {!breakdown.byDoctor?.length && (
@@ -1453,9 +1383,10 @@ const RevenueStats = () => {
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Department</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Revenue</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Commission</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Hospital Share</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">% of Total</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tests Count</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Avg per Test</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
@@ -1463,16 +1394,15 @@ const RevenueStats = () => {
                   <tr key={dept.departmentId || idx} className="hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm font-medium text-gray-900">{dept.departmentName}</td>
                     <td className="px-4 py-3 text-sm font-bold text-gray-900">{formatCurrency(dept.revenue)}</td>
+                    <td className="px-4 py-3 text-sm text-green-600">{formatCurrency(dept.commission || 0)}</td>
+                    <td className="px-4 py-3 text-sm text-blue-600">{formatCurrency(dept.hospitalShare || 0)}</td>
                     <td className="px-4 py-3 text-sm text-gray-600">{dept.percentage?.toFixed(1)}%</td>
                     <td className="px-4 py-3 text-sm text-gray-600">{dept.count}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">
-                      {formatCurrency(dept.revenue / dept.count)}
-                    </td>
                   </tr>
                 ))}
                 {!breakdown.byDepartment?.length && (
                   <tr>
-                    <td colSpan={5} className="px-4 py-3 text-sm text-gray-500">
+                    <td colSpan={6} className="px-4 py-3 text-sm text-gray-500">
                       No department lab test data for selected period
                     </td>
                   </tr>
@@ -1483,47 +1413,49 @@ const RevenueStats = () => {
         </div>
 
         {/* Lab Test Trend Chart */}
-        <div className="bg-white p-4 rounded-lg shadow border">
-          <h3 className="font-semibold text-gray-800 mb-4">Lab Test Revenue Trend</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={breakdown.daily || []}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
-              <YAxis yAxisId="left" tickFormatter={(v) => `₹${Math.round(v / 1000)}k`} />
-              <YAxis yAxisId="right" orientation="right" />
-              <Tooltip
-                formatter={(value, name) => {
-                  if (name === 'revenue') return [formatCurrency(value), 'Revenue'];
-                  if (name === 'count') return [value, 'Count'];
-                  return [value, name];
-                }}
-              />
-              <Legend />
-              <Line
-                yAxisId="left"
-                type="monotone"
-                dataKey="revenue"
-                stroke="#9C27B0"
-                name="Revenue"
-                strokeWidth={2}
-              />
-              <Line
-                yAxisId="right"
-                type="monotone"
-                dataKey="count"
-                stroke="#FF9800"
-                name="Count"
-                strokeWidth={2}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
+        {breakdown.daily && breakdown.daily.length > 0 && (
+          <div className="bg-white p-4 rounded-lg shadow border">
+            <h3 className="font-semibold text-gray-800 mb-4">Lab Test Revenue Trend</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={breakdown.daily}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" />
+                <YAxis yAxisId="left" tickFormatter={(v) => `₹${Math.round(v / 1000)}k`} />
+                <YAxis yAxisId="right" orientation="right" />
+                <Tooltip
+                  formatter={(value, name) => {
+                    if (name === 'revenue') return [formatCurrency(value), 'Revenue'];
+                    if (name === 'count') return [value, 'Count'];
+                    return [value, name];
+                  }}
+                />
+                <Legend />
+                <Line
+                  yAxisId="left"
+                  type="monotone"
+                  dataKey="revenue"
+                  stroke="#9C27B0"
+                  name="Revenue"
+                  strokeWidth={2}
+                />
+                <Line
+                  yAxisId="right"
+                  type="monotone"
+                  dataKey="count"
+                  stroke="#FF9800"
+                  name="Count"
+                  strokeWidth={2}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        )}
 
         {/* Period Summary */}
         <div className="bg-gray-50 p-4 rounded-lg border text-sm text-gray-600">
           <p>
-            Showing data from <span className="font-medium">{data.period?.start}</span> to{' '}
-            <span className="font-medium">{data.period?.end}</span>
+            Showing data from <span className="font-medium">{data.period?.start ? new Date(data.period.start).toLocaleDateString() : 'N/A'}</span> to{' '}
+            <span className="font-medium">{data.period?.end ? new Date(data.period.end).toLocaleDateString() : 'N/A'}</span>
           </p>
           <p className="mt-1">
             Total unique lab tests: <span className="font-medium">{summary.uniqueLabTests || 0}</span>
@@ -1533,18 +1465,23 @@ const RevenueStats = () => {
     );
   };
 
-  // ---------- Render: Overview ----------
+  // ---------- Render: Overview (UPDATED) ----------
   const renderOverview = () => {
     if (!data) return null;
 
-    const totalRevenue = data.summary?.totalRevenue || 0;
+    const summary = data.summary || {};
+    const breakdown = data.breakdown || {};
+    const metrics = data.metrics || {};
+    const counts = data.counts || {};
+
+    const totalRevenue = summary.totalRevenue || 0;
 
     const pieData = [
-      { name: 'Appointments', value: data.summary?.appointmentRevenue || 0 },
-      { name: 'Pharmacy', value: data.summary?.pharmacyRevenue || 0 },
-      { name: 'Procedures', value: data.summary?.procedureRevenue || 0 },
-      { name: 'Lab Tests', value: data.summary?.labTestRevenue || 0 },
-      { name: 'Other', value: data.summary?.otherRevenue || 0 }
+      { name: 'Appointments', value: summary.appointmentRevenue || 0 },
+      { name: 'Pharmacy', value: summary.pharmacyRevenue || 0 },
+      { name: 'Procedures', value: summary.procedureRevenue || 0 },
+      { name: 'Lab Tests', value: summary.labTestRevenue || 0 },
+      { name: 'Other', value: summary.otherRevenue || 0 }
     ].filter((x) => Number(x.value) > 0);
 
     return (
@@ -1565,7 +1502,7 @@ const RevenueStats = () => {
               <FaMoneyBillWave className="text-blue-500 text-2xl" />
             </div>
             <div className="mt-2 text-xs text-gray-600">
-              {data.counts?.totalInvoices || 0} invoices
+              {counts.totalInvoices || 0} invoices
             </div>
           </div>
 
@@ -1574,28 +1511,28 @@ const RevenueStats = () => {
               <div>
                 <p className="text-sm text-green-600 font-medium">Net Revenue</p>
                 <p className="text-2xl font-bold text-gray-800 mt-1">
-                  {formatCurrency(data.summary?.netRevenue || 0)}
+                  {formatCurrency(summary.netRevenue || 0)}
                 </p>
               </div>
               <FaChartLine className="text-green-500 text-2xl" />
             </div>
             <div className="mt-2 text-xs text-gray-600">
-              Profit margin: {Number(data.metrics?.profitMargin || 0).toFixed(1)}%
+              Profit margin: {formatPercentage(metrics.profitMargin)}
             </div>
           </div>
 
           <div className="bg-gradient-to-r from-purple-50 to-purple-100 p-4 rounded-lg border border-purple-200">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-purple-600 font-medium">Expenses</p>
+                <p className="text-sm text-purple-600 font-medium">Salary Expenses</p>
                 <p className="text-2xl font-bold text-gray-800 mt-1">
-                  {formatCurrency(data.summary?.totalSalaryExpenses || 0)}
+                  {formatCurrency(summary.actualSalaryExpenses || 0)}
                 </p>
               </div>
               <FaReceipt className="text-purple-500 text-2xl" />
             </div>
             <div className="mt-2 text-xs text-gray-600">
-              {data.counts?.salariesPaid || 0} salaries paid
+              {counts.salariesPaid || 0} salaries paid
             </div>
           </div>
 
@@ -1604,13 +1541,13 @@ const RevenueStats = () => {
               <div>
                 <p className="text-sm text-teal-600 font-medium">Collection Rate</p>
                 <p className="text-2xl font-bold text-gray-800 mt-1">
-                  {Number(data.summary?.collectionRate || 0).toFixed(1)}%
+                  {formatPercentage(summary.collectionRate)}
                 </p>
               </div>
               <FaRupeeSign className="text-teal-500 text-2xl" />
             </div>
             <div className="mt-2 text-xs text-gray-600">
-              Paid invoices: {data.breakdown?.byStatus?.paid?.invoices || 0}
+              Paid invoices: {breakdown.byStatus?.paid?.invoices || 0}
             </div>
           </div>
         </div>
@@ -1642,17 +1579,17 @@ const RevenueStats = () => {
           <div className="bg-white p-4 rounded-lg shadow border">
             <h3 className="font-semibold text-gray-800 mb-4">Daily Revenue Trend</h3>
             <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={data.breakdown?.daily || []}>
+              <LineChart data={breakdown.daily || []}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="date" />
                 <YAxis tickFormatter={(v) => `₹${Math.round(v / 1000)}k`} />
                 <Tooltip formatter={(v) => formatCurrency(v)} />
                 <Legend />
-                <Line type="monotone" dataKey="revenue" stroke="#0088FE" name="Revenue" />
-                {data.breakdown?.daily?.[0]?.procedureRevenue && (
+                <Line type="monotone" dataKey="revenue" stroke="#0088FE" name="Total Revenue" />
+                {breakdown.daily?.[0]?.procedureRevenue && (
                   <Line type="monotone" dataKey="procedureRevenue" stroke="#8884D8" name="Procedure Revenue" />
                 )}
-                {data.breakdown?.daily?.[0]?.labTestRevenue && (
+                {breakdown.daily?.[0]?.labTestRevenue && (
                   <Line type="monotone" dataKey="labTestRevenue" stroke="#9C27B0" name="Lab Test Revenue" />
                 )}
               </LineChart>
@@ -1681,26 +1618,24 @@ const RevenueStats = () => {
                       <p className="text-xs text-gray-500">
                         {doctor.department && doctor.department !== 'Unknown'
                           ? getDeptName(doctor.department)
-                          : 'Unknown'}
+                          : 'Unknown'} • {doctor.isFullTime ? 'Full-time' : 'Part-time'}
                       </p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="font-bold text-gray-900">{formatCurrency(doctor.revenue)}</p>
+                    <p className="font-bold text-gray-900">{formatCurrency(doctor.revenueGenerated || doctor.revenue)}</p>
                     <p className="text-xs text-gray-500">
+                      <span className="text-green-600">Earned: {formatCurrency(doctor.earnings || doctor.commission || 0)}</span>
                       {doctor.procedureRevenue > 0 && (
-                        <span className="text-indigo-600 mr-2">
+                        <span className="text-indigo-600 ml-2">
                           Proc: {formatCurrency(doctor.procedureRevenue)}
                         </span>
                       )}
                       {doctor.labTestRevenue > 0 && (
-                        <span className="text-purple-600">
+                        <span className="text-purple-600 ml-2">
                           Lab: {formatCurrency(doctor.labTestRevenue)}
                         </span>
                       )}
-                      <div className="text-xs">
-                        Comm: {formatCurrency(doctor.commission || 0)}
-                      </div>
                     </p>
                   </div>
                 </div>
@@ -1789,24 +1724,24 @@ const RevenueStats = () => {
             <div className="text-center p-3 bg-gray-50 rounded">
               <p className="text-sm text-gray-600">Avg. Invoice Value</p>
               <p className="text-xl font-bold text-gray-800">
-                {formatCurrency(data.metrics?.averageInvoiceValue || 0)}
+                {formatCurrency(metrics.averageInvoiceValue || 0)}
               </p>
             </div>
             <div className="text-center p-3 bg-gray-50 rounded">
               <p className="text-sm text-gray-600">Avg. Daily Revenue</p>
               <p className="text-xl font-bold text-gray-800">
-                {formatCurrency(data.metrics?.averageDailyRevenue || 0)}
+                {formatCurrency(metrics.averageDailyRevenue || 0)}
               </p>
             </div>
             <div className="text-center p-3 bg-gray-50 rounded">
               <p className="text-sm text-gray-600">Expense Ratio</p>
               <p className="text-xl font-bold text-gray-800">
-                {Number(data.metrics?.expenseRatio || 0).toFixed(1)}%
+                {formatPercentage(metrics.expenseRatio)}
               </p>
             </div>
             <div className="text-center p-3 bg-gray-50 rounded">
               <p className="text-sm text-gray-600">Unique Patients</p>
-              <p className="text-xl font-bold text-gray-800">{data.counts?.uniquePatients || 0}</p>
+              <p className="text-xl font-bold text-gray-800">{counts.uniquePatients || 0}</p>
             </div>
           </div>
         </div>
@@ -1814,9 +1749,13 @@ const RevenueStats = () => {
     );
   };
 
-  // ---------- Render: Daily ----------
+  // ---------- Render: Daily (UPDATED) ----------
   const renderDailyReport = () => {
     if (!data) return null;
+
+    const summary = data.summary || {};
+    const breakdown = data.breakdown || {};
+    const metrics = data.metrics || {};
 
     return (
       <div className="space-y-6">
@@ -1827,19 +1766,19 @@ const RevenueStats = () => {
           <div className="bg-white p-4 rounded-lg shadow border">
             <p className="text-sm text-gray-600">Total Revenue</p>
             <p className="text-2xl font-bold text-gray-800">
-              {formatCurrency(data.summary?.totalRevenue || 0)}
+              {formatCurrency(summary.totalRevenue || 0)}
             </p>
           </div>
           <div className="bg-white p-4 rounded-lg shadow border">
-            <p className="text-sm text-gray-600">Net Income</p>
+            <p className="text-sm text-gray-600">Doctor Earnings</p>
             <p className="text-2xl font-bold text-gray-800">
-              {formatCurrency(data.summary?.netRevenue || 0)}
+              {formatCurrency(summary.totalDoctorEarnings || 0)}
             </p>
           </div>
           <div className="bg-white p-4 rounded-lg shadow border">
-            <p className="text-sm text-gray-600">Profit Margin</p>
+            <p className="text-sm text-gray-600">Hospital Share</p>
             <p className="text-2xl font-bold text-gray-800">
-              {Number(data.summary?.profitMargin || 0).toFixed(1)}%
+              {formatCurrency(summary.totalHospitalShare || 0)}
             </p>
           </div>
         </div>
@@ -1847,18 +1786,15 @@ const RevenueStats = () => {
         <div className="bg-white p-4 rounded-lg shadow border">
           <h3 className="font-semibold text-gray-800 mb-4">Hourly Revenue Distribution</h3>
           <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={data.breakdown?.hourly || []}>
+            <BarChart data={breakdown.hourly || []}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="hour" />
               <YAxis tickFormatter={(v) => `₹${Math.round(v / 1000)}k`} />
               <Tooltip formatter={(v) => formatCurrency(v)} />
+              <Legend />
               <Bar dataKey="revenue" fill="#0088FE" name="Total Revenue" />
-              {data.breakdown?.hourly?.[0]?.procedureRevenue && (
-                <Bar dataKey="procedureRevenue" fill="#8884D8" name="Procedure Revenue" />
-              )}
-              {data.breakdown?.hourly?.[0]?.labTestRevenue && (
-                <Bar dataKey="labTestRevenue" fill="#9C27B0" name="Lab Test Revenue" />
-              )}
+              <Bar dataKey="doctorEarnings" fill="#00C49F" name="Doctor Earnings" />
+              <Bar dataKey="hospitalShare" fill="#8884D8" name="Hospital Share" />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -1870,19 +1806,25 @@ const RevenueStats = () => {
               <thead>
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Doctor</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Department</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total Revenue</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Procedure Revenue</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Lab Test Revenue</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Doctor's Share</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Hospital's Share</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Revenue</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Earnings</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Hospital Share</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Invoices</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {(data.breakdown?.byDoctor || []).map((doc, idx) => (
+                {(breakdown.byDoctor || []).map((doc, idx) => (
                   <tr key={doc.doctorId || idx} className="hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm font-medium text-gray-900">{doc.name}</td>
+                    <td className="px-4 py-3 text-sm">
+                      <span className={`px-2 py-1 text-xs rounded-full ${
+                        doc.isFullTime ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
+                      }`}>
+                        {doc.isFullTime ? 'Full-time' : 'Part-time'}
+                      </span>
+                    </td>
                     <td className="px-4 py-3 text-sm text-gray-600">
                       {doc.department && doc.department !== 'Unknown'
                         ? getDeptName(doc.department)
@@ -1891,24 +1833,18 @@ const RevenueStats = () => {
                     <td className="px-4 py-3 text-sm font-bold text-gray-900">
                       {formatCurrency(doc.revenue)}
                     </td>
-                    <td className="px-4 py-3 text-sm text-indigo-600">
-                      {formatCurrency(doc.procedureRevenue || 0)}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-purple-600">
-                      {formatCurrency(doc.labTestRevenue || 0)}
-                    </td>
                     <td className="px-4 py-3 text-sm text-green-600">
-                      {formatCurrency(doc.commission || 0)}
+                      {formatCurrency(doc.earnings || doc.commission || 0)}
                     </td>
                     <td className="px-4 py-3 text-sm text-blue-600">
-                      {formatCurrency(doc.hospitalShare || doc.revenue - (doc.commission || 0))}
+                      {formatCurrency(doc.hospitalShare || 0)}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-600">{doc.invoices || 0}</td>
                   </tr>
                 ))}
-                {!data.breakdown?.byDoctor?.length && (
+                {!breakdown.byDoctor?.length && (
                   <tr>
-                    <td colSpan={8} className="px-4 py-3 text-sm text-gray-500">
+                    <td colSpan={7} className="px-4 py-3 text-sm text-gray-500">
                       No doctor breakdown for selected filters.
                     </td>
                   </tr>
@@ -1921,15 +1857,15 @@ const RevenueStats = () => {
         <div className="bg-white p-4 rounded-lg shadow border">
           <h3 className="font-semibold text-gray-800 mb-4">Recent Invoices</h3>
           <div className="space-y-3">
-            {(data.invoices || []).slice(0, 5).map((inv, idx) => (
+            {(data.recentInvoices || []).slice(0, 5).map((inv, idx) => (
               <div
-                key={inv.invoice_number || idx}
+                key={inv.invoiceNumber || idx}
                 className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50"
               >
                 <div>
-                  <p className="font-medium text-gray-800">{inv.invoice_number}</p>
+                  <p className="font-medium text-gray-800">{inv.invoiceNumber}</p>
                   <p className="text-xs text-gray-500">
-                    {inv.patient} • {inv.time}
+                    {inv.patient} • {inv.timeIST || inv.time}
                   </p>
                   {inv.type === 'Procedure' && (
                     <span className="text-xs bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded mt-1 inline-block">
@@ -1945,17 +1881,17 @@ const RevenueStats = () => {
                 <div className="text-right">
                   <p className="font-bold text-gray-900">{formatCurrency(inv.amount)}</p>
                   <p className="text-xs text-gray-500">
-                    {inv.status} • {inv.payment_method}
-                    {inv.commission_percentage && (
+                    {inv.status} • {inv.paymentMethod}
+                    {inv.commission && (
                       <span className="ml-2 text-green-600">
-                        (Doctor: {inv.commission_percentage}%)
+                        Comm: {formatCurrency(inv.commission)}
                       </span>
                     )}
                   </p>
                 </div>
               </div>
             ))}
-            {!data.invoices?.length && (
+            {!data.recentInvoices?.length && (
               <div className="text-sm text-gray-500">No invoices for selected day/filters.</div>
             )}
           </div>
@@ -1964,9 +1900,14 @@ const RevenueStats = () => {
     );
   };
 
-  // ---------- Render: Monthly ----------
+  // ---------- Render: Monthly (UPDATED) ----------
   const renderMonthlyReport = () => {
     if (!data) return null;
+
+    const summary = data.summary || {};
+    const breakdown = data.breakdown || {};
+    const counts = data.counts || {};
+    const metrics = data.metrics || {};
 
     return (
       <div className="space-y-6">
@@ -1978,24 +1919,24 @@ const RevenueStats = () => {
             <div>
               <p className="text-sm text-gray-600">Total Revenue</p>
               <p className="text-2xl font-bold text-gray-800">
-                {formatCurrency(data.summary?.totalRevenue || 0)}
+                {formatCurrency(summary.totalRevenue || 0)}
               </p>
             </div>
             <div>
               <p className="text-sm text-gray-600">Net Revenue</p>
               <p className="text-2xl font-bold text-gray-800">
-                {formatCurrency(data.summary?.netRevenue || 0)}
+                {formatCurrency(summary.netRevenue || 0)}
               </p>
             </div>
             <div>
-              <p className="text-sm text-gray-600">Expense Ratio</p>
+              <p className="text-sm text-gray-600">Doctor Earnings</p>
               <p className="text-2xl font-bold text-gray-800">
-                {Number(data.summary?.expenseRatio || 0).toFixed(1)}%
+                {formatCurrency(summary.totalDoctorEarnings || 0)}
               </p>
             </div>
             <div>
               <p className="text-sm text-gray-600">Business Days</p>
-              <p className="text-2xl font-bold text-gray-800">{data.counts?.businessDays || 0}</p>
+              <p className="text-2xl font-bold text-gray-800">{counts.businessDays || 0}</p>
             </div>
           </div>
 
@@ -2003,80 +1944,67 @@ const RevenueStats = () => {
           <div className="mb-6">
             <h4 className="font-semibold text-gray-800 mb-4">Weekly Breakdown</h4>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-              {(data.breakdown?.weekly || []).map((week) => (
+              {(breakdown.weekly || []).map((week) => (
                 <div key={week.week} className="bg-gray-50 p-3 rounded border">
                   <p className="text-sm font-medium text-gray-700">Week {week.week}</p>
                   <p className="text-lg font-bold text-gray-900">{formatCurrency(week.revenue)}</p>
                   <p className="text-xs text-gray-500">
-                    Procedure: {formatCurrency(week.procedureRevenue || 0)}
+                    Earnings: {formatCurrency(week.doctorEarnings || 0)}
                   </p>
                   <p className="text-xs text-gray-500">
-                    Lab: {formatCurrency(week.labTestRevenue || 0)}
+                    Hospital: {formatCurrency(week.hospitalShare || 0)}
                   </p>
                   <p className="text-xs text-gray-500">
                     Days {week.startDay}-{week.endDay}
                   </p>
                 </div>
               ))}
-              {!data.breakdown?.weekly?.length && (
+              {!breakdown.weekly?.length && (
                 <div className="text-sm text-gray-500">No weekly data.</div>
               )}
             </div>
           </div>
 
           {/* Daily Trend Chart */}
-          <div className="bg-white p-4 rounded-lg border">
-            <h4 className="font-semibold text-gray-800 mb-4">Daily Revenue</h4>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={data.breakdown?.daily || []}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" />
-                <YAxis tickFormatter={(v) => `₹${Math.round(v / 1000)}k`} />
-                <Tooltip formatter={(v) => formatCurrency(v)} />
-                <Legend />
-                <Line type="monotone" dataKey="revenue" stroke="#00C49F" name="Total Revenue" />
-                {data.breakdown?.daily?.[0]?.procedureRevenue && (
-                  <Line type="monotone" dataKey="procedureRevenue" stroke="#8884D8" name="Procedure Revenue" />
-                )}
-                {data.breakdown?.daily?.[0]?.labTestRevenue && (
-                  <Line type="monotone" dataKey="labTestRevenue" stroke="#9C27B0" name="Lab Test Revenue" />
-                )}
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
+          {breakdown.daily && breakdown.daily.length > 0 && (
+            <div className="bg-white p-4 rounded-lg border">
+              <h4 className="font-semibold text-gray-800 mb-4">Daily Revenue</h4>
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={breakdown.daily}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="date" />
+                  <YAxis tickFormatter={(v) => `₹${Math.round(v / 1000)}k`} />
+                  <Tooltip formatter={(v) => formatCurrency(v)} />
+                  <Legend />
+                  <Line type="monotone" dataKey="revenue" stroke="#00C49F" name="Total Revenue" />
+                  <Line type="monotone" dataKey="doctorEarnings" stroke="#8884D8" name="Doctor Earnings" />
+                  <Line type="monotone" dataKey="hospitalShare" stroke="#FF8042" name="Hospital Share" />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
 
           {/* Top Doctors in Month */}
           <div className="bg-white p-4 rounded-lg border mt-6">
             <h4 className="font-semibold text-gray-800 mb-4">Top Doctors (Month)</h4>
             <div className="space-y-2 max-h-96 overflow-y-auto">
-              {(data.breakdown?.byDoctor || []).slice(0, 8).map((d) => (
+              {(breakdown.byDoctor || []).slice(0, 8).map((d) => (
                 <div key={d.doctorId} className="flex justify-between items-center p-2 hover:bg-gray-50 rounded">
                   <div>
                     <p className="font-medium text-gray-800">{d.name}</p>
                     <p className="text-xs text-gray-500">
-                      {d.department && d.department !== 'Unknown' ? getDeptName(d.department) : 'Unknown'} •{' '}
-                      {d.specialization || 'N/A'}
+                      {d.isFullTime ? 'Full-time' : 'Part-time'} • {d.specialization || 'N/A'}
                     </p>
                   </div>
                   <div className="text-right">
                     <div className="font-bold">{formatCurrency(d.revenue)}</div>
                     <div className="text-xs text-gray-500">
-                      <span className="text-green-600">Comm: {formatCurrency(d.commission || 0)}</span>
-                      {d.procedureRevenue > 0 && (
-                        <span className="ml-2 text-indigo-600">
-                          Proc: {formatCurrency(d.procedureRevenue)}
-                        </span>
-                      )}
-                      {d.labTestRevenue > 0 && (
-                        <span className="ml-2 text-purple-600">
-                          Lab: {formatCurrency(d.labTestRevenue)}
-                        </span>
-                      )}
+                      <span className="text-green-600">Earned: {formatCurrency(d.earnings || d.commission || 0)}</span>
                     </div>
                   </div>
                 </div>
               ))}
-              {!data.breakdown?.byDoctor?.length && (
+              {!breakdown.byDoctor?.length && (
                 <div className="text-sm text-gray-500">No doctor data.</div>
               )}
             </div>
@@ -2086,7 +2014,7 @@ const RevenueStats = () => {
     );
   };
 
-  // ---------- Render: Doctor ----------
+  // ---------- Render: Doctor (UPDATED) ----------
   const renderDoctorRevenue = () => {
     if (!filters.selectedDoctor) {
       return (
@@ -2098,23 +2026,31 @@ const RevenueStats = () => {
 
     if (!data || !data.doctor) return null;
 
+    const doctor = data.doctor;
+    const summary = data.summary || {};
+    const breakdown = data.breakdown || {};
+
     return (
       <div className="space-y-6">
         <div className="bg-white p-6 rounded-lg shadow border">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h2 className="text-2xl font-bold text-gray-800">{data.doctor.name}</h2>
+              <h2 className="text-2xl font-bold text-gray-800">{doctor.name}</h2>
               <p className="text-gray-600">
-                {data.doctor.department && data.doctor.department !== 'Unknown'
-                  ? getDeptName(data.doctor.department)
+                {doctor.department && doctor.department !== 'Unknown'
+                  ? getDeptName(doctor.department)
                   : 'Unknown'}{' '}
-                • {data.doctor.specialization || 'N/A'}
+                • {doctor.specialization || 'N/A'}
               </p>
-              <p className="text-sm text-gray-500">License: {data.doctor.licenseNumber || 'N/A'}</p>
+              <p className="text-sm text-gray-500">
+                {doctor.isFullTime ? 'Full-time (Salaried)' : 'Part-time (Commission)'}
+              </p>
             </div>
             <div className="text-right">
-              <p className="text-3xl font-bold text-gray-800">{formatCurrency(data.summary?.totalRevenue || 0)}</p>
-              <p className="text-sm text-gray-600">Total Revenue</p>
+              <p className="text-3xl font-bold text-gray-800">{formatCurrency(summary.totalRevenue || 0)}</p>
+              <p className="text-sm text-gray-600">Revenue Generated</p>
+              <p className="text-lg font-bold text-green-600">{formatCurrency(summary.totalCommission || 0)}</p>
+              <p className="text-xs text-gray-500">Commission Earned</p>
             </div>
           </div>
 
@@ -2123,44 +2059,36 @@ const RevenueStats = () => {
             <h4 className="text-lg font-bold text-blue-800 mb-4">Revenue Distribution</h4>
             <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
               <div className="text-center p-3 bg-white rounded border">
-                <p className="text-sm text-gray-600">Doctor's Commission</p>
+                <p className="text-sm text-gray-600">Commission Earned</p>
                 <p className="text-2xl font-bold text-green-600">
-                  {formatCurrency(data.summary?.doctorCommission || 0)}
+                  {formatCurrency(summary.totalCommission || 0)}
                 </p>
                 <p className="text-xs text-gray-500">
-                  {data.doctor.revenuePercentage
-                    ? `${data.doctor.revenuePercentage}% of revenue`
-                    : '30% of revenue (estimated)'}
+                  {doctor.isFullTime ? 'Salaried' : `${doctor.revenuePercentage || 30}% of revenue`}
                 </p>
               </div>
               <div className="text-center p-3 bg-white rounded border">
                 <p className="text-sm text-gray-600">Procedure Revenue</p>
                 <p className="text-2xl font-bold text-indigo-600">
-                  {formatCurrency(data.summary?.procedureRevenue || 0)}
-                </p>
-                <p className="text-xs text-gray-500">
-                  {data.breakdown?.byService?.filter(s => s.service === 'Procedure')?.[0]?.percentage || 0}% of total
+                  {formatCurrency(breakdown.byService?.find(s => s.service === 'Procedure')?.revenue || 0)}
                 </p>
               </div>
               <div className="text-center p-3 bg-white rounded border">
                 <p className="text-sm text-gray-600">Lab Test Revenue</p>
                 <p className="text-2xl font-bold text-purple-600">
-                  {formatCurrency(data.summary?.labTestRevenue || 0)}
-                </p>
-                <p className="text-xs text-gray-500">
-                  {data.breakdown?.byService?.filter(s => s.service === 'Lab Test')?.[0]?.percentage || 0}% of total
+                  {formatCurrency(breakdown.byService?.find(s => s.service === 'Lab Test')?.revenue || 0)}
                 </p>
               </div>
               <div className="text-center p-3 bg-white rounded border">
-                <p className="text-sm text-gray-600">Procedure Commission</p>
-                <p className="text-2xl font-bold text-indigo-600">
-                  {formatCurrency(data.summary?.procedureCommission || 0)}
+                <p className="text-sm text-gray-600">Appointment Revenue</p>
+                <p className="text-2xl font-bold text-blue-600">
+                  {formatCurrency(breakdown.byService?.find(s => s.service === 'Appointment')?.revenue || 0)}
                 </p>
               </div>
               <div className="text-center p-3 bg-white rounded border">
-                <p className="text-sm text-gray-600">Lab Test Commission</p>
-                <p className="text-2xl font-bold text-purple-600">
-                  {formatCurrency(data.summary?.labTestCommission || 0)}
+                <p className="text-sm text-gray-600">Hospital Share</p>
+                <p className="text-2xl font-bold text-orange-600">
+                  {formatCurrency(summary.totalHospitalShare || 0)}
                 </p>
               </div>
             </div>
@@ -2169,24 +2097,24 @@ const RevenueStats = () => {
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
             <div className="text-center p-3 bg-blue-50 rounded">
               <p className="text-sm text-blue-600">Total Invoices</p>
-              <p className="text-xl font-bold text-gray-800">{data.summary?.totalInvoices || 0}</p>
+              <p className="text-xl font-bold text-gray-800">{summary.totalInvoices || 0}</p>
             </div>
             <div className="text-center p-3 bg-green-50 rounded">
               <p className="text-sm text-green-600">Unique Patients</p>
-              <p className="text-xl font-bold text-gray-800">{data.summary?.uniquePatients || 0}</p>
+              <p className="text-xl font-bold text-gray-800">{summary.uniquePatients || 0}</p>
             </div>
             <div className="text-center p-3 bg-indigo-50 rounded">
               <p className="text-sm text-indigo-600">Procedures</p>
-              <p className="text-xl font-bold text-gray-800">{data.summary?.procedureCount || 0}</p>
+              <p className="text-xl font-bold text-gray-800">{summary.procedureCount || 0}</p>
             </div>
             <div className="text-center p-3 bg-purple-50 rounded">
               <p className="text-sm text-purple-600">Lab Tests</p>
-              <p className="text-xl font-bold text-gray-800">{data.summary?.labTestCount || 0}</p>
+              <p className="text-xl font-bold text-gray-800">{summary.labTestCount || 0}</p>
             </div>
             <div className="text-center p-3 bg-teal-50 rounded">
               <p className="text-sm text-teal-600">Avg/Procedure</p>
               <p className="text-xl font-bold text-gray-800">
-                {formatCurrency(data.summary?.averageProcedureValue || 0)}
+                {formatCurrency(summary.averageProcedureValue || 0)}
               </p>
             </div>
           </div>
@@ -2194,35 +2122,31 @@ const RevenueStats = () => {
           <div className="bg-white p-4 rounded-lg border">
             <h4 className="font-semibold text-gray-800 mb-4">Service Breakdown</h4>
             <div className="space-y-2">
-              {(data.breakdown?.byService || []).map((s, idx) => (
+              {(breakdown.byService || []).map((s, idx) => (
                 <div key={`${s.service}-${idx}`} className="flex items-center justify-between p-2 hover:bg-gray-50 rounded">
                   <span className="text-gray-700 flex items-center gap-2">
                     {s.service === 'Procedure' && <FaSyringe className="text-indigo-500" />}
                     {s.service === 'Lab Test' && <FaFlask className="text-purple-500" />}
+                    {s.service === 'Appointment' && <FaUserMd className="text-blue-500" />}
                     {s.service}
                   </span>
                   <div className="text-right">
                     <p className="font-bold text-gray-900">{formatCurrency(s.revenue)}</p>
                     <p className="text-xs text-gray-500">
-                      {s.percentage}% of total •
+                      {s.percentage?.toFixed(1)}% of total •
                       <span className="ml-2 text-green-600">
-                        Commission: {formatCurrency(s.commission || 0)}
+                        Earned: {formatCurrency(s.commission || 0)}
                       </span>
-                      {s.service === 'Procedure' && s.count && (
-                        <span className="ml-2 text-indigo-600">
-                          ({s.count} procedures)
-                        </span>
-                      )}
-                      {s.service === 'Lab Test' && s.count && (
-                        <span className="ml-2 text-purple-600">
-                          ({s.count} tests)
+                      {s.count && (
+                        <span className="ml-2 text-gray-500">
+                          ({s.count} {s.service === 'Procedure' ? 'procedures' : s.service === 'Lab Test' ? 'tests' : 'visits'})
                         </span>
                       )}
                     </p>
                   </div>
                 </div>
               ))}
-              {!data.breakdown?.byService?.length && (
+              {!breakdown.byService?.length && (
                 <div className="text-sm text-gray-500">No service breakdown found.</div>
               )}
             </div>
@@ -2232,7 +2156,7 @@ const RevenueStats = () => {
     );
   };
 
-  // ---------- Render: Department ----------
+  // ---------- Render: Department (UPDATED) ----------
   const renderDepartmentRevenue = () => {
     if (!filters.selectedDepartment) {
       return (
@@ -2245,6 +2169,10 @@ const RevenueStats = () => {
     if (!data) return null;
 
     const deptName = getDeptName(filters.selectedDepartment);
+    const department = data.department || {};
+    const summary = data.summary || {};
+    const breakdown = data.breakdown || {};
+    const doctors = data.doctors || [];
 
     return (
       <div className="space-y-6">
@@ -2257,7 +2185,7 @@ const RevenueStats = () => {
               </p>
             </div>
             <div className="text-right">
-              <p className="text-3xl font-bold text-gray-800">{formatCurrency(data.summary?.totalRevenue || 0)}</p>
+              <p className="text-3xl font-bold text-gray-800">{formatCurrency(summary.totalRevenue || 0)}</p>
               <p className="text-sm text-gray-600">Total Revenue</p>
             </div>
           </div>
@@ -2267,39 +2195,30 @@ const RevenueStats = () => {
             <h4 className="text-lg font-bold text-blue-800 mb-4">Department Revenue Split</h4>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="text-center p-3 bg-white rounded border">
-                <p className="text-sm text-gray-600">Total Doctors Commission</p>
+                <p className="text-sm text-gray-600">Total Doctor Earnings</p>
                 <p className="text-2xl font-bold text-green-600">
-                  {formatCurrency(data.summary?.totalDoctorCommission || data.summary?.totalRevenue * 0.35)}
+                  {formatCurrency(summary.totalDoctorEarnings || 0)}
                 </p>
                 <p className="text-xs text-gray-500">
-                  Combined commission for all doctors
+                  Combined earnings for all doctors
                 </p>
               </div>
               <div className="text-center p-3 bg-white rounded border">
                 <p className="text-sm text-gray-600">Procedure Revenue</p>
                 <p className="text-2xl font-bold text-indigo-600">
-                  {formatCurrency(data.summary?.procedureRevenue || 0)}
-                </p>
-                <p className="text-xs text-gray-500">
-                  {data.breakdown?.bySource?.procedures?.percentage?.toFixed(1) || 0}% of total
+                  {formatCurrency(breakdown.bySource?.procedures?.amount || 0)}
                 </p>
               </div>
               <div className="text-center p-3 bg-white rounded border">
                 <p className="text-sm text-gray-600">Lab Test Revenue</p>
                 <p className="text-2xl font-bold text-purple-600">
-                  {formatCurrency(data.summary?.labTestRevenue || 0)}
-                </p>
-                <p className="text-xs text-gray-500">
-                  {data.breakdown?.bySource?.labTests?.percentage?.toFixed(1) || 0}% of total
+                  {formatCurrency(breakdown.bySource?.labTests?.amount || 0)}
                 </p>
               </div>
               <div className="text-center p-3 bg-white rounded border">
                 <p className="text-sm text-gray-600">Hospital Net Revenue</p>
                 <p className="text-2xl font-bold text-blue-600">
-                  {formatCurrency(data.summary?.hospitalNetRevenue || data.summary?.totalRevenue * 0.65)}
-                </p>
-                <p className="text-xs text-gray-500">
-                  After deducting doctor commissions
+                  {formatCurrency(summary.hospitalShare || 0)}
                 </p>
               </div>
             </div>
@@ -2308,23 +2227,23 @@ const RevenueStats = () => {
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
             <div className="text-center p-3 bg-blue-50 rounded">
               <p className="text-sm text-blue-600">Total Invoices</p>
-              <p className="text-xl font-bold text-gray-800">{data.summary?.totalInvoices || 0}</p>
+              <p className="text-xl font-bold text-gray-800">{summary.totalInvoices || 0}</p>
             </div>
             <div className="text-center p-3 bg-green-50 rounded">
               <p className="text-sm text-green-600">Active Doctors</p>
-              <p className="text-xl font-bold text-gray-800">{data.summary?.activeDoctors || 0}</p>
+              <p className="text-xl font-bold text-gray-800">{summary.activeDoctors || 0}</p>
             </div>
             <div className="text-center p-3 bg-indigo-50 rounded">
               <p className="text-sm text-indigo-600">Procedures</p>
-              <p className="text-xl font-bold text-gray-800">{data.summary?.procedureCount || 0}</p>
+              <p className="text-xl font-bold text-gray-800">{summary.procedureCount || 0}</p>
             </div>
             <div className="text-center p-3 bg-purple-50 rounded">
               <p className="text-sm text-purple-600">Lab Tests</p>
-              <p className="text-xl font-bold text-gray-800">{data.summary?.labTestCount || 0}</p>
+              <p className="text-xl font-bold text-gray-800">{summary.labTestCount || 0}</p>
             </div>
             <div className="text-center p-3 bg-teal-50 rounded">
               <p className="text-sm text-teal-600">Total Doctors</p>
-              <p className="text-xl font-bold text-gray-800">{data.summary?.totalDoctors || 0}</p>
+              <p className="text-xl font-bold text-gray-800">{summary.totalDoctors || 0}</p>
             </div>
           </div>
 
@@ -2335,29 +2254,37 @@ const RevenueStats = () => {
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Doctor</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Specialization</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Revenue</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Procedure Revenue</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Lab Test Revenue</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Commission</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Earnings</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Commission %</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Hospital Share</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Invoices</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {(data.breakdown?.byDoctor || []).map((d) => (
+                  {(doctors || []).map((d) => (
                     <tr key={d.id} className="hover:bg-gray-50">
                       <td className="px-4 py-3 text-sm font-medium text-gray-900">{d.name}</td>
+                      <td className="px-4 py-3 text-sm">
+                        <span className={`px-2 py-1 text-xs rounded-full ${
+                          d.isFullTime ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
+                        }`}>
+                          {d.isFullTime ? 'Full-time' : 'Part-time'}
+                        </span>
+                      </td>
                       <td className="px-4 py-3 text-sm text-gray-600">{d.specialization || 'N/A'}</td>
-                      <td className="px-4 py-3 text-sm font-bold text-gray-900">{formatCurrency(d.revenue)}</td>
-                      <td className="px-4 py-3 text-sm text-indigo-600">{formatCurrency(d.procedureRevenue || 0)}</td>
-                      <td className="px-4 py-3 text-sm text-purple-600">{formatCurrency(d.labTestRevenue || 0)}</td>
-                      <td className="px-4 py-3 text-sm text-green-600">{formatCurrency(d.commission || d.revenue * 0.3)}</td>
-                      <td className="px-4 py-3 text-sm text-gray-600">{d.commissionPercentage || '30%'}</td>
+                      <td className="px-4 py-3 text-sm font-bold text-gray-900">{formatCurrency(d.revenue || 0)}</td>
+                      <td className="px-4 py-3 text-sm text-green-600">{formatCurrency(d.earnings || d.commission || 0)}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">
+                        {d.isFullTime ? 'Salaried' : `${d.revenuePercentage || 30}%`}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-blue-600">{formatCurrency(d.hospitalShare || 0)}</td>
                       <td className="px-4 py-3 text-sm text-gray-600">{d.invoices || 0}</td>
                     </tr>
                   ))}
-                  {!data.breakdown?.byDoctor?.length && (
+                  {!doctors?.length && (
                     <tr>
                       <td colSpan={8} className="px-4 py-3 text-sm text-gray-500">
                         No doctor data found for this department/period.
@@ -2373,9 +2300,13 @@ const RevenueStats = () => {
     );
   };
 
-  // ---------- Render: Detailed ----------
+  // ---------- Render: Detailed (UPDATED) ----------
   const renderDetailedReport = () => {
     if (!data) return null;
+
+    const summary = data.summary || {};
+    const transactions = data.transactions || [];
+    const pagination = data.pagination || {};
 
     return (
       <div className="space-y-6">
@@ -2386,19 +2317,19 @@ const RevenueStats = () => {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
             <div>
               <p className="text-sm text-gray-600">Total Revenue</p>
-              <p className="text-xl font-bold text-gray-800">{formatCurrency(data.summary?.totalRevenue || 0)}</p>
+              <p className="text-xl font-bold text-gray-800">{formatCurrency(summary.totalRevenue || 0)}</p>
             </div>
             <div>
               <p className="text-sm text-gray-600">Total Paid</p>
-              <p className="text-xl font-bold text-gray-800">{formatCurrency(data.summary?.totalPaid || 0)}</p>
+              <p className="text-xl font-bold text-gray-800">{formatCurrency(summary.totalPaid || 0)}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-600">Total Pending</p>
-              <p className="text-xl font-bold text-gray-800">{formatCurrency(data.summary?.totalPending || 0)}</p>
+              <p className="text-sm text-gray-600">Total Commission</p>
+              <p className="text-xl font-bold text-gray-800">{formatCurrency(summary.totalCommission || 0)}</p>
             </div>
             <div>
               <p className="text-sm text-gray-600">Total Invoices</p>
-              <p className="text-xl font-bold text-gray-800">{data.summary?.totalInvoices || 0}</p>
+              <p className="text-xl font-bold text-gray-800">{summary.totalInvoices || 0}</p>
             </div>
           </div>
         </div>
@@ -2412,19 +2343,19 @@ const RevenueStats = () => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Patient</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Doctor</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Doctor Type</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Procedure/Lab</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Commission</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Hospital Share</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Payment</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {(data.transactions || []).map((t, idx) => {
+                {(transactions || []).map((t, idx) => {
                   const procedureInfo = t.procedure_items?.[0];
                   const labTestInfo = t.lab_test_items?.[0];
-                  const serviceType = procedureInfo ? 'Procedure' : (labTestInfo ? 'Lab Test' : 'Other');
                   
                   return (
                     <tr key={t.invoice_number || idx} className="hover:bg-gray-50">
@@ -2440,6 +2371,15 @@ const RevenueStats = () => {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {t.doctor?.name || 'Unknown'}
                       </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        {t.doctor_type && (
+                          <span className={`px-2 py-1 text-xs rounded-full ${
+                            t.doctor_type.includes('Full-time') ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
+                          }`}>
+                            {t.doctor_type}
+                          </span>
+                        )}
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span
                           className={`px-2 py-1 text-xs rounded-full ${
@@ -2452,19 +2392,6 @@ const RevenueStats = () => {
                         >
                           {t.invoice_type}
                         </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                        {t.invoice_type === 'Procedure' && procedureInfo && (
-                          <span title={procedureInfo.procedure_name}>
-                            {procedureInfo.procedure_code}
-                          </span>
-                        )}
-                        {t.invoice_type === 'Lab Test' && labTestInfo && (
-                          <span title={labTestInfo.lab_test_name}>
-                            {labTestInfo.lab_test_code}
-                          </span>
-                        )}
-                        {t.invoice_type !== 'Procedure' && t.invoice_type !== 'Lab Test' && '-'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span
@@ -2482,10 +2409,11 @@ const RevenueStats = () => {
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">
                         {formatCurrency(t.total)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                        {t.commission
-                          ? `${formatCurrency(t.commission)} (${t.commission_percentage || '30'}%)`
-                          : 'N/A'}
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600">
+                        {t.commission ? formatCurrency(t.commission) : 'N/A'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-600">
+                        {t.hospital_share ? formatCurrency(t.hospital_share) : 'N/A'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {t.payment_method || 'N/A'}
@@ -2493,9 +2421,9 @@ const RevenueStats = () => {
                     </tr>
                   );
                 })}
-                {!data.transactions?.length && (
+                {!transactions?.length && (
                   <tr>
-                    <td colSpan={10} className="px-6 py-4 text-sm text-gray-500">
+                    <td colSpan={11} className="px-6 py-4 text-sm text-gray-500">
                       No transactions found for selected filters.
                     </td>
                   </tr>
@@ -2504,12 +2432,12 @@ const RevenueStats = () => {
             </table>
           </div>
 
-          {data.pagination && (
+          {pagination && pagination.totalPages > 0 && (
             <div className="px-6 py-3 bg-gray-50 border-t flex items-center justify-between">
               <div className="text-sm text-gray-700">
-                Showing {((data.pagination.page - 1) * data.pagination.limit) + 1} to{' '}
-                {Math.min(data.pagination.page * data.pagination.limit, data.pagination.total)} of{' '}
-                {data.pagination.total} results
+                Showing {((pagination.page - 1) * pagination.limit) + 1} to{' '}
+                {Math.min(pagination.page * pagination.limit, pagination.total)} of{' '}
+                {pagination.total} results
               </div>
               <div className="flex gap-2">
                 <button
@@ -2523,9 +2451,9 @@ const RevenueStats = () => {
                 </button>
                 <button
                   onClick={() => handleFilterChange('page', filters.page + 1)}
-                  disabled={filters.page >= data.pagination.totalPages}
+                  disabled={filters.page >= pagination.totalPages}
                   className={`px-3 py-1 text-sm rounded border ${
-                    filters.page >= data.pagination.totalPages
+                    filters.page >= pagination.totalPages
                       ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                       : 'bg-white text-gray-700 hover:bg-gray-50'
                   }`}
@@ -2577,7 +2505,7 @@ const RevenueStats = () => {
           {doctors.map((d) => (
             <option key={d._id} value={d._id}>
               {d.firstName} {d.lastName}{' '}
-              {d.department ? `(${getDeptName(d.department)})` : ''}
+              {d.department ? `(${getDeptName(d.department)})` : ''} {d.isFullTime ? '(Full-time)' : '(Part-time)'}
             </option>
           ))}
         </select>
@@ -2941,7 +2869,7 @@ const RevenueStats = () => {
                 <option value="">Select Doctor</option>
                 {doctors.map((d) => (
                   <option key={d._id} value={d._id}>
-                    {d.firstName} {d.lastName}
+                    {d.firstName} {d.lastName} {d.isFullTime ? '(Full-time)' : '(Part-time)'}
                   </option>
                 ))}
               </select>
@@ -3201,7 +3129,7 @@ const RevenueStats = () => {
                 setActiveTab(tab.id);
                 handleFilterChange('page', 1);
               }}
-              className={`flex items-center gap-1 px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+              className={`flex items-center gap-1 px-3.5 py-3 text-sm font-medium border-b-2 transition-colors ${
                 activeTab === tab.id
                   ? 'border-teal-600 text-teal-600 bg-teal-50'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'

@@ -5,7 +5,7 @@ import { pharmacySidebar } from '../../../constants/sidebarItems/pharmacySidebar
 
 const Inventory = () => {
   return (
-    <Layout sidebarItems={pharmacySidebar}section="Pharmacy">
+    <Layout sidebarItems={pharmacySidebar} section="Pharmacy" resetProgress={()=>{}}>
       <PharmacyDashboard />
     </Layout>
   );

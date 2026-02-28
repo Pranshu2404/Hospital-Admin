@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   FaTruck,
   FaExclamationTriangle,
@@ -7,14 +7,17 @@ import {
   FaPlus,
   FaCalendarTimes,
   FaShoppingCart,
-  FaUsers,
+  FaBoxes,
   FaFileInvoiceDollar,
   FaPrescription,
   FaChartLine,
-  FaBoxes,
   FaChevronRight,
   FaFilter,
-  FaEye
+  FaEye,
+  FaCalendarCheck,
+  FaClock,
+  FaHeartbeat,
+  FaCheckCircle
 } from 'react-icons/fa';
 import apiClient from '../../../api/apiClient';
 import dayjs from 'dayjs';
@@ -57,10 +60,27 @@ ChartJS.register(
 
 dayjs.extend(relativeTime);
 
-// --- Custom Styles for Charts Override ---
-const chartStyles = `
-  .chart-container { position: relative; height: 100%; width: 100%; }
-  .chart-tooltip { background: white; border-radius: 8px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); padding: 8px 12px; }
+// --- Custom Styles ---
+const dashboardStyles = `
+  .stat-card-hover {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .stat-card-hover:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.05), 0 8px 10px -6px rgb(0 0 0 / 0.02);
+  }
+  .pulse-dot {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(1.1); }
+  }
+  .chart-container { 
+    position: relative; 
+    height: 100%; 
+    width: 100%; 
+  }
 `;
 
 // Color Palette
@@ -75,7 +95,7 @@ const COLORS = {
   slate: '#64748b'
 };
 
-const ExpiryAlertBar = ({ medicines }) => {
+const ExpiryAlertBar = ({ medicines, onViewAll }) => {
   if (!medicines || medicines.length === 0) {
     return null;
   }
@@ -84,36 +104,105 @@ const ExpiryAlertBar = ({ medicines }) => {
   const remainingCount = medicines.length - 3;
 
   return (
-    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-red-50 to-orange-50 border border-red-200 p-4 mb-8 shadow-sm">
+    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 p-5 mb-8 shadow-sm">
       <div className="flex items-start gap-4">
-        <div className="p-3 bg-white rounded-xl shadow-sm border border-red-100">
-          <FaCalendarTimes className="text-red-600 text-2xl" />
+        <div className="p-3 bg-white rounded-xl shadow-sm border border-amber-100">
+          <FaCalendarTimes className="text-amber-600 text-xl" />
         </div>
         <div className="flex-1">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <h3 className="font-bold text-red-800 text-lg">Expiry Alert!</h3>
-              <p className="text-sm text-red-600 mt-1">
-                {medicines.length} medicine(s) expiring soon: <strong className="font-semibold">{medicineNames}</strong>
-                {remainingCount > 0 && ` and ${remainingCount} more...`}
+              <div className="flex items-center gap-2">
+                <h3 className="font-bold text-amber-800 text-lg">Expiry Alert!</h3>
+                <span className="bg-amber-200 text-amber-800 text-xs px-2 py-0.5 rounded-full font-medium">
+                  {medicines.length} items
+                </span>
+              </div>
+              <p className="text-sm text-amber-700 mt-1">
+                Expiring soon: <span className="font-semibold">{medicineNames}</span>
+                {remainingCount > 0 && ` and ${remainingCount} more`}
               </p>
             </div>
-            <button className="text-sm font-semibold text-red-700 hover:text-red-800 px-3 py-1 bg-white border border-red-200 rounded-lg hover:bg-red-50 transition-colors">
+            <button 
+              onClick={onViewAll}
+              className="text-sm font-semibold text-amber-700 hover:text-amber-800 px-4 py-2 bg-white border border-amber-200 rounded-lg hover:bg-amber-50 transition-colors"
+            >
               View All
             </button>
           </div>
         </div>
       </div>
       {/* Decorative elements */}
-      <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-red-100/50 rounded-full blur-2xl"></div>
-      <div className="absolute top-0 left-0 w-16 h-16 bg-red-100/30 rounded-full blur-xl"></div>
+      <div className="absolute -bottom-4 -right-4 w-32 h-32 bg-amber-200/30 rounded-full blur-3xl"></div>
+      <div className="absolute top-0 left-0 w-24 h-24 bg-amber-200/20 rounded-full blur-2xl"></div>
+    </div>
+  );
+};
+
+// Custom Stat Card Component (redesigned to match other dashboards)
+const StatCard = ({ title, value, icon: Icon, color, onClick, linkTo, change, changeColor = 'text-slate-500' }) => {
+  const navigate = useNavigate();
+  
+  const handleClick = () => {
+    if (linkTo) navigate(linkTo);
+    else if (onClick) onClick();
+  };
+
+  const colorClasses = {
+    teal: 'bg-teal-50 text-teal-600 border-teal-100',
+    blue: 'bg-blue-50 text-blue-600 border-blue-100',
+    orange: 'bg-orange-50 text-orange-600 border-orange-100',
+    purple: 'bg-purple-50 text-purple-600 border-purple-100',
+    indigo: 'bg-indigo-50 text-indigo-600 border-indigo-100',
+    red: 'bg-red-50 text-red-600 border-red-100',
+    gray: 'bg-slate-50 text-slate-600 border-slate-100',
+    green: 'bg-emerald-50 text-emerald-600 border-emerald-100'
+  };
+
+  const iconBgColors = {
+    teal: 'bg-teal-600',
+    blue: 'bg-blue-600',
+    orange: 'bg-orange-500',
+    purple: 'bg-purple-600',
+    indigo: 'bg-indigo-600',
+    red: 'bg-red-500',
+    gray: 'bg-slate-500',
+    green: 'bg-emerald-600'
+  };
+
+  return (
+    <div
+      onClick={handleClick}
+      className="stat-card-hover relative overflow-hidden rounded-2xl p-6 cursor-pointer bg-white border border-slate-200 shadow-sm group"
+    >
+      <div className="flex items-start justify-between relative z-10">
+        <div className="space-y-2">
+          <p className="text-slate-500 text-xs font-bold uppercase tracking-wider">{title}</p>
+          <div>
+            <h3 className="text-3xl font-bold text-slate-800">{value}</h3>
+            {change && (
+              <p className={`text-xs font-medium mt-2 flex items-center gap-1 ${changeColor}`}>
+                <span className="w-1 h-1 rounded-full bg-current"></span>
+                {change}
+              </p>
+            )}
+          </div>
+        </div>
+        <div className={`p-3 rounded-xl ${iconBgColors[color]} text-white shadow-lg group-hover:scale-110 transition-transform duration-300`}>
+          <Icon size={22} />
+        </div>
+      </div>
+      <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-white/20 rounded-full blur-2xl group-hover:bg-white/30 transition-colors"></div>
     </div>
   );
 };
 
 const PharmacyDashboard = () => {
+  const navigate = useNavigate();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [currentTime, setCurrentTime] = useState(dayjs());
+  const [hospital, setHospital] = useState(null);
   const [dashboardData, setDashboardData] = useState({
     stats: {
       totalMedicines: 0,
@@ -135,7 +224,27 @@ const PharmacyDashboard = () => {
     categoryDistribution: []
   });
 
-  // Enhanced Chart Data
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(dayjs()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Fetch hospital data
+  useEffect(() => {
+    const fetchHospitalData = async () => {
+      try {
+        const res = await apiClient.get('/hospitals');
+        if (res.data && res.data.length > 0) {
+          setHospital(res.data[0]);
+        }
+      } catch (err) {
+        console.error('Failed to fetch hospital data:', err);
+      }
+    };
+    fetchHospitalData();
+  }, []);
+
+  // Enhanced Chart Data (unchanged)
   const salesChartData = {
     labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
     datasets: [{
@@ -157,15 +266,7 @@ const PharmacyDashboard = () => {
     maintainAspectRatio: false,
     plugins: {
       legend: {
-        position: 'top',
-        labels: {
-          usePointStyle: true,
-          padding: 20,
-          font: {
-            family: "'Inter', sans-serif",
-            size: 12
-          }
-        }
+        display: false,
       },
       tooltip: {
         backgroundColor: 'white',
@@ -173,7 +274,8 @@ const PharmacyDashboard = () => {
         bodyColor: '#475569',
         borderColor: '#e2e8f0',
         borderWidth: 1,
-        boxPadding: 10,
+        padding: 12,
+        boxPadding: 6,
         usePointStyle: true,
         callbacks: {
           label: function (context) {
@@ -190,9 +292,7 @@ const PharmacyDashboard = () => {
         },
         ticks: {
           color: '#64748b',
-          font: {
-            size: 12
-          }
+          font: { size: 12 }
         }
       },
       y: {
@@ -205,9 +305,7 @@ const PharmacyDashboard = () => {
           callback: function (value) {
             return '₹' + (value / 1000) + 'k';
           },
-          font: {
-            size: 12
-          }
+          font: { size: 12 }
         }
       }
     }
@@ -326,47 +424,12 @@ const PharmacyDashboard = () => {
     }).format(amount);
   };
 
-  // Custom Stat Card Component (inline for consistency)
-  const StatCard = ({ title, value, icon: Icon, color, onClick, linkTo, change, changeColor = 'text-slate-500' }) => {
-    const CardComponent = linkTo ? Link : 'div';
-    const cardProps = linkTo ? { to: linkTo } : onClick ? { onClick } : {};
-
-    const colorClasses = {
-      teal: 'bg-teal-50 text-teal-600 border-teal-100',
-      blue: 'bg-blue-50 text-blue-600 border-blue-100',
-      orange: 'bg-orange-50 text-orange-600 border-orange-100',
-      purple: 'bg-purple-50 text-purple-600 border-purple-100',
-      indigo: 'bg-indigo-50 text-indigo-600 border-indigo-100',
-      red: 'bg-red-50 text-red-600 border-red-100',
-      gray: 'bg-slate-50 text-slate-600 border-slate-100',
-      green: 'bg-emerald-50 text-emerald-600 border-emerald-100'
-    };
-
-    return (
-      <CardComponent
-        {...cardProps}
-        className={`block p-5 rounded-2xl border transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 ${colorClasses[color] || colorClasses.teal} cursor-pointer`}
-      >
-        <div className="flex justify-between items-start">
-          <div>
-            <p className="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">{title}</p>
-            <h3 className="text-3xl font-bold text-slate-800">{value}</h3>
-            {change && <p className={`text-xs font-medium mt-2 ${changeColor}`}>{change}</p>}
-          </div>
-          <div className={`p-3 rounded-xl ${colorClasses[color].split(' ')[0]}`}>
-            <Icon size={22} />
-          </div>
-        </div>
-      </CardComponent>
-    );
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50/50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600 mx-auto"></div>
-          <p className="mt-4 text-slate-500 font-medium">Loading pharmacy dashboard...</p>
+          <div className="w-16 h-16 border-4 border-teal-200 border-t-teal-600 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-slate-500 font-medium">Loading pharmacy dashboard...</p>
         </div>
       </div>
     );
@@ -374,39 +437,36 @@ const PharmacyDashboard = () => {
 
   return (
     <>
-      <style>{chartStyles}</style>
+      <style>{dashboardStyles}</style>
       <div className="min-h-screen bg-slate-50/50 p-6 font-sans">
 
-        {/* Header */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-8">
+        {/* Header with Hospital Info - Matching other dashboards */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between mb-8">
           <div>
-            <h1 className="text-2xl font-bold text-slate-800">Pharmacy Dashboard</h1>
-            <p className="text-slate-500 text-sm mt-1">Comprehensive overview of pharmacy operations</p>
+            <div className="flex items-center gap-3 mb-2">
+              <h1 className="text-3xl font-bold text-slate-800">Pharmacy Dashboard</h1>
+            </div>
+            <p className="text-slate-500 text-sm">Comprehensive overview of pharmacy operations</p>
           </div>
-          <div className="mt-4 lg:mt-0 flex items-center gap-3">
-            <div className="bg-white px-4 py-2 rounded-xl shadow-sm border border-slate-200 flex items-center gap-2 text-slate-600">
-              <FaCalendarTimes className="text-teal-500" />
+          <div className="mt-4 md:mt-0 flex flex-col sm:flex-row gap-3">
+            <div className="bg-white px-4 py-2 rounded-lg shadow-sm border border-slate-200 flex items-center gap-2 text-slate-600">
+              <FaCalendarCheck className="text-teal-500" />
               <span className="font-medium text-sm">{dayjs().format('dddd, MMMM D, YYYY')}</span>
             </div>
-            <Link
-              to="/dashboard/pharmacy/add-medicine"
-              className="flex items-center gap-2 bg-white text-slate-700 font-semibold px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 transition-colors shadow-sm"
-            >
-              <FaPlus /> Add Medicine
-            </Link>
-            <Link
-              to="/dashboard/pharmacy/pos"
-              className="flex items-center gap-2 bg-teal-600 text-white font-semibold px-5 py-2.5 rounded-xl hover:bg-teal-700 shadow-lg shadow-teal-600/20 transition-all hover:-translate-y-0.5"
-            >
-              <FaShoppingCart /> POS System
-            </Link>
+            <div className="bg-gradient-to-r from-teal-50 to-emerald-50 px-4 py-2 rounded-lg shadow-sm border border-teal-200 flex items-center gap-2">
+              <div className="w-2 h-2 bg-teal-500 rounded-full animate-pulse"></div>
+              <span className="font-bold text-teal-700 font-mono text-sm tracking-wide">{currentTime.format('HH:mm:ss')}</span>
+            </div>
           </div>
         </div>
 
-        {/* Expiry Alert Bar */}
-        <ExpiryAlertBar medicines={dashboardData.expiringSoon} />
+        {/* Expiry Alert Bar - Redesigned */}
+        <ExpiryAlertBar 
+          medicines={dashboardData.expiringSoon} 
+          onViewAll={() => setIsModalOpen(true)}
+        />
 
-        {/* Statistics Grid - 8 Cards */}
+        {/* Statistics Grid - 8 Cards - Redesigned to match */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <StatCard
             title="Total Medicines"
@@ -422,15 +482,15 @@ const PharmacyDashboard = () => {
             icon={FaTruck}
             color="blue"
             linkTo="/dashboard/pharmacy/suppliers"
-            change="Active suppliers"
+            change="Active partners"
           />
           <StatCard
-            title="Expiring Soon"
+            title="Expiring This Month"
             value={dashboardData.stats.expiringThisMonthCount}
-            icon={FaExclamationTriangle}
+            icon={FaCalendarTimes}
             color="orange"
             onClick={() => setIsModalOpen(true)}
-            change="View details"
+            change="Check details"
             changeColor="text-orange-600"
           />
           <StatCard
@@ -439,7 +499,7 @@ const PharmacyDashboard = () => {
             icon={FaMoneyBillWave}
             color="teal"
             linkTo="/dashboard/pharmacy/history"
-            change="Sales performance"
+            change="Daily earnings"
             changeColor="text-teal-600"
           />
           <StatCard
@@ -448,7 +508,7 @@ const PharmacyDashboard = () => {
             icon={FaShoppingCart}
             color="purple"
             linkTo="/dashboard/pharmacy/history"
-            change="Transactions today"
+            change="Today's transactions"
           />
           <StatCard
             title="Prescriptions"
@@ -456,15 +516,15 @@ const PharmacyDashboard = () => {
             icon={FaPrescription}
             color="indigo"
             linkTo="/dashboard/pharmacy/prescriptions/list"
-            change="Active prescriptions"
+            change="Pending fulfillment"
           />
           <StatCard
-            title="Low Stock"
+            title="Low Stock Alert"
             value={dashboardData.stats.lowStockCount}
             icon={FaExclamationTriangle}
             color="red"
             linkTo="/dashboard/pharmacy/low-stock"
-            change="Need restocking"
+            change="Needs restocking"
             changeColor="text-red-600"
           />
           <StatCard
@@ -473,7 +533,7 @@ const PharmacyDashboard = () => {
             icon={FaFileInvoiceDollar}
             color="gray"
             linkTo="/dashboard/pharmacy/expired"
-            change="Needs attention"
+            change="Requires disposal"
             changeColor="text-slate-600"
           />
         </div>
@@ -481,15 +541,21 @@ const PharmacyDashboard = () => {
         {/* Charts and Quick Actions */}
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 mb-8">
           {/* Sales Chart (2/3 width) */}
-          <div className="xl:col-span-2 space-y-8">
+          <div className="xl:col-span-2">
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
               <div className="flex justify-between items-center mb-6">
                 <div>
-                  <h2 className="text-lg font-bold text-slate-800">Sales Overview</h2>
-                  <p className="text-slate-500 text-sm">Last 7 days performance</p>
+                  <div className="flex items-center gap-2">
+                    <FaChartLine className="text-teal-600" />
+                    <h2 className="text-lg font-bold text-slate-800">Sales Overview</h2>
+                  </div>
+                  <p className="text-slate-500 text-sm mt-1">Last 7 days performance</p>
                 </div>
-                <Link to="/dashboard/pharmacy/reports/sales" className="text-sm font-semibold text-teal-600 hover:text-teal-700 hover:bg-teal-50 px-3 py-1 rounded-lg transition-colors">
-                  View Report <FaChevronRight className="inline ml-1" size={10} />
+                <Link 
+                  to="/dashboard/pharmacy/reports/sales" 
+                  className="text-sm font-semibold text-teal-600 hover:text-teal-700 hover:bg-teal-50 px-4 py-2 rounded-lg transition-colors flex items-center gap-1"
+                >
+                  View Report <FaChevronRight size={10} />
                 </Link>
               </div>
               <div className="h-[300px]">
@@ -500,18 +566,30 @@ const PharmacyDashboard = () => {
 
           {/* Right Column: Quick Actions & Stock Alerts */}
           <div className="space-y-8">
+            {/* Quick Actions - Redesigned to match other dashboards */}
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
               <h3 className="text-lg font-bold text-slate-800 mb-4">Quick Actions</h3>
-              <QuickActions />
-            </div>
-
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-              <h3 className="text-lg font-bold text-slate-800 mb-4">Stock Alerts</h3>
-              <StockAlerts
-                lowStockCount={dashboardData.stats.lowStockCount}
-                expiringCount={dashboardData.stats.expiringThisMonthCount}
-                expiredCount={dashboardData.stats.expiredStockCount}
-              />
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { label: 'Add Medicine', icon: FaPlus, path: '/dashboard/pharmacy/add-medicine', color: 'teal' },
+                  { label: 'POS System', icon: FaShoppingCart, path: '/dashboard/pharmacy/pos', color: 'green' },
+                  { label: 'New Sale', icon: FaMoneyBillWave, path: '/dashboard/pharmacy/pos', color: 'blue' },
+                  { label: 'Suppliers', icon: FaTruck, path: '/dashboard/pharmacy/suppliers', color: 'purple' }
+                ].map((item) => (
+                  <div
+                    key={item.label}
+                    onClick={() => navigate(item.path)}
+                    className="group flex flex-col items-center justify-center p-4 rounded-xl border border-slate-100 bg-slate-50/30 hover:bg-white hover:border-teal-200 hover:shadow-lg transition-all duration-300 cursor-pointer"
+                  >
+                    <div className={`p-2.5 bg-white rounded-lg text-${item.color}-600 shadow-sm mb-2 group-hover:scale-110 group-hover:bg-${item.color}-500 group-hover:text-white transition-all duration-300`}>
+                      <item.icon className="w-5 h-5" />
+                    </div>
+                    <span className="text-xs font-medium text-slate-600 group-hover:text-teal-700 text-center">
+                      {item.label}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -519,45 +597,59 @@ const PharmacyDashboard = () => {
         {/* Bottom Grid - Recent Activity */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
           {/* Recent Sales */}
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-            <div className="flex justify-between items-center mb-6">
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
               <div>
-                <h2 className="text-lg font-bold text-slate-800">Recent Sales</h2>
-                <p className="text-slate-500 text-sm">Latest transactions</p>
+                <h3 className="text-lg font-bold text-slate-800">Recent Sales</h3>
+                <p className="text-xs text-slate-500 mt-1">Latest transactions</p>
               </div>
-              <Link to="/dashboard/pharmacy/history" className="text-sm font-semibold text-teal-600 hover:text-teal-700 hover:bg-teal-50 px-3 py-1 rounded-lg transition-colors">
-                View All <FaChevronRight className="inline ml-1" size={10} />
+              <Link 
+                to="/dashboard/pharmacy/history" 
+                className="text-sm font-semibold text-teal-600 hover:text-teal-700 hover:bg-teal-50 px-4 py-2 rounded-lg transition-colors"
+              >
+                View All
               </Link>
             </div>
-            <RecentSalesTable sales={dashboardData.recentSales} />
+            <div className="p-6">
+              <RecentSalesTable sales={dashboardData.recentSales} />
+            </div>
           </div>
 
           {/* Recent Prescriptions */}
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-            <div className="flex justify-between items-center mb-6">
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
               <div>
-                <h2 className="text-lg font-bold text-slate-800">Recent Prescriptions</h2>
-                <p className="text-slate-500 text-sm">Latest prescriptions issued</p>
+                <h3 className="text-lg font-bold text-slate-800">Recent Prescriptions</h3>
+                <p className="text-xs text-slate-500 mt-1">Latest prescriptions issued</p>
               </div>
-              <Link to="/dashboard/pharmacy/prescriptions/list" className="text-sm font-semibold text-teal-600 hover:text-teal-700 hover:bg-teal-50 px-3 py-1 rounded-lg transition-colors">
-                View All <FaChevronRight className="inline ml-1" size={10} />
+              <Link 
+                to="/dashboard/pharmacy/prescriptions/list" 
+                className="text-sm font-semibold text-teal-600 hover:text-teal-700 hover:bg-teal-50 px-4 py-2 rounded-lg transition-colors"
+              >
+                View All
               </Link>
             </div>
-            <RecentPrescriptions prescriptions={dashboardData.recentPrescriptions} />
+            <div className="p-6">
+              <RecentPrescriptions prescriptions={dashboardData.recentPrescriptions} />
+            </div>
           </div>
         </div>
 
-        {/* Category Distribution */}
+        {/* Category Distribution - Redesigned */}
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
           <div className="flex justify-between items-center mb-6">
             <div>
-              <h2 className="text-lg font-bold text-slate-800">Medicine Categories</h2>
-              <p className="text-slate-500 text-sm">Inventory distribution by category</p>
+              <div className="flex items-center gap-2">
+                <FaBoxes className="text-teal-600" />
+                <h2 className="text-lg font-bold text-slate-800">Medicine Categories</h2>
+              </div>
+              <p className="text-slate-500 text-sm mt-1">Inventory distribution by category</p>
             </div>
-            <button className="flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-slate-800 hover:bg-slate-50 px-3 py-1 rounded-lg transition-colors">
+            <button className="flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-slate-800 hover:bg-slate-50 px-4 py-2 rounded-lg transition-colors">
               <FaFilter size={12} /> Filter
             </button>
           </div>
+          
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <div className="h-[300px]">
               <Doughnut
@@ -571,11 +663,8 @@ const PharmacyDashboard = () => {
                       labels: {
                         usePointStyle: true,
                         padding: 20,
-                        boxWidth: 12,
-                        font: {
-                          family: "'Inter', sans-serif",
-                          size: 12
-                        }
+                        boxWidth: 10,
+                        font: { size: 12 }
                       }
                     },
                     tooltip: {
@@ -584,6 +673,7 @@ const PharmacyDashboard = () => {
                       bodyColor: '#475569',
                       borderColor: '#e2e8f0',
                       borderWidth: 1,
+                      padding: 12,
                       usePointStyle: true,
                       callbacks: {
                         label: function (context) {
@@ -594,37 +684,35 @@ const PharmacyDashboard = () => {
                       }
                     }
                   },
-                  cutout: '60%',
+                  cutout: '65%',
                 }}
               />
             </div>
 
             {/* Category Breakdown List */}
-            <div>
-              <div className="space-y-4">
-                {dashboardData.categoryDistribution.map((category, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 rounded-xl bg-slate-50/50 border border-slate-100 hover:bg-slate-50 transition-colors group">
-                    <div className="flex items-center gap-3">
-                      <div
-                        className="w-3 h-3 rounded-full"
-                        style={{ backgroundColor: category.color || categoryColors[index % categoryColors.length] }}
-                      />
-                      <div>
-                        <p className="font-semibold text-slate-800 text-sm">{category.name}</p>
-                        <p className="text-xs text-slate-500">{category.value} medicines</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-bold text-slate-700">
-                        {Math.round((category.value / dashboardData.stats.totalMedicines) * 100)}%
-                      </span>
-                      <button className="p-1.5 text-slate-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100">
-                        <FaEye size={12} />
-                      </button>
+            <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
+              {dashboardData.categoryDistribution.map((category, index) => (
+                <div key={index} className="flex items-center justify-between p-3 rounded-xl bg-slate-50/50 border border-slate-100 hover:bg-slate-50 transition-colors group">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: category.color || categoryColors[index % categoryColors.length] }}
+                    />
+                    <div>
+                      <p className="font-semibold text-slate-800 text-sm">{category.name}</p>
+                      <p className="text-xs text-slate-500">{category.value} medicines</p>
                     </div>
                   </div>
-                ))}
-              </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-bold text-slate-700">
+                      {Math.round((category.value / dashboardData.stats.totalMedicines) * 100)}%
+                    </span>
+                    <button className="p-1.5 text-slate-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100">
+                      <FaEye size={12} />
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
