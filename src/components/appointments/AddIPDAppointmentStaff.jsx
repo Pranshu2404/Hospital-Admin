@@ -31,7 +31,6 @@ const priorityOptions = [
 ];
 
 const salutationOptions = [
-  { value: '', label: 'Select Salutation' },
   { value: 'Mr.', label: 'Mr.' },
   { value: 'Mrs.', label: 'Mrs.' },
   { value: 'Ms.', label: 'Ms.' },
@@ -43,14 +42,12 @@ const salutationOptions = [
 ];
 
 const genderOptions = [
-  { value: '', label: 'Select Gender' },
   { value: 'male', label: 'Male' },
   { value: 'female', label: 'Female' },
   { value: 'other', label: 'Other' }
 ];
 
 const bloodGroupOptions = [
-  { value: '', label: 'Select Blood Group' },
   { value: 'A+', label: 'A+' },
   { value: 'A-', label: 'A-' },
   { value: 'B+', label: 'B+' },

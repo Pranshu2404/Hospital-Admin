@@ -138,7 +138,7 @@ const AddStaffForm = () => {
     { value: 'Surgeon', label: 'Surgeon' },
     { value: 'Anesthesiologist', label: 'Anesthesiologist' },
     { value: 'Accountant', label: 'Accountant' },
-    { value: 'Receptionist', label: 'Receptionist' },
+    // { value: 'Receptionist', label: 'Receptionist' },
     { value: 'Cleaner', label: 'Cleaner' },
     { value: 'Security Guard', label: 'Security Guard' },
     { value: 'Ambulance Driver', label: 'Ambulance Driver' },

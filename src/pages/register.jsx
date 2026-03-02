@@ -265,10 +265,6 @@ const PreviewDetails = ({ form, isdCode, stateName, cityName, pincode }) => {
               <span className="text-gray-900">{form.hospitalName || 'Not provided'}</span>
             </div>
             <div className="flex">
-              <span className="font-medium text-gray-600 w-32">Hospital ID:</span>
-              <span className="text-gray-900 font-mono">{form.hospitalID || 'Not provided'}</span>
-            </div>
-            <div className="flex">
               <span className="font-medium text-gray-600 w-32">Registry No:</span>
               <span className="text-gray-900">{form.registryNo || 'Not provided'}</span>
             </div>
@@ -278,7 +274,7 @@ const PreviewDetails = ({ form, isdCode, stateName, cityName, pincode }) => {
             </div>
             <div className="flex">
               <span className="font-medium text-gray-600 w-32">License No:</span>
-              <span className="text-gray-900">{form.companyNumber || 'Not provided'}</span>
+              <span className="text-gray-900">{form.licenseNumber || 'Not provided'}</span>
             </div>
             {form.logo && (
               <div className="mt-3">
@@ -397,7 +393,6 @@ export default function Register() {
   const [fieldErrors, setFieldErrors] = useState({});
   const [phoneType, setPhoneType] = useState('mobile'); // 'mobile' or 'landline'
   const [manualIsdCode, setManualIsdCode] = useState('');
-  const [hospitalIDTouched, setHospitalIDTouched] = useState(false);
 
   const config = {
     headers: {
@@ -407,8 +402,8 @@ export default function Register() {
 
   const [form, setForm] = useState({
     // Step 1
-    hospitalName: '', hospitalID: '', registryNo: '', address: '',
-    companyName: '', companyNumber: '', logo: null,
+    hospitalName: '', registryNo: '', address: '',
+    companyName: '', licenseNumber: '', logo: null,
     pinCode: '', city: '', state: '',
     // Step 2
     name: '', email: '', password: '', contact: '', contactPrefix: '+91', role: 'admin',
@@ -548,9 +543,9 @@ export default function Register() {
   const handleBlur = (e) => {
     const { name, value } = e.target;
 
-    if (name === 'hospitalID') {
-      setHospitalIDTouched(true);
-    }
+    // if (name === 'hospitalID') {
+    //   setHospitalIDTouched(true);
+    // }
 
     const error = validateField(name, value);
     setFieldErrors(prev => ({
@@ -569,13 +564,13 @@ export default function Register() {
       let newValue = value;
 
       // Format hospital ID to uppercase
-      if (name === 'hospitalID') {
-        newValue = value.toUpperCase();
-        // Only allow letters and numbers
-        newValue = newValue.replace(/[^A-Za-z0-9]/g, '');
-        // Limit to 6 characters
-        if (newValue.length > 6) newValue = newValue.slice(0, 6);
-      }
+      // if (name === 'hospitalID') {
+      //   newValue = value.toUpperCase();
+      //   // Only allow letters and numbers
+      //   newValue = newValue.replace(/[^A-Za-z0-9]/g, '');
+      //   // Limit to 6 characters
+      //   if (newValue.length > 6) newValue = newValue.slice(0, 6);
+      // }
 
       // Handle contact number based on phone type
       if (name === 'contact') {
@@ -658,14 +653,8 @@ export default function Register() {
     const errors = {};
 
     if (!form.hospitalName) errors.hospitalName = 'Hospital Name is required';
-    if (!form.hospitalID) errors.hospitalID = 'Hospital ID is required';
     if (!form.registryNo) errors.registryNo = 'Registry Number is required';
     if (!form.address) errors.address = 'Address is required';
-
-    // Validate Hospital ID format
-    if (form.hospitalID && !/^[A-Za-z]{2}\d{4}$/.test(form.hospitalID)) {
-      errors.hospitalID = 'Hospital ID must be 2 letters followed by 4 numbers';
-    }
 
     setFieldErrors(errors);
 
@@ -735,11 +724,11 @@ export default function Register() {
 
       // Hospital details
       formData.append('hospitalName', form.hospitalName);
-      formData.append('hospitalID', form.hospitalID);
+      // formData.append('hospitalID', form.hospitalID);
       formData.append('registryNo', form.registryNo);
       formData.append('address', form.address);
       formData.append('companyName', form.companyName || '');
-      formData.append('companyNumber', form.companyNumber || '');
+      formData.append('licenseNumber', form.licenseNumber || '');
       formData.append('pinCode', form.pinCode || '');
       formData.append('city', form.city || '');
       formData.append('state', form.state || '');
@@ -842,7 +831,7 @@ export default function Register() {
                     required
                     error={fieldErrors.registryNo}
                   />
-                  <InputWithIcon
+                  {/* <InputWithIcon
                     label="Hospital ID"
                     name="hospitalID"
                     placeholder="AB1234"
@@ -854,7 +843,7 @@ export default function Register() {
                     required
                     error={fieldErrors.hospitalID}
                     maxLength="6"
-                  />
+                  /> */}
                   <InputWithIcon
                     label="Company Name"
                     name="companyName"
@@ -864,14 +853,15 @@ export default function Register() {
                   />
                   <InputWithIcon
                     label="License No."
-                    name="companyNumber"
-                    placeholder="Optional License Number"
-                    value={form.companyNumber}
+                    name="licenseNumber"
+                    placeholder="License Number"
+                    value={form.licenseNumber}
                     onChange={handleChange}
+                    required
                   />
 
                   {/* Logo Upload */}
-                  <div className="space-y-1">
+                  <div className="space-y-1 col-span-2">
                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide ml-1">
                       Hospital Logo (Optional)
                     </label>
@@ -946,22 +936,15 @@ export default function Register() {
                         placeholder="Search or select state..."
                         className="mt-0"
                       />
-                      <FormInput
+                      <SearchableFormSelect
                         label="City"
-                        name="city"
                         value={form.city}
-                        onChange={handleChange}
+                        onChange={(e) => handleChange(e)}
+                        options={cities.map(city => ({ value: city.name, label: city.name }))}
                         required
-                        as="select"
                         error={fieldErrors.city}
-                      >
-                        <option value="">Select City</option>
-                        {cities.map((city) => (
-                          <option key={city.name} value={city.name}>
-                            {city.name}
-                          </option>
-                        ))}
-                      </FormInput>
+                        placeholder="Search for a city..."
+                      />
                       <InputWithIcon
                         label="Pincode"
                         name="pinCode"
@@ -1174,7 +1157,7 @@ export default function Register() {
                 className="flex-1"
               >
                 {isLoading ? (
-                  <span className="flex items-center gap-2">
+                  <span className="flex items-center justify-center gap-2">
                     <svg className="animate-spin h-5 w-5 text-white" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -1182,8 +1165,8 @@ export default function Register() {
                     Processing...
                   </span>
                 ) : (
-                  step === 1 ? 'Continue to Admin Details' :
-                    step === 2 ? 'Preview & Submit' : 'Complete Registration'
+                    step === 1 ? 'Continue to Admin Details' :
+                      step === 2 ? 'Preview & Submit' : 'Complete Registration'
                 )}
               </Button>
             </div>

@@ -91,6 +91,7 @@ export const SearchableFormSelect = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [isSelecting, setIsSelecting] = useState(false); // Add this state
   const wrapperRef = useRef(null);
 
   // 1. Normalize options: Convert ['A', 'B'] to [{label: 'A', value: 'A'}]
@@ -152,6 +153,9 @@ export const SearchableFormSelect = ({
   };
 
   const handleSelect = (opt) => {
+    // Set selecting state to true to prevent onFocus from reopening dropdown
+    setIsSelecting(true);
+    
     // Create a synthetic event that matches the expected format
     const syntheticEvent = {
       target: {
@@ -173,6 +177,10 @@ export const SearchableFormSelect = ({
         const input = wrapperRef.current.querySelector('input');
         if (input) input.focus();
       }
+      // Reset selecting state after focus
+      setTimeout(() => {
+        setIsSelecting(false);
+      }, 100);
     }, 0);
   };
 
@@ -201,7 +209,12 @@ export const SearchableFormSelect = ({
         <input
           type="text"
           value={searchTerm}
-          onFocus={() => setIsOpen(true)}
+          onFocus={() => {
+            // Only open dropdown if not in the middle of selecting
+            if (!isSelecting) {
+              setIsOpen(true);
+            }
+          }}
           onChange={(e) => {
             setSearchTerm(e.target.value);
             setActiveIndex(0);
@@ -236,7 +249,10 @@ export const SearchableFormSelect = ({
               {displayedOptions.map((opt, index) => (
                 <div
                   key={opt.value}
-                  onClick={() => handleSelect(opt)}
+                  onClick={(e) => {
+                    e.stopPropagation(); // Prevent event from bubbling up to input
+                    handleSelect(opt);
+                  }}
                   onMouseEnter={() => setActiveIndex(index)}
                   className={`px-4 py-2 text-sm cursor-pointer transition-colors ${
                     index === activeIndex ? 'bg-emerald-50 text-emerald-900 font-semibold' : 'text-gray-700'
@@ -332,7 +348,7 @@ export const Button = ({
   disabled = false,
   className = ""
 }) => {
-  const baseClasses = "font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 flex gap-2";
+  const baseClasses = "font-medium text-center items-center justify-center rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 flex gap-2";
 
   const variants = {
     primary: "bg-teal-600 hover:bg-teal-700 text-white focus:ring-teal-500",

@@ -196,7 +196,6 @@ const AddPatientIPDForm = () => {
   };
 
   const salutationOptions = [
-    { value: '', label: 'Select Salutation' },
     { value: 'Mr.', label: 'Mr.' },
     { value: 'Mrs.', label: 'Mrs.' },
     { value: 'Ms.', label: 'Ms.' },
