@@ -1244,8 +1244,8 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
         const bill = response.data.bill;
         setInvoiceDetails({
           ...bill,
-          patientName: bill.patient_id ? 
-            `${bill.patient_id.salutation || ''} ${bill.patient_id.first_name || ''} ${bill.patient_id.last_name || ''}`.trim() : 
+          patientName: bill.patient_id ?
+            `${bill.patient_id.salutation || ''} ${bill.patient_id.first_name || ''} ${bill.patient_id.last_name || ''}`.trim() :
             'Unknown Patient',
           doctorName: `Dr. ${bill.appointment_id?.doctor_id?.firstName || ''} ${bill.appointment_id?.doctor_id?.lastName || ''}`.trim(),
           departmentName: bill.appointment_id?.department_id?.name || 'N/A',
@@ -1621,13 +1621,11 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
                             label="Select Patient"
                             value={formData.patientId}
                             onChange={(e) => handleInputChange('patientId', e.target.value)}
-                            options={[
-                              { value: '', label: 'Select a patient' },
-                              ...(filteredPatients || []).map(p => ({
-                                value: p._id,
-                                label: `${p.salutation || ''} ${p.first_name || ''} ${p.last_name || ''} - ${p.phone || ''} (${p.patientId || ''})${p.aadhaar_number ? ` - Aadhaar: ${p.aadhaar_number}` : ''}`
-                              }))
-                            ]}
+                            options={(filteredPatients || []).map(p => ({
+                              value: p._id,
+                              label: `${[p.salutation, p.first_name, p.last_name].filter(Boolean).join(' ')} - ${p.phone || 'No phone'} (${p.patientId || 'No ID'})${p.aadhaar_number ? ` - Aadhaar: ${p.aadhaar_number}` : ''}`
+                            }))}
+                            placeholder="Search for a patient..."
                             required
                           />
                           {selectedPatient && (
@@ -1858,7 +1856,7 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
                             <h3 className="text-lg font-semibold text-gray-900">Charges Summary</h3>
                             {doctorDetails && type === 'opd' && (
                               <div className={`fee-info-badge ${doctorDetails.paymentType === 'Per Hour' ? 'fee-per-hour' :
-                                  !doctorDetails.isFullTime ? 'fee-part-time' : 'fee-full-time'
+                                !doctorDetails.isFullTime ? 'fee-part-time' : 'fee-full-time'
                                 }`}>
                                 <FaMoneyBillWave className="mr-1" size={12} />
                                 {doctorDetails.paymentType === 'Per Hour' ? 'Per Hour' :
@@ -2289,7 +2287,7 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
           <div className="action-modal">
             <h3 className="text-2xl font-bold text-gray-900 mb-2">Appointment Created!</h3>
             <p className="text-gray-600 mb-6">What would you like to do next?</p>
-            
+
             <div className="action-buttons">
               <div
                 className="action-button"
@@ -2302,7 +2300,7 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
                 <span className="title">View Appointment Slip</span>
                 <span className="description">Print or download appointment details</span>
               </div>
-              
+
               {invoiceDetails && (
                 <div
                   className="action-button"
@@ -2317,7 +2315,7 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
                 </div>
               )}
             </div>
-            
+
             <div className="mt-6">
               <button
                 onClick={() => {

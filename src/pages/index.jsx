@@ -51,14 +51,13 @@ export default function Login() {
       const res = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/auth/login`, { email, password });
 
       let { token, role } = res.data;
-      const { staffId, doctorId, pharmacyId, pathologyStaffId, hospitalId } = res.data;
-      
+      const { staffId, doctorId, pharmacyId, pathologyStaffId, hospitalID } = res.data;
       console.log('Login response:', res.data);
       console.log('User role:', role);
 
       // Store IDs in localStorage based on role
       if (doctorId) localStorage.setItem("doctorId", doctorId);
-      if (hospitalId) localStorage.setItem("hospitalId", res.data.hospitalID);
+      if (hospitalID) localStorage.setItem("hospitalId", res.data.hospitalID);
       if (staffId) localStorage.setItem("staffId", staffId);
       if (pharmacyId) localStorage.setItem("pharmacyId", pharmacyId);
       if (pathologyStaffId) localStorage.setItem("pathologyStaffId", pathologyStaffId);
