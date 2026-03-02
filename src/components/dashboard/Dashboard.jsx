@@ -196,7 +196,7 @@ const Dashboard = () => {
       const invoices = invoiceList.slice(0, 5).map((inv) => ({
         id: inv._id,
         invoiceNumber: inv.invoice_number || inv.number || `#${String(inv._id || '').slice(-4)}`,
-        patientName: inv.patient_id?.first_name || inv.patientName || 'Unknown',
+        patientName: inv.patient_id?.first_name || inv.invoice_type || 'Unknown',
         amount: inv.total || inv.total_amount || inv.amount || 0,
         status: inv.status || 'Pending',
         date: dayjs(inv.created_at || inv.createdAt || inv.issue_date).format('MMM DD, YYYY'),
@@ -653,30 +653,6 @@ const Dashboard = () => {
               )) : (
                 <p className="text-sm text-slate-400 italic text-center py-4">No recent invoices</p>
               )}
-            </div>
-          </div>
-
-          {/* Quick Actions */}
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-            <h3 className="text-lg font-bold text-slate-800 mb-5">Quick Actions</h3>
-            <div className="grid grid-cols-2 gap-3">
-              {adminSidebar
-                .filter((link) => !link.submenu && link.label !== 'Dashboard')
-                .slice(0, 6)
-                .map((item) => (
-                  <div
-                    key={item.label}
-                    onClick={() => navigate(item.path)}
-                    className="group flex flex-col items-center justify-center p-4 rounded-xl border border-slate-100 bg-slate-50/30 hover:bg-white hover:border-teal-200 hover:shadow-lg transition-all duration-300 cursor-pointer"
-                  >
-                    <div className="p-2.5 bg-white rounded-lg text-teal-600 shadow-sm mb-2 group-hover:scale-110 group-hover:bg-teal-500 group-hover:text-white transition-all duration-300">
-                      {item.icon && <item.icon className="w-5 h-5" />}
-                    </div>
-                    <span className="text-xs font-medium text-slate-600 group-hover:text-teal-700 text-center">
-                      {item.label}
-                    </span>
-                  </div>
-                ))}
             </div>
           </div>
 

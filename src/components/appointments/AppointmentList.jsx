@@ -19,7 +19,7 @@ const AppointmentList = () => {
   const [appointments, setAppointments] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
-  const [dateFilter, setDateFilter] = useState('today');
+  const [dateFilter, setDateFilter] = useState('all');
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
   const [appointmentType, setAppointmentType] = useState(null);
@@ -106,58 +106,111 @@ const AppointmentList = () => {
     return appointmentDateTime > now;
   };
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const [appointmentRes, hospitalRes] = await Promise.all([
-          axios.get(`${import.meta.env.VITE_BACKEND_URL}/appointments`),
-          axios.get(`${import.meta.env.VITE_BACKEND_URL}/hospitals`)
-        ]);
+useEffect(() => {
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const [appointmentRes, hospitalRes] = await Promise.all([
+        axios.get(`${import.meta.env.VITE_BACKEND_URL}/appointments`),
+        axios.get(`${import.meta.env.VITE_BACKEND_URL}/hospitals`)
+      ]);
 
-        console.log(appointmentRes)
-        const enriched = appointmentRes.data.map((appt) => {
-          const timeInMinutes = getTimeInMinutes(appt.start_time || appt.time_slot?.start_time);
-          const appointmentDate = new Date(appt.appointment_date);
+      console.log('Appointments data:', appointmentRes.data);
+      
+      const enriched = appointmentRes.data.map((appt) => {
+        // Safely access nested properties with fallbacks
+        const patientFirstName = appt.patient_id?.first_name || appt.patient_id?.firstName || '';
+        const patientLastName = appt.patient_id?.last_name || appt.patient_id?.lastName || '';
+        const doctorFirstName = appt.doctor_id?.first_name || appt.doctor_id?.firstName || '';
+        const doctorLastName = appt.doctor_id?.last_name || appt.doctor_id?.lastName || '';
+        const departmentName = appt.department_id?.name || 'N/A';
+        const patientImage = appt.patient_id?.patient_image || appt.patient_id?.image || null;
+        const patientIdNumber = appt.patient_id?.patientId || appt.patient_id?.patient_id || 'N/A';
+        
+        // Calculate time in minutes
+        let timeInMinutes = 0;
+        if (appt.start_time) {
+          timeInMinutes = getTimeInMinutes(appt.start_time);
+        } else if (appt.time_slot?.start_time) {
+          timeInMinutes = getTimeInMinutes(appt.time_slot.start_time);
+        }
 
-          return {
-            ...appt,
-            patientName: `${appt.patient_id?.first_name || ''} ${appt.patient_id?.last_name || ''}`.trim(),
-            patientImage: appt.patient_id?.patient_image || null,
-            doctorName: `Dr. ${appt.doctor_id?.firstName || ''} ${appt.doctor_id?.lastName || ''}`.trim(),
-            departmentName: appt.department_id?.name || 'N/A',
-            date: appointmentDate.toLocaleDateString('en-US', {
-              month: 'short',
-              day: 'numeric',
-              year: 'numeric'
-            }),
-            rawDate: appt.appointment_date,
-            time: formatTime(appt.start_time, appt.time_slot),
-            patientId: appt.patient_id?.patientId,
-            type: appt.type || 'Consultation',
-            // Store time in minutes for sorting
-            timeInMinutes: timeInMinutes,
-            // Create a proper datetime for sorting
-            datetime: new Date(appointmentDate.setHours(
-              Math.floor(timeInMinutes / 60),
-              timeInMinutes % 60,
-              0,
-              0
-            ))
-          };
-        });
+        // Create appointment date object
+        let appointmentDate;
+        try {
+          appointmentDate = new Date(appt.appointment_date);
+          if (isNaN(appointmentDate.getTime())) {
+            appointmentDate = new Date(); // fallback to current date
+          }
+        } catch (error) {
+          console.error('Error parsing appointment date:', error);
+          appointmentDate = new Date();
+        }
 
-        setAppointments(enriched);
-        setHospitalInfo(hospitalRes.data[0]);
+        // Format date
+        let formattedDate = 'N/A';
+        try {
+          formattedDate = appointmentDate.toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric'
+          });
+        } catch (error) {
+          console.error('Error formatting date:', error);
+        }
 
-      } catch (error) {
-        console.error('Error fetching data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, []);
+        // Format time
+        const formattedTime = formatTime(appt.start_time, appt.time_slot);
+
+        return {
+          ...appt,
+          patientName: `${patientFirstName} ${patientLastName}`.trim() || 'Unknown Patient',
+          patientImage: patientImage,
+          doctorName: `Dr. ${doctorFirstName} ${doctorLastName}`.trim() || 'Unknown Doctor',
+          departmentName: departmentName,
+          date: formattedDate,
+          rawDate: appt.appointment_date,
+          time: formattedTime,
+          patientId: patientIdNumber,
+          type: appt.appointment_type || appt.type || 'Consultation',
+          timeInMinutes: timeInMinutes,
+          datetime: new Date(appointmentDate.setHours(
+            Math.floor(timeInMinutes / 60),
+            timeInMinutes % 60,
+            0,
+            0
+          ))
+        };
+      });
+
+      console.log('Enriched appointments:', enriched);
+      setAppointments(enriched);
+      setHospitalInfo(hospitalRes.data[0]);
+
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+  fetchData();
+}, []);
+
+// Add this after your stats display or in the main content area
+if (loading) {
+  return (
+    <div className="p-2 bg-slate-50 min-h-screen font-sans">
+      <div className="max-w-[1600px] mx-auto space-y-6">
+        <div className="flex justify-center items-center h-64">
+          <div className="text-center">
+            <div className="w-16 h-16 border-4 border-teal-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-slate-600">Loading appointments...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
   // Separate appointments into completed and upcoming
   const separateAppointments = (appts) => {

@@ -22,43 +22,56 @@ import {
   FaCalendar,
   FaFileAlt,
   FaReceipt,
-  FaBuilding
+  FaBuilding,
+  FaPercent,
+  FaClock,
+  FaExclamationCircle,
+  FaRupeeSign,
+  FaUserMd,
+  FaChartLine
 } from 'react-icons/fa';
-
+import AddExpenseModal from './AddExpenseModal';
 
 const ExpensePage = () => {
   const [expenseRecords, setExpenseRecords] = useState([]);
   const [purchaseOrders, setPurchaseOrders] = useState([]);
   const [salaryRecords, setSalaryRecords] = useState([]);
+  const [commissionRecords, setCommissionRecords] = useState([]);
+  const [pendingCommissions, setPendingCommissions] = useState([]);
+  const [pendingSalaries, setPendingSalaries] = useState([]);
 
   const [expenseSummary, setExpenseSummary] = useState(null);
   const [purchaseOrderSummary, setPurchaseOrderSummary] = useState(null);
   const [salarySummary, setSalarySummary] = useState(null);
+  const [commissionSummary, setCommissionSummary] = useState(null);
 
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('expenses'); // 'expenses' | 'purchase-orders' | 'salaries'
+  const [activeTab, setActiveTab] = useState('expenses'); // 'expenses' | 'purchase-orders' | 'salaries' | 'commissions'
   const [searchTerm, setSearchTerm] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
-  // Salary payment UI
+  // Payment UI
   const [payModalOpen, setPayModalOpen] = useState(false);
-  const [payTarget, setPayTarget] = useState(null); // salary record
+  const [payTarget, setPayTarget] = useState(null);
+  const [payType, setPayType] = useState('salary'); // 'salary' or 'commission'
   const [payForm, setPayForm] = useState({
     payment_method: 'bank_transfer',
     paid_date: new Date().toISOString().split('T')[0],
     notes: ''
   });
 
-  // Bulk select (salaries tab)
+  // Bulk select
   const [selectedSalaryIds, setSelectedSalaryIds] = useState(new Set());
+  const [selectedCommissionIds, setSelectedCommissionIds] = useState(new Set());
   const [bulkPayOpen, setBulkPayOpen] = useState(false);
+  const [bulkPayType, setBulkPayType] = useState('salary');
   const [bulkPayForm, setBulkPayForm] = useState({
     payment_method: 'bank_transfer',
     paid_date: new Date().toISOString().split('T')[0],
     notes: 'Bulk payment processed'
   });
 
-  // NEW: Add Expense Modal
+  // Add Expense Modal
   const [addExpenseModalOpen, setAddExpenseModalOpen] = useState(false);
   const [newExpense, setNewExpense] = useState({
     date: new Date().toISOString().split('T')[0],
@@ -76,23 +89,37 @@ const ExpensePage = () => {
   // Navigation hook
   const navigate = useNavigate();
 
+  // Doctors list for filters
+  const [doctors, setDoctors] = useState([]);
+
   // Unified filters
   const [filters, setFilters] = useState({
-    // Expenses period filter
-    period: 'monthly', // daily | monthly | all
+    period: 'monthly',
     date: new Date().toISOString().split('T')[0],
     month: new Date().getMonth() + 1,
     year: new Date().getFullYear(),
     category: 'all',
     status: 'all',
-
-    // Salaries
-    periodType: 'all', // daily | weekly | monthly | all
+    periodType: 'all',
     startDate: '',
     endDate: '',
     page: 1,
-    limit: 50
+    limit: 50,
+    doctorId: 'all'
   });
+
+  useEffect(() => {
+    fetchDoctors();
+  }, []);
+
+  const fetchDoctors = async () => {
+    try {
+      const response = await apiClient.get('/doctors');
+      setDoctors(response.data || []);
+    } catch (err) {
+      console.error('Error fetching doctors:', err);
+    }
+  };
 
   const handleFilterChange = (key, value) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
@@ -119,7 +146,9 @@ const ExpensePage = () => {
       received: 'bg-green-100 text-green-800',
       'partially received': 'bg-blue-100 text-blue-800',
       hold: 'bg-orange-100 text-orange-800',
-      'partially paid': 'bg-blue-100 text-blue-800'
+      'partially paid': 'bg-blue-100 text-blue-800',
+      issued: 'bg-purple-100 text-purple-800',
+      processing: 'bg-indigo-100 text-indigo-800'
     };
 
     const cls = statusClasses[status] || 'bg-gray-100 text-gray-800';
@@ -145,7 +174,6 @@ const ExpensePage = () => {
   // ---------- fetchers ----------
   useEffect(() => {
     fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     activeTab,
     filters.period,
@@ -158,7 +186,8 @@ const ExpensePage = () => {
     filters.startDate,
     filters.endDate,
     filters.page,
-    filters.limit
+    filters.limit,
+    filters.doctorId
   ]);
 
   const fetchData = async () => {
@@ -170,7 +199,9 @@ const ExpensePage = () => {
       } else if (activeTab === 'purchase-orders') {
         await Promise.all([fetchPurchaseOrders(), fetchPurchaseOrderSummary()]);
       } else if (activeTab === 'salaries') {
-        await Promise.all([fetchSalaryData(), fetchSalarySummary()]);
+        await Promise.all([fetchSalaryData(), fetchSalarySummary(), fetchPendingSalaries()]);
+      } else if (activeTab === 'commissions') {
+        await Promise.all([fetchCommissionData(), fetchCommissionSummary(), fetchPendingCommissions()]);
       }
     } catch (err) {
       console.error(err);
@@ -180,7 +211,7 @@ const ExpensePage = () => {
     }
   };
 
-  // ----- UPDATED: Expense API calls -----
+  // ----- Expense API calls -----
   const fetchExpenseData = async () => {
     try {
       let endpoint = '/expenses';
@@ -196,11 +227,22 @@ const ExpensePage = () => {
         endpoint = '/expenses/monthly';
         params.year = filters.year;
         params.month = filters.month;
+      } else if (filters.startDate && filters.endDate) {
+        params.startDate = filters.startDate;
+        params.endDate = filters.endDate;
       }
-      // For 'all', no additional params needed
 
       const response = await apiClient.get(endpoint, { params });
-      const raw = response.data?.expenses || response.data?.data || response.data || [];
+      
+      let raw = [];
+      if (response.data?.expenses) {
+        raw = response.data.expenses;
+      } else if (response.data?.data) {
+        raw = response.data.data;
+      } else if (Array.isArray(response.data)) {
+        raw = response.data;
+      }
+      
       setExpenseRecords(transformExpenseData(raw));
     } catch (err) {
       console.error('Error fetching expense data:', err);
@@ -216,6 +258,10 @@ const ExpensePage = () => {
         params.month = filters.month;
       }
       if (filters.period === 'daily') params.date = filters.date;
+      if (filters.startDate && filters.endDate) {
+        params.startDate = filters.startDate;
+        params.endDate = filters.endDate;
+      }
 
       const response = await apiClient.get('/expenses/summary', { params });
       setExpenseSummary(response.data || null);
@@ -243,11 +289,15 @@ const ExpensePage = () => {
       receipt_number: item.receipt_number || item.receiptNo || ''
     }));
 
-  // ----- UPDATED: Purchase Order API calls -----
+  // ----- Purchase Order API calls -----
   const fetchPurchaseOrders = async () => {
     try {
       const params = {};
       if (filters.status !== 'all') params.status = filters.status;
+      if (filters.startDate && filters.endDate) {
+        params.startDate = filters.startDate;
+        params.endDate = filters.endDate;
+      }
 
       const response = await apiClient.get('/orders/purchase', { params });
       const orders = response.data?.purchaseOrders || response.data?.orders || response.data?.data || response.data || [];
@@ -260,7 +310,12 @@ const ExpensePage = () => {
 
   const fetchPurchaseOrderSummary = async () => {
     try {
-      const response = await apiClient.get('/orders/purchase/stats');
+      const params = {};
+      if (filters.startDate && filters.endDate) {
+        params.startDate = filters.startDate;
+        params.endDate = filters.endDate;
+      }
+      const response = await apiClient.get('/orders/purchase/stats', { params });
       setPurchaseOrderSummary(response.data || null);
     } catch (err) {
       console.error('Error fetching purchase order summary:', err);
@@ -268,16 +323,18 @@ const ExpensePage = () => {
     }
   };
 
-  // ----- Salaries -----
+  // ----- Salary API calls (from Salary model - paid records) -----
   const fetchSalaryData = async () => {
     try {
       const params = {
         page: filters.page,
-        limit: filters.limit
+        limit: filters.limit,
+        earningType: 'salary'
       };
 
       if (filters.status !== 'all') params.status = safeLower(filters.status);
       if (filters.periodType && filters.periodType !== 'all') params.periodType = filters.periodType;
+      if (filters.doctorId && filters.doctorId !== 'all') params.doctorId = filters.doctorId;
 
       if (filters.startDate && filters.endDate) {
         params.startDate = filters.startDate;
@@ -294,7 +351,7 @@ const ExpensePage = () => {
 
   const fetchSalarySummary = async () => {
     try {
-      const params = {};
+      const params = { earningType: 'salary' };
       if (filters.periodType && filters.periodType !== 'all') params.period = filters.periodType;
       if (filters.startDate && filters.endDate) {
         params.startDate = filters.startDate;
@@ -306,6 +363,215 @@ const ExpensePage = () => {
     } catch (err) {
       console.error('Error fetching salary summary:', err);
       setSalarySummary(null);
+    }
+  };
+
+  // ----- Commission API calls (from invoices - pending commissions) -----
+  const fetchCommissionData = async () => {
+    try {
+      const params = {
+        page: filters.page,
+        limit: filters.limit,
+        earningType: 'commission'
+      };
+
+      if (filters.status !== 'all') params.status = safeLower(filters.status);
+      if (filters.periodType && filters.periodType !== 'all') params.periodType = filters.periodType;
+      if (filters.doctorId && filters.doctorId !== 'all') params.doctorId = filters.doctorId;
+
+      if (filters.startDate && filters.endDate) {
+        params.startDate = filters.startDate;
+        params.endDate = filters.endDate;
+      }
+
+      const response = await apiClient.get('/salaries', { params });
+      setCommissionRecords(response.data?.salaries || []);
+    } catch (err) {
+      console.error('Error fetching commission data:', err);
+      setCommissionRecords([]);
+    }
+  };
+
+  const fetchCommissionSummary = async () => {
+    try {
+      const params = { earningType: 'commission' };
+      if (filters.periodType && filters.periodType !== 'all') params.period = filters.periodType;
+      if (filters.startDate && filters.endDate) {
+        params.startDate = filters.startDate;
+        params.endDate = filters.endDate;
+      }
+
+      const response = await apiClient.get('/salaries/stats', { params });
+      setCommissionSummary(response.data || null);
+    } catch (err) {
+      console.error('Error fetching commission summary:', err);
+      setCommissionSummary(null);
+    }
+  };
+
+  // ----- Pending Salaries (from doctors who are full-time) -----
+  const fetchPendingSalaries = async () => {
+    try {
+      // Fetch all full-time doctors
+      const doctorsRes = await apiClient.get('/doctors', {
+        params: { isFullTime: true }
+      });
+      const fullTimeDoctors = doctorsRes.data || [];
+
+      // Fetch existing paid salaries for the period
+      const salaryParams = {
+        earningType: 'salary',
+        status: 'paid',
+        startDate: filters.startDate || new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
+        endDate: filters.endDate || new Date().toISOString().split('T')[0]
+      };
+      const salariesRes = await apiClient.get('/salaries', { params: salaryParams });
+      const paidSalaries = salariesRes.data?.salaries || [];
+
+      // Create a map of doctors who already have paid salaries in this period
+      const paidDoctorMap = {};
+      paidSalaries.forEach(s => {
+        if (s.doctor_id?._id) {
+          paidDoctorMap[s.doctor_id._id] = true;
+        }
+      });
+
+      // Generate pending salaries for doctors without paid records
+      const pending = [];
+      fullTimeDoctors.forEach(doctor => {
+        if (!paidDoctorMap[doctor._id] && doctor.amount > 0) {
+          pending.push({
+            _id: `pending-salary-${doctor._id}`,
+            doctor_id: doctor,
+            period_type: filters.periodType || 'monthly',
+            period_start: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+            period_end: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0),
+            amount: doctor.amount,
+            net_amount: doctor.amount,
+            status: 'pending',
+            is_pending: true
+          });
+        }
+      });
+
+      setPendingSalaries(pending);
+    } catch (err) {
+      console.error('Error fetching pending salaries:', err);
+    }
+  };
+
+  // ----- Pending Commissions (from invoices) -----
+  const fetchPendingCommissions = async () => {
+    try {
+      // Fetch all part-time doctors
+      const doctorsRes = await apiClient.get('/doctors', {
+        params: { isFullTime: false }
+      });
+      const partTimeDoctors = doctorsRes.data || [];
+
+      // Fetch completed appointments for these doctors
+      const appointmentsParams = {
+        status: 'Completed',
+        startDate: filters.startDate || new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
+        endDate: filters.endDate || new Date().toISOString().split('T')[0],
+        limit: 1000
+      };
+      
+      const appointmentsRes = await apiClient.get('/appointments', { params: appointmentsParams });
+      const appointments = appointmentsRes.data || appointmentsRes.data || [];
+
+      // Fetch invoices for these appointments
+      const invoiceParams = {
+        invoice_type: 'Appointment',
+        startDate: filters.startDate || new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
+        endDate: filters.endDate || new Date().toISOString().split('T')[0],
+        limit: 1000
+      };
+      
+      const invoicesRes = await apiClient.get('/invoices', { params: invoiceParams });
+      const invoices = invoicesRes.data?.invoices || invoicesRes.data || [];
+      console.log('Fetched invoices for commission calculation:', invoices);
+      // Create doctor map for quick lookup
+      const doctorMap = {};
+      partTimeDoctors.forEach(doc => {
+        doctorMap[doc._id] = doc;
+      });
+
+      // Fetch existing paid commissions
+      const commissionParams = {
+        earningType: 'commission',
+        status: 'paid',
+        startDate: filters.startDate || new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
+        endDate: filters.endDate || new Date().toISOString().split('T')[0]
+      };
+      const commissionsRes = await apiClient.get('/salaries', { params: commissionParams });
+      const paidCommissions = commissionsRes.data?.salaries || [];
+
+      // Create a set of paid appointment IDs
+      const paidAppointmentSet = new Set();
+      paidCommissions.forEach(comm => {
+        if (comm.appointments) {
+          comm.appointments.forEach(apptId => paidAppointmentSet.add(apptId.toString()));
+        }
+      });
+
+      // Process invoices to generate pending commissions
+      const pending = [];
+      
+      for (const invoice of invoices) {
+        // Find appointment for this invoice
+        const appointment = appointments.find(a => a._id === invoice.appointment_id);
+        if (!appointment) continue;
+
+        // Skip if already paid
+        if (paidAppointmentSet.has(appointment._id)) continue;
+
+        const doctor = doctorMap[appointment.doctor_id?._id || appointment.doctor_id];
+        if (!doctor) continue;
+
+        // Calculate commission from consultation fees
+        let consultationFee = 0;
+        let registrationFee = 0;
+
+        (invoice.service_items || []).forEach(item => {
+          const desc = (item.description || '').toLowerCase();
+          if (desc.includes('consultation') || desc.includes('doctor consultation')) {
+            consultationFee += item.total_price || 0;
+          } else {
+            registrationFee += item.total_price || 0;
+          }
+        });
+
+        if (consultationFee === 0) {
+          consultationFee = invoice.total || 0;
+        }
+
+        const commissionAmount = (consultationFee * (doctor.revenuePercentage || 0)) / 100;
+
+        pending.push({
+          _id: `pending-commission-${invoice._id}`,
+          invoice_id: invoice._id,
+          invoice_number: invoice.invoice_number,
+          doctor_id: doctor,
+          appointment_date: appointment.appointment_date,
+          patient_name: appointment.patient_name || 'Unknown',
+          consultation_fee: consultationFee,
+          registration_fee: registrationFee,
+          total_amount: invoice.total || 0,
+          amount: commissionAmount,
+          net_amount: commissionAmount,
+          status: 'pending',
+          is_pending: true,
+          period_type: 'daily',
+          period_start: new Date(appointment.appointment_date),
+          period_end: new Date(appointment.appointment_date)
+        });
+      }
+
+      setPendingCommissions(pending);
+    } catch (err) {
+      console.error('Error fetching pending commissions:', err);
+      setPendingCommissions([]);
     }
   };
 
@@ -329,9 +595,9 @@ const ExpensePage = () => {
   const filteredPurchaseOrders = useMemo(() => {
     const q = safeLower(searchTerm);
     return purchaseOrders.filter((o) => {
-      const orderNum = safeLower(o.order_number);
-      const supplierName = safeLower(o.supplier_name || o.supplier_id?.name);
-      const notes = safeLower(o.notes);
+      const orderNum = safeLower(o.order_number || '');
+      const supplierName = safeLower(o.supplier_name || o.supplier_id?.name || '');
+      const notes = safeLower(o.notes || '');
 
       const matchesSearch = orderNum.includes(q) || supplierName.includes(q) || notes.includes(q);
       const matchesStatus = filters.status === 'all' || o.status === filters.status;
@@ -342,26 +608,56 @@ const ExpensePage = () => {
 
   const filteredSalaryRecords = useMemo(() => {
     const q = safeLower(searchTerm);
+    // Combine paid salaries from model and pending salaries from doctors
+    const allSalaries = [...salaryRecords, ...pendingSalaries];
 
-    return salaryRecords.filter((s) => {
+    return allSalaries.filter((s) => {
       const doc = s.doctor_id || {};
       const doctorName = safeLower(
         `${doc.firstName || doc.first_name || ''} ${doc.lastName || doc.last_name || ''}`.trim()
       );
 
-      const periodType = safeLower(s.period_type);
-      const notes = safeLower(s.notes);
+      const periodType = safeLower(s.period_type || '');
+      const notes = safeLower(s.notes || '');
 
       const matchesSearch = doctorName.includes(q) || periodType.includes(q) || notes.includes(q);
 
-      const matchesStatus =
-        filters.status === 'all' || safeLower(s.status) === safeLower(filters.status);
+      const matchesStatus = filters.status === 'all' || 
+        (filters.status === 'pending' && s.status === 'pending') ||
+        (filters.status === 'paid' && s.status === 'paid');
 
       const matchesPeriod = !filters.periodType || filters.periodType === 'all' || s.period_type === filters.periodType;
 
       return matchesSearch && matchesStatus && matchesPeriod;
     });
-  }, [salaryRecords, filters.status, filters.periodType, searchTerm]);
+  }, [salaryRecords, pendingSalaries, filters.status, filters.periodType, searchTerm]);
+
+  const filteredCommissionRecords = useMemo(() => {
+    const q = safeLower(searchTerm);
+    // Combine paid commissions from model and pending commissions from invoices
+    const allCommissions = [...commissionRecords, ...pendingCommissions];
+
+    return allCommissions.filter((c) => {
+      const doc = c.doctor_id || {};
+      const doctorName = safeLower(
+        `${doc.firstName || doc.first_name || ''} ${doc.lastName || doc.last_name || ''}`.trim()
+      );
+
+      const patientName = safeLower(c.patient_name || '');
+      const invoiceNum = safeLower(c.invoice_number || '');
+      const notes = safeLower(c.notes || '');
+
+      const matchesSearch = doctorName.includes(q) || patientName.includes(q) || invoiceNum.includes(q) || notes.includes(q);
+
+      const matchesStatus = filters.status === 'all' || 
+        (filters.status === 'pending' && c.status === 'pending') ||
+        (filters.status === 'paid' && c.status === 'paid');
+
+      const matchesDoctor = filters.doctorId === 'all' || c.doctor_id?._id === filters.doctorId;
+
+      return matchesSearch && matchesStatus && matchesDoctor;
+    });
+  }, [commissionRecords, pendingCommissions, filters.status, filters.doctorId, searchTerm]);
 
   // ---------- expense actions ----------
   const handleAddExpense = async () => {
@@ -394,13 +690,14 @@ const ExpensePage = () => {
     }
   };
 
-  // ---------- salary pay actions ----------
-  const openPayModal = (salary) => {
-    setPayTarget(salary);
+  // ---------- pay actions ----------
+  const openPayModal = (record, type) => {
+    setPayTarget(record);
+    setPayType(type);
     setPayForm({
-      payment_method: salary?.payment_method || 'bank_transfer',
+      payment_method: record?.payment_method || 'bank_transfer',
       paid_date: new Date().toISOString().split('T')[0],
-      notes: salary?.notes || ''
+      notes: record?.notes || ''
     });
     setPayModalOpen(true);
   };
@@ -410,27 +707,82 @@ const ExpensePage = () => {
     setPayTarget(null);
   };
 
-  const submitPaySalary = async () => {
+  const submitPayment = async () => {
     if (!payTarget?._id) return;
+    
     try {
       setLoading(true);
-      await apiClient.put(`/salaries/${payTarget._id}/status`, {
-        status: 'paid',
-        payment_method: payForm.payment_method,
-        paid_date: payForm.paid_date,
-        notes: payForm.notes
-      });
+      
+      if (payType === 'salary') {
+        // For pending salaries (from doctors), create new salary record
+        if (payTarget.is_pending) {
+          await apiClient.post('/salaries', {
+            doctor_id: payTarget.doctor_id._id,
+            period_type: payTarget.period_type,
+            period_start: payTarget.period_start,
+            period_end: payTarget.period_end,
+            amount: payTarget.amount,
+            net_amount: payTarget.amount,
+            earning_type: 'salary',
+            status: 'paid',
+            payment_method: payForm.payment_method,
+            paid_date: payForm.paid_date,
+            notes: payForm.notes
+          });
+        } else {
+          // Update existing salary record
+          await apiClient.put(`/salaries/${payTarget._id}/status`, {
+            status: 'paid',
+            payment_method: payForm.payment_method,
+            paid_date: payForm.paid_date,
+            notes: payForm.notes
+          });
+        }
+      } else if (payType === 'commission') {
+        // For pending commissions, create new commission record
+        if (payTarget.is_pending) {
+          await apiClient.post('/salaries', {
+            doctor_id: payTarget.doctor_id._id,
+            period_type: 'daily',
+            period_start: payTarget.period_start,
+            period_end: payTarget.period_end,
+            amount: payTarget.amount,
+            net_amount: payTarget.amount,
+            earning_type: 'commission',
+            appointment_count: 1,
+            appointments: [payTarget._id.replace('pending-commission-', '')],
+            gross_amount: payTarget.total_amount,
+            doctor_share: payTarget.amount,
+            hospital_share: payTarget.total_amount - payTarget.amount,
+            revenue_percentage: payTarget.doctor_id.revenuePercentage,
+            status: 'paid',
+            payment_method: payForm.payment_method,
+            paid_date: payForm.paid_date,
+            notes: payForm.notes
+          });
+        } else {
+          // Update existing commission record
+          await apiClient.put(`/salaries/${payTarget._id}/status`, {
+            status: 'paid',
+            payment_method: payForm.payment_method,
+            paid_date: payForm.paid_date,
+            notes: payForm.notes
+          });
+        }
+      }
+
       closePayModal();
-      await fetchSalaryData();
-      await fetchSalarySummary();
+      await fetchData();
+      alert(`${payType === 'salary' ? 'Salary' : 'Commission'} paid successfully!`);
     } catch (err) {
-      console.error('Pay salary failed:', err);
-      alert(err?.response?.data?.error || err.message || 'Failed to pay salary');
+      console.error('Payment failed:', err);
+      alert(err?.response?.data?.error || err.message || `Failed to pay ${payType}`);
     } finally {
       setLoading(false);
     }
   };
 
+  // Bulk select toggles
   const toggleSalarySelect = (salaryId) => {
     setSelectedSalaryIds((prev) => {
       const next = new Set(prev);
@@ -440,27 +792,101 @@ const ExpensePage = () => {
     });
   };
 
+  const toggleCommissionSelect = (commissionId) => {
+    setSelectedCommissionIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(commissionId)) next.delete(commissionId);
+      else next.add(commissionId);
+      return next;
+    });
+  };
+
   const clearSelectedSalaries = () => setSelectedSalaryIds(new Set());
+  const clearSelectedCommissions = () => setSelectedCommissionIds(new Set());
+
+  const openBulkPayModal = (type) => {
+    setBulkPayType(type);
+    setBulkPayOpen(true);
+  };
 
   const submitBulkPay = async () => {
-    const ids = Array.from(selectedSalaryIds);
+    const ids = bulkPayType === 'salary' 
+      ? Array.from(selectedSalaryIds) 
+      : Array.from(selectedCommissionIds);
+    
     if (!ids.length) return;
 
     try {
       setLoading(true);
-      await apiClient.post('/salaries/bulk-pay', {
-        salaryIds: ids,
-        payment_method: bulkPayForm.payment_method,
-        paid_date: bulkPayForm.paid_date,
-        notes: bulkPayForm.notes
-      });
+      
+      // Filter out pending records (those with is_pending flag)
+      const recordsToPay = bulkPayType === 'salary' 
+        ? filteredSalaryRecords.filter(r => selectedSalaryIds.has(r._id) && !r.is_pending)
+        : filteredCommissionRecords.filter(r => selectedCommissionIds.has(r._id) && !r.is_pending);
+
+      if (recordsToPay.length > 0) {
+        await apiClient.post('/salaries/bulk-pay', {
+          salaryIds: recordsToPay.map(r => r._id),
+          payment_method: bulkPayForm.payment_method,
+          paid_date: bulkPayForm.paid_date,
+          notes: bulkPayForm.notes
+        });
+      }
+
+      // Handle pending records separately (create new salary records)
+      const pendingRecords = bulkPayType === 'salary'
+        ? filteredSalaryRecords.filter(r => selectedSalaryIds.has(r._id) && r.is_pending)
+        : filteredCommissionRecords.filter(r => selectedCommissionIds.has(r._id) && r.is_pending);
+
+      for (const record of pendingRecords) {
+        if (bulkPayType === 'salary') {
+          await apiClient.post('/salaries', {
+            doctor_id: record.doctor_id._id,
+            period_type: record.period_type,
+            period_start: record.period_start,
+            period_end: record.period_end,
+            amount: record.amount,
+            net_amount: record.amount,
+            earning_type: 'salary',
+            status: 'paid',
+            payment_method: bulkPayForm.payment_method,
+            paid_date: bulkPayForm.paid_date,
+            notes: bulkPayForm.notes
+          });
+        } else {
+          await apiClient.post('/salaries', {
+            doctor_id: record.doctor_id._id,
+            period_type: 'daily',
+            period_start: record.period_start,
+            period_end: record.period_end,
+            amount: record.amount,
+            net_amount: record.amount,
+            earning_type: 'commission',
+            appointment_count: 1,
+            appointments: [record._id.replace('pending-commission-', '')],
+            gross_amount: record.total_amount,
+            doctor_share: record.amount,
+            hospital_share: record.total_amount - record.amount,
+            revenue_percentage: record.doctor_id.revenuePercentage,
+            status: 'paid',
+            payment_method: bulkPayForm.payment_method,
+            paid_date: bulkPayForm.paid_date,
+            notes: bulkPayForm.notes
+          });
+        }
+      }
+
       setBulkPayOpen(false);
-      clearSelectedSalaries();
-      await fetchSalaryData();
-      await fetchSalarySummary();
+      if (bulkPayType === 'salary') {
+        clearSelectedSalaries();
+      } else {
+        clearSelectedCommissions();
+      }
+      await fetchData();
+      alert(`Bulk payment processed successfully!`);
     } catch (err) {
       console.error('Bulk pay failed:', err);
-      alert(err?.response?.data?.error || err.message || 'Failed to bulk pay salaries');
+      alert(err?.response?.data?.error || err.message || 'Failed to bulk pay');
     } finally {
       setLoading(false);
     }
@@ -469,20 +895,21 @@ const ExpensePage = () => {
   // ---------- export ----------
   const exportReport = async () => {
     try {
-      if (activeTab === 'salaries') {
+      if (activeTab === 'salaries' || activeTab === 'commissions') {
         const periodType = filters.periodType && filters.periodType !== 'all' ? filters.periodType : 'monthly';
         const startDate = filters.startDate || new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
         const endDate = filters.endDate || new Date().toISOString().split('T')[0];
+        const earningType = activeTab === 'salaries' ? 'salary' : 'commission';
 
         const res = await apiClient.get('/salaries/report', {
-          params: { periodType, startDate, endDate, format: 'csv' },
+          params: { periodType, startDate, endDate, earningType, format: 'csv' },
           responseType: 'blob'
         });
 
         const url = window.URL.createObjectURL(new Blob([res.data]));
         const link = document.createElement('a');
         link.href = url;
-        link.setAttribute('download', `salary-report-${startDate}-to-${endDate}.csv`);
+        link.setAttribute('download', `${activeTab}-report-${startDate}-to-${endDate}.csv`);
         document.body.appendChild(link);
         link.click();
         link.remove();
@@ -530,9 +957,17 @@ const ExpensePage = () => {
   }, [salarySummary]);
 
   const pendingSalaryAmount = useMemo(() => {
-    const pending = salarySummary?.byStatus?.find((x) => safeLower(x._id) === 'pending');
-    return pending?.totalAmount || 0;
-  }, [salarySummary]);
+    return pendingSalaries.reduce((sum, s) => sum + (s.amount || 0), 0);
+  }, [pendingSalaries]);
+
+  const paidCommissionAmount = useMemo(() => {
+    const paid = commissionSummary?.byStatus?.find((x) => safeLower(x._id) === 'paid');
+    return paid?.totalAmount || 0;
+  }, [commissionSummary]);
+
+  const pendingCommissionAmount = useMemo(() => {
+    return pendingCommissions.reduce((sum, c) => sum + (c.amount || 0), 0);
+  }, [pendingCommissions]);
 
   const purchaseReceivedAmount = useMemo(() => {
     return purchaseOrderSummary?.statusBreakdown?.find((s) => s.status === 'Received')?.amount || 0;
@@ -577,7 +1012,7 @@ const ExpensePage = () => {
             <FaMoneyBillWave className="text-teal-600" />
             Hospital Expense Management
           </h1>
-          <p className="text-gray-600">Track and manage expenses, purchase orders, and doctor salaries</p>
+          <p className="text-gray-600">Track and manage expenses, purchase orders, and doctor salaries/commissions</p>
           {errorMsg ? <p className="text-sm text-red-600 mt-1">{errorMsg}</p> : null}
         </div>
 
@@ -587,14 +1022,6 @@ const ExpensePage = () => {
             className="flex items-center gap-2 bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700"
           >
             <FaDownload /> Export
-          </button>
-
-          {/* Pay Salary Page Link */}
-          <button
-            onClick={() => navigate('/dashboard/admin/finance/salary')}
-            className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
-          >
-            <FaMoneyCheckAlt /> Pay Salaries
           </button>
 
           {activeTab === 'expenses' && (
@@ -608,7 +1035,7 @@ const ExpensePage = () => {
 
           {activeTab === 'purchase-orders' && (
             <button 
-              onClick={() => setAddPurchaseOrderModalOpen(true)}
+              onClick={() => navigate('/dashboard/admin/purchase-orders/new')}
               className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
             >
               <FaPlus /> Create Purchase Order
@@ -618,7 +1045,7 @@ const ExpensePage = () => {
           {activeTab === 'salaries' && (
             <>
               <button
-                onClick={() => setBulkPayOpen(true)}
+                onClick={() => openBulkPayModal('salary')}
                 disabled={selectedSalaryIds.size === 0}
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg ${
                   selectedSalaryIds.size === 0
@@ -639,112 +1066,194 @@ const ExpensePage = () => {
               </button>
             </>
           )}
+
+          {activeTab === 'commissions' && (
+            <>
+              <button
+                onClick={() => openBulkPayModal('commission')}
+                disabled={selectedCommissionIds.size === 0}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg ${
+                  selectedCommissionIds.size === 0
+                    ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                    : 'bg-blue-600 text-white hover:bg-blue-700'
+                }`}
+              >
+                <FaCheckCircle /> Pay Selected ({selectedCommissionIds.size})
+              </button>
+              <button
+                onClick={() => {
+                  clearSelectedCommissions();
+                  setFilters((prev) => ({ ...prev, status: 'pending' }));
+                }}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
+              >
+                <FaFilter /> Show Pending
+              </button>
+            </>
+          )}
         </div>
       </div>
 
       {/* Tabs */}
       <div className="bg-white rounded-lg shadow border overflow-hidden">
-        <div className="flex border-b">
+        <div className="flex border-b overflow-x-auto">
           <button
-            className={`px-6 py-3 font-medium ${
+            className={`px-6 py-3 font-medium whitespace-nowrap ${
               activeTab === 'expenses' ? 'text-teal-600 border-b-2 border-teal-600' : 'text-gray-500 hover:text-gray-700'
             }`}
-            onClick={() => {
-              setActiveTab('expenses');
-              setSelectedSalaryIds(new Set());
-            }}
+            onClick={() => setActiveTab('expenses')}
           >
             <FaMoneyBillWave className="inline mr-2" />
             Expenses
           </button>
 
           <button
-            className={`px-6 py-3 font-medium ${
+            className={`px-6 py-3 font-medium whitespace-nowrap ${
               activeTab === 'purchase-orders'
                 ? 'text-teal-600 border-b-2 border-teal-600'
                 : 'text-gray-500 hover:text-gray-700'
             }`}
-            onClick={() => {
-              setActiveTab('purchase-orders');
-              setSelectedSalaryIds(new Set());
-            }}
+            onClick={() => setActiveTab('purchase-orders')}
           >
             <FaShoppingCart className="inline mr-2" />
             Purchase Orders
           </button>
 
           <button
-            className={`px-6 py-3 font-medium ${
+            className={`px-6 py-3 font-medium whitespace-nowrap ${
               activeTab === 'salaries' ? 'text-teal-600 border-b-2 border-teal-600' : 'text-gray-500 hover:text-gray-700'
             }`}
-            onClick={() => {
-              setActiveTab('salaries');
-            }}
+            onClick={() => setActiveTab('salaries')}
           >
             <FaUser className="inline mr-2" />
             Salaries
+          </button>
+
+          <button
+            className={`px-6 py-3 font-medium whitespace-nowrap ${
+              activeTab === 'commissions' ? 'text-teal-600 border-b-2 border-teal-600' : 'text-gray-500 hover:text-gray-700'
+            }`}
+            onClick={() => setActiveTab('commissions')}
+          >
+            <FaPercent className="inline mr-2" />
+            Commissions
           </button>
         </div>
       </div>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <SummaryCard
-          title={`Total ${activeTab === 'salaries' ? 'Salaries' : activeTab === 'purchase-orders' ? 'Orders' : 'Expenses'}`}
-          value={
-            activeTab === 'expenses'
-              ? formatCurrency(expenseSummary?.overall?.totalExpenses ?? totals.totalExpenses)
-              : activeTab === 'purchase-orders'
-              ? formatCurrency(purchaseOrderSummary?.totalAmount || 0)
-              : formatCurrency(salarySummary?.overall?.totalAmount || 0)
-          }
-          icon={<FaMoneyBillWave className="text-3xl text-blue-600" />}
-        />
+        {activeTab === 'expenses' && (
+          <>
+            <SummaryCard
+              title="Total Expenses"
+              value={formatCurrency(expenseSummary?.overall?.totalExpenses || 0)}
+              icon={<FaMoneyBillWave className="text-3xl text-blue-600" />}
+            />
+            <SummaryCard
+              title="Paid Expenses"
+              value={formatCurrency(expenseSummary?.overall?.paidExpenses || 0)}
+              icon={<FaCheckCircle className="text-3xl text-green-600" />}
+              valueClass="text-green-600"
+            />
+            <SummaryCard
+              title="Pending Expenses"
+              value={formatCurrency(expenseSummary?.overall?.pendingExpenses || 0)}
+              icon={<FaClock className="text-3xl text-yellow-600" />}
+              valueClass="text-yellow-600"
+            />
+            <SummaryCard
+              title="Salary Expenses"
+              value={formatCurrency(expenseSummary?.salaryExpenses || 0)}
+              icon={<FaUser className="text-3xl text-purple-600" />}
+              valueClass="text-purple-600"
+            />
+          </>
+        )}
 
-        <SummaryCard
-          title={`Paid ${activeTab === 'salaries' ? 'Salaries' : activeTab === 'purchase-orders' ? 'Received' : 'Expenses'}`}
-          value={
-            activeTab === 'expenses'
-              ? formatCurrency(expenseSummary?.overall?.paidExpenses ?? totals.paidExpenses)
-              : activeTab === 'purchase-orders'
-              ? formatCurrency(purchaseReceivedAmount)
-              : formatCurrency(paidSalaryAmount)
-          }
-          icon={<FaMoneyBillWave className="text-3xl text-green-600" />}
-          valueClass="text-green-600"
-        />
+        {activeTab === 'purchase-orders' && (
+          <>
+            <SummaryCard
+              title="Total Orders"
+              value={purchaseOrderSummary?.totalOrders || 0}
+              icon={<FaShoppingCart className="text-3xl text-blue-600" />}
+            />
+            <SummaryCard
+              title="Total Amount"
+              value={formatCurrency(purchaseOrderSummary?.totalAmount || 0)}
+              icon={<FaMoneyBillWave className="text-3xl text-red-600" />}
+              valueClass="text-red-600"
+            />
+            <SummaryCard
+              title="Received"
+              value={formatCurrency(purchaseReceivedAmount)}
+              icon={<FaCheckCircle className="text-3xl text-green-600" />}
+              valueClass="text-green-600"
+            />
+            <SummaryCard
+              title="Pending"
+              value={formatCurrency(purchasePendingAmount)}
+              icon={<FaClock className="text-3xl text-yellow-600" />}
+              valueClass="text-yellow-600"
+            />
+          </>
+        )}
 
-        <SummaryCard
-          title={`Pending ${activeTab === 'salaries' ? 'Salaries' : activeTab === 'purchase-orders' ? 'Orders' : 'Expenses'}`}
-          value={
-            activeTab === 'expenses'
-              ? formatCurrency(expenseSummary?.overall?.pendingExpenses ?? totals.pendingExpenses)
-              : activeTab === 'purchase-orders'
-              ? formatCurrency(purchasePendingAmount)
-              : formatCurrency(pendingSalaryAmount)
-          }
-          icon={<FaMoneyBillWave className="text-3xl text-yellow-600" />}
-          valueClass="text-yellow-600"
-        />
+        {activeTab === 'salaries' && (
+          <>
+            <SummaryCard
+              title="Total Salaries"
+              value={formatCurrency((salarySummary?.overall?.totalAmount || 0) + pendingSalaryAmount)}
+              icon={<FaUser className="text-3xl text-blue-600" />}
+            />
+            <SummaryCard
+              title="Paid Salaries"
+              value={formatCurrency(paidSalaryAmount)}
+              icon={<FaCheckCircle className="text-3xl text-green-600" />}
+              valueClass="text-green-600"
+            />
+            <SummaryCard
+              title="Pending Salaries"
+              value={formatCurrency(pendingSalaryAmount)}
+              icon={<FaClock className="text-3xl text-yellow-600" />}
+              valueClass="text-yellow-600"
+            />
+            <SummaryCard
+              title="Records"
+              value={salarySummary?.overall?.totalRecords || 0}
+              icon={<FaFileAlt className="text-3xl text-purple-600" />}
+              valueClass="text-purple-600"
+            />
+          </>
+        )}
 
-        <SummaryCard
-          title={
-            activeTab === 'expenses'
-              ? 'Salary Expenses'
-              : activeTab === 'purchase-orders'
-              ? 'Completed Orders'
-              : 'Total Records'
-          }
-          value={
-            activeTab === 'expenses'
-              ? formatCurrency(expenseSummary?.salaryExpenses || 0)
-              : activeTab === 'purchase-orders'
-              ? String(purchaseOrderSummary?.statusBreakdown?.find((s) => s.status === 'Received')?.count || 0)
-              : String(salarySummary?.overall?.totalRecords || 0)
-          }
-          icon={<FaUser className="text-3xl text-purple-600" />}
-          valueClass="text-purple-600"
-        />
+        {activeTab === 'commissions' && (
+          <>
+            <SummaryCard
+              title="Total Commissions"
+              value={formatCurrency((commissionSummary?.overall?.totalAmount || 0) + pendingCommissionAmount)}
+              icon={<FaPercent className="text-3xl text-blue-600" />}
+            />
+            <SummaryCard
+              title="Paid Commissions"
+              value={formatCurrency(paidCommissionAmount)}
+              icon={<FaCheckCircle className="text-3xl text-green-600" />}
+              valueClass="text-green-600"
+            />
+            <SummaryCard
+              title="Pending Commissions"
+              value={formatCurrency(pendingCommissionAmount)}
+              icon={<FaClock className="text-3xl text-yellow-600" />}
+              valueClass="text-yellow-600"
+            />
+            <SummaryCard
+              title="Appointments"
+              value={pendingCommissions.length}
+              icon={<FaUserMd className="text-3xl text-purple-600" />}
+              valueClass="text-purple-600"
+            />
+          </>
+        )}
       </div>
 
       {/* Filters */}
@@ -766,7 +1275,9 @@ const ExpensePage = () => {
                   ? 'Search expenses...'
                   : activeTab === 'purchase-orders'
                   ? 'Search purchase orders...'
-                  : 'Search salaries (doctor/period/notes)...'
+                  : activeTab === 'salaries'
+                  ? 'Search salaries (doctor/period)...'
+                  : 'Search commissions (doctor/patient/invoice)...'
               }
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -857,8 +1368,8 @@ const ExpensePage = () => {
             </>
           )}
 
-          {/* Salary-specific filters */}
-          {activeTab === 'salaries' && (
+          {/* Salary/Commission filters */}
+          {(activeTab === 'salaries' || activeTab === 'commissions') && (
             <>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Period Type</label>
@@ -895,10 +1406,26 @@ const ExpensePage = () => {
                   className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500"
                 />
               </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Doctor</label>
+                <select
+                  value={filters.doctorId}
+                  onChange={(e) => handleFilterChange('doctorId', e.target.value)}
+                  className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500"
+                >
+                  <option value="all">All Doctors</option>
+                  {doctors.map((doc) => (
+                    <option key={doc._id} value={doc._id}>
+                      Dr. {doc.firstName} {doc.lastName} {doc.isFullTime ? '(Full-time)' : '(Part-time)'}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </>
           )}
 
-          {/* Status (shared but options differ) */}
+          {/* Status */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
 
@@ -915,7 +1442,7 @@ const ExpensePage = () => {
                   </option>
                 ))}
               </select>
-            ) : activeTab === 'salaries' ? (
+            ) : activeTab === 'salaries' || activeTab === 'commissions' ? (
               <select
                 value={filters.status}
                 onChange={(e) => handleFilterChange('status', e.target.value)}
@@ -952,43 +1479,6 @@ const ExpensePage = () => {
             </button>
           </div>
         </div>
-
-        {/* Salaries pagination */}
-        {activeTab === 'salaries' && (
-          <div className="mt-4 flex flex-col md:flex-row md:items-center gap-3 justify-between">
-            <div className="text-sm text-gray-600">
-              Records: <span className="font-semibold">{filteredSalaryRecords.length}</span>
-            </div>
-            <div className="flex gap-2 items-center">
-              <label className="text-sm text-gray-600">Per page</label>
-              <select
-                value={filters.limit}
-                onChange={(e) => handleFilterChange('limit', parseInt(e.target.value, 10))}
-                className="p-2 border border-gray-300 rounded-lg text-sm"
-              >
-                {[10, 20, 50, 100].map((n) => (
-                  <option key={n} value={n}>
-                    {n}
-                  </option>
-                ))}
-              </select>
-
-              <button
-                onClick={() => handleFilterChange('page', Math.max(1, (filters.page || 1) - 1))}
-                className="px-3 py-2 border rounded-lg text-sm hover:bg-gray-50"
-              >
-                Prev
-              </button>
-              <div className="text-sm text-gray-700">Page {filters.page}</div>
-              <button
-                onClick={() => handleFilterChange('page', (filters.page || 1) + 1)}
-                className="px-3 py-2 border rounded-lg text-sm hover:bg-gray-50"
-              >
-                Next
-              </button>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Data Table */}
@@ -998,11 +1488,21 @@ const ExpensePage = () => {
             {activeTab === 'expenses' && 'Expense Records'}
             {activeTab === 'purchase-orders' && 'Purchase Orders'}
             {activeTab === 'salaries' && 'Salary Records'}
+            {activeTab === 'commissions' && 'Commission Records'}
           </h3>
 
           {activeTab === 'salaries' && selectedSalaryIds.size > 0 && (
             <button
-              onClick={() => clearSelectedSalaries()}
+              onClick={clearSelectedSalaries}
+              className="text-sm px-3 py-2 rounded-lg border border-gray-300 hover:bg-gray-50"
+            >
+              Clear Selection
+            </button>
+          )}
+
+          {activeTab === 'commissions' && selectedCommissionIds.size > 0 && (
+            <button
+              onClick={clearSelectedCommissions}
               className="text-sm px-3 py-2 rounded-lg border border-gray-300 hover:bg-gray-50"
             >
               Clear Selection
@@ -1011,11 +1511,20 @@ const ExpensePage = () => {
         </div>
 
         {activeTab === 'expenses' && (
-          <ExpenseTable records={filteredExpenseRecords} formatCurrency={formatCurrency} getStatusBadge={getStatusBadge} getCategoryIcon={getCategoryIcon} />
+          <ExpenseTable 
+            records={filteredExpenseRecords} 
+            formatCurrency={formatCurrency} 
+            getStatusBadge={getStatusBadge} 
+            getCategoryIcon={getCategoryIcon} 
+          />
         )}
 
         {activeTab === 'purchase-orders' && (
-          <PurchaseOrderTable orders={filteredPurchaseOrders} formatCurrency={formatCurrency} getStatusBadge={getStatusBadge} />
+          <PurchaseOrderTable 
+            orders={filteredPurchaseOrders} 
+            formatCurrency={formatCurrency} 
+            getStatusBadge={getStatusBadge} 
+          />
         )}
 
         {activeTab === 'salaries' && (
@@ -1023,37 +1532,64 @@ const ExpensePage = () => {
             salaries={filteredSalaryRecords}
             formatCurrency={formatCurrency}
             getStatusBadge={getStatusBadge}
-            onPay={openPayModal}
-            selectedSalaryIds={selectedSalaryIds}
+            onPay={(record) => openPayModal(record, 'salary')}
+            selectedIds={selectedSalaryIds}
             toggleSelect={toggleSalarySelect}
+            type="salary"
+          />
+        )}
+
+        {activeTab === 'commissions' && (
+          <CommissionTable
+            commissions={filteredCommissionRecords}
+            formatCurrency={formatCurrency}
+            getStatusBadge={getStatusBadge}
+            onPay={(record) => openPayModal(record, 'commission')}
+            selectedIds={selectedCommissionIds}
+            toggleSelect={toggleCommissionSelect}
           />
         )}
       </div>
 
-      {/* Summary sections */}
-      {activeTab === 'expenses' && expenseSummary && <ExpenseSummary expenseSummary={expenseSummary} formatCurrency={formatCurrency} />}
-      {activeTab === 'purchase-orders' && purchaseOrderSummary && <PurchaseOrderSummary purchaseOrderSummary={purchaseOrderSummary} formatCurrency={formatCurrency} />}
-      {activeTab === 'salaries' && salarySummary && <SalarySummary salarySummary={salarySummary} formatCurrency={formatCurrency} />}
-
-      {/* Pay salary modal */}
+      {/* Pay modal */}
       {payModalOpen && (
-        <Modal title="Pay Salary" onClose={closePayModal}>
+        <Modal title={`Pay ${payType === 'salary' ? 'Salary' : 'Commission'}`} onClose={closePayModal}>
           <div className="space-y-4">
             <div className="text-sm text-gray-700">
-              <div className="font-semibold">
-                Doctor:{' '}
-                {payTarget?.doctor_id
-                  ? `${payTarget.doctor_id.firstName || payTarget.doctor_id.first_name || ''} ${
-                      payTarget.doctor_id.lastName || payTarget.doctor_id.last_name || ''
-                    }`
-                  : 'N/A'}
-              </div>
-              <div className="text-gray-600 capitalize">
-                Period: {payTarget?.period_type} •{' '}
-                {payTarget?.period_start ? new Date(payTarget.period_start).toLocaleDateString() : 'N/A'} to{' '}
-                {payTarget?.period_end ? new Date(payTarget.period_end).toLocaleDateString() : 'N/A'}
-              </div>
-              <div className="mt-1 font-bold">{formatCurrency(payTarget?.net_amount || 0)}</div>
+              {payType === 'salary' ? (
+                <>
+                  <div className="font-semibold">
+                    Doctor:{' '}
+                    {payTarget?.doctor_id
+                      ? `${payTarget.doctor_id.firstName || ''} ${payTarget.doctor_id.lastName || ''}`
+                      : 'N/A'}
+                  </div>
+                  <div className="text-gray-600 capitalize">
+                    Period: {payTarget?.period_type} •{' '}
+                    {payTarget?.period_start ? new Date(payTarget.period_start).toLocaleDateString() : 'N/A'} to{' '}
+                    {payTarget?.period_end ? new Date(payTarget.period_end).toLocaleDateString() : 'N/A'}
+                  </div>
+                  <div className="mt-1 font-bold">{formatCurrency(payTarget?.net_amount || 0)}</div>
+                </>
+              ) : (
+                <>
+                  <div className="font-semibold">
+                    Doctor:{' '}
+                    {payTarget?.doctor_id
+                      ? `${payTarget.doctor_id.firstName || ''} ${payTarget.doctor_id.lastName || ''}`
+                      : 'N/A'}
+                  </div>
+                  <div className="text-gray-600">
+                    Patient: {payTarget?.patient_name || 'N/A'} • Invoice: {payTarget?.invoice_number || 'N/A'}
+                  </div>
+                  <div className="text-gray-600">
+                    Consultation Fee: {formatCurrency(payTarget?.consultation_fee || 0)}
+                  </div>
+                  <div className="mt-1 font-bold">
+                    Commission ({payTarget?.doctor_id?.revenuePercentage || 0}%): {formatCurrency(payTarget?.net_amount || 0)}
+                  </div>
+                </>
+              )}
             </div>
 
             <div>
@@ -1067,6 +1603,7 @@ const ExpensePage = () => {
                 <option value="cash">Cash</option>
                 <option value="upi">UPI</option>
                 <option value="card">Card</option>
+                <option value="cheque">Cheque</option>
               </select>
             </div>
 
@@ -1087,6 +1624,7 @@ const ExpensePage = () => {
                 onChange={(e) => setPayForm((p) => ({ ...p, notes: e.target.value }))}
                 className="w-full p-2 border rounded-lg"
                 rows={3}
+                placeholder="Add payment notes..."
               />
             </div>
 
@@ -1095,10 +1633,10 @@ const ExpensePage = () => {
                 Cancel
               </button>
               <button
-                onClick={submitPaySalary}
+                onClick={submitPayment}
                 className="px-4 py-2 rounded-lg bg-teal-600 text-white hover:bg-teal-700"
               >
-                Mark Paid
+                Process Payment
               </button>
             </div>
           </div>
@@ -1108,12 +1646,12 @@ const ExpensePage = () => {
       {/* Bulk pay modal */}
       {bulkPayOpen && (
         <Modal
-          title={`Bulk Pay Salaries (${selectedSalaryIds.size})`}
+          title={`Bulk Pay ${bulkPayType === 'salary' ? 'Salaries' : 'Commissions'} (${bulkPayType === 'salary' ? selectedSalaryIds.size : selectedCommissionIds.size})`}
           onClose={() => setBulkPayOpen(false)}
         >
           <div className="space-y-4">
             <div className="text-sm text-gray-600">
-              This will mark all selected salary records as <span className="font-semibold">paid</span>.
+              This will mark all selected {bulkPayType === 'salary' ? 'salary' : 'commission'} records as paid.
             </div>
 
             <div>
@@ -1127,6 +1665,7 @@ const ExpensePage = () => {
                 <option value="cash">Cash</option>
                 <option value="upi">UPI</option>
                 <option value="card">Card</option>
+                <option value="cheque">Cheque</option>
               </select>
             </div>
 
@@ -1147,6 +1686,7 @@ const ExpensePage = () => {
                 onChange={(e) => setBulkPayForm((p) => ({ ...p, notes: e.target.value }))}
                 className="w-full p-2 border rounded-lg"
                 rows={3}
+                placeholder="Add payment notes..."
               />
             </div>
 
@@ -1156,14 +1696,14 @@ const ExpensePage = () => {
               </button>
               <button
                 onClick={submitBulkPay}
-                disabled={selectedSalaryIds.size === 0}
+                disabled={(bulkPayType === 'salary' ? selectedSalaryIds.size : selectedCommissionIds.size) === 0}
                 className={`px-4 py-2 rounded-lg ${
-                  selectedSalaryIds.size === 0
+                  (bulkPayType === 'salary' ? selectedSalaryIds.size : selectedCommissionIds.size) === 0
                     ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                     : 'bg-teal-600 text-white hover:bg-teal-700'
                 }`}
               >
-                Pay Selected
+                Process Bulk Payment
               </button>
             </div>
           </div>
@@ -1463,8 +2003,8 @@ const PurchaseOrderTable = ({ orders, formatCurrency, getStatusBadge }) => (
   </div>
 );
 
-// Salaries Table (with pay + select)
-const SalaryTable = ({ salaries, formatCurrency, getStatusBadge, onPay, selectedSalaryIds, toggleSelect }) => (
+// Salaries Table
+const SalaryTable = ({ salaries, formatCurrency, getStatusBadge, onPay, selectedIds, toggleSelect, type }) => (
   <div className="overflow-x-auto">
     <table className="w-full">
       <thead className="bg-gray-50">
@@ -1472,8 +2012,7 @@ const SalaryTable = ({ salaries, formatCurrency, getStatusBadge, onPay, selected
           <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Select</th>
           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Doctor</th>
           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Period</th>
-          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Net Amount</th>
-          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Appointments</th>
+          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
         </tr>
@@ -1484,13 +2023,14 @@ const SalaryTable = ({ salaries, formatCurrency, getStatusBadge, onPay, selected
           const doctorName = `${doc.firstName || doc.first_name || ''} ${doc.lastName || doc.last_name || ''}`.trim() || 'N/A';
           const statusLower = (s.status || '').toString().toLowerCase();
           const isPaid = statusLower === 'paid';
+          const isPending = s.is_pending || statusLower === 'pending';
 
           return (
-            <tr key={s._id} className="hover:bg-gray-50">
+            <tr key={s._id} className={`hover:bg-gray-50 ${isPending ? 'bg-yellow-50' : ''}`}>
               <td className="px-4 py-4 whitespace-nowrap">
                 <input
                   type="checkbox"
-                  checked={selectedSalaryIds.has(s._id)}
+                  checked={selectedIds.has(s._id)}
                   disabled={isPaid}
                   onChange={() => toggleSelect(s._id)}
                   className="h-4 w-4"
@@ -1500,12 +2040,12 @@ const SalaryTable = ({ salaries, formatCurrency, getStatusBadge, onPay, selected
 
               <td className="px-6 py-4 whitespace-nowrap">
                 <div className="text-sm font-medium text-gray-900">{doctorName}</div>
-                {doc.paymentType ? <div className="text-xs text-gray-500">{doc.paymentType}</div> : null}
-                {doc.revenuePercentage && doc.revenuePercentage !== 100 ? (
-                  <div className="text-xs text-blue-600 font-medium">
-                    Revenue Share: {doc.revenuePercentage}%
-                  </div>
-                ) : null}
+                {doc.paymentType && (
+                  <div className="text-xs text-gray-500">{doc.paymentType}</div>
+                )}
+                {isPending && (
+                  <div className="text-xs text-yellow-600 font-medium mt-1">Pending</div>
+                )}
               </td>
 
               <td className="px-6 py-4">
@@ -1518,10 +2058,7 @@ const SalaryTable = ({ salaries, formatCurrency, getStatusBadge, onPay, selected
 
               <td className="px-6 py-4 whitespace-nowrap">
                 <div className="text-sm font-bold text-gray-900">{formatCurrency(s.net_amount || s.amount || 0)}</div>
-                {!isPaid && s.payment_method ? <div className="text-xs text-gray-500">{s.payment_method}</div> : null}
               </td>
-
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{s.appointment_count || 0}</td>
 
               <td className="px-6 py-4 whitespace-nowrap">
                 <span className={getStatusBadge(s.status)}>{(s.status || '').toString()}</span>
@@ -1534,15 +2071,13 @@ const SalaryTable = ({ salaries, formatCurrency, getStatusBadge, onPay, selected
                     View
                   </button>
 
-                  {!isPaid ? (
+                  {!isPaid && (
                     <button
                       onClick={() => onPay(s)}
                       className="text-white bg-teal-600 hover:bg-teal-700 text-sm px-3 py-1 rounded-lg"
                     >
                       Pay
                     </button>
-                  ) : (
-                    <span className="text-xs text-green-600 font-semibold">Paid</span>
                   )}
                 </div>
               </td>
@@ -1558,6 +2093,104 @@ const SalaryTable = ({ salaries, formatCurrency, getStatusBadge, onPay, selected
   </div>
 );
 
+// Commissions Table
+const CommissionTable = ({ commissions, formatCurrency, getStatusBadge, onPay, selectedIds, toggleSelect }) => (
+  <div className="overflow-x-auto">
+    <table className="w-full">
+      <thead className="bg-gray-50">
+        <tr>
+          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Select</th>
+          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Doctor</th>
+          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Invoice #</th>
+          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Patient</th>
+          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Consultation Fee</th>
+          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Commission</th>
+          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+        </tr>
+      </thead>
+      <tbody className="divide-y divide-gray-200">
+        {commissions.map((c) => {
+          const doc = c.doctor_id || {};
+          const doctorName = `${doc.firstName || doc.first_name || ''} ${doc.lastName || doc.last_name || ''}`.trim() || 'N/A';
+          const statusLower = (c.status || '').toString().toLowerCase();
+          const isPaid = statusLower === 'paid';
+          const isPending = c.is_pending || statusLower === 'pending';
+
+          return (
+            <tr key={c._id} className={`hover:bg-gray-50 ${isPending ? 'bg-yellow-50' : ''}`}>
+              <td className="px-4 py-4 whitespace-nowrap">
+                <input
+                  type="checkbox"
+                  checked={selectedIds.has(c._id)}
+                  disabled={isPaid}
+                  onChange={() => toggleSelect(c._id)}
+                  className="h-4 w-4"
+                  title={isPaid ? 'Already paid' : 'Select for bulk pay'}
+                />
+              </td>
+
+              <td className="px-6 py-4 whitespace-nowrap">
+                <div className="text-sm font-medium text-gray-900">{doctorName}</div>
+                <div className="text-xs text-gray-500">{doc.revenuePercentage || 0}%</div>
+              </td>
+
+              <td className="px-6 py-4 whitespace-nowrap">
+                <div className="text-sm font-mono text-gray-600">{c.invoice_number || 'N/A'}</div>
+              </td>
+
+              <td className="px-6 py-4 whitespace-nowrap">
+                <div className="text-sm text-gray-900">{c.patient_name || 'N/A'}</div>
+              </td>
+
+              <td className="px-6 py-4 whitespace-nowrap">
+                <div className="text-sm text-gray-600">
+                  {c.appointment_date ? new Date(c.appointment_date).toLocaleDateString() : '—'}
+                </div>
+              </td>
+
+              <td className="px-6 py-4 whitespace-nowrap">
+                <div className="text-sm text-gray-700">{formatCurrency(c.consultation_fee || 0)}</div>
+              </td>
+
+              <td className="px-6 py-4 whitespace-nowrap">
+                <div className="text-sm font-bold text-emerald-600">{formatCurrency(c.net_amount || c.amount || 0)}</div>
+              </td>
+
+              <td className="px-6 py-4 whitespace-nowrap">
+                <span className={getStatusBadge(c.status)}>{(c.status || '').toString()}</span>
+              </td>
+
+              <td className="px-6 py-4 whitespace-nowrap">
+                <div className="flex items-center gap-3">
+                  <button className="text-teal-600 hover:text-teal-900 text-sm">
+                    <FaEye className="inline mr-1" />
+                    View
+                  </button>
+
+                  {!isPaid && (
+                    <button
+                      onClick={() => onPay(c)}
+                      className="text-white bg-teal-600 hover:bg-teal-700 text-sm px-3 py-1 rounded-lg"
+                    >
+                      Pay
+                    </button>
+                  )}
+                </div>
+              </td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+
+    {commissions.length === 0 && (
+      <EmptyState icon={<FaPercent className="text-4xl text-gray-300 mx-auto mb-4" />} title="No commission records found" />
+    )}
+  </div>
+);
+
 const EmptyState = ({ icon, title }) => (
   <div className="text-center py-12">
     {icon}
@@ -1565,121 +2198,6 @@ const EmptyState = ({ icon, title }) => (
     <p className="text-sm text-gray-400 mt-1">Try adjusting your search or filters.</p>
   </div>
 );
-
-// Expense Summary
-const ExpenseSummary = ({ expenseSummary, formatCurrency }) => (
-  <div className="bg-white p-6 rounded-lg shadow border">
-    <h3 className="text-lg font-semibold text-gray-800 mb-4">Expense Summary</h3>
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <div>
-        <h4 className="font-medium text-gray-700 mb-3">Expense Breakdown</h4>
-        <div className="space-y-2">
-          <Row label="Total Expenses" value={formatCurrency(expenseSummary.overall?.totalExpenses || 0)} valueClass="text-red-600" />
-          <Row label="Paid Expenses" value={formatCurrency(expenseSummary.overall?.paidExpenses || 0)} valueClass="text-green-600" />
-          <Row label="Pending Expenses" value={formatCurrency(expenseSummary.overall?.pendingExpenses || 0)} valueClass="text-yellow-600" />
-          <div className="flex justify-between border-t pt-2">
-            <span className="font-medium">Net Expenses:</span>
-            <span className="font-bold text-red-600">{formatCurrency(expenseSummary.overall?.totalExpenses || 0)}</span>
-          </div>
-        </div>
-      </div>
-
-      <div>
-        <h4 className="font-medium text-gray-700 mb-3">Category Breakdown</h4>
-        <div className="space-y-2">
-          <Row label="Salary Expenses" value={formatCurrency(expenseSummary.salaryExpenses || 0)} />
-          <Row label="Medical Supplies" value={formatCurrency(expenseSummary.medicalSupplies || 0)} />
-          <Row label="Utilities" value={formatCurrency(expenseSummary.utilities || 0)} />
-          <Row label="Other Expenses" value={formatCurrency(expenseSummary.otherExpenses || 0)} />
-        </div>
-      </div>
-    </div>
-  </div>
-);
-
-// Purchase Order Summary
-const PurchaseOrderSummary = ({ purchaseOrderSummary, formatCurrency }) => {
-  const getStatusAmount = (status) => purchaseOrderSummary.statusBreakdown?.find((s) => s.status === status)?.amount || 0;
-  const getStatusCount = (status) => purchaseOrderSummary.statusBreakdown?.find((s) => s.status === status)?.count || 0;
-
-  return (
-    <div className="bg-white p-6 rounded-lg shadow border">
-      <h3 className="text-lg font-semibold text-gray-800 mb-4">Purchase Order Summary</h3>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-          <h4 className="font-medium text-gray-700 mb-3">Order Breakdown</h4>
-          <div className="space-y-2">
-            <Row label="Total Orders" value={purchaseOrderSummary.totalOrders || 0} />
-            <Row label="Total Amount" value={formatCurrency(purchaseOrderSummary.totalAmount || 0)} valueClass="text-red-600" />
-            <Row label="Average Order Value" value={formatCurrency(purchaseOrderSummary.averageOrderValue || 0)} />
-          </div>
-        </div>
-
-        <div>
-          <h4 className="font-medium text-gray-700 mb-3">Status Breakdown</h4>
-          <div className="space-y-2">
-            <Row
-              label="Received Orders"
-              value={`${getStatusCount('Received')} (${formatCurrency(getStatusAmount('Received'))})`}
-              valueClass="text-green-600"
-            />
-            <Row
-              label="Pending Orders"
-              value={`${getStatusCount('Pending')} (${formatCurrency(getStatusAmount('Pending'))})`}
-              valueClass="text-yellow-600"
-            />
-            <Row
-              label="Cancelled Orders"
-              value={`${getStatusCount('Cancelled')} (${formatCurrency(getStatusAmount('Cancelled'))})`}
-              valueClass="text-red-600"
-            />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// Salary Summary
-const SalarySummary = ({ salarySummary, formatCurrency }) => {
-  const getStatusAmount = (status) =>
-    salarySummary.byStatus?.find((s) => (s._id || '').toString().toLowerCase() === status)?.totalAmount || 0;
-
-  const getStatusCount = (status) =>
-    salarySummary.byStatus?.find((s) => (s._id || '').toString().toLowerCase() === status)?.count || 0;
-
-  return (
-    <div className="bg-white p-6 rounded-lg shadow border">
-      <h3 className="text-lg font-semibold text-gray-800 mb-4">Salary Summary</h3>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-          <h4 className="font-medium text-gray-700 mb-3">Overall Statistics</h4>
-          <div className="space-y-2">
-            <Row label="Total Salary Records" value={salarySummary.overall?.totalRecords || 0} />
-            <Row label="Total Amount (Paid + Pending)" value={formatCurrency(salarySummary.overall?.totalAmount || 0)} valueClass="text-red-600" />
-            <Row label="Average Salary Amount" value={formatCurrency(salarySummary.overall?.averageSalary || 0)} />
-          </div>
-        </div>
-
-        <div>
-          <h4 className="font-medium text-gray-700 mb-3">Status Breakdown</h4>
-          <div className="space-y-2">
-            <Row
-              label="Paid Salaries"
-              value={`${getStatusCount('paid')} (${formatCurrency(getStatusAmount('paid'))})`}
-              valueClass="text-green-600"
-            />
-            <Row
-              label="Pending Salaries"
-              value={`${getStatusCount('pending')} (${formatCurrency(getStatusAmount('pending'))})`}
-              valueClass="text-yellow-600"
-            />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 const Row = ({ label, value, valueClass = 'text-gray-900' }) => (
   <div className="flex justify-between">

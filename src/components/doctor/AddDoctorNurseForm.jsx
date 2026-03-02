@@ -33,7 +33,7 @@ const AddDoctorNurseForm = () => {
     firstName: '', lastName: '', email: '', phone: '', dateOfBirth: '', gender: '',
     address: '', city: '', state: '', zipCode: '', aadharNumber: '', panNumber: '',
     department: '', specialization: '', licenseNumber: '', experience: '', education: '',
-    startDate: getTodayDate(), isFullTime: true, paymentType: 'Salary', amount: '',
+    startDate: getTodayDate(), isFullTime: '', paymentType: 'Salary', amount: '',
     contractStartDate: '', contractEndDate: '', visitsPerWeek: '', workingDaysPerWeek: [],
     shift: '', timeSlots: [{ start: '', end: '' }], notes: '', emergencyContact: '', emergencyPhone: '',
     revenuePercentage: 80, // NEW FIELD: Default 80% for part-time doctors
@@ -712,7 +712,7 @@ const AddDoctorNurseForm = () => {
 
                   <SearchableFormSelect
                     label="Employment Type"
-                    value={formData.isFullTime ? 'Full-time' : 'Part-time'}
+                    value={formData.isFullTime === true ? 'Full-time' : formData.isFullTime === false ? 'Part-time' : ''}
                     onChange={(e) => {
                       const isFull = e.target.value === 'Full-time';
                       setFormData(prev => ({
@@ -722,7 +722,10 @@ const AddDoctorNurseForm = () => {
                         revenuePercentage: isFull ? 100 : prev.revenuePercentage
                       }));
                     }}
-                    options={[{ value: 'Full-time', label: 'Full-time (Salaried)' }, { value: 'Part-time', label: 'Part-time (Consultant)' }]}
+                    options={[
+                      { value: 'Full-time', label: 'Full-time (Salaried)' },
+                      { value: 'Part-time', label: 'Part-time (Consultant)' }
+                    ]}
                   />
                 </div>
 
