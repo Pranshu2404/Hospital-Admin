@@ -318,12 +318,13 @@ const NurseAppointments = () => {
                         <span className="px-2 py-1 bg-yellow-100 text-yellow-700 rounded text-xs">Pending</span>
                     )}
                 </td>
-                <td className="px-6 py-4">
-                    <button
-                        onClick={() => handleUpdateClick(a)}
-                        disabled={!canAccessVitals()}
-                        className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition font-medium ${
-                            canAccessVitals() 
+                {(a.status === 'Scheduled' || a.status === 'Pending' ) && (
+                    <td className="px-6 py-4">
+                        <button
+                            onClick={() => handleUpdateClick(a)}
+                            disabled={!canAccessVitals()}
+                            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition font-medium ${
+                                canAccessVitals() 
                                 ? 'bg-teal-50 text-teal-600 hover:bg-teal-100' 
                                 : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                         }`}
@@ -332,6 +333,7 @@ const NurseAppointments = () => {
                         {canAccessVitals() ? 'Update Vitals' : 'Access Denied'}
                     </button>
                 </td>
+                )}
             </tr>
         );
     };
@@ -408,7 +410,7 @@ const NurseAppointments = () => {
                         <table className="w-full text-sm text-left">
                             <thead className="bg-slate-50 text-slate-500 font-semibold uppercase">
                                 <tr>
-                                    <th className="px-6 py-4">Date / Time / Queue No.</th>
+                                    <th className="px-6 py-4">Date / Time</th>
                                     <th className="px-6 py-4">Patient</th>
                                     <th className="px-6 py-4">Doctor</th>
                                     <th className="px-6 py-4">Status</th>
@@ -493,7 +495,7 @@ const NurseAppointments = () => {
                                 <table className="w-full text-sm text-left">
                                     <thead className="bg-slate-50 text-slate-500 font-semibold uppercase">
                                         <tr>
-                                            <th className="px-6 py-4">Date / Time / Queue No.</th>
+                                            <th className="px-6 py-4">Date / Time</th>
                                             <th className="px-6 py-4">Patient</th>
                                             <th className="px-6 py-4">Doctor</th>
                                             <th className="px-6 py-4">Status</th>
@@ -528,12 +530,12 @@ const NurseAppointments = () => {
                                 <table className="w-full text-sm text-left">
                                     <thead className="bg-slate-50 text-slate-500 font-semibold uppercase">
                                         <tr>
-                                            <th className="px-6 py-4">Date / Time / Queue No.</th>
+                                            <th className="px-6 py-4">Date / Time</th>
                                             <th className="px-6 py-4">Patient</th>
                                             <th className="px-6 py-4">Doctor</th>
                                             <th className="px-6 py-4">Status</th>
                                             <th className="px-6 py-4">Vitals Status</th>
-                                            <th className="px-6 py-4">Action</th>
+                                            {/* <th className="px-6 py-4">Action</th> */}
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100">

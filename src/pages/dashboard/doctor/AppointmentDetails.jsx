@@ -728,7 +728,7 @@ const AppointmentDetails = () => {
 
       if (response.data.data && response.data.data.medicines) {
         const medicineOpts = response.data.data.medicines.map(med => ({
-          label: med.medicine_name,
+          label: med.medicine_name + (med.strength ? ` ${med.strength}` : '') + (med.dosage_form ? ` ${med.dosage_form}` : ''),
           value: med.medicine_name,
           dosage: med.dosage_form,
           strength: med.strength,

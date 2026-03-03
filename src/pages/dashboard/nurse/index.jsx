@@ -261,7 +261,7 @@ const NurseDashboard = () => {
 
           {/* Completed Vitals Card */}
           <div className="stat-card-hover relative overflow-hidden rounded-2xl p-6 cursor-pointer bg-white border border-slate-200 shadow-sm group"
-               onClick={() => navigate('/dashboard/nurse/vitals-history')}>
+               onClick={() => navigate('/dashboard/nurse/prescriptions')}>
             <div className="flex items-start justify-between relative z-10">
               <div className="space-y-2">
                 <p className="text-slate-500 text-xs font-bold uppercase tracking-wider">Completed Vitals</p>
@@ -285,7 +285,7 @@ const NurseDashboard = () => {
 
           {/* Today's Appointments Card */}
           <div className="stat-card-hover relative overflow-hidden rounded-2xl p-6 cursor-pointer bg-white border border-slate-200 shadow-sm group"
-               onClick={() => navigate('/dashboard/nurse/appointments')}>
+               onClick={() => navigate('/dashboard/nurse/prescriptions')}>
             <div className="flex items-start justify-between relative z-10">
               <div className="space-y-2">
                 <p className="text-slate-500 text-xs font-bold uppercase tracking-wider">Today's Appointments</p>
@@ -315,7 +315,7 @@ const NurseDashboard = () => {
                   <p className="text-xs text-slate-500 mt-1">Latest patient appointments</p>
                 </div>
                 <button
-                  onClick={() => navigate('/dashboard/nurse/appointments')}
+                  onClick={() => navigate('/dashboard/nurse/prescriptions')}
                   className="text-sm font-semibold text-teal-600 hover:text-teal-700 hover:bg-teal-50 px-4 py-2 rounded-lg transition-colors"
                 >
                   View All
@@ -336,7 +336,7 @@ const NurseDashboard = () => {
                   <tbody className="divide-y divide-slate-100">
                     {recentAppointments.length > 0 ? (
                       recentAppointments.map((appt) => (
-                        <tr key={appt.id} className="hover:bg-slate-50/80 transition-colors cursor-pointer" onClick={() => navigate(`/dashboard/nurse/appointments/${appt.id}`)}>
+                        <tr key={appt.id} className="hover:bg-slate-50/80 transition-colors cursor-pointer" onClick={() => navigate(`/dashboard/nurse/prescriptions`)}>
                           <td className="px-6 py-4">
                             <div className="flex items-center gap-3">
                               {appt.patientImage ? (
@@ -419,7 +419,7 @@ const NurseDashboard = () => {
                 className="w-full py-3 bg-white text-teal-700 font-bold rounded-xl shadow-md hover:bg-teal-50 transition-colors flex items-center justify-center gap-2"
               >
                 <FaPlus />
-                Start Recording
+                Record Vitals
               </button>
             </div>
 
@@ -429,16 +429,16 @@ const NurseDashboard = () => {
               <div className="grid grid-cols-2 gap-3">
                 {[
                   { label: 'Vitals Queue', icon: FaHeartbeat, path: '/dashboard/nurse/prescriptions', color: 'amber' },
-                  { label: 'Appointments', icon: FaCalendarCheck, path: '/dashboard/nurse/appointments', color: 'teal' },
-                  { label: 'Patients', icon: FaUserInjured, path: '/dashboard/nurse/patients', color: 'blue' },
-                  { label: 'History', icon: FaClock, path: '/dashboard/nurse/vitals-history', color: 'purple' }
+                  { label: 'Appointments', icon: FaCalendarCheck, path: '/dashboard/nurse/prescriptions', color: 'teal' },
+                  { label: 'Patients', icon: FaUserInjured, path: '/dashboard/nurse/prescriptions', color: 'blue' },
+                  { label: 'History', icon: FaClock, path: '/dashboard/nurse/prescriptions', color: 'purple' }
                 ].map((item) => (
                   <div
                     key={item.label}
                     onClick={() => navigate(item.path)}
                     className="group flex flex-col items-center justify-center p-4 rounded-xl border border-slate-100 bg-slate-50/30 hover:bg-white hover:border-teal-200 hover:shadow-lg transition-all duration-300 cursor-pointer"
                   >
-                    <div className={`p-2.5 bg-white rounded-lg text-${item.color}-600 shadow-sm mb-2 group-hover:scale-110 group-hover:bg-${item.color}-500 group-hover:text-white transition-all duration-300`}>
+                    <div className={`p-2.5 bg-white rounded-lg text-${item.color}-600 shadow-sm mb-2 group-hover:scale-110 transition-all duration-300`}>
                       <item.icon className="w-5 h-5" />
                     </div>
                     <span className="text-xs font-medium text-slate-600 group-hover:text-teal-700 text-center">

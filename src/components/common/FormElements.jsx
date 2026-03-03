@@ -91,18 +91,20 @@ export const SearchableFormSelect = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
-  const [isSelecting, setIsSelecting] = useState(false); // Add this state
+  const [isSelecting, setIsSelecting] = useState(false);
   const wrapperRef = useRef(null);
 
-  // 1. Normalize options: Convert ['A', 'B'] to [{label: 'A', value: 'A'}]
+  // Normalize options: Convert ['A', 'B'] to [{label: 'A', value: 'A'}]
   const normalizedOptions = useMemo(() => {
     return options.map(opt => 
       typeof opt === 'object' ? opt : { label: String(opt), value: String(opt) }
     );
   }, [options]);
 
+  // Sort options with matches first, then alphabetically
   const displayedOptions = useMemo(() => {
     if (!searchTerm) {
+      // When no search term, just sort alphabetically
       return [...normalizedOptions].sort((a, b) => 
         (a.label || '').localeCompare(b.label || '')
       );
@@ -110,18 +112,29 @@ export const SearchableFormSelect = ({
     
     const lowerSearch = searchTerm.toLowerCase();
     
-    // Filter options that match the search term
-    const matchingOptions = normalizedOptions.filter(opt => 
-      opt.label.toLowerCase().includes(lowerSearch)
-    );
+    // Split options into matches and non-matches
+    const matches = [];
+    const nonMatches = [];
     
-    // Sort matching options alphabetically
-    return matchingOptions.sort((a, b) => 
-      (a.label || '').localeCompare(b.label || '')
-    );
+    normalizedOptions.forEach(opt => {
+      if (opt.label.toLowerCase().includes(lowerSearch)) {
+        matches.push(opt);
+      } else {
+        nonMatches.push(opt);
+      }
+    });
+    
+    // Sort matches alphabetically
+    matches.sort((a, b) => (a.label || '').localeCompare(b.label || ''));
+    
+    // Sort non-matches alphabetically
+    nonMatches.sort((a, b) => (a.label || '').localeCompare(b.label || ''));
+    
+    // Return matches first, then non-matches
+    return [...matches, ...nonMatches];
   }, [searchTerm, normalizedOptions]);
 
-  // 3. Sync search term when value changes externally
+  // Sync search term when value changes externally
   useEffect(() => {
     const selected = normalizedOptions.find(opt => opt.value === value);
     if (selected) setSearchTerm(selected.label);
@@ -129,7 +142,6 @@ export const SearchableFormSelect = ({
   }, [value, normalizedOptions]);
 
   const handleKeyDown = (e) => {
-    // IMPORTANT: Stop propagation to prevent parent form handlers
     e.stopPropagation();
     
     if (e.key === 'ArrowDown') {
@@ -140,11 +152,10 @@ export const SearchableFormSelect = ({
       e.preventDefault();
       setActiveIndex(prev => (prev > 0 ? prev - 1 : prev));
     } else if (e.key === 'Enter') {
-      e.preventDefault(); // Prevent form submission
+      e.preventDefault();
       if (isOpen && displayedOptions[activeIndex]) {
         handleSelect(displayedOptions[activeIndex]);
       } else {
-        // If dropdown is closed, open it
         setIsOpen(true);
       }
     } else if (e.key === 'Escape') {
@@ -153,16 +164,13 @@ export const SearchableFormSelect = ({
   };
 
   const handleSelect = (opt) => {
-    // Set selecting state to true to prevent onFocus from reopening dropdown
     setIsSelecting(true);
     
-    // Create a synthetic event that matches the expected format
     const syntheticEvent = {
       target: {
         name: label.toLowerCase().replace(/\s/g, ''),
         value: opt.value
       },
-      // Stop propagation to prevent parent handlers
       stopPropagation: () => {},
       preventDefault: () => {}
     };
@@ -171,13 +179,11 @@ export const SearchableFormSelect = ({
     setSearchTerm(opt.label);
     setIsOpen(false);
     
-    // Focus back on input after selection
     setTimeout(() => {
       if (wrapperRef.current) {
         const input = wrapperRef.current.querySelector('input');
         if (input) input.focus();
       }
-      // Reset selecting state after focus
       setTimeout(() => {
         setIsSelecting(false);
       }, 100);
@@ -210,7 +216,6 @@ export const SearchableFormSelect = ({
           type="text"
           value={searchTerm}
           onFocus={() => {
-            // Only open dropdown if not in the middle of selecting
             if (!isSelecting) {
               setIsOpen(true);
             }
@@ -246,21 +251,37 @@ export const SearchableFormSelect = ({
         {isOpen && displayedOptions.length > 0 && (
           <div className="absolute border border-gray-200 z-50 w-full mt-1 bg-white rounded-xl shadow-xl overflow-hidden">
             <div className="overflow-y-scroll max-h-[200px]">
-              {displayedOptions.map((opt, index) => (
-                <div
-                  key={opt.value}
-                  onClick={(e) => {
-                    e.stopPropagation(); // Prevent event from bubbling up to input
-                    handleSelect(opt);
-                  }}
-                  onMouseEnter={() => setActiveIndex(index)}
-                  className={`px-4 py-2 text-sm cursor-pointer transition-colors ${
-                    index === activeIndex ? 'bg-emerald-50 text-emerald-900 font-semibold' : 'text-gray-700'
-                  } ${opt.value === value ? 'bg-emerald-100/50 text-emerald-700' : ''}`}
-                >
-                  {opt.label}
-                </div>
-              ))}
+              {/* Optional separator when there are both matches and non-matches */}
+              
+              {displayedOptions.map((opt, index) => {
+                const isMatch = !searchTerm || opt.label.toLowerCase().includes(searchTerm.toLowerCase());
+                const showSeparator = searchTerm && 
+                                     index > 0 && 
+                                     isMatch && 
+                                     !displayedOptions[index - 1].label.toLowerCase().includes(searchTerm.toLowerCase());
+                
+                return (
+                  <React.Fragment key={opt.value}>
+                    {showSeparator && (
+                      <div className="px-4 py-1 bg-gray-50 border-y border-gray-200">
+                        <span className="text-xs font-medium text-gray-500">OTHER OPTIONS</span>
+                      </div>
+                    )}
+                    <div
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleSelect(opt);
+                      }}
+                      onMouseEnter={() => setActiveIndex(index)}
+                      className={`px-4 py-2 text-sm cursor-pointer transition-colors ${
+                        index === activeIndex ? 'bg-emerald-50 text-emerald-900 font-semibold' : 'text-gray-700'
+                      } ${opt.value === value ? 'bg-emerald-100/50 text-emerald-700' : ''}`}
+                    >
+                      {opt.label}
+                    </div>
+                  </React.Fragment>
+                );
+              })}
             </div>
           </div>
         )}

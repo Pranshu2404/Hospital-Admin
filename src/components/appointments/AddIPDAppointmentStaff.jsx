@@ -1494,7 +1494,7 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
           display: flex;
           align-items: center;
           justify-content: center;
-          z-index: 1000;
+          z-index: 40;
           backdrop-filter: blur(5px);
         }
 
@@ -2292,7 +2292,7 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
               <div
                 className="action-button"
                 onClick={() => {
-                  setShowActionModal(false);
+                  // setShowActionModal(false);
                   setSlipModal(true);
                 }}
               >
@@ -2305,7 +2305,7 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
                 <div
                   className="action-button"
                   onClick={() => {
-                    setShowActionModal(false);
+                    // setShowActionModal(false);
                     setInvoiceModal(true);
                   }}
                 >
@@ -2337,7 +2337,7 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
           isOpen={slipModal}
           onClose={() => {
             setSlipModal(false);
-            resetFormForNextAppointment();
+            // resetFormForNextAppointment();
           }}
           appointmentData={submitDetails}
           hospitalInfo={hospitalInfo}
@@ -2350,7 +2350,7 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
           isOpen={invoiceModal}
           onClose={() => {
             setInvoiceModal(false);
-            resetFormForNextAppointment();
+            // resetFormForNextAppointment();
           }}
           invoiceData={invoiceDetails}
           hospitalInfo={hospitalInfo}

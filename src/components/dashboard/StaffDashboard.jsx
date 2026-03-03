@@ -5,7 +5,7 @@ import {
     ArrowUp, ArrowDown, Clock,
     X, ChevronDown, Edit, Save, Search, Filter, Calendar as CalendarIcon
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Navigate, Router, useNavigate } from 'react-router-dom';
 import {
     Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
     Legend, Line, LineChart, BarChart, Area, AreaChart
@@ -326,6 +326,7 @@ const PatientRegistrationChart = ({ patients }) => {
 
 // --- List Components ---
 const RecentAppointments = ({ appointments }) => {
+    const navigate = useNavigate();
     const getApptDetails = (appt) => {
         const patientName = appt.patient_id?.first_name
             ? `${appt.patient_id.first_name} ${appt.patient_id.last_name}`
@@ -365,7 +366,9 @@ const RecentAppointments = ({ appointments }) => {
                 {appointments.length > 0 ? appointments.slice(0, 6).map((appt) => {
                     const { patientName, doctorName, time, date, type, status } = getApptDetails(appt);
                     return (
-                        <div key={appt._id} className="flex items-center p-3 rounded-xl border border-slate-100 hover:border-teal-200 hover:bg-teal-50/30 transition-all group cursor-pointer">
+                        <div key={appt._id}
+                        onClick={() => navigate(`/dashboard/staff/appointments`)}
+                        className="flex items-center p-3 rounded-xl border border-slate-100 hover:border-teal-200 hover:bg-teal-50/30 transition-all group cursor-pointer">
                             <div className="w-10 h-10 rounded-full bg-teal-100 flex items-center justify-center text-teal-700 font-bold text-sm mr-3 group-hover:bg-white group-hover:shadow-sm">
                                 {patientName.charAt(0)}
                             </div>

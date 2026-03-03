@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import axios from 'axios';
 import {
   Search, Plus, Calendar, Clock, Filter,
@@ -83,6 +83,58 @@ const AppointmentListStaff = () => {
     }
   }, [patientType]);
 
+  // Define fetchData with useCallback to memoize it
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
+      const [appointmentRes, hospitalRes] = await Promise.all([
+        axios.get(`${import.meta.env.VITE_BACKEND_URL}/appointments`, { headers }),
+        axios.get(`${import.meta.env.VITE_BACKEND_URL}/hospitals`)
+      ]);
+
+      // Add enriched data for display
+      const enriched = appointmentRes.data.map((appt) => {
+        const timeInMinutes = getTimeInMinutes(appt.start_time);
+        const appointmentDate = new Date(appt.appointment_date);
+
+        return {
+          ...appt,
+          patientName: `${appt.patient_id?.first_name || ''} ${appt.patient_id?.last_name || ''}`.trim(),
+          patientImage: appt.patient_id?.patient_image || null,
+          doctorName: `Dr. ${appt.doctor_id?.firstName || ''} ${appt.doctor_id?.lastName || ''}`.trim(),
+          departmentName: appt.department_id?.name || 'N/A',
+          date: appointmentDate.toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric'
+          }),
+          rawDate: appt.appointment_date,
+          time: formatStoredTime(appt.start_time),
+          patientId: appt.patient_id?.patientId,
+          type: appt.type || 'Consultation',
+          timeInMinutes: timeInMinutes,
+          datetime: new Date(appointmentDate.setHours(
+            Math.floor(timeInMinutes / 60),
+            timeInMinutes % 60,
+            0,
+            0
+          ))
+        };
+      });
+
+      setAppointments(enriched);
+      setHospitalInfo(hospitalRes.data[0]);
+
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   // Fetch vitals configuration
   const fetchVitalsConfig = async (hospitalId) => {
     try {
@@ -107,6 +159,11 @@ const AppointmentListStaff = () => {
       setConfigLoading(false);
     }
   };
+
+  // Initial data fetch
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   // Listen for vitals config updates
   useEffect(() => {
@@ -149,12 +206,6 @@ const AppointmentListStaff = () => {
           color: 'green',
           icon: UserPlus
         };
-      // case 'registrar':
-      //   return {
-      //     message: userRole === 'registrar' ? 'You have access to manage vitals' : 'Vitals are managed by Registrars',
-      //     color: 'purple',
-      //     icon: User
-      //   };
       default:
         return {
           message: 'Vitals access information',
@@ -241,60 +292,6 @@ const AppointmentListStaff = () => {
 
     return appointmentDateTime > now;
   };
-
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const token = localStorage.getItem('token');
-        const headers = token ? { Authorization: `Bearer ${token}` } : {};
-
-        const [appointmentRes, hospitalRes] = await Promise.all([
-          axios.get(`${import.meta.env.VITE_BACKEND_URL}/appointments`, { headers }),
-          axios.get(`${import.meta.env.VITE_BACKEND_URL}/hospitals`)
-        ]);
-
-        // Add enriched data for display
-        const enriched = appointmentRes.data.map((appt) => {
-          const timeInMinutes = getTimeInMinutes(appt.start_time);
-          const appointmentDate = new Date(appt.appointment_date);
-
-          return {
-            ...appt,
-            patientName: `${appt.patient_id?.first_name || ''} ${appt.patient_id?.last_name || ''}`.trim(),
-            patientImage: appt.patient_id?.patient_image || null,
-            doctorName: `Dr. ${appt.doctor_id?.firstName || ''} ${appt.doctor_id?.lastName || ''}`.trim(),
-            departmentName: appt.department_id?.name || 'N/A',
-            date: appointmentDate.toLocaleDateString('en-US', {
-              month: 'short',
-              day: 'numeric',
-              year: 'numeric'
-            }),
-            rawDate: appt.appointment_date,
-            time: formatStoredTime(appt.start_time),
-            patientId: appt.patient_id?.patientId,
-            type: appt.type || 'Consultation',
-            timeInMinutes: timeInMinutes,
-            datetime: new Date(appointmentDate.setHours(
-              Math.floor(timeInMinutes / 60),
-              timeInMinutes % 60,
-              0,
-              0
-            ))
-          };
-        });
-
-        setAppointments(enriched);
-        setHospitalInfo(hospitalRes.data[0]);
-
-      } catch (error) {
-        console.error('Error fetching data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, []);
 
   // Separate appointments into completed and upcoming
   const separateAppointments = (appts) => {
@@ -414,8 +411,7 @@ const AppointmentListStaff = () => {
       setIsVitalsModalOpen(false);
       
       // Refresh appointments to show updated vitals
-      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/appointments`);
-      setAppointments(response.data);
+      fetchData();
     } catch (err) {
       console.error('Error updating vitals:', err);
       alert('Failed to update vitals.');
@@ -444,26 +440,31 @@ const AppointmentListStaff = () => {
     setIsViewModalOpen(true);
   };
 
-  const handleAppointmentSuccess = (newAppointment) => {
-    setAppointments([newAppointment, ...appointments]);
+  const handleAppointmentSuccess = async () => {
     setChooserOpen(false);
-    setSelectedAppointment(newAppointment);
-    setIsViewModalOpen(true);
+    // Refresh data after successful appointment creation
+    await fetchData();
   };
 
   const handleCompleteClick = async (appointment, e) => {
     e.stopPropagation();
     if (appointment.status !== 'Completed') {
       // Handle completion logic here
+      // After completion, refresh data
+      await fetchData();
     } else {
       setSelectedAppointment(appointment);
       setIsCompletionModalOpen(true);
     }
   };
 
+  const handleModalClose = async () => {
+    setChooserOpen(false);
+    await fetchData();
+  };
+
   const renderAppointmentRow = (appointment, isUpcoming = false, index = 0) => {
     const vitalsAccess = canAccessVitals();
-    const vitalsInfo = getVitalsAccessMessage();
     const vitalsFilled = appointment.vitals && Object.keys(appointment.vitals).length > 0;
 
     return (
@@ -691,7 +692,7 @@ const AppointmentListStaff = () => {
             </div>
 
             <button
-              onClick={() => { setChooserOpen(true); setSelectedType('opd'); }} // Default to OPD
+              onClick={() => { setChooserOpen(true); setSelectedType('opd'); }}
               className="flex items-center gap-2 bg-teal-600 hover:bg-teal-700 text-white px-5 py-2.5 rounded-lg font-medium transition-all shadow-sm hover:shadow-md active:scale-95"
             >
               <Plus size={18} /> New Appointment
@@ -834,7 +835,7 @@ const AppointmentListStaff = () => {
         </div>
       </div>
 
-      {/* Appointment Creation Modal - Simplified (No Type Selection) */}
+      {/* Appointment Creation Modal */}
       {chooserOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl overflow-hidden">
@@ -843,7 +844,7 @@ const AppointmentListStaff = () => {
                 <h3 className="font-bold text-lg text-slate-800">Schedule New Appointment</h3>
                 <p className="text-xs text-slate-500">Fill in the details below</p>
               </div>
-              <button onClick={() => setChooserOpen(false)} className="p-2 text-slate-400 hover:bg-slate-200 rounded-full transition">
+              <button onClick={handleModalClose} className="p-2 text-slate-400 hover:bg-slate-200 rounded-full transition">
                 <X size={20} />
               </button>
             </div>
@@ -851,8 +852,8 @@ const AppointmentListStaff = () => {
             <div className="flex-1 overflow-y-auto p-6 bg-white" style={{ maxHeight: '80vh' }}>
               <AddIPDAppointmentStaff
                 embedded={true}
-                type="opd" // Always OPD
-                onClose={() => setChooserOpen(false)}
+                type="opd"
+                onClose={handleModalClose}
                 onSuccess={handleAppointmentSuccess}
               />
             </div>
