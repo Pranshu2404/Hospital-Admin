@@ -13,8 +13,24 @@ import {
   FaClipboardCheck, FaChevronRight, FaChevronDown, FaTag,
   FaMoneyCheckAlt, FaReceipt, FaFileInvoice, FaArrowRight,
   FaPlayCircle, FaPauseCircle, FaStopCircle, FaHistory,
-  FaDownload, FaShare, FaEnvelope, FaCheck, FaTasks
+  FaDownload, FaShare, FaEnvelope, FaCheck, FaTasks,
+  FaExclamationTriangle, FaArrowLeft
 } from 'react-icons/fa';
+
+// --- Helper Functions ---
+const formatDateForAPI = (date) => {
+  if (!date) return null;
+  const d = new Date(date);
+  // Format as YYYY-MM-DD without timezone shift
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
+const formatDateTimeForAPI = (dateTime) => {
+  if (!dateTime) return null;
+  const d = new Date(dateTime);
+  // Return ISO string but ensure it's in local format
+  return d.toISOString();
+};
 
 // --- UI Components ---
 const StatusBadge = ({ status }) => {
@@ -88,6 +104,8 @@ function ProcedureManagement() {
   const [generatedBill, setGeneratedBill] = useState(null);
   const [generatedInvoice, setGeneratedInvoice] = useState(null);
   const [completingProcedure, setCompletingProcedure] = useState(false);
+  const [billingInProgress, setBillingInProgress] = useState(false);
+  const [billedProcedureIds, setBilledProcedureIds] = useState(new Set());
   
   // Filters
   const [searchTerm, setSearchTerm] = useState('');
@@ -104,6 +122,8 @@ function ProcedureManagement() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [showAutoBillModal, setShowAutoBillModal] = useState(false);
+  const [showDuplicateBillWarning, setShowDuplicateBillWarning] = useState(false);
+  const [duplicateProcedures, setDuplicateProcedures] = useState([]);
   
   // Form States
   const [paymentData, setPaymentData] = useState({
@@ -124,7 +144,7 @@ function ProcedureManagement() {
   const [completeProcedureData, setCompleteProcedureData] = useState({
     notes: '',
     performed_by: '',
-    completed_date: new Date().toISOString(),
+    completed_date: new Date().toISOString().split('T')[0] + 'T' + new Date().toTimeString().split(' ')[0],
     auto_generate_bill: true,
     payment_method: 'Cash'
   });
@@ -149,6 +169,7 @@ function ProcedureManagement() {
   
   const [doctors, setDoctors] = useState([]);
   const [hospitalInfo, setHospitalInfo] = useState(null);
+  const [doctorMap, setDoctorMap] = useState({});
 
   // Group procedures by prescription ID for better display
   const groupedProcedures = useMemo(() => {
@@ -183,6 +204,25 @@ function ProcedureManagement() {
   useEffect(() => {
     filterProcedures();
   }, [procedures, searchTerm, statusFilter, dateFilter, paymentFilter]);
+
+  // Sync billedProcedureIds with procedures data
+  useEffect(() => {
+    const billedIds = new Set(
+      procedures
+        .filter(p => p.is_billed)
+        .map(p => p._id)
+    );
+    setBilledProcedureIds(billedIds);
+  }, [procedures]);
+
+  // Create doctor map for quick lookup
+  useEffect(() => {
+    const map = {};
+    doctors.forEach(doctor => {
+      map[doctor._id] = doctor;
+    });
+    setDoctorMap(map);
+  }, [doctors]);
 
   const fetchProcedures = async () => {
     try {
@@ -310,20 +350,30 @@ function ProcedureManagement() {
     setFilteredProcedures(filtered);
   };
 
-  // NEW: Handle Complete Procedure with auto billing
+  // Handle Complete Procedure with auto billing
   const handleCompleteProcedure = (procedure) => {
     setSelectedProcedure(procedure);
+    const now = new Date();
+    const localDateTime = now.getFullYear() + '-' + 
+      String(now.getMonth() + 1).padStart(2, '0') + '-' + 
+      String(now.getDate()).padStart(2, '0') + 'T' + 
+      String(now.getHours()).padStart(2, '0') + ':' + 
+      String(now.getMinutes()).padStart(2, '0');
+    
+    // Pre-fill performed_by if it exists in the procedure
+    const performedById = procedure.performed_by?._id || procedure.performed_by || '';
+    
     setCompleteProcedureData({
-      notes: '',
-      performed_by: '',
-      completed_date: new Date().toISOString(),
+      notes: procedure.notes || '',
+      performed_by: performedById,
+      completed_date: localDateTime,
       auto_generate_bill: true,
       payment_method: 'Cash'
     });
     setShowCompleteProcedureModal(true);
   };
 
-  // NEW: Complete procedure and optionally generate bill
+  // Complete procedure and optionally generate bill
   const completeProcedureAndBill = async () => {
     try {
       if (!selectedProcedure) {
@@ -331,14 +381,30 @@ function ProcedureManagement() {
         return;
       }
 
+      // Validate performed_by is selected
+      if (!completeProcedureData.performed_by) {
+        toast.error('Please select who performed the procedure');
+        return;
+      }
+
+      // Check if procedure is already billed
+      if (billedProcedureIds.has(selectedProcedure._id)) {
+        toast.error('This procedure is already billed');
+        setShowCompleteProcedureModal(false);
+        return;
+      }
+
       setCompletingProcedure(true);
 
+      // Format dates properly for API
+      const completedDate = new Date(completeProcedureData.completed_date);
+      
       // 1. Complete the procedure
       await apiClient.put(
         `/prescriptions/${selectedProcedure.prescription_id}/procedures/${selectedProcedure._id}/status`,
         {
           status: 'Completed',
-          completed_date: completeProcedureData.completed_date,
+          completed_date: completedDate.toISOString(),
           performed_by: completeProcedureData.performed_by,
           notes: completeProcedureData.notes
         }
@@ -361,37 +427,56 @@ function ProcedureManagement() {
 
         const totalAmount = selectedProcedure.cost || 0;
 
-        const billResponse = await apiClient.post('/billing', {
-          patient_id: selectedProcedure.patient?._id || selectedProcedure.patient,
-          appointment_id: selectedProcedure.appointment?._id || selectedProcedure.appointment,
-          prescription_id: selectedProcedure.prescription_id,
-          items: [billItem],
-          total_amount: totalAmount,
-          subtotal: totalAmount,
-          discount: 0,
-          tax_amount: 0,
-          payment_method: completeProcedureData.payment_method,
-          status: 'Paid',
-          notes: `Bill for procedure ${selectedProcedure.procedure_name}. ${completeProcedureData.notes}`
-        });
-        
-        // Store the generated bill and invoice
-        setGeneratedBill(billResponse.data.bill);
-        setGeneratedInvoice(billResponse.data.invoice);
+        try {
+          const billResponse = await apiClient.post('/billing', {
+            patient_id: selectedProcedure.patient?._id || selectedProcedure.patient,
+            appointment_id: selectedProcedure.appointment?._id || selectedProcedure.appointment,
+            prescription_id: selectedProcedure.prescription_id,
+            procedure_ids: [selectedProcedure._id], // Add for duplicate check
+            items: [billItem],
+            total_amount: totalAmount,
+            subtotal: totalAmount,
+            discount: 0,
+            tax_amount: 0,
+            payment_method: completeProcedureData.payment_method,
+            status: 'Paid',
+            notes: `Bill for procedure ${selectedProcedure.procedure_name}. ${completeProcedureData.notes}`
+          });
+          
+          // Store the generated bill and invoice
+          setGeneratedBill(billResponse.data.bill);
+          setGeneratedInvoice(billResponse.data.invoice);
 
-        // 3. Mark procedure as billed
-        await apiClient.put(
-          `/prescriptions/${selectedProcedure.prescription_id}/procedures/${selectedProcedure._id}/billed`,
-          {
-            invoice_id: billResponse.data.invoice?._id,
-            cost: selectedProcedure.cost || 0,
-            is_billed: true
+          // 3. Mark procedure as billed
+          await apiClient.put(
+            `/prescriptions/${selectedProcedure.prescription_id}/procedures/${selectedProcedure._id}/billed`,
+            {
+              invoice_id: billResponse.data.invoice?._id,
+              cost: selectedProcedure.cost || 0,
+              is_billed: true
+            }
+          );
+
+          // Update billed procedures set
+          setBilledProcedureIds(prev => new Set([...prev, selectedProcedure._id]));
+
+          toast.success('Bill and invoice generated successfully!');
+          setShowCompleteProcedureModal(false);
+          setShowAutoBillModal(true);
+        } catch (billError) {
+          if (billError.response?.data?.duplicateProcedures) {
+            // Handle duplicate billing error
+            setDuplicateProcedures(billError.response.data.duplicateProcedures);
+            setShowDuplicateBillWarning(true);
+            
+            // Mark procedure as billed in local state
+            setBilledProcedureIds(prev => new Set([...prev, ...billError.response.data.duplicateProcedures]));
+            
+            toast.warning('Some procedures are already billed');
+          } else {
+            throw billError;
           }
-        );
-
-        toast.success('Bill and invoice generated successfully!');
-        setShowCompleteProcedureModal(false);
-        setShowAutoBillModal(true);
+        }
       } else {
         // Just complete without billing
         toast.success('Procedure completed without billing');
@@ -428,10 +513,22 @@ function ProcedureManagement() {
 
   const handleInitiateProcedure = (procedure) => {
     setSelectedProcedure(procedure);
+    // Format date for datetime-local input (YYYY-MM-DDThh:mm)
+    const now = new Date();
+    const localDateTime = now.getFullYear() + '-' + 
+      String(now.getMonth() + 1).padStart(2, '0') + '-' + 
+      String(now.getDate()).padStart(2, '0') + 'T' + 
+      String(now.getHours()).padStart(2, '0') + ':' + 
+      String(now.getMinutes()).padStart(2, '0');
+    
+    // Pre-fill performed_by if it exists
+    const performedById = procedure.performed_by?._id || procedure.performed_by || '';
+    
     setProcedureData({
-      scheduled_date: new Date().toISOString().split('T')[0],
-      notes: '',
-      performed_by: '',
+      scheduled_date: procedure.scheduled_date ? 
+        new Date(procedure.scheduled_date).toISOString().slice(0, 16) : localDateTime,
+      notes: procedure.notes || '',
+      performed_by: performedById,
       equipment_required: [],
       consumables: []
     });
@@ -439,6 +536,17 @@ function ProcedureManagement() {
   };
 
   const handleGenerateBill = (procedures, prescriptionData) => {
+    // Check if any procedures are already being billed or are billed
+    const procedureIds = procedures.map(p => p._id);
+    const alreadyBilled = procedureIds.some(id => billedProcedureIds.has(id));
+    
+    if (alreadyBilled) {
+      const billedProcs = procedures.filter(p => billedProcedureIds.has(p._id));
+      setDuplicateProcedures(billedProcs.map(p => p._id));
+      setShowDuplicateBillWarning(true);
+      return;
+    }
+    
     setSelectedPrescription(prescriptionData);
     
     const billItems = procedures
@@ -475,17 +583,31 @@ function ProcedureManagement() {
     setShowHistoryModal(true);
   };
 
-  // Existing API Calls (keep your existing functions)
+  // Update procedure status
   const updateProcedureStatus = async (procedureId, status, data = {}) => {
     try {
       if (!selectedProcedure) return;
       
+      // Validate performed_by for scheduling
+      if (status === 'Scheduled' && !data.performed_by) {
+        toast.error('Please select who will perform the procedure');
+        return;
+      }
+      
+      // Format scheduled date properly if provided
+      let apiData = { status, ...data };
+      if (data.scheduled_date) {
+        // Convert local datetime to ISO string
+        const scheduledDate = new Date(data.scheduled_date);
+        apiData.scheduled_date = scheduledDate.toISOString();
+      }
+      
       await apiClient.put(
         `/prescriptions/${selectedProcedure.prescription_id}/procedures/${procedureId}/status`,
-        { status, ...data }
+        apiData
       );
       
-      toast.success(`Procedure status updated to ${status}`);
+      toast.success(`Procedure ${status === 'Scheduled' ? 'scheduled' : 'started'} successfully`);
       fetchProcedures();
       setShowProcedureInitiation(false);
     } catch (error) {
@@ -498,6 +620,13 @@ function ProcedureManagement() {
     try {
       if (!selectedProcedure || !paymentData.amount || paymentData.amount <= 0) {
         toast.warning('Please enter a valid payment amount');
+        return;
+      }
+
+      // Check if procedure is already billed
+      if (billedProcedureIds.has(selectedProcedure._id)) {
+        toast.error('This procedure is already billed');
+        setShowPaymentModal(false);
         return;
       }
 
@@ -520,6 +649,9 @@ function ProcedureManagement() {
         }
       );
 
+      // Update billed procedures set
+      setBilledProcedureIds(prev => new Set([...prev, selectedProcedure._id]));
+
       toast.success('Payment processed successfully');
       setShowPaymentModal(false);
       fetchProcedures();
@@ -531,10 +663,29 @@ function ProcedureManagement() {
 
   const generateBill = async () => {
     try {
+      if (billingInProgress) {
+        toast.warning('Billing already in progress');
+        return;
+      }
+      
       if (billData.items.length === 0 || !selectedPrescription) {
         toast.warning('No items to bill');
         return;
       }
+
+      // Check for already billed procedures
+      const procedureIds = billData.items.map(item => item.procedure_id);
+      const alreadyBilled = procedureIds.some(id => billedProcedureIds.has(id));
+      
+      if (alreadyBilled) {
+        const billedProcs = billData.items.filter(item => billedProcedureIds.has(item.procedure_id));
+        setDuplicateProcedures(billedProcs.map(item => item.procedure_id));
+        setShowDuplicateBillWarning(true);
+        setShowBillModal(false);
+        return;
+      }
+
+      setBillingInProgress(true);
 
       const totalAmount = billData.items.reduce((sum, item) => sum + (item.amount * (item.quantity || 1)), 0);
       const finalAmount = totalAmount - billData.discount + billData.tax;
@@ -543,6 +694,7 @@ function ProcedureManagement() {
         patient_id: selectedPrescription.patient?._id || selectedPrescription.patient,
         appointment_id: selectedPrescription.appointment?._id || selectedPrescription.appointment,
         prescription_id: selectedPrescription.prescription_id,
+        procedure_ids: procedureIds,
         items: billData.items,
         total_amount: finalAmount,
         subtotal: totalAmount,
@@ -553,6 +705,10 @@ function ProcedureManagement() {
         notes: billData.notes
       });
 
+      // Add to billed procedures set
+      const newBilledIds = new Set([...billedProcedureIds, ...procedureIds]);
+      setBilledProcedureIds(newBilledIds);
+
       setGeneratedBill(billResponse.data.bill);
       setGeneratedInvoice(billResponse.data.invoice);
       
@@ -562,7 +718,19 @@ function ProcedureManagement() {
       fetchProcedures();
     } catch (error) {
       console.error('Error generating bill:', error);
-      toast.error('Failed to generate bill');
+      
+      if (error.response?.data?.duplicateProcedures) {
+        setDuplicateProcedures(error.response.data.duplicateProcedures);
+        setShowDuplicateBillWarning(true);
+        
+        // Update billed procedures set
+        const newBilledIds = new Set([...billedProcedureIds, ...error.response.data.duplicateProcedures]);
+        setBilledProcedureIds(newBilledIds);
+      } else {
+        toast.error('Failed to generate bill');
+      }
+    } finally {
+      setBillingInProgress(false);
     }
   };
 
@@ -623,6 +791,7 @@ function ProcedureManagement() {
         }
       );
       
+      setBilledProcedureIds(prev => new Set([...prev, procedureId]));
       toast.success('Procedure marked as billed');
       fetchProcedures();
     } catch (error) {
@@ -631,13 +800,24 @@ function ProcedureManagement() {
     }
   };
 
+  // Get doctor name by ID
+  const getDoctorName = (doctorId) => {
+    if (!doctorId) return 'Unknown';
+    const doctor = doctorMap[doctorId];
+    return doctor ? `Dr. ${doctor.firstName} ${doctor.lastName}` : 'Unknown';
+  };
+
   // UI Rendering Functions
   const renderProcedureCard = (procedure, index) => {
     const canCollectPayment = procedure.status === 'Completed' && !procedure.is_billed;
-    const canInitiate = procedure.status === 'Pending' || procedure.status === 'Scheduled';
-    const canGenerateBill = procedure.status === 'Completed' && !procedure.is_billed;
+    const canInitiate = procedure.status === 'Pending';
     const canViewHistory = procedure.status === 'Completed';
-    const canComplete = procedure.status === 'Pending' || procedure.status === 'Scheduled' || procedure.status === 'In Progress';
+    const canComplete = procedure.status === 'Scheduled' || procedure.status === 'In Progress';
+    const isBilled = procedure.is_billed || billedProcedureIds.has(procedure._id);
+    
+    // Determine if procedure is scheduled (has performed_by or scheduled_date)
+    const isScheduled = procedure.status === 'Scheduled' || procedure.status === 'In Progress' || 
+                       (procedure.performed_by && procedure.scheduled_date);
 
     return (
       <div key={index} className="bg-white rounded-xl border border-slate-200 p-4 mb-4 hover:shadow-md transition-shadow">
@@ -657,7 +837,7 @@ function ProcedureManagement() {
           </div>
           <div className="text-right">
             <div className="text-2xl font-bold text-emerald-700">₹{procedure.cost || 0}</div>
-            {procedure.is_billed ? (
+            {isBilled ? (
               <div className="text-xs text-emerald-600 font-medium flex items-center gap-1">
                 <FaCheckCircle /> Billed
               </div>
@@ -677,17 +857,23 @@ function ProcedureManagement() {
           <div>
             <div className="text-xs text-slate-400">Scheduled</div>
             <div className="font-medium">
-              {procedure.scheduled_date ? new Date(procedure.scheduled_date).toLocaleDateString() : 'Not scheduled'}
+              {procedure.scheduled_date ? new Date(procedure.scheduled_date).toLocaleString() : 'Not scheduled'}
             </div>
           </div>
           <div>
-            <div className="text-xs text-slate-400">Insurance</div>
-            <div className="font-medium">{procedure.insurance_coverage || 'Self Pay'}</div>
+            <div className="text-xs text-slate-400">Performed By</div>
+            <div className="font-medium">
+              {procedure.performed_by ? 
+                (typeof procedure.performed_by === 'object' ? 
+                  `Dr. ${procedure.performed_by.firstName || ''} ${procedure.performed_by.lastName || ''}`.trim() : 
+                  getDoctorName(procedure.performed_by)) 
+                : 'Not assigned'}
+            </div>
           </div>
           <div>
             <div className="text-xs text-slate-400">Billing</div>
             <div className="font-medium">
-              {procedure.is_billed ? 'Processed' : 'Pending'}
+              {isBilled ? 'Processed' : 'Pending'}
             </div>
           </div>
         </div>
@@ -707,8 +893,8 @@ function ProcedureManagement() {
             <FaEye /> View Details
           </button>
           
-          {/* NEW: Complete Procedure Button */}
-          {canComplete && (
+          {/* Show Complete & Bill for Scheduled/In Progress procedures */}
+          {canComplete && !isBilled && (
             <button
               onClick={() => handleCompleteProcedure(procedure)}
               className="px-3 py-1.5 text-sm bg-gradient-to-r from-emerald-500 to-green-500 text-white hover:from-emerald-600 hover:to-green-600 rounded-lg flex items-center gap-1 shadow-md"
@@ -717,15 +903,7 @@ function ProcedureManagement() {
             </button>
           )}
           
-          {canCollectPayment && (
-            <button
-              onClick={() => handleCollectPayment(procedure)}
-              className="px-3 py-1.5 text-sm bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-lg flex items-center gap-1"
-            >
-              <FaMoneyBillWave /> Collect Payment
-            </button>
-          )}
-          
+          {/* Show Initiate only for Pending procedures */}
           {canInitiate && (
             <button
               onClick={() => handleInitiateProcedure(procedure)}
@@ -735,6 +913,17 @@ function ProcedureManagement() {
             </button>
           )}
           
+          {/* Show Collect Payment for Completed but unbilled procedures */}
+          {canCollectPayment && !isBilled && (
+            <button
+              onClick={() => handleCollectPayment(procedure)}
+              className="px-3 py-1.5 text-sm bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-lg flex items-center gap-1"
+            >
+              <FaMoneyBillWave /> Collect Payment
+            </button>
+          )}
+          
+          {/* Show View History for Completed procedures */}
           {canViewHistory && (
             <button
               onClick={() => handleViewHistory(procedure)}
@@ -750,11 +939,12 @@ function ProcedureManagement() {
 
   const renderPrescriptionGroup = (group) => {
     const pendingProcedures = group.procedures?.filter(p => p.status === 'Pending') || [];
+    const scheduledProcedures = group.procedures?.filter(p => p.status === 'Scheduled' || p.status === 'In Progress') || [];
     const completedProcedures = group.procedures?.filter(p => p.status === 'Completed') || [];
-    const billedProcedures = group.procedures?.filter(p => p.is_billed) || [];
+    const billedProcedures = group.procedures?.filter(p => p.is_billed || billedProcedureIds.has(p._id)) || [];
     const totalCost = group.procedures?.reduce((sum, proc) => sum + (proc.cost || 0), 0) || 0;
     const billedCost = billedProcedures.reduce((sum, proc) => sum + (proc.cost || 0), 0);
-    const pendingBillingProcedures = completedProcedures.filter(p => !p.is_billed);
+    const pendingBillingProcedures = completedProcedures.filter(p => !p.is_billed && !billedProcedureIds.has(p._id));
 
     return (
       <div key={group.prescription_id} className="bg-white rounded-xl shadow-sm border border-slate-200 mb-6 overflow-hidden">
@@ -801,16 +991,16 @@ function ProcedureManagement() {
               <div className="text-sm text-slate-500">Pending</div>
             </div>
             <div className="text-center">
+              <div className="text-2xl font-bold text-blue-600">{scheduledProcedures.length}</div>
+              <div className="text-sm text-slate-500">Scheduled</div>
+            </div>
+            <div className="text-center">
               <div className="text-2xl font-bold text-emerald-600">{completedProcedures.length}</div>
               <div className="text-sm text-slate-500">Completed</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-purple-600">{billedProcedures.length}</div>
               <div className="text-sm text-slate-500">Billed</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600">₹{totalCost}</div>
-              <div className="text-sm text-slate-500">Total Cost</div>
             </div>
           </div>
         </div>
@@ -903,7 +1093,7 @@ function ProcedureManagement() {
             subtitle="Awaiting initiation"
           />
           <StatCard
-            title="Today's Schedule"
+            title="Scheduled Today"
             value={stats.todayProcedures}
             icon={<FaCalendarCheck />}
             colorClass="text-blue-500"
@@ -1009,8 +1199,49 @@ function ProcedureManagement() {
           )}
         </div>
 
-        {/* MODALS */}
-
+        {/* Duplicate Bill Warning Modal */}
+        {showDuplicateBillWarning && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
+              <div className="p-6 border-b border-slate-100">
+                <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2 text-amber-600">
+                  <FaExclamationTriangle /> Duplicate Billing Detected
+                </h3>
+              </div>
+              <div className="p-6">
+                <p className="text-slate-600 mb-4">
+                  The following procedures have already been billed and cannot be billed again:
+                </p>
+                <ul className="list-disc list-inside space-y-2 mb-4">
+                  {duplicateProcedures.map((procId, idx) => {
+                    const proc = procedures.find(p => p._id === procId);
+                    return (
+                      <li key={idx} className="text-sm text-slate-700">
+                        {proc?.procedure_code} - {proc?.procedure_name}
+                      </li>
+                    );
+                  })}
+                </ul>
+                <p className="text-sm text-slate-500">
+                  Please refresh the page to see updated billing status.
+                </p>
+              </div>
+              <div className="p-6 border-t border-slate-100 flex justify-end">
+                <button
+                  onClick={() => {
+                    setShowDuplicateBillWarning(false);
+                    setDuplicateProcedures([]);
+                    fetchProcedures();
+                  }}
+                  className="px-6 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700"
+                >
+                  OK, Refresh Data
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        
         {/* Complete Procedure Modal */}
         {showCompleteProcedureModal && selectedProcedure && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
@@ -1023,26 +1254,34 @@ function ProcedureManagement() {
               </div>
               
               <div className="p-6 space-y-4">
-                <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
-                  <div className="text-sm text-emerald-700 mb-2">Procedure Information</div>
-                  <div className="font-bold">{selectedProcedure.procedure_code} - {selectedProcedure.procedure_name}</div>
-                  <div className="text-lg font-bold text-emerald-800 mt-2">₹{selectedProcedure.cost || 0}</div>
-                </div>
                 
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">Performed By</label>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">
+                    Performed By <span className="text-red-500">*</span>
+                  </label>
                   <select
                     value={completeProcedureData.performed_by}
                     onChange={(e) => setCompleteProcedureData({...completeProcedureData, performed_by: e.target.value})}
+                    required
                     className="w-full p-2.5 border border-slate-300 rounded-lg"
                   >
                     <option value="">Select Doctor/Staff</option>
                     {doctors.map(doctor => (
                       <option key={doctor._id} value={doctor._id}>
-                        Dr. {doctor.firstName} {doctor.lastName}
+                        Dr. {doctor.firstName} {doctor.lastName} - {doctor.specialization}
                       </option>
                     ))}
                   </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">Completion Date & Time</label>
+                  <input
+                    type="datetime-local"
+                    value={completeProcedureData.completed_date}
+                    onChange={(e) => setCompleteProcedureData({...completeProcedureData, completed_date: e.target.value})}
+                    className="w-full p-2.5 border border-slate-300 rounded-lg"
+                  />
                 </div>
                 
                 <div>
@@ -1132,6 +1371,13 @@ function ProcedureManagement() {
                   <div className="text-sm text-emerald-700 mb-2">Procedure Completed</div>
                   <div className="font-bold">{selectedProcedure?.procedure_name}</div>
                   <div className="text-sm text-emerald-600 mt-1">Status: <StatusBadge status="Completed" /></div>
+                  {selectedProcedure?.performed_by && (
+                    <div className="text-sm text-emerald-600 mt-1">
+                      Performed By: {typeof selectedProcedure.performed_by === 'object' ? 
+                        `Dr. ${selectedProcedure.performed_by.firstName || ''} ${selectedProcedure.performed_by.lastName || ''}`.trim() : 
+                        getDoctorName(selectedProcedure.performed_by)}
+                    </div>
+                  )}
                 </div>
                 
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -1211,6 +1457,17 @@ function ProcedureManagement() {
                   <p className="text-2xl font-bold text-emerald-700">₹{selectedProcedure.cost || 0}</p>
                 </div>
                 
+                {selectedProcedure.performed_by && (
+                  <div>
+                    <label className="text-xs text-slate-500 uppercase">Performed By</label>
+                    <p className="font-medium">
+                      {typeof selectedProcedure.performed_by === 'object' ? 
+                        `Dr. ${selectedProcedure.performed_by.firstName || ''} ${selectedProcedure.performed_by.lastName || ''}`.trim() : 
+                        getDoctorName(selectedProcedure.performed_by)}
+                    </p>
+                  </div>
+                )}
+                
                 {selectedProcedure.notes && (
                   <div>
                     <label className="text-xs text-slate-500 uppercase">Notes</label>
@@ -1222,6 +1479,13 @@ function ProcedureManagement() {
                   <div>
                     <label className="text-xs text-slate-500 uppercase">Scheduled Date</label>
                     <p className="font-medium">{new Date(selectedProcedure.scheduled_date).toLocaleString()}</p>
+                  </div>
+                )}
+                
+                {selectedProcedure.completed_date && (
+                  <div>
+                    <label className="text-xs text-slate-500 uppercase">Completed Date</label>
+                    <p className="font-medium">{new Date(selectedProcedure.completed_date).toLocaleString()}</p>
                   </div>
                 )}
               </div>
@@ -1317,7 +1581,11 @@ function ProcedureManagement() {
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
             <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
               <div className="p-6 border-b border-slate-100">
-                <h3 className="text-xl font-bold text-slate-800">Initiate Procedure</h3>
+                <h3 className="text-xl font-bold text-slate-800">
+                  {selectedProcedure.status === 'Scheduled' || selectedProcedure.status === 'In Progress' 
+                    ? 'Update Procedure' 
+                    : 'Initiate Procedure'}
+                </h3>
                 <p className="text-slate-500 text-sm mt-1">{selectedProcedure.procedure_name}</p>
               </div>
               
@@ -1326,10 +1594,17 @@ function ProcedureManagement() {
                   <div className="text-sm text-blue-700 mb-2">Patient Information</div>
                   <div className="font-bold">{selectedProcedure.patient?.first_name} {selectedProcedure.patient?.last_name}</div>
                   <div className="text-sm text-blue-600">Prescription: {selectedProcedure.prescription_number}</div>
+                  {selectedProcedure.status !== 'Pending' && (
+                    <div className="mt-2 text-sm text-blue-600">
+                      Current Status: <StatusBadge status={selectedProcedure.status} />
+                    </div>
+                  )}
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">Schedule Date & Time</label>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">
+                    Schedule Date & Time
+                  </label>
                   <input
                     type="datetime-local"
                     value={procedureData.scheduled_date}
@@ -1339,10 +1614,13 @@ function ProcedureManagement() {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">Performed By</label>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">
+                    Performed By <span className="text-red-500">*</span>
+                  </label>
                   <select
                     value={procedureData.performed_by}
                     onChange={(e) => setProcedureData({...procedureData, performed_by: e.target.value})}
+                    required
                     className="w-full p-2.5 border border-slate-300 rounded-lg"
                   >
                     <option value="">Select Doctor/Staff</option>
@@ -1373,18 +1651,29 @@ function ProcedureManagement() {
                 >
                   Cancel
                 </button>
-                <button
-                  onClick={() => updateProcedureStatus(selectedProcedure._id, 'Scheduled', procedureData)}
-                  className="px-6 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 shadow-md"
-                >
-                  Schedule Procedure
-                </button>
-                <button
-                  onClick={() => updateProcedureStatus(selectedProcedure._id, 'In Progress', procedureData)}
-                  className="px-6 py-2 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 shadow-md"
-                >
-                  Start Procedure
-                </button>
+                {selectedProcedure.status === 'Pending' ? (
+                  <>
+                    <button
+                      onClick={() => updateProcedureStatus(selectedProcedure._id, 'Scheduled', procedureData)}
+                      className="px-6 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 shadow-md"
+                    >
+                      Schedule Procedure
+                    </button>
+                    <button
+                      onClick={() => updateProcedureStatus(selectedProcedure._id, 'In Progress', procedureData)}
+                      className="px-6 py-2 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 shadow-md"
+                    >
+                      Start Procedure
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => updateProcedureStatus(selectedProcedure._id, selectedProcedure.status, procedureData)}
+                    className="px-6 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 shadow-md"
+                  >
+                    Update Procedure
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -1512,9 +1801,19 @@ function ProcedureManagement() {
                 </button>
                 <button
                   onClick={generateBill}
-                  className="px-6 py-2 bg-emerald-600 text-white font-semibold rounded-lg hover:bg-emerald-700 shadow-md flex items-center gap-2"
+                  disabled={billingInProgress}
+                  className="px-6 py-2 bg-emerald-600 text-white font-semibold rounded-lg hover:bg-emerald-700 shadow-md flex items-center gap-2 disabled:opacity-70"
                 >
-                  <FaReceipt /> Generate Bill & Invoice
+                  {billingInProgress ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <FaReceipt /> Generate Bill & Invoice
+                    </>
+                  )}
                 </button>
               </div>
             </div>
@@ -1637,7 +1936,7 @@ function ProcedureManagement() {
                         </div>
                       )}
                       
-                      {selectedProcedure.is_billed && (
+                      {(selectedProcedure.is_billed || billedProcedureIds.has(selectedProcedure._id)) && (
                         <div className="flex items-start gap-3">
                           <div className="p-2 bg-purple-100 rounded-full">
                             <FaReceipt className="text-purple-600" />

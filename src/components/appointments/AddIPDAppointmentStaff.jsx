@@ -7,7 +7,29 @@ import AppointmentInvoiceModal from './AppointmentInvoiceModal';
 import QRCodeModal from './QRCodeModal';
 import PaymentPendingModal from './PaymentPendingModal';
 import SuccessModal from './SuccessModal';
-import { FaUser, FaCloudUploadAlt, FaTimes, FaIdCard, FaCalendarAlt, FaClock, FaUserPlus, FaCheckCircle, FaArrowLeft, FaMoneyBillWave, FaFileInvoice, FaPrint } from 'react-icons/fa';
+import { 
+  FaUser, FaCloudUploadAlt, FaTimes, FaIdCard, FaCalendarAlt, FaClock, 
+  FaUserPlus, FaCheckCircle, FaArrowLeft, FaMoneyBillWave, FaFileInvoice, 
+  FaPrint, FaProcedures, FaExclamationTriangle, FaArrowRight 
+} from 'react-icons/fa';
+
+// Status Badge Component for Procedures
+const StatusBadge = ({ status }) => {
+  const statusConfig = {
+    Pending: { color: 'bg-amber-100 text-amber-700 border-amber-200', label: 'Pending' },
+    Scheduled: { color: 'bg-blue-100 text-blue-700 border-blue-200', label: 'Scheduled' },
+    'In Progress': { color: 'bg-indigo-100 text-indigo-700 border-indigo-200', label: 'In Progress' },
+    Completed: { color: 'bg-emerald-100 text-emerald-700 border-emerald-200', label: 'Completed' }
+  };
+
+  const config = statusConfig[status] || { color: 'bg-gray-100 text-gray-700 border-gray-200', label: status };
+
+  return (
+    <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full border ${config.color}`}>
+      {config.label}
+    </span>
+  );
+};
 
 const appointmentTypeOptions = [
   { value: 'consultation', label: 'Consultation' },
@@ -68,7 +90,7 @@ const addDaysToDate = (dateString, days) => {
   return `${yyyy}-${mm}-${dd}`;
 };
 
-// Check if all available hours have passed for today - FIXED VERSION
+// Check if all available hours have passed for today
 const checkIfAllHoursPassed = (doctorWorkingHours, currentTime) => {
   if (!doctorWorkingHours || doctorWorkingHours.length === 0) return true;
 
@@ -80,11 +102,9 @@ const checkIfAllHoursPassed = (doctorWorkingHours, currentTime) => {
     const startInMinutes = startH * 60 + startM;
     const endInMinutes = endH * 60 + endM;
 
-    if (endInMinutes <= startInMinutes) { // Overnight shift (e.g., 23:00 to 07:00)
-      // For overnight shift, check if current time is after the end time AND after the start time
-      // This means we've passed both parts of the overnight shift
+    if (endInMinutes <= startInMinutes) {
       return currentMinutes >= endInMinutes && currentMinutes >= startInMinutes;
-    } else { // Normal shift (e.g., 09:00 to 17:00)
+    } else {
       return currentMinutes >= endInMinutes;
     }
   });
@@ -102,21 +122,15 @@ const hasFutureTimeSlotsToday = (doctorWorkingHours, currentTime, duration) => {
     const startInMinutes = startH * 60 + startM;
     const endInMinutes = endH * 60 + endM;
 
-    if (endInMinutes <= startInMinutes) { // Overnight shift
-      // Check if we're before the overnight shift starts
+    if (endInMinutes <= startInMinutes) {
       if (currentMinutes < startInMinutes) {
-        return true; // Overnight shift hasn't started yet
+        return true;
       }
-      // Check if we're during the overnight shift (before the end time on next day)
       if (currentMinutes >= startInMinutes && currentMinutes < endInMinutes) {
-        return true; // Still within overnight shift (night portion)
+        return true;
       }
-      // If we're between end time and start time of next day's overnight shift
-      // (e.g., 07:00 to 23:00 for a 23:00-07:00 shift), no slots available
-    } else { // Normal shift
-      // Check if we're before the end of the shift
+    } else {
       if (currentMinutes < endInMinutes) {
-        // Check if there's enough time for at least one appointment
         const timeRemaining = endInMinutes - Math.max(currentMinutes, startInMinutes);
         if (timeRemaining >= duration) {
           return true;
@@ -137,9 +151,9 @@ const isToday = (dateString) => {
 
 const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false, onClose = () => { }, onSuccess }) => {
   const navigate = useNavigate();
-  const formContainerRef = useRef(null); // Ref for scrolling to top
+  const formContainerRef = useRef(null);
 
-  // Helper to get local YYYY-MM-DD date string (avoids timezone-shift issues)
+  // Helper to get local YYYY-MM-DD date string
   const getLocalDateString = () => {
     const t = new Date();
     const yyyy = t.getFullYear();
@@ -224,6 +238,12 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
   const [previousDoctorId, setPreviousDoctorId] = useState('');
   const [showActionModal, setShowActionModal] = useState(false);
 
+  // NEW: State for doctor procedures
+  const [doctorProcedures, setDoctorProcedures] = useState([]);
+  const [showProcedureConflict, setShowProcedureConflict] = useState(false);
+  const [procedureConflictMessage, setProcedureConflictMessage] = useState('');
+  const [loadingProcedures, setLoadingProcedures] = useState(false);
+
   // New States for CSC API and Image Upload
   const [states, setStates] = useState([]);
   const [cities, setCities] = useState([]);
@@ -244,7 +264,6 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
         block: 'start'
       });
     } else {
-      // Fallback to window scroll
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
@@ -266,8 +285,9 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
     setAutoAssignedTime(null);
     setAutoSwitchMessage('');
     setNewPatientData(null);
+    setDoctorProcedures([]);
+    setShowProcedureConflict(false);
 
-    // Scroll to top after reset
     setTimeout(() => {
       scrollToTop();
     }, 100);
@@ -283,10 +303,180 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
     setShowFields(false);
     setNewPatientData(null);
 
-    // Scroll to top
     setTimeout(() => {
       scrollToTop();
     }, 100);
+  };
+
+  // NEW: Fetch doctor's procedures for the selected date
+  const fetchDoctorProcedures = async (doctorId, date) => {
+    try {
+      if (!doctorId || !date) return;
+      
+      setLoadingProcedures(true);
+      const response = await axios.get(
+        `${import.meta.env.VITE_BACKEND_URL}/appointments/doctor/${doctorId}/procedures/${date}`
+      );
+      
+      if (response.data.success) {
+        setDoctorProcedures(response.data.procedures);
+        
+        // Check if there are procedures at the selected time
+        if (formData.start_time) {
+          checkProcedureConflicts(response.data.procedures, formData.start_time, parseInt(formData.duration));
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching doctor procedures:', error);
+    } finally {
+      setLoadingProcedures(false);
+    }
+  };
+
+  // NEW: Check for procedure conflicts
+  const checkProcedureConflicts = (procedures, selectedTime, duration) => {
+    if (!selectedTime || !procedures || procedures.length === 0) {
+      setShowProcedureConflict(false);
+      setProcedureConflictMessage('');
+      return;
+    }
+
+    const [selectedHour, selectedMinute] = selectedTime.split(':').map(Number);
+    const selectedStart = selectedHour * 60 + selectedMinute;
+    const selectedEnd = selectedStart + duration;
+
+    const conflictingProcedures = procedures.filter(proc => {
+      const procDate = new Date(proc.scheduled_date);
+      const procHour = procDate.getHours();
+      const procMinute = procDate.getMinutes();
+      const procStart = procHour * 60 + procMinute;
+      const procEnd = procStart + (proc.duration_minutes || 30);
+
+      return (selectedStart < procEnd && selectedEnd > procStart);
+    });
+
+    if (conflictingProcedures.length > 0) {
+      const procedure = conflictingProcedures[0];
+      const procEndTime = new Date(procedure.scheduled_date);
+      procEndTime.setMinutes(procEndTime.getMinutes() + (procedure.duration_minutes || 30));
+      
+      const suggestedStart = new Date(procEndTime);
+      
+      // Add a buffer of 10-30 minutes based on procedure type
+      const bufferMinutes = procedure.duration_minutes >= 60 ? 30 : 10;
+      suggestedStart.setMinutes(suggestedStart.getMinutes() + bufferMinutes);
+      
+      const suggestedHour = suggestedStart.getHours().toString().padStart(2, '0');
+      const suggestedMinute = suggestedStart.getMinutes().toString().padStart(2, '0');
+      const suggestedTime = `${suggestedHour}:${suggestedMinute}`;
+      
+      const patientName = procedure.patient?.name || 'Unknown Patient';
+      const procedureName = procedure.procedure_name || procedure.procedure_code;
+      
+      setProcedureConflictMessage(
+        `⚠️ Dr. has a procedure (${procedureName}) scheduled for ${patientName} at this time. ` +
+        `The procedure ends at ${procEndTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}. ` +
+        `Consider scheduling after ${suggestedTime} (allowing ${bufferMinutes} mins buffer).`
+      );
+      setShowProcedureConflict(true);
+    } else {
+      setShowProcedureConflict(false);
+      setProcedureConflictMessage('');
+    }
+  };
+
+  // NEW: Suggest next available slot after procedures
+  const suggestNextAvailableSlot = () => {
+    if (doctorProcedures.length === 0 || !formData.start_time) return;
+
+    const conflictingProcedures = doctorProcedures.filter(proc => {
+      const procDate = new Date(proc.scheduled_date);
+      const procHour = procDate.getHours();
+      const procMinute = procDate.getMinutes();
+      const procStart = procHour * 60 + procMinute;
+      const procEnd = procStart + (proc.duration_minutes || 30);
+      
+      const [selectedHour, selectedMinute] = formData.start_time.split(':').map(Number);
+      const selectedStart = selectedHour * 60 + selectedMinute;
+      const selectedEnd = selectedStart + parseInt(formData.duration);
+
+      return selectedStart < procEnd && selectedEnd > procStart;
+    });
+
+    if (conflictingProcedures.length > 0) {
+      // Sort by end time and get the latest ending procedure
+      const sortedProcs = conflictingProcedures.sort((a, b) => {
+        const aEnd = new Date(a.scheduled_date).getTime() + (a.duration_minutes || 30) * 60000;
+        const bEnd = new Date(b.scheduled_date).getTime() + (b.duration_minutes || 30) * 60000;
+        return bEnd - aEnd;
+      });
+      
+      const lastProc = sortedProcs[0];
+      const procEnd = new Date(lastProc.scheduled_date);
+      procEnd.setMinutes(procEnd.getMinutes() + (lastProc.duration_minutes || 30));
+      
+      // Add appropriate buffer
+      const bufferMinutes = lastProc.duration_minutes >= 60 ? 30 : 10;
+      procEnd.setMinutes(procEnd.getMinutes() + bufferMinutes);
+      
+      const suggestedHour = procEnd.getHours().toString().padStart(2, '0');
+      const suggestedMin = procEnd.getMinutes().toString().padStart(2, '0');
+      
+      handleInputChange('start_time', `${suggestedHour}:${suggestedMin}`);
+    }
+  };
+
+  // NEW: Render doctor procedures list
+  const renderDoctorProcedures = () => {
+    if (doctorProcedures.length === 0) return null;
+
+    return (
+      <div className="mt-4 bg-orange-50 border border-orange-200 rounded-lg p-4">
+        <div className="flex items-center justify-between mb-3">
+          <h4 className="font-semibold text-orange-800 flex items-center gap-2">
+            <FaProcedures className="text-orange-600" />
+            Scheduled Procedures ({doctorProcedures.length})
+          </h4>
+          {loadingProcedures && (
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-orange-600"></div>
+          )}
+        </div>
+        <div className="space-y-2 max-h-60 overflow-y-auto">
+          {doctorProcedures.map((proc, idx) => {
+            const procTime = new Date(proc.scheduled_date);
+            const endTime = new Date(procTime);
+            endTime.setMinutes(endTime.getMinutes() + (proc.duration_minutes || 30));
+
+            return (
+              <div key={idx} className="bg-white p-3 rounded-lg border border-orange-100 hover:shadow-sm transition-shadow">
+                <div className="flex justify-between items-start">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-gray-900">
+                        {proc.procedure_code}
+                      </span>
+                      <StatusBadge status={proc.status} />
+                    </div>
+                    <div className="text-sm text-gray-600 mt-1">
+                      {proc.procedure_name}
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      Patient: {proc.patient?.name || 'Unknown'}
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1 flex items-center gap-2">
+                      <FaClock className="text-gray-400" />
+                      {procTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - 
+                      {endTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                      {' '}({proc.duration_minutes || 30} mins)
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
   };
 
   const handleImageUpload = async (e) => {
@@ -333,17 +523,12 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
     }
   };
 
-  // Add this helper function near the top (after other helper functions):
   const convertUTCTimeToLocalForDate = (utcTimeString, targetDateString) => {
     if (!utcTimeString) return null;
 
-    // Create a date object in UTC
     const utcDate = new Date(utcTimeString);
-
-    // Get the target date in local timezone
     const targetDate = new Date(targetDateString + 'T00:00:00');
 
-    // Combine target date with UTC time components
     const localDate = new Date(
       targetDate.getFullYear(),
       targetDate.getMonth(),
@@ -372,6 +557,23 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
     fetchStates();
   }, []);
 
+  // Fetch doctor procedures when doctor or date changes
+  useEffect(() => {
+    if (formData.doctorId && formData.date) {
+      fetchDoctorProcedures(formData.doctorId, formData.date);
+    } else {
+      setDoctorProcedures([]);
+      setShowProcedureConflict(false);
+    }
+  }, [formData.doctorId, formData.date]);
+
+  // Check for conflicts when time changes
+  useEffect(() => {
+    if (formData.start_time && doctorProcedures.length > 0) {
+      checkProcedureConflicts(doctorProcedures, formData.start_time, parseInt(formData.duration));
+    }
+  }, [formData.start_time, formData.duration, doctorProcedures]);
+
   // Calculate charges whenever relevant form data changes
   useEffect(() => {
     calculateCharges();
@@ -393,17 +595,14 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
     }
   };
 
-  // UPDATED: Calculate charges based on doctor type
+  // Calculate charges based on doctor type
   const calculateCharges = () => {
     let charges = [];
     let total = 0;
 
-    // Check if patient is new (based on includeRegistrationFee checkbox)
     const isNewPatient = includeRegistrationFee;
 
-    // For OPD appointments
     if (type === 'opd') {
-      // First add OPD registration fee if it's a new patient
       if (isNewPatient && hospitalCharges?.opdCharges?.registrationFee) {
         const regFee = hospitalCharges.opdCharges.registrationFee;
         charges.push({
@@ -413,33 +612,27 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
         total += regFee;
       }
 
-      // Determine consultation fee based on doctor type
       let consultationFee = 0;
 
       if (doctorDetails) {
-        // Check if doctor is part-time or fee-per-visit
         const isPartTimeDoctor = !doctorDetails.isFullTime ||
           doctorDetails.paymentType === 'Fee per Visit' ||
           doctorDetails.paymentType === 'Per Hour';
 
         if (isPartTimeDoctor) {
-          // For part-time or fee-per-visit doctors, use doctor.amount field (consultation fee)
           consultationFee = doctorDetails.amount || 0;
 
-          // For per-hour doctors, calculate based on duration
           if (doctorDetails.paymentType === 'Per Hour') {
             const hours = Number(formData.duration) / 60;
             consultationFee = consultationFee * hours;
           }
 
-          // Add doctor consultation fee
           charges.push({
             description: getDoctorFeeDescription(doctorDetails),
             amount: consultationFee
           });
           total += consultationFee;
         } else {
-          // For full-time doctors, use hospital's consultation fee
           consultationFee = hospitalCharges?.opdCharges?.consultationFee || 0;
           charges.push({
             description: `Consultation Fee (Dr. ${doctorDetails.firstName} ${doctorDetails.lastName})`,
@@ -448,7 +641,6 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
           total += consultationFee;
         }
       } else {
-        // If no doctor details yet, use default hospital consultation fee
         consultationFee = hospitalCharges?.opdCharges?.consultationFee || 0;
         charges.push({
           description: "OPD Consultation Fee",
@@ -457,7 +649,6 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
         total += consultationFee;
       }
 
-      // Apply discount if available
       if (hospitalCharges?.opdCharges?.discountValue > 0) {
         let discount = 0;
         if (hospitalCharges.opdCharges.discountType === 'Percentage') {
@@ -473,7 +664,6 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
       }
     }
 
-    // Add IPD charges if applicable
     if (type === 'ipd' && hospitalCharges?.ipdCharges) {
       const admissionFee = hospitalCharges.ipdCharges.admissionFee || 0;
       charges.push({
@@ -491,7 +681,6 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
         total += regFee;
       }
 
-      // Add room charges if room is selected
       if (formData.roomId) {
         const selectedRoom = rooms.find(r => r._id === formData.roomId);
         if (selectedRoom) {
@@ -504,7 +693,6 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
         }
       }
 
-      // For IPD, include doctor's visit fee if part-time
       if (doctorDetails && !doctorDetails.isFullTime && doctorDetails.paymentType === 'Fee per Visit') {
         const doctorVisitFee = doctorDetails.amount || 0;
         charges.push({
@@ -515,27 +703,22 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
       }
     }
 
-    // Ensure total is not negative
     setChargesSummary(charges);
     setTotalAmount(total > 0 ? total : 0);
   };
 
   const handleInputChange = (field, value) => {
     if (field === 'doctorId') {
-      // Store previous doctor ID before changing
       setPreviousDoctorId(formData.doctorId);
 
-      // Check if we're switching doctors
       if (formData.doctorId && value && formData.doctorId !== value) {
-        // Reset to today if the selected date is not today
-        // This ensures when switching doctors, we always check availability for today first
         const today = getLocalDateString();
         if (formData.date !== today) {
           setFormData(prev => ({
             ...prev,
             [field]: value,
-            date: today, // Reset to today when switching doctors
-            start_time: '' // Clear start time
+            date: today,
+            start_time: ''
           }));
           setAutoSwitchMessage('Date reset to today for new doctor selection');
           setTimeout(() => setAutoSwitchMessage(''), 3000);
@@ -556,7 +739,6 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
     }
   };
 
-  // Format Aadhaar number with spaces (XXXX XXXX XXXX)
   const formatAadhaarNumber = (value) => {
     const digits = value.replace(/\D/g, '');
     if (digits.length <= 4) return digits;
@@ -609,7 +791,6 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
     fetchOptions();
   }, [formData.department]);
 
-  // Monitor time and auto-switch date when needed
   useEffect(() => {
     if (!formData.doctorId || !formData.date || formData.type !== 'time-based') return;
 
@@ -619,43 +800,32 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
       const isToday = today.toDateString() === now.toDateString();
       const duration = parseInt(formData.duration);
 
-      // Only check for auto-switch if it's today
       if (isToday && doctorWorkingHours.length > 0) {
         const allHoursPassed = checkIfAllHoursPassed(doctorWorkingHours, now);
         const hasFutureSlots = hasFutureTimeSlotsToday(doctorWorkingHours, now, duration);
 
-        // Only switch date if ALL hours have passed AND no future slots available
         if (allHoursPassed && !hasFutureSlots) {
-          // Switch to next date
           const nextDate = addDaysToDate(formData.date, 1);
           handleInputChange('date', nextDate);
 
-          // Set proposed time to first available slot on next date
           if (doctorWorkingHours.length > 0) {
             const firstSlot = doctorWorkingHours[0];
             handleInputChange('start_time', firstSlot.start);
             setAutoAssignedTime(firstSlot.start);
 
-            // Clear message after 5 seconds
             setTimeout(() => setAutoSwitchMessage(''), 5000);
           }
         }
       }
     };
 
-    // Check immediately
     checkAndSwitchDate();
-
-    // Check every minute
     const interval = setInterval(checkAndSwitchDate, 60000);
-
     return () => clearInterval(interval);
   }, [formData.doctorId, formData.date, formData.type, doctorWorkingHours, formData.duration]);
 
-  // Reset date to today when doctor changes - FIX FOR THE ISSUE
   useEffect(() => {
     if (formData.doctorId && previousDoctorId && formData.doctorId !== previousDoctorId) {
-      // Check if current date is not today and doctor has working hours
       const today = getLocalDateString();
       const isDateToday = isToday(formData.date);
 
@@ -664,12 +834,11 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
         const duration = parseInt(formData.duration);
         const hasSlotsToday = hasFutureTimeSlotsToday(doctorWorkingHours, now, duration);
 
-        // Only reset to today if new doctor has slots available today
         if (hasSlotsToday) {
           setFormData(prev => ({
             ...prev,
             date: today,
-            start_time: '' // Clear start time
+            start_time: ''
           }));
           setAutoSwitchMessage('Date reset to today for new doctor selection');
           setTimeout(() => setAutoSwitchMessage(''), 3000);
@@ -678,7 +847,6 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
     }
   }, [formData.doctorId, previousDoctorId, doctorWorkingHours, formData.duration]);
 
-  // Main effect for finding time slots
   useEffect(() => {
     if (formData.doctorId && formData.date && formData.type === 'time-based') {
       const sortedAppointments = [...existingAppointments].sort(
@@ -691,31 +859,25 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
       const isToday = today.toDateString() === now.toDateString();
       const duration = parseInt(formData.duration);
 
-      // Check if we should switch date (only if it's today)
       if (isToday && doctorWorkingHours.length > 0) {
         const allHoursPassed = checkIfAllHoursPassed(doctorWorkingHours, now);
         const hasFutureSlots = hasFutureTimeSlotsToday(doctorWorkingHours, now, duration);
 
-        // Only switch date if ALL hours have passed AND no future slots available
         if (allHoursPassed && !hasFutureSlots) {
-          // Switch to next date
           const nextDate = addDaysToDate(formData.date, 1);
           handleInputChange('date', nextDate);
 
-          // Set proposed time to first available slot on next date
           if (doctorWorkingHours.length > 0) {
             const firstSlot = doctorWorkingHours[0];
             handleInputChange('start_time', firstSlot.start);
             setAutoAssignedTime(firstSlot.start);
 
-            // Clear message after 5 seconds
             setTimeout(() => setAutoSwitchMessage(''), 5000);
           }
-          return; // Exit early since date changed
+          return;
         }
       }
 
-      // Find available time slot
       for (const range of doctorWorkingHours) {
         const [startH, startM] = range.start.split(':').map(Number);
         const [endH, endM] = range.end.split(':').map(Number);
@@ -734,15 +896,12 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
           const nextSlotMinutesValue = nextHours * 60 + nextMins;
 
           if (isOvernightShift) {
-            // For overnight shift (e.g., 23:00 to 07:00)
-            // If current time is before shift starts OR during overnight portion
             if (nextSlotMinutesValue >= rangeStartMinutes || nextSlotMinutesValue < rangeEndMinutes) {
               currentTime.setHours(nextHours, nextMins, 0, 0);
             } else {
               currentTime.setHours(startH, startM, 0, 0);
             }
           } else {
-            // For normal shift
             if (nextSlotMinutesValue < rangeStartMinutes) {
               currentTime.setHours(startH, startM, 0, 0);
             } else if (nextSlotMinutesValue >= rangeStartMinutes && nextSlotMinutesValue < rangeEndMinutes) {
@@ -761,24 +920,17 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
           const [endHour, endMinute] = [endH, endM];
           const endTotalMinutes = endHour * 60 + endMinute;
 
-          // Check if we're still within the shift
           if (isOvernightShift) {
-            // For overnight shift, we need special handling
             if (currentTotalMinutes >= startH * 60 + startM) {
-              // We're in the overnight portion (after start time)
               if (currentTotalMinutes >= 1440) {
-                // We've wrapped past midnight
                 break;
               }
             } else {
-              // We're before the shift starts
               if (currentTotalMinutes >= endTotalMinutes && currentTotalMinutes < startH * 60 + startM) {
-                // We're after the morning end time but before the evening start time
                 break;
               }
             }
           } else {
-            // For normal shift
             if (currentTotalMinutes >= endTotalMinutes) {
               break;
             }
@@ -789,14 +941,10 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
           const [proposedEndH, proposedEndM] = proposedEnd.split(':').map(Number);
           const proposedEndInMinutes = proposedEndH * 60 + proposedEndM;
 
-          // Check if appointment would end outside working hours
           let wouldEndOutside = false;
           if (isOvernightShift) {
-            // For overnight shift, ending time needs special handling
             if (proposedEndInMinutes > endTotalMinutes && proposedEndInMinutes <= startH * 60 + startM) {
-              // Would end after morning end time but before evening start time - this is OK
             } else if (proposedEndInMinutes > 1440) {
-              // Would end after midnight (next day) - not allowed
               wouldEndOutside = true;
             }
           } else {
@@ -819,13 +967,11 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
           }
 
           const hasConflict = sortedAppointments.some(appt => {
-            // Convert UTC appointment times to local time for the selected date
             const apptStartLocal = convertUTCTimeToLocalForDate(appt.startTime, formData.date);
             const apptEndLocal = convertUTCTimeToLocalForDate(appt.endTime, formData.date);
 
             if (!apptStartLocal || !apptEndLocal) return false;
 
-            // Create local time for proposed appointment
             const newStart = new Date(today);
             newStart.setHours(currentTime.getHours(), currentTime.getMinutes());
             const newEnd = new Date(today);
@@ -852,7 +998,6 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
       }
 
       if (!proposedTime && doctorWorkingHours.length > 0) {
-        // If no slot found, suggest the first available start time
         proposedTime = doctorWorkingHours[0].start;
       }
 
@@ -865,7 +1010,6 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
     }
   }, [formData.doctorId, formData.date, formData.duration, formData.type, existingAppointments, doctorWorkingHours]);
 
-  // Fetch hospital charges
   useEffect(() => {
     if (hospitalId) {
       const fetchCharges = async () => {
@@ -880,7 +1024,6 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
     }
   }, [hospitalId]);
 
-  // Fetch available rooms if IPD
   useEffect(() => {
     if (type === 'ipd') {
       const fetchRooms = async () => {
@@ -895,7 +1038,6 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
     }
   }, [type]);
 
-  // Fetch doctor data and appointments
   useEffect(() => {
     if (formData.doctorId && hospitalId && formData.date) {
       const fetchDoctorData = async () => {
@@ -984,7 +1126,6 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
     const today = new Date();
     const selectedDate = new Date(formData.date);
 
-    // Only apply time restrictions if it's today's date
     if (selectedDate.toDateString() === today.toDateString()) {
       const currentMinutes = today.getHours() * 60 + today.getMinutes();
       const duration = parseInt(formData.duration) || 10;
@@ -1011,7 +1152,6 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
     return start.toTimeString().slice(0, 5);
   };
 
-  // Form validation
   const errors = {};
   if (!formData.department) errors.department = 'Please select a department';
   if (!formData.doctorId) errors.doctorId = 'Please select a doctor';
@@ -1023,7 +1163,6 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
       const selectedDate = new Date(formData.date);
       const today = new Date();
 
-      // Check if it's today and time is in past
       if (selectedDate.toDateString() === today.toDateString()) {
         const [startH, startM] = formData.start_time.split(':').map(Number);
         const selectedMinutes = startH * 60 + startM;
@@ -1034,7 +1173,6 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
         }
       }
 
-      // Check working hours
       if (!isWithinWorkingHours(formData.start_time)) {
         errors.start_time = 'Selected time is outside doctor working hours';
       } else {
@@ -1060,7 +1198,6 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
     for (const appt of existingAppointments) {
       if (!appt.startTime || !appt.endTime) continue;
 
-      // Convert UTC appointment times to local time for comparison
       const apptStartLocal = convertUTCTimeToLocalForDate(appt.startTime, formData.date);
       const apptEndLocal = convertUTCTimeToLocalForDate(appt.endTime, formData.date);
 
@@ -1199,7 +1336,6 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
       const newPatient = patientRes.data;
       setNewPatientData(newPatient);
 
-      // Refresh patients list
       const allPatientsRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/patients?limit=1000`);
       const patientsData = Array.isArray(allPatientsRes.data)
         ? allPatientsRes.data
@@ -1210,12 +1346,10 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
       setPatients(patientsData);
       setFilteredPatients(patientsData);
 
-      // Show success modal
       setSuccessMessage(`Patient ${formData2.firstName} ${formData2.lastName} added successfully!`);
       setShowSuccessModal(true);
       setShowFields(false);
 
-      // Scroll to top after patient added
       setTimeout(() => {
         scrollToTop();
       }, 300);
@@ -1231,8 +1365,6 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
       setFormData(prev => ({ ...prev, patientId: newPatientData._id }));
       setShowSuccessModal(false);
       setNewPatientData(null);
-
-      // Reset patient form
       resetAfterNewPatient();
     }
   };
@@ -1262,14 +1394,23 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
     if (e) e.preventDefault();
     setIsLoading(true);
 
-    // If adding new patient
     if (showFields) {
       await addNewPatient();
       setIsLoading(false);
       return;
     }
 
-    // Schedule appointment
+    // Check for procedure conflicts before submitting
+    if (showProcedureConflict) {
+      const confirmProceed = window.confirm(
+        "There is a procedure scheduled at this time. Are you sure you want to proceed? This may cause scheduling conflicts."
+      );
+      if (!confirmProceed) {
+        setIsLoading(false);
+        return;
+      }
+    }
+
     const finalPaymentMethod = paymentInfo ? paymentInfo.method : formData.paymentMethod;
     const finalBillStatus = paymentInfo ? 'Paid' : status;
 
@@ -1307,11 +1448,8 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
       };
 
       if (formData.type === 'time-based') {
-        // Store times as UTC without timezone conversion
-        // If user selects 9 PM, store as 21:00 UTC
         appointmentData.start_time = `${formData.date}T${formData.start_time}:00+00:00`;
 
-        // Calculate end time in 24-hour format
         const [hours, minutes] = formData.start_time.split(':').map(Number);
         const totalMinutes = hours * 60 + minutes + parseInt(formData.duration);
         const endHours = Math.floor(totalMinutes / 60) % 24;
@@ -1338,6 +1476,7 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
 
       const appointmentId = appointmentRes.data._id;
       console.log('Appointment scheduled with ID:', appointmentId, 'and status:', finalBillStatus);
+      
       const billRes = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/billing`, {
         patient_id: formData.patientId,
         appointment_id: appointmentId,
@@ -1348,10 +1487,8 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
         transaction_id: paymentInfo ? paymentInfo.transactionId : null,
       });
 
-      // Fetch invoice details
       await fetchInvoiceDetails(appointmentId);
 
-      // Show appointment success modal
       const selectedPatient = filteredPatients.find(p => p._id === formData.patientId);
       const patientName = selectedPatient ?
         `${selectedPatient.salutation || ''} ${selectedPatient.first_name || ''} ${selectedPatient.last_name || ''}`.trim() :
@@ -1374,10 +1511,9 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
       };
       setSubmitDetails(enriched);
 
-      // Instead of immediately showing slip, show action modal after success modal closes
       setTimeout(() => {
         setShowSuccessModal(false);
-        setShowActionModal(true); // Show action modal with options
+        setShowActionModal(true);
       }, 2000);
 
     } catch (err) {
@@ -1401,7 +1537,6 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
   const selectedPatient = formData.patientId ?
     filteredPatients.find(p => p._id === formData.patientId) : null;
 
-  // Helper to display doctor consultation fee
   const getDoctorFeeDisplay = () => {
     if (!doctorDetails) return null;
 
@@ -1549,12 +1684,26 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
           color: #64748b;
           margin-top: 4px;
         }
+
+        .procedure-conflict-alert {
+          animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+          0% {
+            box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+          }
+          70% {
+            box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+          }
+          100% {
+            box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+          }
+        }
       `}</style>
 
-      {/* Add ref for scrolling */}
       <div ref={formContainerRef} className="min-h-screen">
         <div className="max-w-7xl mx-auto">
-          {/* Header */}
           <div className="flex flex-col md:flex-row md:items-center items-center w-full justify-between mb-8">
             <div>
               <h1 className="text-2xl font-bold text-center text-gray-800 capitalize">{type} Appointment Booking</h1>
@@ -1564,9 +1713,7 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
             </div>
           </div>
 
-          {/* Main Content */}
           <div className="relative grid grid-cols-1 lg:grid-cols-5 gap-8">
-            {/* Left Column - Form */}
             <div className={`col-span-1 ${showFields ? 'lg:col-span-5' : 'lg:col-span-3'}`}>
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                 <div className="p-6 border-b border-gray-100">
@@ -1613,7 +1760,6 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
 
                 <div className="p-6">
                   <form onSubmit={handleSubmit} className="space-y-6">
-                    {/* Patient Selection / Registration */}
                     {!showFields ? (
                       <>
                         <div className="space-y-4">
@@ -1655,7 +1801,6 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
                           )}
                         </div>
 
-                        {/* Appointment Details */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <SearchableFormSelect
                             label="Select Department"
@@ -1758,6 +1903,27 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
                                 </div>
                               )}
                             </div>
+
+                            {/* NEW: Procedure Conflict Warning */}
+                            {showProcedureConflict && (
+                              <div className="procedure-conflict-alert bg-red-50 border border-red-200 rounded-lg p-4">
+                                <div className="flex items-start gap-3">
+                                  <FaExclamationTriangle className="text-red-500 text-xl mt-0.5" />
+                                  <div className="flex-1">
+                                    <p className="text-sm text-red-700">{procedureConflictMessage}</p>
+                                    <button
+                                      type="button"
+                                      onClick={suggestNextAvailableSlot}
+                                      className="mt-2 px-3 py-1.5 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 inline-flex items-center gap-2"
+                                    >
+                                      <FaArrowRight className="text-xs" />
+                                      Suggest Next Available Slot
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
                             {autoSwitchMessage && (
                               <div className="bg-yellow-50 border border-yellow-100 rounded-lg p-3">
                                 <p className="text-sm text-yellow-700">
@@ -1779,6 +1945,9 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
                             )}
                           </div>
                         )}
+
+                        {/* NEW: Display Doctor's Scheduled Procedures */}
+                        {!showFields && formData.doctorId && formData.date && doctorProcedures.length > 0 && renderDoctorProcedures()}
 
                         {type === 'ipd' && (
                           <SearchableFormSelect
@@ -1824,7 +1993,6 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
                           />
                         </div>
 
-                        {/* Registration Fee Checkbox */}
                         <div className="bg-gray-50 border border-gray-100 rounded-lg p-4">
                           <div className="flex items-center justify-between">
                             <div>
@@ -1850,7 +2018,6 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
                           </div>
                         </div>
 
-                        {/* Charges Summary */}
                         <div className="bg-gray-50 border border-gray-100 rounded-lg p-6">
                           <div className="flex items-center justify-between mb-4">
                             <h3 className="text-lg font-semibold text-gray-900">Charges Summary</h3>
@@ -2073,7 +2240,6 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
                       </>
                     )}
 
-                    {/* Action Buttons */}
                     <div className="flex justify-end space-x-4 pt-6 border-t border-gray-100">
                       {showFields ? (
                         <>
@@ -2121,7 +2287,6 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
               </div>
             </div>
 
-            {/* Right Column - Calendar (Fixed Position) */}
             {!showFields && formData.doctorId && (
               <div className="fixed-calendar hidden lg:block">
                 <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
@@ -2146,11 +2311,6 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
                               <FaMoneyBillWave className="mr-2" size={14} />
                               Consultation Fee: {getDoctorFeeDisplay()}
                             </p>
-                            {/* {doctorDetails.revenuePercentage && doctorDetails.revenuePercentage < 100 && (
-                              <p className="text-xs text-blue-600 mt-1">
-                                Doctor's revenue share: {doctorDetails.revenuePercentage}%
-                              </p>
-                            )} */}
                           </div>
                         )}
                       </div>
@@ -2175,7 +2335,6 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
                           <h4 className="font-medium text-gray-900 mb-2">Booked Appointments</h4>
                           <div className="space-y-2 max-h-60 overflow-y-auto">
                             {existingAppointments.map((appt, index) => {
-                              // Convert UTC times to local time for display
                               const startTimeLocal = convertUTCTimeToLocalForDate(appt.startTime, formData.date);
                               const endTimeLocal = convertUTCTimeToLocalForDate(appt.endTime, formData.date);
 
@@ -2271,17 +2430,15 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
           onContinue={() => {
             setShowSuccessModal(false);
             if (!newPatientData) {
-              // Show action modal instead of directly showing slip
               setShowActionModal(true);
             } else {
               handleSelectPatientAfterSuccess();
             }
           }}
-          showSlipButton={false} // Changed to false since we show action modal
+          showSlipButton={false}
         />
       )}
 
-      {/* Action Modal - Choose between Slip and Invoice */}
       {showActionModal && submitDetails && (
         <div className="action-modal-overlay">
           <div className="action-modal">
@@ -2292,7 +2449,6 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
               <div
                 className="action-button"
                 onClick={() => {
-                  // setShowActionModal(false);
                   setSlipModal(true);
                 }}
               >
@@ -2305,7 +2461,6 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
                 <div
                   className="action-button"
                   onClick={() => {
-                    // setShowActionModal(false);
                     setInvoiceModal(true);
                   }}
                 >
@@ -2331,26 +2486,22 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
         </div>
       )}
 
-      {/* Appointment Slip Modal */}
       {slipModal && submitDetails && (
         <AppointmentSlipModal
           isOpen={slipModal}
           onClose={() => {
             setSlipModal(false);
-            // resetFormForNextAppointment();
           }}
           appointmentData={submitDetails}
           hospitalInfo={hospitalInfo}
         />
       )}
 
-      {/* Appointment Invoice Modal */}
       {invoiceModal && invoiceDetails && (
         <AppointmentInvoiceModal
           isOpen={invoiceModal}
           onClose={() => {
             setInvoiceModal(false);
-            // resetFormForNextAppointment();
           }}
           invoiceData={invoiceDetails}
           hospitalInfo={hospitalInfo}
