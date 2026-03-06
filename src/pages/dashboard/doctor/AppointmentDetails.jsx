@@ -80,7 +80,7 @@ const SearchableFormSelect = ({
 
     // Split search term into words for better matching
     const searchWords = term.split(/\s+/).filter(word => word.length > 0);
-    
+
     // Filter and score options
     const filtered = normalizedOptions
       .map(opt => {
@@ -95,7 +95,7 @@ const SearchableFormSelect = ({
 
         // Calculate score: higher score means better match
         let score = 0;
-        
+
         // Check if starts with search term (highest priority)
         if (haystack.startsWith(term)) {
           score += 100;
@@ -108,7 +108,7 @@ const SearchableFormSelect = ({
         else if (haystack.includes(term)) {
           score += 25;
         }
-        
+
         // Check for word boundary matches
         searchWords.forEach(word => {
           if (word.length > 0) {
@@ -375,7 +375,7 @@ const SearchableFormSelect = ({
                         {opt.fasting_required && <span>• Fasting Required</span>}
                       </div>
                     )}
-                    
+
                     {/* Show match indicator for debugging (remove in production) */}
                     {/* {opt.score && (
                       <div className="text-[8px] text-gray-300 mt-0.5">Score: {opt.score}</div>
@@ -574,12 +574,12 @@ const AppointmentDetails = () => {
     // Get hospital ID from localStorage
     const hospitalID = localStorage.getItem('hospitalId');
     const userData = JSON.parse(localStorage.getItem('user') || '{}');
-    
+
     if (hospitalID) {
       setHospitalId(hospitalID);
       fetchVitalsConfig(hospitalID);
     }
-    
+
     if (userData.role) {
       setUserRole(userData.role);
     }
@@ -633,7 +633,7 @@ const AppointmentDetails = () => {
       };
     }
 
-    switch(vitalsConfig.vitalsController) {
+    switch (vitalsConfig.vitalsController) {
       case 'doctor':
         return {
           message: 'You have full access to manage vitals',
@@ -667,7 +667,7 @@ const AppointmentDetails = () => {
       alert('You do not have permission to manage vitals.');
       return;
     }
-    
+
     // Pre-fill with existing vitals if available
     setVitals({
       bp: appointment.vitals?.bp || defaultVitals.bp,
@@ -688,7 +688,7 @@ const AppointmentDetails = () => {
 
   const submitVitals = async (e) => {
     e.preventDefault();
-    
+
     if (!canAccessVitals()) {
       alert('Vitals access has been revoked or reassigned.');
       setIsVitalsModalOpen(false);
@@ -705,10 +705,10 @@ const AppointmentDetails = () => {
 
       setMessage('Vitals updated successfully!');
       setIsVitalsModalOpen(false);
-      
+
       // Refresh appointment data to show updated vitals
       fetchAppointment();
-      
+
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
       console.error('Error updating vitals:', err);
@@ -716,19 +716,23 @@ const AppointmentDetails = () => {
     }
   };
 
-  // Fetch medicines
-  const fetchMedicines = async (searchTerm = '') => {
+  // Fetch medicines (with optional dosage_form filter for faster search)
+  const fetchMedicines = async (searchTerm = '', dosageForm = '') => {
     if (searchTerm.length < 2 && searchTerm !== '') return;
 
     setSearchingMedicines(true);
     try {
+      const params = { q: searchTerm, limit: 30 };
+      if (dosageForm) {
+        params.dosage_form = dosageForm;
+      }
       const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/NLEMmedicines/search`, {
-        params: { q: searchTerm, limit: 20 }
+        params
       });
 
       if (response.data.data && response.data.data.medicines) {
         const medicineOpts = response.data.data.medicines.map(med => ({
-          label: med.medicine_name + (med.strength ? ` ${med.strength}` : '') + (med.dosage_form ? ` ${med.dosage_form}` : ''),
+          label: med.medicine_name + (med.strength ? ` ${med.strength}` : '') + (med.dosage_form ? ` (${med.dosage_form})` : ''),
           value: med.medicine_name,
           dosage: med.dosage_form,
           strength: med.strength,
@@ -811,18 +815,16 @@ const AppointmentDetails = () => {
   // Load initial data
   useEffect(() => {
     const loadInitialData = async () => {
-      setLoadingMedicines(true);
       setLoadingProcedures(true);
       setLoadingLabTests(true);
 
       try {
-        await fetchMedicines('');
+        // Medicines are now loaded on-demand when type is selected
         await fetchProcedures('');
         await fetchLabTests('');
       } catch (error) {
         console.error('Error loading initial data:', error);
       } finally {
-        setLoadingMedicines(false);
         setLoadingProcedures(false);
         setLoadingLabTests(false);
       }
@@ -1148,6 +1150,43 @@ const AppointmentDetails = () => {
     const { name, value, _selectedOption } = e.target;
     const newItems = [...prescription.items];
     const item = { ...newItems[index], [name]: value };
+
+    // When medicine type changes, pre-fetch medicines of that type
+    if (name === 'medicine_type') {
+      // Map UI type to dosage_form value used in API
+      const typeToFormMap = {
+        'Tablet': 'Tablet',
+        'Capsule': 'Capsule',
+        'Syrup': 'Syrup',
+        'Injection': 'Injection',
+        'Ointment': 'Ointment',
+        'Drops': 'Drops',
+        'Inhaler': 'Inhaler',
+        'Suppository': 'Suppository',
+        'Powder': 'Powder',
+        'Cream': 'Cream',
+        'Lotion': 'Lotion',
+        'Other': ''
+      };
+      const dosageForm = typeToFormMap[value] || '';
+      // Clear current medicine name and reset options
+      item.medicine_name = '';
+      item.dosage = '';
+      item.route_of_administration = '';
+      item.instructions = '';
+      item.frequency = '';
+      item.quantity = '';
+      item.duration = '';
+      // Pre-fetch medicines for the selected type
+      if (dosageForm) {
+        fetchMedicines('', dosageForm);
+      } else {
+        setMedicineOptions([]);
+      }
+      newItems[index] = item;
+      setPrescription(prev => ({ ...prev, items: newItems }));
+      return;
+    }
 
     if (name === 'medicine_name') {
       if (!value) {
@@ -1523,7 +1562,7 @@ const AppointmentDetails = () => {
 
       const proceduresWithPrice = proceduresWithCosts.filter(proc => proc.cost > 0);
       const labTestsWithPrice = labTestsWithCosts.filter(test => test.cost > 0);
-      
+
       let procedureBillingNote = '';
       let labTestBillingNote = '';
 
@@ -2350,7 +2389,7 @@ const AppointmentDetails = () => {
                     </button>
                   )}
                 </div>
-                
+
                 {appointment.vitals && (appointment.vitals.bp || appointment.vitals.pulse || appointment.vitals.weight || appointment.vitals.spo2 || appointment.vitals.temperature || appointment.vitals.respiratory_rate || appointment.vitals.random_blood_sugar || appointment.vitals.height) ? (
                   <div className="p-4">
                     <div className="grid grid-cols-2 gap-3">
@@ -2576,8 +2615,8 @@ const AppointmentDetails = () => {
                                         <div
                                           key={index}
                                           className={`rounded-lg border transition-all ${isExpanded
-                                              ? 'border-blue-200 bg-blue-50 shadow-md'
-                                              : 'border-blue-100 bg-blue-50 hover:border-blue-300'
+                                            ? 'border-blue-200 bg-blue-50 shadow-md'
+                                            : 'border-blue-100 bg-blue-50 hover:border-blue-300'
                                             }`}
                                         >
                                           {/* Procedure header and content */}
@@ -2716,8 +2755,8 @@ const AppointmentDetails = () => {
                                         <div
                                           key={index}
                                           className={`rounded-lg border transition-all ${isExpanded
-                                              ? 'border-amber-200 bg-amber-50 shadow-md'
-                                              : 'border-amber-100 bg-amber-50 hover:border-amber-300'
+                                            ? 'border-amber-200 bg-amber-50 shadow-md'
+                                            : 'border-amber-100 bg-amber-50 hover:border-amber-300'
                                             }`}
                                         >
                                           {/* Lab test header and content */}
@@ -2889,8 +2928,8 @@ const AppointmentDetails = () => {
                                       <div
                                         key={index}
                                         className={`rounded-lg border transition-all ${isExpanded
-                                            ? 'border-teal-200 bg-teal-50 shadow-md'
-                                            : 'border-teal-100 bg-teal-50 hover:border-teal-300'
+                                          ? 'border-teal-200 bg-teal-50 shadow-md'
+                                          : 'border-teal-100 bg-teal-50 hover:border-teal-300'
                                           }`}
                                       >
                                         {/* Medicine header and content */}
@@ -2948,35 +2987,36 @@ const AppointmentDetails = () => {
                                             </div>
 
                                             <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+                                              <div className="md:col-span-2">
+                                                <SearchableFormSelect
+                                                  label={<>Type <span className="text-red-500">*</span></>}
+                                                  value={item.medicine_type || ''}
+                                                  onChange={(e) => handleMedicineChange(index, e)}
+                                                  options={medicineTypeOptions}
+                                                  placeholder="Select type"
+                                                  name="medicine_type"
+                                                  allowCustom={false}
+                                                  freeSolo={false}
+                                                />
+                                              </div>
                                               <div className="md:col-span-4">
                                                 <SearchableFormSelect
                                                   label="Medicine Name"
                                                   value={item.medicine_name}
                                                   onChange={(e) => handleMedicineChange(index, e)}
                                                   options={medicineOptions}
-                                                  placeholder="Search..."
+                                                  placeholder={item.medicine_type ? `Search ${item.medicine_type.toLowerCase()}s...` : 'Select type first'}
                                                   required
                                                   type="medicine"
                                                   name="medicine_name"
                                                   loading={searchingMedicines}
                                                   error={medicineErrors[index]}
-                                                  onSearch={fetchMedicines}
-                                                  debounceDelay={1000}
+                                                  onSearch={(searchTerm) => fetchMedicines(searchTerm, item.medicine_type || '')}
+                                                  debounceDelay={300}
                                                   minSearchChars={0}
                                                   allowCustom={true}
                                                   freeSolo={true}
-                                                />
-                                              </div>
-                                              <div className="md:col-span-2">
-                                                <SearchableFormSelect
-                                                  label="Type"
-                                                  value={item.medicine_type || ''}
-                                                  onChange={(e) => handleMedicineChange(index, e)}
-                                                  options={medicineTypeOptions}
-                                                  placeholder="Type"
-                                                  name="medicine_type"
-                                                  allowCustom={false}
-                                                  freeSolo={false}
+                                                  disabled={!item.medicine_type}
                                                 />
                                               </div>
                                               <div className="md:col-span-2">
