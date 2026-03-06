@@ -70,7 +70,7 @@ const AppointmentInvoiceModal = ({ isOpen, onClose, invoiceData, hospitalInfo, d
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Appointment Invoice #${invoiceData.invoiceNumber}</title>
+          <title>Invoice #${invoiceData.invoiceNumber}</title>
           <style>
             @page {
               size: A4 portrait;
@@ -220,7 +220,7 @@ const AppointmentInvoiceModal = ({ isOpen, onClose, invoiceData, hospitalInfo, d
               </div>
             </div>
             <div>
-              <div class="invoice-title-box">APPOINTMENT INVOICE</div>
+              <div class="invoice-title-box">INVOICE</div>
               <div style="text-align:center;font-size:10px;margin-top:4px;">
                 ${invoiceData.status === 'Paid' ? '(PAID)' : '(PENDING)'}
               </div>
@@ -479,7 +479,7 @@ const AppointmentInvoiceModal = ({ isOpen, onClose, invoiceData, hospitalInfo, d
                 </div>
               </div>
               <div>
-                <div className="invoice-title-box">APPOINTMENT INVOICE</div>
+                <div className="invoice-title-box">INVOICE</div>
                 <div style={{ textAlign: 'center', fontSize: '10px', marginTop: '4px' }}>
                   {invoiceData.status === 'Paid' ? '(PAID)' : '(PENDING)'}
                 </div>
@@ -574,7 +574,7 @@ const AppointmentInvoiceModal = ({ isOpen, onClose, invoiceData, hospitalInfo, d
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
         <div className="bg-white rounded-2xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
           <div className="p-6 border-b border-gray-200 flex justify-between items-center sticky top-0 bg-white">
-            <h3 className="text-xl font-bold text-gray-800">Appointment Invoice</h3>
+            <h3 className="text-xl font-bold text-gray-800">Invoice</h3>
             <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
               <FaTimes size={20} />
             </button>
