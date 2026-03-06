@@ -2132,6 +2132,7 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
                               value={formData2.salutation}
                               onChange={(e) => handlePatientInputChange('salutation', e.target.value)}
                               options={salutationOptions}
+                              required
                             />
                             <FormInput
                               label="First Name"

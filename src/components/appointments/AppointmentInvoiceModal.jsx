@@ -26,11 +26,11 @@ const AppointmentInvoiceModal = ({ isOpen, onClose, invoiceData, hospitalInfo, d
 
   const getDoctorName = () => {
     if (!invoiceData) return 'N/A';
-    
+
     if (invoiceData.doctorName) {
       return invoiceData.doctorName;
     }
-    
+
     if (invoiceData.doctor_id) {
       if (typeof invoiceData.doctor_id === 'object') {
         const doc = invoiceData.doctor_id;
@@ -41,19 +41,19 @@ const AppointmentInvoiceModal = ({ isOpen, onClose, invoiceData, hospitalInfo, d
         return `${doc.firstName || doc.first_name || ''} ${doc.lastName || doc.last_name || ''}`.trim();
       }
     }
-    
+
     return 'N/A';
   };
 
   const generateInvoiceHTML = () => {
     const doctorName = getDoctorName();
-    const patientName = invoiceData.patientName || 
-      (invoiceData.patient_id ? 
-        `${invoiceData.patient_id.first_name || ''} ${invoiceData.patient_id.last_name || ''}`.trim() : 
+    const patientName = invoiceData.patientName ||
+      (invoiceData.patient_id ?
+        `${invoiceData.patient_id.first_name || ''} ${invoiceData.patient_id.last_name || ''}`.trim() :
         'Unknown');
     const patientId = invoiceData.patient_id?.patientId || 'N/A';
-    const appointmentDate = invoiceData.appointment_date ? 
-      new Date(invoiceData.appointment_date).toLocaleDateString() : 
+    const appointmentDate = invoiceData.appointment_date ?
+      new Date(invoiceData.appointment_date).toLocaleDateString() :
       new Date().toLocaleDateString();
 
     // Generate items HTML
@@ -74,7 +74,7 @@ const AppointmentInvoiceModal = ({ isOpen, onClose, invoiceData, hospitalInfo, d
           <style>
             @page {
               size: A4 portrait;
-              margin: 10mm;
+              margin: 0;
             }
             body {
               font-family: Arial, sans-serif;
@@ -206,10 +206,10 @@ const AppointmentInvoiceModal = ({ isOpen, onClose, invoiceData, hospitalInfo, d
         <body>
           <div class="invoice-header">
             <div class="logo-area">
-              ${hospitalInfo?.logo 
-                ? `<img src="${hospitalInfo.logo}" alt="Logo" />` 
-                : '<div style="width:100%;height:100%;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;font-size:10px;">LOGO</div>'
-              }
+              ${hospitalInfo?.logo
+        ? `<img src="${hospitalInfo.logo}" alt="Logo" />`
+        : '<div style="width:100%;height:100%;border:1px dashed #ccc;display:flex;align-items:center;justify-content:center;font-size:10px;">LOGO</div>'
+      }
             </div>
             <div class="hospital-details">
               <h1 class="hospital-name">${hospitalInfo?.hospitalName || 'HOSPITAL NAME'}</h1>
@@ -293,7 +293,7 @@ const AppointmentInvoiceModal = ({ isOpen, onClose, invoiceData, hospitalInfo, d
           `${import.meta.env.VITE_BACKEND_URL}/invoices/${invoiceData.invoiceId}/download`,
           { responseType: 'blob' }
         );
-        
+
         const url = window.URL.createObjectURL(new Blob([response.data]));
         const link = document.createElement('a');
         link.href = url;
@@ -303,7 +303,7 @@ const AppointmentInvoiceModal = ({ isOpen, onClose, invoiceData, hospitalInfo, d
         link.remove();
       } catch (err) {
         console.error('Error downloading invoice PDF:', err);
-        
+
         // Fallback to HTML download
         const htmlContent = generateInvoiceHTML();
         const blob = new Blob([htmlContent], { type: 'text/html' });
@@ -342,7 +342,7 @@ const AppointmentInvoiceModal = ({ isOpen, onClose, invoiceData, hospitalInfo, d
             <style>{`
               @page {
                 size: A4 portrait;
-                margin: 10mm;
+                margin: 0;
               }
               body {
                 font-family: Arial, sans-serif;
@@ -461,7 +461,7 @@ const AppointmentInvoiceModal = ({ isOpen, onClose, invoiceData, hospitalInfo, d
                 color: #666;
               }
             `}</style>
-            
+
             <div className="invoice-header">
               <div className="logo-area">
                 {hospitalInfo?.logo ? (
@@ -504,9 +504,9 @@ const AppointmentInvoiceModal = ({ isOpen, onClose, invoiceData, hospitalInfo, d
               <div className="details-item">
                 <span className="details-label">Patient Name:</span>
                 <span className="details-value">
-                  {invoiceData.patientName || 
-                    (invoiceData.patient_id ? 
-                      `${invoiceData.patient_id.first_name || ''} ${invoiceData.patient_id.last_name || ''}`.trim() : 
+                  {invoiceData.patientName ||
+                    (invoiceData.patient_id ?
+                      `${invoiceData.patient_id.first_name || ''} ${invoiceData.patient_id.last_name || ''}`.trim() :
                       'Unknown')}
                 </span>
               </div>
@@ -601,9 +601,9 @@ const AppointmentInvoiceModal = ({ isOpen, onClose, invoiceData, hospitalInfo, d
                 <div>
                   <h4 className="text-xs text-gray-500 uppercase mb-1">Patient</h4>
                   <p className="font-semibold">
-                    {invoiceData.patientName || 
-                      (invoiceData.patient_id ? 
-                        `${invoiceData.patient_id.first_name || ''} ${invoiceData.patient_id.last_name || ''}`.trim() : 
+                    {invoiceData.patientName ||
+                      (invoiceData.patient_id ?
+                        `${invoiceData.patient_id.first_name || ''} ${invoiceData.patient_id.last_name || ''}`.trim() :
                         'Unknown')}
                   </p>
                   <p className="text-sm text-gray-600">ID: {invoiceData.patient_id?.patientId}</p>
@@ -674,7 +674,7 @@ const AppointmentInvoiceModal = ({ isOpen, onClose, invoiceData, hospitalInfo, d
               >
                 <FaPrint /> Print
               </button>
-              <button
+              {/* <button
                 onClick={handleDownload}
                 disabled={downloading}
                 className={`px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 flex items-center gap-2 ${
@@ -683,7 +683,7 @@ const AppointmentInvoiceModal = ({ isOpen, onClose, invoiceData, hospitalInfo, d
               >
                 {downloading ? <FaSync className="animate-spin" /> : <FaDownload />}
                 {downloading ? 'Downloading...' : 'Download Invoice'}
-              </button>
+              </button> */}
             </div>
           </div>
         </div>
@@ -694,7 +694,7 @@ const AppointmentInvoiceModal = ({ isOpen, onClose, invoiceData, hospitalInfo, d
         @media print {
           @page {
             size: A4 portrait;
-            margin: 10mm;
+            margin: 0;
           }
           body, html {
             height: 100%;
