@@ -7,10 +7,10 @@ import AppointmentInvoiceModal from './AppointmentInvoiceModal';
 import QRCodeModal from './QRCodeModal';
 import PaymentPendingModal from './PaymentPendingModal';
 import SuccessModal from './SuccessModal';
-import { 
-  FaUser, FaCloudUploadAlt, FaTimes, FaIdCard, FaCalendarAlt, FaClock, 
-  FaUserPlus, FaCheckCircle, FaArrowLeft, FaMoneyBillWave, FaFileInvoice, 
-  FaPrint, FaProcedures, FaExclamationTriangle, FaArrowRight 
+import {
+  FaUser, FaCloudUploadAlt, FaTimes, FaIdCard, FaCalendarAlt, FaClock,
+  FaUserPlus, FaCheckCircle, FaArrowLeft, FaMoneyBillWave, FaFileInvoice,
+  FaPrint, FaProcedures, FaExclamationTriangle, FaArrowRight
 } from 'react-icons/fa';
 
 // Status Badge Component for Procedures
@@ -312,15 +312,15 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
   const fetchDoctorProcedures = async (doctorId, date) => {
     try {
       if (!doctorId || !date) return;
-      
+
       setLoadingProcedures(true);
       const response = await axios.get(
         `${import.meta.env.VITE_BACKEND_URL}/appointments/doctor/${doctorId}/procedures/${date}`
       );
-      
+
       if (response.data.success) {
         setDoctorProcedures(response.data.procedures);
-        
+
         // Check if there are procedures at the selected time
         if (formData.start_time) {
           checkProcedureConflicts(response.data.procedures, formData.start_time, parseInt(formData.duration));
@@ -359,23 +359,23 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
       const procedure = conflictingProcedures[0];
       const procEndTime = new Date(procedure.scheduled_date);
       procEndTime.setMinutes(procEndTime.getMinutes() + (procedure.duration_minutes || 30));
-      
+
       const suggestedStart = new Date(procEndTime);
-      
+
       // Add a buffer of 10-30 minutes based on procedure type
       const bufferMinutes = procedure.duration_minutes >= 60 ? 30 : 10;
       suggestedStart.setMinutes(suggestedStart.getMinutes() + bufferMinutes);
-      
+
       const suggestedHour = suggestedStart.getHours().toString().padStart(2, '0');
       const suggestedMinute = suggestedStart.getMinutes().toString().padStart(2, '0');
       const suggestedTime = `${suggestedHour}:${suggestedMinute}`;
-      
+
       const patientName = procedure.patient?.name || 'Unknown Patient';
       const procedureName = procedure.procedure_name || procedure.procedure_code;
-      
+
       setProcedureConflictMessage(
         `⚠️ Dr. has a procedure (${procedureName}) scheduled for ${patientName} at this time. ` +
-        `The procedure ends at ${procEndTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}. ` +
+        `The procedure ends at ${procEndTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}. ` +
         `Consider scheduling after ${suggestedTime} (allowing ${bufferMinutes} mins buffer).`
       );
       setShowProcedureConflict(true);
@@ -395,7 +395,7 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
       const procMinute = procDate.getMinutes();
       const procStart = procHour * 60 + procMinute;
       const procEnd = procStart + (proc.duration_minutes || 30);
-      
+
       const [selectedHour, selectedMinute] = formData.start_time.split(':').map(Number);
       const selectedStart = selectedHour * 60 + selectedMinute;
       const selectedEnd = selectedStart + parseInt(formData.duration);
@@ -410,39 +410,44 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
         const bEnd = new Date(b.scheduled_date).getTime() + (b.duration_minutes || 30) * 60000;
         return bEnd - aEnd;
       });
-      
+
       const lastProc = sortedProcs[0];
       const procEnd = new Date(lastProc.scheduled_date);
       procEnd.setMinutes(procEnd.getMinutes() + (lastProc.duration_minutes || 30));
-      
+
       // Add appropriate buffer
       const bufferMinutes = lastProc.duration_minutes >= 60 ? 30 : 10;
       procEnd.setMinutes(procEnd.getMinutes() + bufferMinutes);
-      
+
       const suggestedHour = procEnd.getHours().toString().padStart(2, '0');
       const suggestedMin = procEnd.getMinutes().toString().padStart(2, '0');
-      
+
       handleInputChange('start_time', `${suggestedHour}:${suggestedMin}`);
     }
   };
 
   // NEW: Render doctor procedures list
   const renderDoctorProcedures = () => {
-    if (doctorProcedures.length === 0) return null;
+    // Filter out completed procedures
+    const activeProcedures = doctorProcedures.filter(
+      (proc) => proc.status?.toLowerCase() !== 'completed'
+    );
+
+    if (activeProcedures.length === 0) return null;
 
     return (
       <div className="mt-4 bg-orange-50 border border-orange-200 rounded-lg p-4">
         <div className="flex items-center justify-between mb-3">
           <h4 className="font-semibold text-orange-800 flex items-center gap-2">
             <FaProcedures className="text-orange-600" />
-            Scheduled Procedures ({doctorProcedures.length})
+            Scheduled Procedures ({activeProcedures.length})
           </h4>
           {loadingProcedures && (
             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-orange-600"></div>
           )}
         </div>
         <div className="space-y-2 max-h-60 overflow-y-auto">
-          {doctorProcedures.map((proc, idx) => {
+          {activeProcedures.map((proc, idx) => {
             const procTime = new Date(proc.scheduled_date);
             const endTime = new Date(procTime);
             endTime.setMinutes(endTime.getMinutes() + (proc.duration_minutes || 30));
@@ -465,8 +470,8 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
                     </div>
                     <div className="text-xs text-gray-500 mt-1 flex items-center gap-2">
                       <FaClock className="text-gray-400" />
-                      {procTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - 
-                      {endTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                      {procTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} -
+                      {endTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       {' '}({proc.duration_minutes || 30} mins)
                     </div>
                   </div>
@@ -1476,7 +1481,7 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
 
       const appointmentId = appointmentRes.data._id;
       console.log('Appointment scheduled with ID:', appointmentId, 'and status:', finalBillStatus);
-      
+
       const billRes = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/billing`, {
         patient_id: formData.patientId,
         appointment_id: appointmentId,
