@@ -31,6 +31,7 @@ export const AuthProvider = ({ children }) => {
 
     // Redirect based on role
     if (role === 'admin') navigate('/dashboard/admin');
+    if (role === 'demo') navigate('/dashboard/demo');
     else if (role === 'doctor') navigate('/dashboard/doctor');
     else if (role && role.toLowerCase() === 'nurse') navigate('/dashboard/nurse');
     else if (role === 'staff' || role === 'registrar' || role === 'receptionist') navigate('/dashboard/staff');
