@@ -11,6 +11,7 @@ import {
   FormCheckbox,
   Button
 } from '../../../components/common/FormElements';
+import { demoSidebar } from '@/constants/sidebarItems/demoSidebar';
 
 const AddHodPage = () => {
   const location = useLocation();
@@ -146,7 +147,7 @@ const AddHodPage = () => {
   ];
 
   return (
-    <Layout sidebarItems={adminSidebar}>
+    <Layout sidebarItems={demoSidebar} section="Demo User">
       <div className="p-6">
         <div className="bg-white rounded-xl shadow-sm border border-gray-100">
           <div className="p-6 border-b border-gray-100">

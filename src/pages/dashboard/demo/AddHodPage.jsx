@@ -3,6 +3,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import Layout from '../../../components/Layout';
 import { adminSidebar } from '../../../constants/sidebarItems/adminSidebar';
+import { demoSidebar } from '@/constants/sidebarItems/demoSidebar';
 
 // --- Badges Helper ---
 const getStatusBadge = (status) => {
@@ -95,13 +96,13 @@ const AddHodPage = () => {
   };
 
   if (loading) return (
-    <Layout sidebarItems={adminSidebar}>
+    <Layout sidebarItems={demoSidebar} section="Demo User">
       <div className="flex items-center justify-center min-h-[600px] text-slate-400 font-medium">Loading Department Data...</div>
     </Layout>
   );
 
   return (
-    <Layout sidebarItems={adminSidebar}>
+    <Layout sidebarItems={demoSidebar} section="Demo User">
       <div className="p-8 min-h-screen bg-slate-50/50 font-sans text-slate-800">
         
         {/* Header */}

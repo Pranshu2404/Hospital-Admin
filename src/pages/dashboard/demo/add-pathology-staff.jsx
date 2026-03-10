@@ -3,9 +3,9 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../../../components/Layout';
-import { adminSidebar } from '../../../constants/sidebarItems/adminSidebar';
 import { FormInput, Button } from '../../../components/common/FormElements';
 import { FaFlask, FaSearch, FaCheck, FaTimes, FaSave } from 'react-icons/fa';
+import { demoSidebar } from '@/constants/sidebarItems/demoSidebar';
 
 const AddPathologyStaff = () => {
   const navigate = useNavigate();
@@ -195,7 +195,7 @@ const AddPathologyStaff = () => {
       });
 
       if (staffResponse.data.success) {
-        navigate('/dashboard/admin/pathology-staff');
+        navigate('/dashboard/demo/pathology-staff');
       }
     } catch (err) {
       console.error('Failed to add pathology staff:', err);
@@ -215,7 +215,7 @@ const AddPathologyStaff = () => {
   };
 
   return (
-    <Layout sidebarItems={adminSidebar}>
+    <Layout sidebarItems={demoSidebar} section="Demo User">
       <div className="p-6 max-w-7xl mx-auto">
         <h2 className="text-2xl font-bold mb-6">Add Pathology Staff</h2>
         
@@ -471,7 +471,7 @@ const AddPathologyStaff = () => {
             <Button 
               type="button" 
               variant="outline" 
-              onClick={() => navigate('/dashboard/admin/pathology-staff')}
+              onClick={() => navigate('/dashboard/demo/pathology-staff')}
             >
               Cancel
             </Button>

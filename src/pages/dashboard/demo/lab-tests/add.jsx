@@ -1,9 +1,9 @@
-// pages/dashboard/admin/lab-tests/add.jsx
+// pages/dashboard/demo/lab-tests/add.jsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
 import Layout from '../../../../components/Layout';
-import { adminSidebar } from '../../../../constants/sidebarItems/adminSidebar';
+import { adminSidebar } from '../../../../constants/sidebarItems/demoSidebar';
 import {
   FaFlask,
   FaSave,
@@ -19,6 +19,7 @@ import {
   FaCheckCircle,
   FaExclamationTriangle
 } from 'react-icons/fa';
+import { demoSidebar } from '@/constants/sidebarItems/demoSidebar';
 
 const AddLabTest = () => {
   const navigate = useNavigate();
@@ -189,7 +190,7 @@ const AddLabTest = () => {
       }
 
       setTimeout(() => {
-        navigate('/dashboard/admin/lab-tests');
+        navigate('/dashboard/demo/lab-tests');
       }, 2000);
     } catch (error) {
       console.error('Error saving lab test:', error);
@@ -207,7 +208,7 @@ const AddLabTest = () => {
 
   if (isFetching) {
     return (
-      <Layout sidebarItems={adminSidebar} section="Admin">
+      <Layout sidebarItems={demoSidebar} section="Admin">
         <div className="flex justify-center items-center h-96">
           <div className="animate-spin rounded-full h-12 w-12 border-4 border-emerald-200 border-t-emerald-600"></div>
         </div>
@@ -216,13 +217,13 @@ const AddLabTest = () => {
   }
 
   return (
-    <Layout sidebarItems={adminSidebar} section="Admin">
+    <Layout sidebarItems={demoSidebar} section="Admin">
       <div className="p-6 bg-slate-50 min-h-screen">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-4">
             <button
-              onClick={() => navigate('/dashboard/admin/lab-tests')}
+              onClick={() => navigate('/dashboard/demo/lab-tests')}
               className="p-2 hover:bg-white rounded-lg transition-colors"
             >
               <FaArrowLeft className="text-slate-600" />
@@ -469,7 +470,7 @@ const AddLabTest = () => {
           <div className="mt-6 flex justify-end gap-3">
             <button
               type="button"
-              onClick={() => navigate('/dashboard/admin/lab-tests')}
+              onClick={() => navigate('/dashboard/demo/lab-tests')}
               className="px-6 py-2 border border-slate-200 rounded-lg text-slate-700 font-medium hover:bg-slate-50 transition-colors flex items-center gap-2"
             >
               <FaTimes /> Cancel

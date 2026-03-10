@@ -60,12 +60,12 @@ const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message }) => {
   );
 };
 
-const Header = ({ 
-  currentPage, 
-  section = 'Hospital', 
-  sidebarItems = [], 
+const Header = ({
+  currentPage,
+  section = 'Hospital',
+  sidebarItems = [],
   user = { name: '', role: '', image: null },
-  onToggleSidebar 
+  onToggleSidebar
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -75,9 +75,9 @@ const Header = ({
   const [displayName, setDisplayName] = useState(user.name);
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
-  
+
   const { resetProgress } = useSetupTracker();
-  
+
   useEffect(() => {
     function handleClickOutside(event) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -131,7 +131,7 @@ const Header = ({
       const currentRole = pathSegments[2];
       navigate(`/dashboard/${currentRole}/profile`);
     } else {
-      navigate('/dashboard/admin/profile'); 
+      navigate('/dashboard/admin/profile');
     }
     setIsProfileOpen(false);
   };
@@ -151,9 +151,9 @@ const Header = ({
     }
     if (found) return found;
     switch (currentPage) {
-       case 'Dashboard': return 'Dashboard';
-       case 'AppointmentList': return 'Appointments';
-       default: return section;
+      case 'Dashboard': return 'Dashboard';
+      case 'AppointmentList': return 'Appointments';
+      default: return section;
     }
   };
 
@@ -178,37 +178,35 @@ const Header = ({
     <>
       <header className="bg-white/80 backdrop-blur-md border-b border-gray-200 px-4 sm:px-6 py-3 sticky top-0 z-40 shadow-sm transition-all duration-300">
         <div className="flex items-center justify-between">
-          
+
           {/* --- Left: Menu Button & Title --- */}
           <div className="flex items-center space-x-3 sm:space-x-4">
-<button
-  onClick={(e) => {
-    e.stopPropagation(); // Prevent event bubbling
-    console.log('Menu button clicked, calling onToggleSidebar');
-    onToggleSidebar();
-  }}
-  className="lg:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors flex-shrink-0"
-  aria-label="Toggle menu"
->
-  <MenuIconSVG />
-</button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation(); // Prevent event bubbling
+                console.log('Menu button clicked, calling onToggleSidebar');
+                onToggleSidebar();
+              }}
+              className="lg:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors flex-shrink-0"
+              aria-label="Toggle menu"
+            >
+              <MenuIconSVG />
+            </button>
 
             {/* Title & Breadcrumbs */}
             <div className="flex flex-col">
               <div className="hidden sm:flex items-center text-xs sm:text-sm text-gray-500 font-medium space-x-2 mb-0.5">
                 <span className="truncate">{section}</span>
-                <span className="text-gray-300">/</span>
-                <span className="text-teal-600 truncate">{getPageTitle()}</span>
               </div>
               <h2 className="text-lg sm:text-xl font-bold text-gray-800 tracking-tight truncate">
                 {getPageTitle()}
               </h2>
             </div>
           </div>
-          
+
           {/* --- Right: Actions --- */}
           <div className="flex items-center space-x-2 sm:space-x-4">
-            
+
             {/* Mobile Search Button */}
             {/* <button
               onClick={() => setShowSearch(!showSearch)}
@@ -262,7 +260,7 @@ const Header = ({
             )} */}
 
             {/* Reset Tutorial Button */}
-            <button 
+            <button
               onClick={() => setShowResetModal(true)}
               className="relative p-2 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-xl transition-all duration-200 group flex items-center gap-2"
               title="Reset Tutorial Progress"
@@ -279,7 +277,7 @@ const Header = ({
 
             {/* Professional Profile Dropdown */}
             <div className="relative" ref={dropdownRef}>
-              <button 
+              <button
                 onClick={() => setIsProfileOpen(!isProfileOpen)}
                 className={`
                   flex items-center gap-2 sm:gap-3 pl-1 pr-2 py-1 rounded-full border transition-all duration-200 
@@ -289,20 +287,20 @@ const Header = ({
                 <div className="relative">
                   {/* Avatar Image or Gradient Initials */}
                   {user.image ? (
-                     <img 
-                       src={user.image} 
-                       alt="Profile" 
-                       className="w-8 h-8 sm:w-9 sm:h-9 rounded-full object-cover border-2 border-white shadow-sm" 
-                     />
+                    <img
+                      src={user.image}
+                      alt="Profile"
+                      className="w-8 h-8 sm:w-9 sm:h-9 rounded-full object-cover border-2 border-white shadow-sm"
+                    />
                   ) : (
-                     <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gradient-to-br from-teal-300 to-emerald-700 flex items-center justify-center text-white text-sm font-bold shadow-sm border-2 border-white">
-                       {user.name ? user.name.substring(0, 2).toUpperCase() : 'U'}
-                     </div>
+                    <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gradient-to-br from-teal-300 to-emerald-700 flex items-center justify-center text-white text-sm font-bold shadow-sm border-2 border-white">
+                      {user.name ? user.name.substring(0, 2).toUpperCase() : 'U'}
+                    </div>
                   )}
                   {/* Online Status Dot */}
                   <span className="absolute bottom-0 right-0 block h-2 w-2 sm:h-2.5 sm:w-2.5 rounded-full bg-emerald-500 ring-2 ring-white"></span>
                 </div>
-                
+
                 <div className="hidden md:block text-left mr-1">
                   {/* <p className="text-sm font-bold text-gray-700 leading-none truncate max-w-[120px]">
                     {displayName}
@@ -311,7 +309,7 @@ const Header = ({
                     {getUserRole()}
                   </p>
                 </div>
-                
+
                 <ChevronDownIcon className={`
                   w-4 h-4 text-gray-400 transition-transform duration-200 
                   ${isProfileOpen ? 'rotate-180' : ''}
@@ -328,26 +326,33 @@ const Header = ({
                       {getUserRole()}
                     </p>
                   </div>
-                  
+
                   <div className="p-2 space-y-1">
-                    <button 
+                    <button
                       onClick={handleProfileNavigation}
                       className="flex w-full items-center px-3 py-2 text-sm text-gray-600 rounded-lg hover:bg-teal-50 hover:text-teal-700 transition-colors"
                     >
                       <UserIcon /> My Profile
                     </button>
-                    
-                    <button 
+
+                    <button
                       onClick={() => setShowResetModal(true)}
                       className="flex w-full items-center px-3 py-2 text-sm text-amber-600 rounded-lg hover:bg-amber-50 transition-colors"
                     >
                       <ResetIcon /> Reset Tutorial
                     </button>
                   </div>
-                  
+
                   <div className="p-2 border-t border-gray-50">
-                    <button 
-                      onClick={() => navigate('/')}
+                    <button
+                      onClick={() => {
+                        localStorage.removeItem('doctorId');
+                        localStorage.removeItem('staffId');
+                        localStorage.removeItem('pharmacyId');
+                        localStorage.removeItem('pathologyStaffId');
+                        localStorage.removeItem('hospitalUser');
+                        navigate('/');
+                      }}
                       className="flex w-full items-center px-3 py-2 text-sm text-red-600 rounded-lg hover:bg-red-50 transition-colors"
                     >
                       <LogoutIcon /> Sign Out

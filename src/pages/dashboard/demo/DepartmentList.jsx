@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import Layout from '../../../components/Layout';
 import { adminSidebar } from '../../../constants/sidebarItems/adminSidebar';
+import { demoSidebar } from '@/constants/sidebarItems/demoSidebar';
 
 // --- Custom Icons ---
 const Icons = {
@@ -84,7 +85,7 @@ const DepartmentList = () => {
   };
 
   return (
-    <Layout sidebarItems={adminSidebar}>
+    <Layout sidebarItems={demoSidebar} section="Demo User">
       <div className="p-8 min-h-screen bg-slate-50/50 font-sans text-slate-800">
         
         {/* Header Section */}

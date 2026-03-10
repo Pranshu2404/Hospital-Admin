@@ -1,9 +1,9 @@
-// File: src/pages/dashboard/admin/EditDoctor.jsx
+// File: src/pages/dashboard/demo/EditDoctor.jsx
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Layout from '../../../components/Layout';
-import { adminSidebar } from '../../../constants/sidebarItems/adminSidebar';
+import { adminSidebar } from '../../../constants/sidebarItems/demoSidebar';
 import {
   FaUserMd, FaEnvelope, FaPhone, FaMapMarkerAlt, FaStethoscope,
   FaAward, FaBirthdayCake, FaVenusMars, FaBuilding, FaClock,
@@ -11,6 +11,7 @@ import {
   FaCalendarAlt, FaBriefcase, FaTimes, FaSave, FaExclamationCircle,
   FaGraduationCap
 } from 'react-icons/fa';
+import { demoSidebar } from '@/constants/sidebarItems/demoSidebar';
 
 const SectionTitle = ({ title, icon: Icon }) => (
   <div className="flex items-center gap-2 mb-4 pb-2 border-b border-slate-100">
@@ -91,7 +92,7 @@ const EditDoctor = () => {
     try {
       await axios.put(`${import.meta.env.VITE_BACKEND_URL}/doctors/${id}`, formData);
       setMessage({ type: 'success', text: 'Doctor profile updated successfully' });
-      setTimeout(() => navigate('/dashboard/admin/doctor-list'), 1500);
+      setTimeout(() => navigate('/dashboard/demo/doctor-list'), 1500);
     } catch (err) {
       console.error('Failed to update doctor:', err);
       setMessage({ type: 'error', text: err.response?.data?.message || err.message || 'Failed to update' });
@@ -119,7 +120,7 @@ const EditDoctor = () => {
   if (!formData) return <div className="p-8 text-center text-red-500">Doctor not found.</div>;
 
   return (
-    <Layout sidebarItems={adminSidebar}>
+    <Layout sidebarItems={demoSidebar} section="Demo User">
       <div className="min-h-screen bg-slate-50/50 p-2 font-sans">
 
         {/* Header Card */}

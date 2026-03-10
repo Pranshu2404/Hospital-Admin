@@ -28,8 +28,10 @@ import {
   FaClock,
   FaToggleOn,
   FaToggleOff,
-  FaExclamationTriangle
+  FaExclamationTriangle,
+  FaSignInAlt
 } from 'react-icons/fa';
+import { demoSidebar } from '@/constants/sidebarItems/demoSidebar';
 
 const PathologyStaffList = () => {
   const [staff, setStaff] = useState([]);
@@ -38,6 +40,8 @@ const PathologyStaffList = () => {
   const [roleFilter, setRoleFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [loading, setLoading] = useState(true);
+  const [isDemoUser, setIsDemoUser] = useState(false);
+  const [demoLoginLoading, setDemoLoginLoading] = useState(null);
   
   // Modal states
   const [viewModal, setViewModal] = useState({ show: false, staff: null });
@@ -58,6 +62,12 @@ const PathologyStaffList = () => {
   const [selectAll, setSelectAll] = useState(false);
 
   const navigate = useNavigate();
+
+  // Check if current user is a demo user
+  useEffect(() => {
+    const demoFlag = localStorage.getItem('isDemoUser') === 'true';
+    setIsDemoUser(demoFlag);
+  }, []);
 
   const roleOptions = [
     { value: 'lab_technician', label: 'Lab Technician' },
@@ -198,6 +208,68 @@ const PathologyStaffList = () => {
     }
 
     setFilteredTests(filtered);
+  };
+
+  // Demo Login Handler
+  const handleDemoLogin = async (staffMember) => {
+    setDemoLoginLoading(staffMember._id);
+    try {
+      const userData = JSON.parse(localStorage.getItem('hospitalUser') || '{}');
+      const token = userData.token;
+      
+      const response = await axios.post(
+        `${import.meta.env.VITE_BACKEND_URL}/auth/demo-login`,
+        { email: staffMember.email },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      const { token: newToken, role, doctorId, staffId, pharmacyId, pathologyStaffId, hospitalID } = response.data;
+      
+      console.log('Demo Login response:', response.data);
+
+      // Clear previous role-specific data
+      localStorage.removeItem('doctorId');
+      localStorage.removeItem('staffId');
+      localStorage.removeItem('pharmacyId');
+      localStorage.removeItem('pathologyStaffId');
+
+      // Store IDs in localStorage based on role
+      if (doctorId) localStorage.setItem("doctorId", doctorId);
+      if (hospitalID) localStorage.setItem("hospitalId", hospitalID);
+      if (staffId) localStorage.setItem("staffId", staffId);
+      if (pharmacyId) localStorage.setItem("pharmacyId", pharmacyId);
+      if (pathologyStaffId) localStorage.setItem("pathologyStaffId", pathologyStaffId);
+
+      // Store user data
+      const userDataObj = {
+        token: newToken,
+        role: role
+      };
+      
+      localStorage.setItem('hospitalUser', JSON.stringify(userDataObj));
+      localStorage.setItem('isDemoUser', 'true');
+      
+      // Redirect to appropriate dashboard based on role
+      const dashboardRoutes = {
+        doctor: '/dashboard/doctor',
+        staff: '/dashboard/staff',
+        nurse: '/dashboard/nurse',
+        registrar: '/dashboard/staff',
+        receptionist: '/dashboard/staff',
+        pharmacy: '/dashboard/pharmacy',
+        pathology_staff: '/dashboard/pathology',
+        admin: '/dashboard/admin'
+      };
+
+      const route = dashboardRoutes[role] || '/dashboard';
+      navigate(route);
+      
+    } catch (error) {
+      console.error('Demo login failed:', error);
+      alert(error.response?.data?.error || 'Failed to login as this staff member');
+    } finally {
+      setDemoLoginLoading(null);
+    }
   };
 
   const handleEditClick = (member) => {
@@ -441,8 +513,20 @@ const PathologyStaffList = () => {
   };
 
   return (
-    <Layout sidebarItems={adminSidebar}>
+    <Layout sidebarItems={isDemoUser ? demoSidebar : adminSidebar} section={isDemoUser ? "Demo User" : "Admin"}>
       <div className="p-6">
+        {/* Demo Mode Banner */}
+        {isDemoUser && (
+          <div className="mb-6 bg-purple-50 border border-purple-200 rounded-xl p-4 flex items-center gap-3">
+            <div className="p-2 bg-purple-100 rounded-lg">
+              <FaSignInAlt className="text-purple-600" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-bold text-purple-800">Demo Mode Active</h3>
+            </div>
+          </div>
+        )}
+
         <div className="flex justify-between items-center mb-6">
           <div>
             <h2 className="text-2xl font-bold">Pathology Staff</h2>
@@ -550,6 +634,27 @@ const PathologyStaffList = () => {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex gap-2">
+                        {/* Demo Login Button - Only visible to demo users */}
+                        {isDemoUser && (
+                          <button
+                            onClick={() => handleDemoLogin(member)}
+                            disabled={demoLoginLoading === member._id}
+                            className="p-2 text-purple-600 hover:text-purple-700 hover:bg-purple-50 rounded-lg transition-colors relative group"
+                            title={`Login as ${member.first_name} ${member.last_name}`}
+                          >
+                            {demoLoginLoading === member._id ? (
+                              <div className="w-4 h-4 border-2 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
+                            ) : (
+                              <>
+                                <FaSignInAlt size={16} />
+                                <span className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-purple-600 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                                  Login as {member.first_name}
+                                </span>
+                              </>
+                            )}
+                          </button>
+                        )}
+                        
                         <button
                           onClick={() => setViewModal({ show: true, staff: member })}
                           className="p-2 text-gray-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-colors"

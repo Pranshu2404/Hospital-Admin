@@ -18,7 +18,8 @@ import {
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom'; // ADD THIS
 import Layout from '@/components/Layout';
-import { adminSidebar } from '@/constants/sidebarItems/adminSidebar';
+import { adminSidebar } from '@/constants/sidebarItems/demoSidebar';
+import { demoSidebar } from '@/constants/sidebarItems/demoSidebar';
 
 const PaySalaryPage = () => {
   const [salaries, setSalaries] = useState([]);
@@ -156,13 +157,13 @@ const PaySalaryPage = () => {
   };
 
   return (
-    <Layout sidebarItems={adminSidebar}>
+    <Layout sidebarItems={demoSidebar} section="Demo User">
     <div className="p-6 space-y-6 bg-gray-100 min-h-screen">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex items-center gap-4">
           {/* Back to Expense Page Button */}
           <button
-            onClick={() => navigate('/dashboard/admin/expense')}
+            onClick={() => navigate('/dashboard/demo/expense')}
             className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors"
           >
             <FaArrowLeft /> Back to Expenses

@@ -2,8 +2,9 @@ import { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../../../components/Layout';
-import { adminSidebar } from '../../../constants/sidebarItems/adminSidebar';
+import { adminSidebar } from '../../../constants/sidebarItems/demoSidebar';
 import { FormInput, Button } from '../../../components/common/FormElements';
+import { demoSidebar } from '@/constants/sidebarItems/demoSidebar';
 
 const AddPharmacy = () => {
   const navigate = useNavigate();
@@ -24,14 +25,14 @@ const AddPharmacy = () => {
     e.preventDefault();
     try {
       await axios.post(`${import.meta.env.VITE_BACKEND_URL}/pharmacy`, form);
-      navigate('/dashboard/admin/pharmacies');
+      navigate('/dashboard/demo/pharmacies');
     } catch (err) {
       console.error('Failed to add pharmacy:', err);
     }
   };
 
   return (
-    <Layout sidebarItems={adminSidebar}>
+    <Layout sidebarItems={demoSidebar} section="Demo User">
       <div className="p-6 mx-auto">
         <h2 className="text-2xl font-bold mb-6">Register New Pharmacy</h2>
         <form onSubmit={handleSubmit} className="space-y-4 ">

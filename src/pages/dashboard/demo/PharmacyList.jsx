@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../../../components/Layout';
-import { adminSidebar } from '../../../constants/sidebarItems/adminSidebar';
+import { adminSidebar } from '../../../constants/sidebarItems/demoSidebar';
 import { Button } from '../../../components/common/FormElements';
+import { demoSidebar } from '@/constants/sidebarItems/demoSidebar';
 
 const PharmacyList = () => {
   const [pharmacies, setPharmacies] = useState([]);
@@ -23,11 +24,11 @@ const PharmacyList = () => {
   }, []);
 
   return (
-    <Layout sidebarItems={adminSidebar}>
+    <Layout sidebarItems={demoSidebar} section="Demo User">
       <div className="p-6">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold">Registered Pharmacies</h2>
-          <Button onClick={() => navigate('/dashboard/admin/pharmacies/add')}>+ Add Pharmacy</Button>
+          <Button onClick={() => navigate('/dashboard/demo/pharmacies/add')}>+ Add Pharmacy</Button>
         </div>
 
         <div className="overflow-x-auto bg-white shadow rounded-lg">
@@ -49,7 +50,7 @@ const PharmacyList = () => {
                   <td className="px-6 py-4">{pharmacy.phone || '—'}</td>
                   <td className="px-6 py-4">{pharmacy.status}</td>
                   <td className="px-6 py-4">
-                    <Button size="sm" variant="outline" onClick={() => navigate(`/dashboard/admin/pharmacies/${pharmacy._id}`)}>View</Button>
+                    <Button size="sm" variant="outline" onClick={() => navigate(`/dashboard/demo/pharmacies/${pharmacy._id}`)}>View</Button>
                   </td>
                 </tr>
               ))}

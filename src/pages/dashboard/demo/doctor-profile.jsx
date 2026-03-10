@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Layout from '../../../components/Layout';
-import { adminSidebar } from '../../../constants/sidebarItems/adminSidebar';
+import { adminSidebar } from '../../../constants/sidebarItems/demoSidebar';
 import {
   FaUserMd, FaEnvelope, FaPhone, FaMapMarkerAlt, FaStethoscope,
   FaAward, FaBirthdayCake, FaVenusMars, FaBuilding, FaClock,
@@ -10,6 +10,7 @@ import {
   FaCalendarAlt, FaBriefcase, FaTimes, FaSave, FaExclamationCircle,
   FaGraduationCap, FaArrowLeft
 } from 'react-icons/fa';
+import { demoSidebar } from '@/constants/sidebarItems/demoSidebar';
 
 const SectionTitle = ({ title, icon: Icon }) => (
   <div className="flex items-center gap-2 mb-4 pb-2 border-b border-slate-100">
@@ -68,7 +69,7 @@ const DoctorProfilePage = () => {
 
   if (!doctor) {
     return (
-      <Layout sidebarItems={adminSidebar}>
+      <Layout sidebarItems={demoSidebar} section="Demo User">
         <div className="p-8 text-center">
           <h3 className="text-xl font-bold text-slate-800">Doctor not found</h3>
           <button onClick={() => navigate(-1)} className="mt-4 text-emerald-600 hover:underline">Go Back</button>
@@ -78,7 +79,7 @@ const DoctorProfilePage = () => {
   }
 
   return (
-    <Layout sidebarItems={adminSidebar}>
+    <Layout sidebarItems={demoSidebar} section="Demo User">
       <div className="min-h-screen bg-slate-50/50 p-2 font-sans">
 
         {/* Header Card */}
@@ -122,7 +123,7 @@ const DoctorProfilePage = () => {
                       <FaArrowLeft /> Back
                     </button>
                     <button
-                      onClick={() => navigate(`/dashboard/admin/edit-doctor/${doctor._id}`)}
+                      onClick={() => navigate(`/dashboard/demo/edit-doctor/${doctor._id}`)}
                       className="flex items-center gap-2 bg-slate-800 text-white px-4 py-2 rounded-lg hover:bg-slate-700 transition-all text-sm font-semibold"
                     >
                       <FaEdit /> Edit Profile

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Layout from '../../../components/Layout';
 import { adminSidebar } from '../../../constants/sidebarItems/adminSidebar';
 import axios from 'axios';
+import { demoSidebar } from '@/constants/sidebarItems/demoSidebar';
 
 // --- Custom Icons ---
 const Icons = {
@@ -322,7 +323,7 @@ const AddHodMain = () => {
   if (isLoading) return <div className="p-8 flex justify-center text-slate-400">Loading Departments...</div>;
 
   return (
-    <Layout sidebarItems={adminSidebar}>
+    <Layout sidebarItems={demoSidebar} section="Demo User">
       <div className="p-8 min-h-screen bg-slate-50/50 font-sans text-slate-800">
         
         {/* Header Section */}

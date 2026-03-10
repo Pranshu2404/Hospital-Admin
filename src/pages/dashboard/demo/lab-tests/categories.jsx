@@ -1,9 +1,9 @@
-// pages/dashboard/admin/lab-tests/categories.jsx
+// pages/dashboard/demo/lab-tests/categories.jsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Layout from '../../../../components/Layout';
-import { adminSidebar } from '../../../../constants/sidebarItems/adminSidebar';
+import { adminSidebar } from '../../../../constants/sidebarItems/demoSidebar';
 import {
   FaFlask,
   FaHeartbeat,
@@ -18,6 +18,7 @@ import {
   FaDollarSign,
   FaVial
 } from 'react-icons/fa';
+import { demoSidebar } from '@/constants/sidebarItems/demoSidebar';
 
 // Category icons mapping
 const categoryIcons = {
@@ -125,12 +126,12 @@ const LabTestCategories = () => {
   };
 
   return (
-    <Layout sidebarItems={adminSidebar} section="Admin">
+    <Layout sidebarItems={demoSidebar} section="Admin">
       <div className="p-6 bg-slate-50 min-h-screen">
         {/* Header */}
         <div className="flex items-center gap-4 mb-6">
           <button
-            onClick={() => navigate('/dashboard/admin/lab-tests')}
+            onClick={() => navigate('/dashboard/demo/lab-tests')}
             className="p-2 hover:bg-white rounded-lg transition-colors"
           >
             <FaArrowLeft className="text-slate-600" />
@@ -257,7 +258,7 @@ const LabTestCategories = () => {
                               {/* <button
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  navigate(`/dashboard/admin/lab-tests/${test.id}`);
+                                  navigate(`/dashboard/demo/lab-tests/${test.id}`);
                                 }}
                                 className="text-sm text-emerald-600 hover:underline"
                               >

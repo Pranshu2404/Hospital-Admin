@@ -15,6 +15,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import Layout from '../../../components/Layout';
 import { adminSidebar } from '../../../constants/sidebarItems/adminSidebar';
+import { demoSidebar } from '@/constants/sidebarItems/demoSidebar';
 
 const StaffLoginPage = () => {
     const [role, setRole] = useState('doctor'); // Default to doctor
@@ -181,7 +182,7 @@ const StaffLoginPage = () => {
     };
 
     return (
-        <Layout sidebarItems={adminSidebar}>
+        <Layout sidebarItems={demoSidebar} section="Demo User">
             <div className="p-2 h-[calc(100vh-80px)] overflow-hidden">
                 <div className="max-w-7xl mx-auto space-y-6 h-full flex flex-col">
 

@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Layout from '../../../components/Layout';
-import { adminSidebar } from '../../../constants/sidebarItems/adminSidebar';
+import { adminSidebar } from '../../../constants/sidebarItems/demoSidebar';
 import { Button } from '../../../components/common/FormElements';
+import { demoSidebar } from '@/constants/sidebarItems/demoSidebar';
 
 const PharmacyProfile = () => {
   const { id } = useParams();
@@ -28,7 +29,7 @@ const PharmacyProfile = () => {
   }
 
   return (
-    <Layout sidebarItems={adminSidebar}>
+    <Layout sidebarItems={demoSidebar} section="Demo User">
       <div className="p-6 max-w-3xl mx-auto bg-white rounded shadow">
         <h2 className="text-2xl font-bold mb-4">{pharmacy.name}</h2>
         <p><strong>License:</strong> {pharmacy.licenseNumber}</p>
@@ -39,7 +40,7 @@ const PharmacyProfile = () => {
         <p><strong>Registered At:</strong> {new Date(pharmacy.registeredAt).toLocaleDateString()}</p>
 
         <div className="mt-6">
-          <Button onClick={() => navigate('/dashboard/admin/pharmacies')}>← Back to List</Button>
+          <Button onClick={() => navigate('/dashboard/demo/pharmacies')}>← Back to List</Button>
         </div>
       </div>
     </Layout>

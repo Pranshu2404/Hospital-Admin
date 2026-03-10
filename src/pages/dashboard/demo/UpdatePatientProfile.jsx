@@ -8,6 +8,7 @@ import { SearchableFormSelect } from '../../../components/common/FormElements';
 import { useLocation } from 'react-router-dom';
 import { FaUser, FaCloudUploadAlt, FaTimes, FaMapMarkerAlt, FaPhoneAlt, FaNotesMedical, FaSave, FaArrowLeft } from 'react-icons/fa';
 import { FormInput, FormSelect, FormTextarea, Button } from '../../../components/common/FormElements';
+import { demoSidebar } from '@/constants/sidebarItems/demoSidebar';
 
 const UpdatePatientProfile = () => {
   const { id } = useParams();
@@ -142,7 +143,7 @@ const UpdatePatientProfile = () => {
   };
 
   if (!patient) return (
-    <Layout sidebarItems={role === 'admin' ? adminSidebar : staffSidebar}>
+    <Layout sidebarItems={role === 'admin' ? demoSidebar : staffSidebar}>
       <div className="p-6">
         <p className="text-gray-600">Loading patient information...</p>
       </div>

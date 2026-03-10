@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../../../components/Layout';
-import { adminSidebar } from '../../../constants/sidebarItems/adminSidebar';
+import { adminSidebar } from '../../../constants/sidebarItems/demoSidebar';
 import { Button } from '../../../components/common/FormElements';
 import axios from 'axios';
+import { demoSidebar } from '@/constants/sidebarItems/demoSidebar';
 
 // --- Icons ---
 const Icons = {
@@ -362,7 +363,7 @@ const DepartmentPopup = ({ department, onClose, onUpdate, onDelete, onAssignHod 
   };
 
   const handleNavigateToAssignHOD = () => {
-    navigate(`/dashboard/admin/add-hod/${department._id}?departmentName=${encodeURIComponent(department.name)}`);
+    navigate(`/dashboard/demo/add-hod/${department._id}?departmentName=${encodeURIComponent(department.name)}`);
     onClose();
   };
 
@@ -709,12 +710,12 @@ const SelectDepartment = () => {
 
   const handleNavigateToAssignHOD = () => {
     if (!newlyAddedDept) return;
-    navigate(`/dashboard/admin/add-hod/${newlyAddedDept._id}?departmentName=${encodeURIComponent(newlyAddedDept.name)}`);
+    navigate(`/dashboard/demo/add-hod/${newlyAddedDept._id}?departmentName=${encodeURIComponent(newlyAddedDept.name)}`);
     setShowAssignPrompt(false);
   };
 
   return (
-    <Layout sidebarItems={adminSidebar}>
+    <Layout sidebarItems={demoSidebar} section="Demo User">
       <div className="p-8 min-h-screen bg-slate-50/50 font-sans text-slate-800">
 
         {/* Header Section */}

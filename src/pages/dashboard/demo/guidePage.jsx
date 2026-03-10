@@ -29,14 +29,15 @@ import {
   Lock
 } from 'lucide-react';
 import Layout from '../../../components/Layout';
-import { adminSidebar } from '../../../constants/sidebarItems/adminSidebar';
+import { adminSidebar } from '../../../constants/sidebarItems/demoSidebar';
 import { FaUserMd, FaHospital, FaUserTie, FaUserNurse, FaFileMedical, FaCalendarAlt } from 'react-icons/fa';
+import { demoSidebar } from '@/constants/sidebarItems/demoSidebar';
 
 const adminGuideData = [
   {
     title: 'Department Setup',
     icon: Building2,
-    path: '/dashboard/admin/add-department',
+    path: '/dashboard/demo/add-department',
     color: 'bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200',
     iconColor: 'text-blue-600',
     priority: 'High',
@@ -49,7 +50,7 @@ const adminGuideData = [
   {
     title: 'Room Management',
     icon: Building2,
-    path: '/dashboard/admin/add-room',
+    path: '/dashboard/demo/add-room',
     color: 'bg-gradient-to-br from-cyan-50 to-cyan-100 border-cyan-200',
     iconColor: 'text-cyan-600',
     priority: 'High',
@@ -62,7 +63,7 @@ const adminGuideData = [
   {
     title: 'Financial Configuration',
     icon: DollarSign,
-    path: '/dashboard/admin/profile',
+    path: '/dashboard/demo/profile',
     color: 'bg-gradient-to-br from-green-50 to-green-100 border-green-200',
     iconColor: 'text-green-600',
     priority: 'High',
@@ -75,7 +76,7 @@ const adminGuideData = [
   {
     title: 'Doctor Management',
     icon: Stethoscope,
-    path: '/dashboard/admin/add-doctor',
+    path: '/dashboard/demo/add-doctor',
     color: 'bg-gradient-to-br from-teal-50 to-teal-100 border-teal-200',
     iconColor: 'text-teal-600',
     priority: 'High',
@@ -88,7 +89,7 @@ const adminGuideData = [
   {
     title: 'HOD Assignments',
     icon: UserCheck,
-    path: '/dashboard/admin/add-hod-main',
+    path: '/dashboard/demo/add-hod-main',
     color: 'bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200',
     iconColor: 'text-purple-600',
     priority: 'High',
@@ -101,7 +102,7 @@ const adminGuideData = [
   {
     title: 'Staff Management',
     icon: Users,
-    path: '/dashboard/admin/add-staff',
+    path: '/dashboard/demo/add-staff',
     color: 'bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200',
     iconColor: 'text-emerald-600',
     priority: 'High',
@@ -114,7 +115,7 @@ const adminGuideData = [
   {
     title: 'Registrar Appointment',
     icon: UserCheck,
-    path: '/dashboard/admin/add-registrar',
+    path: '/dashboard/demo/add-registrar',
     color: 'bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200',
     iconColor: 'text-orange-600',
     priority: 'Medium',
@@ -127,7 +128,7 @@ const adminGuideData = [
   {
     title: 'Pharmacy Setup',
     icon: Pill,
-    path: '/dashboard/admin/pharmacies/add',
+    path: '/dashboard/demo/pharmacies/add',
     color: 'bg-gradient-to-br from-rose-50 to-rose-100 border-rose-200',
     iconColor: 'text-rose-600',
     priority: 'Medium',
@@ -140,7 +141,7 @@ const adminGuideData = [
   {
     title: 'Appointment Scheduling',
     icon: CalendarClock,
-    path: '/dashboard/admin/appointments',
+    path: '/dashboard/demo/appointments',
     color: 'bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200',
     iconColor: 'text-amber-600',
     priority: 'Medium',
@@ -153,7 +154,7 @@ const adminGuideData = [
   {
     title: 'IPD Appointments',
     icon: CalendarClock,
-    path: '/dashboard/admin/ipd-appointments',
+    path: '/dashboard/demo/ipd-appointments',
     color: 'bg-gradient-to-br from-violet-50 to-violet-100 border-violet-200',
     iconColor: 'text-violet-600',
     priority: 'Medium',
@@ -166,7 +167,7 @@ const adminGuideData = [
   {
     title: 'System Settings',
     icon: Settings,
-    path: '/dashboard/admin/settings',
+    path: '/dashboard/demo/settings',
     color: 'bg-gradient-to-br from-slate-50 to-slate-100 border-slate-200',
     iconColor: 'text-slate-600',
     priority: 'Medium',
@@ -179,7 +180,7 @@ const adminGuideData = [
   {
     title: 'Security & Compliance',
     icon: Shield,
-    path: '/dashboard/admin/profile',
+    path: '/dashboard/demo/profile',
     color: 'bg-gradient-to-br from-red-50 to-red-100 border-red-200',
     iconColor: 'text-red-600',
     priority: 'High',
@@ -192,7 +193,7 @@ const adminGuideData = [
   {
     title: 'Salary Management',
     icon: DollarSign,
-    path: '/dashboard/admin/finance/salary',
+    path: '/dashboard/demo/finance/salary',
     color: 'bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200',
     iconColor: 'text-yellow-600',
     priority: 'Medium',
@@ -208,7 +209,7 @@ export default function AdminGuide() {
   const navigate = useNavigate();
 
   return (
-    <Layout sidebarItems={adminSidebar}>
+    <Layout sidebarItems={demoSidebar} section="Demo User">
       <div className="min-h-screen bg-slate-50/50 p-6 font-sans">
         
         {/* Header Section */}
@@ -243,7 +244,7 @@ export default function AdminGuide() {
           
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div 
-              onClick={() => navigate('/dashboard/admin/add-department')}
+              onClick={() => navigate('/dashboard/demo/add-department')}
               className="bg-white p-4 rounded-xl border border-blue-200 cursor-pointer hover:border-blue-300 transition-colors group"
             >
               <div className="flex items-center justify-between mb-2">
@@ -255,7 +256,7 @@ export default function AdminGuide() {
             </div>
             
             <div 
-              onClick={() => navigate('/dashboard/admin/add-doctor')}
+              onClick={() => navigate('/dashboard/demo/add-doctor')}
               className="bg-white p-4 rounded-xl border border-teal-200 cursor-pointer hover:border-teal-300 transition-colors group"
             >
               <div className="flex items-center justify-between mb-2">
@@ -267,7 +268,7 @@ export default function AdminGuide() {
             </div>
             
             <div 
-              onClick={() => navigate('/dashboard/admin/add-staff')}
+              onClick={() => navigate('/dashboard/demo/add-staff')}
               className="bg-white p-4 rounded-xl border border-emerald-200 cursor-pointer hover:border-emerald-300 transition-colors group"
             >
               <div className="flex items-center justify-between mb-2">
@@ -279,7 +280,7 @@ export default function AdminGuide() {
             </div>
             
             <div 
-              onClick={() => navigate('/dashboard/admin/finance/settings')}
+              onClick={() => navigate('/dashboard/demo/finance/settings')}
               className="bg-white p-4 rounded-xl border border-green-200 cursor-pointer hover:border-green-300 transition-colors group"
             >
               <div className="flex items-center justify-between mb-2">

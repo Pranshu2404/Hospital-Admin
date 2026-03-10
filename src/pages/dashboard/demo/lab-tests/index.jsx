@@ -1,9 +1,9 @@
-// pages/dashboard/admin/lab-tests/index.jsx
+// pages/dashboard/demo/lab-tests/index.jsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Layout from '../../../../components/Layout';
-import { adminSidebar } from '../../../../constants/sidebarItems/adminSidebar';
+import { adminSidebar } from '../../../../constants/sidebarItems/demoSidebar';
 import {
   FaFlask,
   FaPlus,
@@ -33,6 +33,7 @@ import {
   FaCalendarAlt,
   FaChartLine
 } from 'react-icons/fa';
+import { demoSidebar } from '@/constants/sidebarItems/demoSidebar';
 
 // Category icons mapping
 const categoryIcons = {
@@ -366,7 +367,7 @@ const LabTestsList = () => {
   };
 
   return (
-    <Layout sidebarItems={adminSidebar} section="Admin">
+    <Layout sidebarItems={demoSidebar} section="Admin">
       <div className="p-6 bg-slate-50 min-h-screen">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-6">
@@ -379,7 +380,7 @@ const LabTestsList = () => {
           </div>
           
           <button
-            onClick={() => navigate('/dashboard/admin/lab-tests/add')}
+            onClick={() => navigate('/dashboard/demo/lab-tests/add')}
             className="mt-4 md:mt-0 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-xl shadow-lg shadow-emerald-600/20 transition-all flex items-center gap-2"
           >
             <FaPlus /> Add New Lab Test
@@ -517,7 +518,7 @@ const LabTestsList = () => {
               </button>
             ) : (
               <button
-                onClick={() => navigate('/dashboard/admin/lab-tests/add')}
+                onClick={() => navigate('/dashboard/demo/lab-tests/add')}
                 className="mt-4 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-6 rounded-lg inline-flex items-center gap-2"
               >
                 <FaPlus /> Add First Lab Test

@@ -1,28 +1,21 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { FormInput, FormSelect, FormTextarea, Button } from '../../../components/common/FormElements';
 import { SearchableFormSelect } from '../../../components/common/FormElements';
 import axios from 'axios';
-import { FaUser, FaCloudUploadAlt, FaTimes } from 'react-icons/fa';
-
-// Helper to get current IST date in YYYY-MM-DD
-function getCurrentISTDate() {
-  const now = new Date();
-  const istOffset = 5.5 * 60 * 60 * 1000;
-  const istTime = new Date(now.getTime() + istOffset - now.getTimezoneOffset() * 60000);
-  return istTime.toISOString().slice(0, 10);
-}
+import { FaUser, FaCloudUploadAlt, FaTimes, FaIdCard } from 'react-icons/fa';
 
 const AddPatientIPDForm = () => {
   const [formData, setFormData] = useState({
-    salutation: 'Mr.',
+    salutation: '',
     firstName: '',
     middleName: '',
-    patient_image: '',
     lastName: '',
+    patient_image: '',
     email: '',
     phone: '',
     dateOfBirth: '',
-    gender: 'male',
+    gender: '',
     address: '',
     city: '',
     state: '',
@@ -32,18 +25,25 @@ const AddPatientIPDForm = () => {
     tehsil: '',
     emergencyContact: '',
     emergencyPhone: '',
+    ward: '',
+    bed: '',
     admissionDate: '',
     medicalHistory: '',
     allergies: '',
     medications: '',
-    bloodGroup: 'A+',
-    department: '',
+    bloodGroup: '',
+    aadhaarNumber: '' // Added Aadhaar number field
   });
 
-  const [departments, setDepartments] = useState([]);
   const [states, setStates] = useState([]);
   const [cities, setCities] = useState([]);
   const [uploadingImage, setUploadingImage] = useState(false);
+
+  const config = {
+    headers: {
+      "X-CSCAPI-KEY": import.meta.env.VITE_CSC_API_KEY,
+    },
+  };
 
   const handleImageUpload = async (e) => {
     const file = e.target.files[0];
@@ -75,26 +75,21 @@ const AddPatientIPDForm = () => {
     setFormData(prev => ({ ...prev, patient_image: '' }));
   };
 
-  const config = {
-    headers: {
-      "X-CSCAPI-KEY": import.meta.env.VITE_CSC_API_KEY,
-    },
+  // Format Aadhaar number with spaces (XXXX XXXX XXXX)
+  const formatAadhaarNumber = (value) => {
+    // Remove all non-digits
+    const digits = value.replace(/\D/g, '');
+    
+    // Format as XXXX XXXX XXXX
+    if (digits.length <= 4) return digits;
+    if (digits.length <= 8) return `${digits.slice(0, 4)} ${digits.slice(4)}`;
+    return `${digits.slice(0, 4)} ${digits.slice(4, 8)} ${digits.slice(8, 12)}`;
   };
 
-    const getLocalDateString = () => {
-    const t = new Date();
-    const yyyy = t.getFullYear();
-    const mm = String(t.getMonth() + 1).padStart(2, '0');
-    const dd = String(t.getDate()).padStart(2, '0');
-    return `${yyyy}-${mm}-${dd}`;
+  const handleAadhaarChange = (value) => {
+    const formatted = formatAadhaarNumber(value);
+    setFormData(prev => ({ ...prev, aadhaarNumber: formatted }));
   };
-
-  // Set default admissionDate to IST date on mount
-  useEffect(() => {
-    if (!formData.admissionDate) {
-      setFormData(prev => ({ ...prev, admissionDate: getCurrentISTDate() }));
-    }
-  }, []);
 
   // Fetch States on component mount
   useEffect(() => {
@@ -111,18 +106,18 @@ const AddPatientIPDForm = () => {
     };
 
     fetchStates();
-  }, []);
 
-  useEffect(() => {
-    const fetchDepartments = async () => {
-      try {
-        const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/departments`);
-        setDepartments(res.data);
-      } catch (err) {
-        console.error('❌ Failed to load departments:', err.message);
-      }
-    };
-    fetchDepartments();
+    // Set admission date to today
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    const todayDate = `${year}-${month}-${day}`;
+
+    setFormData(prev => ({
+      ...prev,
+      admissionDate: todayDate
+    }));
   }, []);
 
   // Fetch Cities when state changes
@@ -138,6 +133,8 @@ const AddPatientIPDForm = () => {
       setCities([]);
     }
   };
+
+  const navigate = useNavigate();
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({
@@ -173,13 +170,15 @@ const AddPatientIPDForm = () => {
         tehsil: formData.tehsil,
         emergency_contact: formData.emergencyContact,
         emergency_phone: formData.emergencyPhone,
+        ward: formData.ward,
+        bed: formData.bed,
         admission_date: formData.admissionDate,
         medical_history: formData.medicalHistory,
         allergies: formData.allergies,
         medications: formData.medications,
         blood_group: formData.bloodGroup,
-        department_id: formData.department,
-        patient_type: 'ipd'
+        aadhaar_number: formData.aadhaarNumber.replace(/\s/g, ''), // Remove spaces before saving
+        patient_type: "ipd"
       };
 
       const response = await axios.post(
@@ -187,9 +186,9 @@ const AddPatientIPDForm = () => {
         payload
       );
 
-      console.log('✅ Patient added:', response.data);
+      console.log('✅Patient added:', response.data);
       alert('Patient added successfully!');
-      // navigate('/dashboard/admin/patient-list'); // Assuming navigate is defined elsewhere or imported
+      navigate('/dashboard/staff/patient-list');
     } catch (err) {
       console.error('❌ Error adding patient:', err.response?.data || err.message);
       alert(err.response?.data?.error || 'Failed to add patient.');
@@ -214,10 +213,14 @@ const AddPatientIPDForm = () => {
   ];
 
   const bloodGroupOptions = [
-    { value: 'A+', label: 'A+' }, { value: 'A-', label: 'A-' },
-    { value: 'B+', label: 'B+' }, { value: 'B-', label: 'B-' },
-    { value: 'AB+', label: 'AB+' }, { value: 'AB-', label: 'AB-' },
-    { value: 'O+', label: 'O+' }, { value: 'O-', label: 'O-' }
+    { value: 'A+', label: 'A+' },
+    { value: 'A-', label: 'A-' },
+    { value: 'B+', label: 'B+' },
+    { value: 'B-', label: 'B-' },
+    { value: 'AB+', label: 'AB+' },
+    { value: 'AB-', label: 'AB-' },
+    { value: 'O+', label: 'O+' },
+    { value: 'O-', label: 'O-' }
   ];
 
   const stateOptions = states.map(state => ({
@@ -231,7 +234,7 @@ const AddPatientIPDForm = () => {
   }));
 
   return (
-    <div className="p-6">
+    <div className="p-1">
       <div className="bg-white rounded-xl shadow-sm border border-gray-100">
         <div className="p-6 border-b border-gray-100">
           <h2 className="text-2xl font-bold text-gray-900">Add Patient</h2>
@@ -293,32 +296,128 @@ const AddPatientIPDForm = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <SearchableFormSelect label="Salutation" value={formData.salutation} onChange={(e) => handleInputChange('salutation', e.target.value)} options={[{ value: 'Mr.', label: 'Mr.' }, { value: 'Mrs.', label: 'Mrs.' }, { value: 'Ms.', label: 'Ms.' }, { value: 'Dr.', label: 'Dr.' }, { value: 'Prof.', label: 'Prof.' }]} required />
-              <FormInput label="First Name" value={formData.firstName} onChange={(e) => handleInputChange('firstName', e.target.value)} required />
-              <FormInput label="Middle Name" value={formData.middleName} onChange={(e) => handleInputChange('middleName', e.target.value)} />
-              <FormInput label="Last Name" value={formData.lastName} onChange={(e) => handleInputChange('lastName', e.target.value)} />
-              <FormInput label="Email" type="email" value={formData.email} onChange={(e) => handleInputChange('email', e.target.value)} />
-              <FormInput label="Phone Number" type="tel" value={formData.phone} onChange={(e) => handleInputChange('phone', e.target.value)} required />
-              <FormInput label="Date of Birth" type="date" value={formData.dateOfBirth} onChange={(e) => handleInputChange('dateOfBirth', e.target.value)} required max={getLocalDateString()}/>
-              <SearchableFormSelect label="Gender" value={formData.gender} onChange={(e) => handleInputChange('gender', e.target.value)} options={genderOptions} />
-              <SearchableFormSelect label="Blood Group" value={formData.bloodGroup} onChange={(e) => handleInputChange('bloodGroup', e.target.value)} options={bloodGroupOptions} />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <SearchableFormSelect
+                label="Salutation"
+                value={formData.salutation}
+                onChange={(e) => handleInputChange('salutation', e.target.value)}
+                options={salutationOptions}
+              />
+              <FormInput 
+                label="First Name" 
+                value={formData.firstName} 
+                onChange={(e) => handleInputChange('firstName', e.target.value)} 
+                required 
+              />
+              <FormInput 
+                label="Middle Name" 
+                value={formData.middleName} 
+                onChange={(e) => handleInputChange('middleName', e.target.value)} 
+              />
+              <FormInput 
+                label="Last Name" 
+                value={formData.lastName} 
+                onChange={(e) => handleInputChange('lastName', e.target.value)}
+              />
+              <FormInput 
+                label="Email" 
+                type="email" 
+                value={formData.email} 
+                onChange={(e) => handleInputChange('email', e.target.value)}
+              />
+              <FormInput 
+                label="Phone Number" 
+                type="tel" 
+                value={formData.phone} 
+                onChange={(e) => handleInputChange('phone', e.target.value.replace(/\D/g, '').slice(0, 10))} 
+                required 
+                maxLength={10}
+                inputMode="numeric"
+                pattern="^[6-9]\d{9}$"
+                title="10 digit Indian mobile number starting with 6-9"
+              />
+              <FormInput 
+                label="Date of Birth" 
+                type="date" 
+                value={formData.dateOfBirth} 
+                onChange={(e) => handleInputChange('dateOfBirth', e.target.value)} 
+                required 
+              />
+              <SearchableFormSelect 
+                label="Gender" 
+                value={formData.gender} 
+                onChange={(e) => handleInputChange('gender', e.target.value)} 
+                options={genderOptions} 
+                required
+              />
+              <div className="md:col-span-2">
+                <div className="relative">
+                  <FormInput
+                    label="Aadhaar Number"
+                    type="text"
+                    value={formData.aadhaarNumber}
+                    onChange={(e) => handleAadhaarChange(e.target.value)}
+                    maxLength="14" // 12 digits + 2 spaces
+                    placeholder="XXXX XXXX XXXX"
+                    icon={<FaIdCard className="text-gray-400" />}
+                  />
+                  {formData.aadhaarNumber && (
+                    <div className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                      <span>Aadhaar: {formData.aadhaarNumber}</span>
+                      {formData.aadhaarNumber.replace(/\s/g, '').length !== 12 && (
+                        <span className="text-amber-600">(Must be 12 digits)</span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Rest of the form remains the same... */}
           {/* Address Information */}
           <div className="mb-8">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Address Information</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormTextarea label="Address" value={formData.address} onChange={(e) => handleInputChange('address', e.target.value)} rows={3} className="md:col-span-2" />
-              {/* Modified City and State inputs to Select */}
-              <SearchableFormSelect label="State" value={formData.state} onChange={(e) => handleInputChange('state', e.target.value)} options={stateOptions} />
-              <SearchableFormSelect label="City" value={formData.city} onChange={(e) => handleInputChange('city', e.target.value)} options={cityOptions} disabled={!formData.state} />
-              <FormInput label="District" value={formData.district} onChange={(e) => handleInputChange('district', e.target.value)} />
-              <FormInput label="Tehsil" value={formData.tehsil} onChange={(e) => handleInputChange('tehsil', e.target.value)} />
-              <FormInput label="Village" value={formData.village} onChange={(e) => handleInputChange('village', e.target.value)} />
-              <FormInput label="ZIP Code" value={formData.zipCode} onChange={(e) => handleInputChange('zipCode', e.target.value)} />
+              <FormTextarea 
+                label="Address" 
+                value={formData.address} 
+                onChange={(e) => handleInputChange('address', e.target.value)} 
+                rows={3} 
+                className="md:col-span-2" 
+              />
+              <SearchableFormSelect 
+                label="State" 
+                value={formData.state} 
+                onChange={(e) => handleInputChange('state', e.target.value)} 
+                options={stateOptions} 
+              />
+              <SearchableFormSelect 
+                label="City" 
+                value={formData.city} 
+                onChange={(e) => handleInputChange('city', e.target.value)} 
+                options={cityOptions} 
+                disabled={!formData.state} 
+              />
+              <FormInput 
+                label="District" 
+                value={formData.district} 
+                onChange={(e) => handleInputChange('district', e.target.value)} 
+              />
+              <FormInput 
+                label="Tehsil" 
+                value={formData.tehsil} 
+                onChange={(e) => handleInputChange('tehsil', e.target.value)} 
+              />
+              <FormInput 
+                label="Village" 
+                value={formData.village} 
+                onChange={(e) => handleInputChange('village', e.target.value)} 
+              />
+              <FormInput 
+                label="ZIP Code" 
+                value={formData.zipCode} 
+                onChange={(e) => handleInputChange('zipCode', e.target.value)} 
+              />
             </div>
           </div>
 
@@ -326,23 +425,32 @@ const AddPatientIPDForm = () => {
           <div className="mb-8">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Emergency Contact</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormInput label="Contact Name" value={formData.emergencyContact} onChange={(e) => handleInputChange('emergencyContact', e.target.value)} />
-              <FormInput label="Contact Phone" type="tel" value={formData.emergencyPhone} onChange={(e) => handleInputChange('emergencyPhone', e.target.value)} />
+              <FormInput 
+                label="Contact Name" 
+                value={formData.emergencyContact} 
+                onChange={(e) => handleInputChange('emergencyContact', e.target.value)} 
+              />
+              <FormInput 
+                label="Contact Phone" 
+                type="tel" 
+                value={formData.emergencyPhone} 
+                onChange={(e) => handleInputChange('emergencyPhone', e.target.value.replace(/\D/g, '').slice(0, 10))} 
+                maxLength={10}
+              />
             </div>
           </div>
 
-          {/* Department + Admission Details */}
+          {/* Admission Details */}
           <div className="mb-8">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Admission Information</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <SearchableFormSelect
-                label="Department"
-                value={formData.department}
-                onChange={(e) => handleInputChange('department', e.target.value)}
-                options={departments.map(dep => ({ value: dep._id, label: dep.name }))}
-                required
+              <FormInput 
+                label="Admission Date" 
+                type="date" 
+                value={formData.admissionDate} 
+                onChange={(e) => handleInputChange('admissionDate', e.target.value)} 
+                required 
               />
-              <FormInput label="Admission Date" type="date" value={formData.admissionDate} onChange={(e) => handleInputChange('admissionDate', e.target.value)} required />
             </div>
           </div>
 
@@ -350,14 +458,39 @@ const AddPatientIPDForm = () => {
           <div className="mb-8">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Medical Information</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormInput label="Medical History" value={formData.medicalHistory} onChange={(e) => handleInputChange('medicalHistory', e.target.value)} />
-              <FormInput label="Allergies" value={formData.allergies} onChange={(e) => handleInputChange('allergies', e.target.value)} />
-              <FormInput label="Medications" value={formData.medications} onChange={(e) => handleInputChange('medications', e.target.value)} />
+              <FormInput 
+                label="Medical History" 
+                value={formData.medicalHistory} 
+                onChange={(e) => handleInputChange('medicalHistory', e.target.value)} 
+              />
+              <FormInput 
+                label="Allergies" 
+                value={formData.allergies} 
+                onChange={(e) => handleInputChange('allergies', e.target.value)} 
+              />
+              <FormInput 
+                label="Medications" 
+                value={formData.medications} 
+                onChange={(e) => handleInputChange('medications', e.target.value)} 
+              />
+              <SearchableFormSelect 
+                label="Blood Group" 
+                value={formData.bloodGroup} 
+                onChange={(e) => handleInputChange('bloodGroup', e.target.value)} 
+                options={bloodGroupOptions} 
+              />
             </div>
           </div>
 
+          {/* Submit Buttons */}
           <div className="flex justify-end space-x-4">
-            <Button variant="secondary" type="button">Cancel</Button>
+            <Button 
+              variant="secondary" 
+              type="button"
+              onClick={() => navigate('/dashboard/staff/patient-list')}
+            >
+              Cancel
+            </Button>
             <Button variant="primary" type="submit">Add Patient</Button>
           </div>
         </form>
