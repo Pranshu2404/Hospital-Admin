@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../../../components/Layout';
-import { adminSidebar } from '../../../constants/sidebarItems/demoSidebar';
+import { demoSidebar } from '../../../constants/sidebarItems/demoSidebar';
 import { Button } from '../../../components/common/FormElements';
 import axios from 'axios';
 import { demoSidebar } from '@/constants/sidebarItems/demoSidebar';

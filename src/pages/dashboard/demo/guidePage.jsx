@@ -29,7 +29,7 @@ import {
   Lock
 } from 'lucide-react';
 import Layout from '../../../components/Layout';
-import { adminSidebar } from '../../../constants/sidebarItems/demoSidebar';
+import { demoSidebar } from '../../../constants/sidebarItems/demoSidebar';
 import { FaUserMd, FaHospital, FaUserTie, FaUserNurse, FaFileMedical, FaCalendarAlt } from 'react-icons/fa';
 import { demoSidebar } from '@/constants/sidebarItems/demoSidebar';
 
