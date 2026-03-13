@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Layout from '../../../components/Layout';
-import { demoSidebar } from '../../../constants/sidebarItems/demoSidebar';
+;
 import {
   FaUserMd, FaEnvelope, FaPhone, FaMapMarkerAlt, FaStethoscope,
   FaAward, FaBirthdayCake, FaVenusMars, FaBuilding, FaClock,
