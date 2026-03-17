@@ -23,19 +23,35 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
   }, []);
 
-  // Login function
   const login = ({ token, role }) => {
-    const userData = { token, role };
+    const isDemoUser = role === 'demo';
+    
+    const userData = { 
+      token, 
+      role
+    };
+    
     localStorage.setItem('hospitalUser', JSON.stringify(userData));
+    
+    // Store demo flag separately if it's a demo user
+    if (isDemoUser) {
+      localStorage.setItem('isDemoUser', 'true');
+      console.log('Demo user logged in - flag stored separately');
+    } else {
+      // Clear demo flag if it exists (in case of switching from demo to regular user)
+      localStorage.removeItem('isDemoUser');
+    }
+    
     setUser(userData);
 
     // Redirect based on role
     if (role === 'admin') navigate('/dashboard/admin');
+    else if (role === 'demo') navigate('/dashboard/demo');
     else if (role === 'doctor') navigate('/dashboard/doctor');
     else if (role && role.toLowerCase() === 'nurse') navigate('/dashboard/nurse');
     else if (role === 'staff' || role === 'registrar' || role === 'receptionist') navigate('/dashboard/staff');
     else if (role === 'pharmacy') navigate('/dashboard/pharmacy');
-    else if (role === 'pathology_staff') navigate('/dashboard/pathology'); // Add pathology dashboard route
+    else if (role === 'pathology_staff') navigate('/dashboard/pathology');
     else navigate('/');
   };
 
@@ -55,13 +71,18 @@ export const AuthProvider = ({ children }) => {
       localStorage.removeItem('pathologyStaffId');
     }
     
-    // hospitalId is usually preserved across sessions
-    // Don't remove hospitalId as it's needed for hospital context
+    // Clear demo flag if it exists
+    localStorage.removeItem('isDemoUser');
     
     // Clear user data
     localStorage.removeItem('hospitalUser');
     setUser(null);
     navigate('/');
+  };
+
+  // Helper to check if current user is a demo user
+  const isDemoSession = () => {
+    return localStorage.getItem('isDemoUser') === 'true';
   };
 
   const value = {
@@ -70,6 +91,7 @@ export const AuthProvider = ({ children }) => {
     logout,
     loading,
     isAuthenticated: !!user,
+    isDemoSession // Helper function to check demo status from separate storage
   };
 
   return (

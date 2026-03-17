@@ -1,4 +1,4 @@
-// App.jsx - Complete updated version with Setup Tracker
+// App.jsx - Complete updated version with Setup Tracker and Demo Routes
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
@@ -142,6 +142,54 @@ import PathologyProfile from './pages/dashboard/pathology/profile';
 import LabTestsManagement from './pages/dashboard/staff/LabTestsManagement';
 import PathologyInvoice from './pages/dashboard/pathology/invoices';
 
+// Demo pages (imported from admin pages)
+import DemoHome from './pages/dashboard/demo/index';
+import DemoAppointmentsPage from './pages/dashboard/demo/appointments';
+import DemoIPDAppointmentsPage from './pages/dashboard/demo/ipdappointment';
+import DemoAddPatientPage from './pages/dashboard/demo/add-patient';
+import DemoPatientListPage from './pages/dashboard/demo/patient-list';
+import DemoPatientProfilePage from './pages/dashboard/demo/patient-profile';
+import DemoAddStaffPage from './pages/dashboard/demo/add-staff';
+import DemoAddRegistrarPage from './pages/dashboard/demo/add-registrar';
+import DemoAddNursePage from './pages/dashboard/demo/add-nurse';
+import DemoNurseListPage from './pages/dashboard/demo/nurse-list';
+import DemoAddDoctorPage from './pages/dashboard/demo/add-doctor';
+import DemoDoctorListPage from './pages/dashboard/demo/doctor-list';
+import DemoRoomListPage from './pages/dashboard/demo/RoomList';
+import DemoAddRoomPage from './pages/dashboard/demo/AddRoom';
+import DemoStaffListPage from './pages/dashboard/demo/staff-list';
+import DemoRegistrarListPage from './pages/dashboard/demo/registrar-list';
+import DemoStaffProfilePage from './pages/dashboard/demo/staff-profile';
+import DemoDoctorProfilePage from './pages/dashboard/demo/doctor-profile';
+import DemoIncomePage from './pages/dashboard/demo/income';
+import DemoExpensePage from './pages/dashboard/demo/expense';
+import DemoInvoicesPage from './pages/dashboard/demo/invoices';
+import DemoInvoiceDetailsPage from './pages/dashboard/demo/invoice-details';
+import DemoInventoryPage from './pages/dashboard/demo/inventory';
+import DemoBirthReportPage from './pages/dashboard/demo/birth-report';
+import DemoBloodBankPage from './pages/dashboard/demo/blood-bank';
+import DemoProfilePage from './pages/dashboard/demo/profile';
+import DemoSettingsPage from './pages/dashboard/demo/settings';
+import DemoPharmacyList from './pages/dashboard/demo/PharmacyList';
+import DemoAddPharmacy from './pages/dashboard/demo/AddPharmacy';
+import DemoPharmacyProfile from './pages/dashboard/demo/PharmacyProfile';
+import DemoAddPatientOPD from "./pages/dashboard/demo/AddPatientOPD";
+import DemoAddPatientIPD from "./pages/dashboard/demo/AddPatientIPD";
+import DemoDepartmentAdd from "./pages/dashboard/demo/add-department";
+import DemoDepartmentList from "./pages/dashboard/demo/DepartmentList";
+import DemoAddHodPage from './pages/dashboard/demo/AddHodPage';
+import DemoLabTestsList from './pages/dashboard/demo/lab-tests';
+import DemoAddLabTest from './pages/dashboard/demo/lab-tests/add';
+import DemoLabTestCategories from './pages/dashboard/demo/lab-tests/categories';
+import DemoPathologyStaffList from './pages/dashboard/demo/pathology-staff';
+import DemoAddPathologyStaff from './pages/dashboard/demo/add-pathology-staff';
+import DemoUpdatePatientProfile from './pages/dashboard/demo/UpdatePatientProfile';
+import DemoEditDoctor from './pages/dashboard/demo/EditDoctor';
+import DemoGuidePage from './pages/dashboard/demo/guidePage';
+import DemoAddHodMain from './pages/dashboard/demo/add-Hod-main';
+import DemoPaySalaryPage from './pages/dashboard/demo/PaySalaryPage';
+import DemoStaffLoginPage from './pages/dashboard/demo/staff-login';
+
 // Custom Layout Wrappers
 const AdminLayout = ({ children }) => (
   <SetupTrackerProvider userRole="admin">
@@ -180,6 +228,13 @@ const NurseLayout = ({ children }) => (
 
 const PathologyLayout = ({ children }) => (
   <SetupTrackerProvider userRole="pathology_staff">
+    {children}
+    <SetupTracker />
+  </SetupTrackerProvider>
+);
+
+const DemoLayout = ({ children }) => (
+  <SetupTrackerProvider userRole="admin">
     {children}
     <SetupTracker />
   </SetupTrackerProvider>
@@ -1456,6 +1511,477 @@ export default function App() {
             }
           />
 
+          {/* Demo Routes with Tracker - All admin pages copied to demo */}
+          <Route
+            path="/dashboard/demo"
+            element={
+              <ProtectedRoute role="demo">
+                <DemoLayout>
+                  <DemoHome />
+                </DemoLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/demo/appointments"
+            element={
+              <ProtectedRoute role="demo">
+                <DemoLayout>
+                  <DemoAppointmentsPage />
+                </DemoLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/demo/ipd-appointments"
+            element={
+              <ProtectedRoute role="demo">
+                <DemoLayout>
+                  <DemoIPDAppointmentsPage />
+                </DemoLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/demo/add-patient"
+            element={
+              <ProtectedRoute role="demo">
+                <DemoLayout>
+                  <DemoAddPatientPage />
+                </DemoLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/demo/patient-list"
+            element={
+              <ProtectedRoute role="demo">
+                <DemoLayout>
+                  <DemoPatientListPage />
+                </DemoLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/demo/patient-profile"
+            element={
+              <ProtectedRoute role="demo">
+                <DemoLayout>
+                  <DemoPatientProfilePage />
+                </DemoLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/demo/add-staff"
+            element={
+              <ProtectedRoute role="demo">
+                <DemoLayout>
+                  <DemoAddStaffPage />
+                </DemoLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/demo/add-registrar"
+            element={
+              <ProtectedRoute role="demo">
+                <DemoLayout>
+                  <DemoAddRegistrarPage />
+                </DemoLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/demo/add-nurse"
+            element={
+              <ProtectedRoute role="demo">
+                <DemoLayout>
+                  <DemoAddNursePage />
+                </DemoLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/demo/nurse-list"
+            element={
+              <ProtectedRoute role="demo">
+                <DemoLayout>
+                  <DemoNurseListPage />
+                </DemoLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/demo/add-doctor"
+            element={
+              <ProtectedRoute role="demo">
+                <DemoLayout>
+                  <DemoAddDoctorPage />
+                </DemoLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/demo/doctor-list"
+            element={
+              <ProtectedRoute role="demo">
+                <DemoLayout>
+                  <DemoDoctorListPage />
+                </DemoLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/demo/room-list"
+            element={
+              <ProtectedRoute role="demo">
+                <DemoLayout>
+                  <DemoRoomListPage />
+                </DemoLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/demo/add-room"
+            element={
+              <ProtectedRoute role="demo">
+                <DemoLayout>
+                  <DemoAddRoomPage />
+                </DemoLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/demo/staff-list"
+            element={
+              <ProtectedRoute role="demo">
+                <DemoLayout>
+                  <DemoStaffListPage />
+                </DemoLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/demo/registrar-list"
+            element={
+              <ProtectedRoute role="demo">
+                <DemoLayout>
+                  <DemoRegistrarListPage />
+                </DemoLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/demo/staff-profile"
+            element={
+              <ProtectedRoute role="demo">
+                <DemoLayout>
+                  <DemoStaffProfilePage />
+                </DemoLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/demo/doctor-profile/:id"
+            element={
+              <ProtectedRoute role="demo">
+                <DemoLayout>
+                  <DemoDoctorProfilePage />
+                </DemoLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/demo/income"
+            element={
+              <ProtectedRoute role="demo">
+                <DemoLayout>
+                  <DemoIncomePage />
+                </DemoLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/demo/expense"
+            element={
+              <ProtectedRoute role="demo">
+                <DemoLayout>
+                  <DemoExpensePage />
+                </DemoLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/demo/invoices"
+            element={
+              <ProtectedRoute role="demo">
+                <DemoLayout>
+                  <DemoInvoicesPage />
+                </DemoLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/demo/invoice-details"
+            element={
+              <ProtectedRoute role="demo">
+                <DemoLayout>
+                  <DemoInvoiceDetailsPage />
+                </DemoLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/demo/inventory"
+            element={
+              <ProtectedRoute role="demo">
+                <DemoLayout>
+                  <DemoInventoryPage />
+                </DemoLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/demo/birth-report"
+            element={
+              <ProtectedRoute role="demo">
+                <DemoLayout>
+                  <DemoBirthReportPage />
+                </DemoLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/demo/blood-bank"
+            element={
+              <ProtectedRoute role="demo">
+                <DemoLayout>
+                  <DemoBloodBankPage />
+                </DemoLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/demo/profile"
+            element={
+              <ProtectedRoute role="demo">
+                <DemoLayout>
+                  <DemoProfilePage />
+                </DemoLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/demo/settings"
+            element={
+              <ProtectedRoute role="demo">
+                <DemoLayout>
+                  <DemoSettingsPage />
+                </DemoLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/demo/staff-login"
+            element={
+              <ProtectedRoute role="demo">
+                <DemoLayout>
+                  <DemoStaffLoginPage />
+                </DemoLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="dashboard/demo/pharmacies"
+            element={
+              <ProtectedRoute role="demo">
+                <DemoLayout>
+                  <DemoPharmacyList />
+                </DemoLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="dashboard/demo/pharmacies/add"
+            element={
+              <ProtectedRoute role="demo">
+                <DemoLayout>
+                  <DemoAddPharmacy />
+                </DemoLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="dashboard/demo/pharmacies/:id"
+            element={
+              <ProtectedRoute role="demo">
+                <DemoLayout>
+                  <DemoPharmacyProfile />
+                </DemoLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/demo/patients/add-opd"
+            element={
+              <ProtectedRoute role="demo">
+                <DemoLayout>
+                  <DemoAddPatientOPD />
+                </DemoLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/demo/patients/add-ipd"
+            element={
+              <ProtectedRoute role="demo">
+                <DemoLayout>
+                  <DemoAddPatientIPD />
+                </DemoLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/demo/departments/:deptName"
+            element={
+              <ProtectedRoute role="demo">
+                <DemoLayout>
+                  <DemoDepartmentAdd />
+                </DemoLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/demo/add-department"
+            element={
+              <ProtectedRoute role="demo">
+                <DemoLayout>
+                  <DemoDepartmentAdd />
+                </DemoLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/demo/add-hod"
+            element={
+              <ProtectedRoute role="demo">
+                <DemoLayout>
+                  <DemoAddHodPage />
+                </DemoLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/demo/DepartmentList"
+            element={
+              <ProtectedRoute role="demo">
+                <DemoLayout>
+                  <DemoDepartmentList />
+                </DemoLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/demo/lab-tests"
+            element={
+              <ProtectedRoute role="demo">
+                <DemoLayout>
+                  <DemoLabTestsList />
+                </DemoLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/demo/lab-tests/add"
+            element={
+              <ProtectedRoute role="demo">
+                <DemoLayout>
+                  <DemoAddLabTest />
+                </DemoLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/demo/lab-tests/categories"
+            element={
+              <ProtectedRoute role="demo">
+                <DemoLayout>
+                  <DemoLabTestCategories />
+                </DemoLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/demo/pathology-staff"
+            element={
+              <ProtectedRoute role="demo">
+                <DemoLayout>
+                  <DemoPathologyStaffList />
+                </DemoLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/demo/pathology-staff/add"
+            element={
+              <ProtectedRoute role="demo">
+                <DemoLayout>
+                  <DemoAddPathologyStaff />
+                </DemoLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/demo/update-patient/:id"
+            element={
+              <ProtectedRoute role="demo">
+                <DemoLayout>
+                  <DemoUpdatePatientProfile />
+                </DemoLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/demo/edit-doctor/:id"
+            element={
+              <ProtectedRoute role="demo">
+                <DemoLayout>
+                  <DemoEditDoctor />
+                </DemoLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/demo/guide"
+            element={
+              <ProtectedRoute role="demo">
+                <DemoLayout>
+                  <DemoGuidePage />
+                </DemoLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/demo/add-hod-main"
+            element={
+              <ProtectedRoute role="demo">
+                <DemoLayout>
+                  <DemoAddHodMain />
+                </DemoLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/demo/finance/salary"
+            element={
+              <ProtectedRoute role="demo">
+                <DemoLayout>
+                  <DemoPaySalaryPage />
+                </DemoLayout>
+              </ProtectedRoute>
+            }
+          />
         </Routes>
       </AuthProvider>
     </Router>
