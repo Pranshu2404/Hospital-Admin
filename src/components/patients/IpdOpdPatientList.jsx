@@ -14,6 +14,22 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient, updatePatientBa
     ? '/dashboard/staff/add-patient'
     : '/dashboard/admin/add-patient';
 
+  const isAdmin = location.pathname.includes('/dashboard/admin');
+
+  const handleDeletePatient = async (patientId) => {
+    if (!window.confirm('Are you sure you want to delete this patient? This action cannot be undone.')) return;
+    try {
+      await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/patients/${patientId}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      alert('Patient deleted successfully');
+      fetchPatients();
+    } catch (error) {
+      console.error('Error deleting patient:', error);
+      alert(error.response?.data?.error || 'Failed to delete patient');
+    }
+  };
+
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
   const [patients, setPatients] = useState([]);
@@ -599,12 +615,15 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient, updatePatientBa
                       >
                         <EditIcon />
                       </button>
-                      <button
-                        className="text-red-600 hover:text-red-900 hover:bg-red-50 p-2 rounded transition-colors"
-                        title="Delete Patient"
-                      >
-                        <DeleteIcon />
-                      </button>
+                      {isAdmin && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleDeletePatient(patient.id); }}
+                          className="text-red-600 hover:text-red-900 hover:bg-red-50 p-2 rounded transition-colors"
+                          title="Delete Patient"
+                        >
+                          <DeleteIcon />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

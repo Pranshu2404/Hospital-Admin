@@ -38,6 +38,7 @@ const AddPatientIPDForm = () => {
     medications: '',
     bloodGroup: 'A+',
     department: '',
+    aadhaarNumber: ''
   });
 
   const [departments, setDepartments] = useState([]);
@@ -73,6 +74,19 @@ const AddPatientIPDForm = () => {
 
   const removeImage = () => {
     setFormData(prev => ({ ...prev, patient_image: '' }));
+  };
+
+  // Format Aadhaar number with spaces (XXXX XXXX XXXX)
+  const formatAadhaarNumber = (value) => {
+    const digits = value.replace(/\D/g, '');
+    if (digits.length <= 4) return digits;
+    if (digits.length <= 8) return `${digits.slice(0, 4)} ${digits.slice(4)}`;
+    return `${digits.slice(0, 4)} ${digits.slice(4, 8)} ${digits.slice(8, 12)}`;
+  };
+
+  const handleAadhaarChange = (value) => {
+    const formatted = formatAadhaarNumber(value);
+    setFormData(prev => ({ ...prev, aadhaarNumber: formatted }));
   };
 
   const config = {
@@ -179,6 +193,7 @@ const AddPatientIPDForm = () => {
         medications: formData.medications,
         blood_group: formData.bloodGroup,
         department_id: formData.department,
+        aadhaar_number: formData.aadhaarNumber.replace(/\s/g, ''),
         patient_type: 'ipd'
       };
 
@@ -303,6 +318,24 @@ const AddPatientIPDForm = () => {
               <FormInput label="Date of Birth" type="date" value={formData.dateOfBirth} onChange={(e) => handleInputChange('dateOfBirth', e.target.value)} required max={getLocalDateString()}/>
               <SearchableFormSelect label="Gender" value={formData.gender} onChange={(e) => handleInputChange('gender', e.target.value)} options={genderOptions} />
               <SearchableFormSelect label="Blood Group" value={formData.bloodGroup} onChange={(e) => handleInputChange('bloodGroup', e.target.value)} options={bloodGroupOptions} />
+              <div className="md:col-span-3">
+                <div className="relative">
+                  <FormInput
+                    label="Aadhaar Number *"
+                    type="text"
+                    value={formData.aadhaarNumber}
+                    onChange={(e) => handleAadhaarChange(e.target.value)}
+                    maxLength="14" // 12 digits + 2 spaces
+                    placeholder="XXXX XXXX XXXX"
+                    required
+                  />
+                  {formData.aadhaarNumber && formData.aadhaarNumber.replace(/\s/g, '').length !== 12 && (
+                    <div className="text-xs text-amber-600 mt-1 flex items-center gap-1">
+                      <span>(Must be exactly 12 digits)</span>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
 

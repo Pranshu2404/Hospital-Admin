@@ -302,6 +302,7 @@ const AddPatientIPDForm = () => {
                 value={formData.salutation}
                 onChange={(e) => handleInputChange('salutation', e.target.value)}
                 options={salutationOptions}
+                required
               />
               <FormInput 
                 label="First Name" 
@@ -359,6 +360,7 @@ const AddPatientIPDForm = () => {
                     onChange={(e) => handleAadhaarChange(e.target.value)}
                     maxLength="14" // 12 digits + 2 spaces
                     placeholder="XXXX XXXX XXXX"
+                    required
                     icon={<FaIdCard className="text-gray-400" />}
                   />
                   {formData.aadhaarNumber && (

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import axios from 'axios';
 import {
   Search, Plus, Calendar, Clock, Filter,
@@ -6,7 +6,7 @@ import {
   CheckCircle, AlertCircle, X, ChevronDown,
   Activity, Building, CheckSquare, Clock as ClockIcon,
   ChevronUp, ChevronRight, ArrowUp, ArrowDown,
-  Heart, Shield, UserCog, UserPlus
+  Heart, Shield, UserCog, UserPlus, Upload
 } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import AddIPDAppointment from './AddIPDAppointment';
@@ -44,6 +44,13 @@ const AppointmentListStaff = () => {
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [isCompletionModalOpen, setIsCompletionModalOpen] = useState(false);
   const [isVitalsModalOpen, setIsVitalsModalOpen] = useState(false);
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [uploadError, setUploadError] = useState('');
+  const [uploadSuccess, setUploadSuccess] = useState('');
+  const [parsedData, setParsedData] = useState([]);
+  const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0, isUploading: false });
+  const [failedRowDetails, setFailedRowDetails] = useState(null);
+  const fileInputRef = useRef(null);
 
   const [loading, setLoading] = useState(true);
   const [hospitalInfo, setHospitalInfo] = useState(null);
@@ -481,6 +488,11 @@ const AppointmentListStaff = () => {
             <div>
               <div className="text-sm font-bold text-slate-800">{appointment.patientName}</div>
               <div className="text-xs text-slate-500 font-mono">ID: {appointment.patientId || 'N/A'}</div>
+              {appointment.token && (
+                <div className="text-[10px] font-bold tracking-widest text-indigo-600 bg-indigo-50 px-1.5 py-0.5 mt-1 rounded inline-block uppercase shadow-sm">
+                  {appointment.token}
+                </div>
+              )}
             </div>
           </div>
         </td>
@@ -588,6 +600,111 @@ const AppointmentListStaff = () => {
   const vitalsInfo = getVitalsAccessMessage();
   const VitalsIcon = vitalsInfo.icon;
 
+  const startSequentialUpload = async (data, startIndex) => {
+    setUploadProgress({ current: startIndex, total: data.length, isUploading: true });
+    setUploadError('');
+    setFailedRowDetails(null);
+
+    for (let i = startIndex; i < data.length; i++) {
+      setUploadProgress(prev => ({ ...prev, current: i + 1 }));
+      try {
+        const token = localStorage.getItem('token');
+        const response = await axios.post(
+          `${import.meta.env.VITE_BACKEND_URL}/appointments/bulk-add`,
+          [data[i]],
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        if (response.data.failedCount > 0) {
+          setUploadProgress(prev => ({ ...prev, isUploading: false }));
+          setFailedRowDetails({
+            row: data[i],
+            index: i,
+            error: response.data.failedImports[0]?.reason || 'Validation failed'
+          });
+          return;
+        }
+      } catch (apiError) {
+        setUploadProgress(prev => ({ ...prev, isUploading: false }));
+        setFailedRowDetails({
+          row: data[i],
+          index: i,
+          error: apiError.response?.data?.error || apiError.message || 'Network error'
+        });
+        return;
+      }
+    }
+
+    setUploadProgress({ current: data.length, total: data.length, isUploading: false });
+    setUploadSuccess('All appointments uploaded successfully!');
+    fetchData();
+    setTimeout(() => {
+      setIsUploadModalOpen(false);
+      setParsedData([]);
+      setUploadSuccess('');
+      setUploadProgress({ current: 0, total: 0, isUploading: false });
+    }, 2000);
+  };
+
+  const handleCorrectionUpdate = (key, value) => {
+    setFailedRowDetails(prev => ({
+      ...prev,
+      row: {
+        ...prev.row,
+        [key]: value
+      }
+    }));
+  };
+
+  const submitCorrection = () => {
+    const newData = [...parsedData];
+    newData[failedRowDetails.index] = failedRowDetails.row;
+    setParsedData(newData);
+    startSequentialUpload(newData, failedRowDetails.index);
+  };
+
+  const handleFileUpload = (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    setUploadError('');
+    setUploadSuccess('');
+
+    import('papaparse').then((Papa) => {
+      Papa.default.parse(file, {
+        header: true,
+        skipEmptyLines: true,
+        complete: async (results) => {
+          setParsedData(results.data);
+          startSequentialUpload(results.data, 0);
+          event.target.value = null;
+        },
+        error: (error) => {
+          setUploadError(`CSV Parsing Error: ${error.message}`);
+          event.target.value = null;
+        },
+      });
+    });
+  };
+
+  const downloadDemoCSV = () => {
+    const headers = [
+      'patient_uhid', 'doctor_email', 'department_name', 'appointment_date', 'start_time', 'duration', 'type', 'appointment_type', 'priority', 'status', 'notes'
+    ];
+    const sampleRow = [
+      'CH260312345678', 'doctor@example.com', 'Cardiology', '2026-03-25', '2026-03-25T10:00:00Z', '30', 'time-based', 'consultation', 'Normal', 'Scheduled', 'Routine checkup'
+    ];
+    const csvContent = headers.join(',') + '\n' + sampleRow.join(',');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'demo_appointments.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="p-2 bg-slate-50 min-h-screen font-sans">
       <div className="max-w-[1600px] mx-auto space-y-6">
@@ -691,12 +808,24 @@ const AppointmentListStaff = () => {
               </div>
             </div>
 
-            <button
-              onClick={() => { setChooserOpen(true); setSelectedType('opd'); }}
-              className="flex items-center gap-2 bg-teal-600 hover:bg-teal-700 text-white px-5 py-2.5 rounded-lg font-medium transition-all shadow-sm hover:shadow-md active:scale-95"
-            >
-              <Plus size={18} /> New Appointment
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  setUploadError('');
+                  setUploadSuccess('');
+                  setIsUploadModalOpen(true);
+                }}
+                className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-lg font-medium transition-all shadow-sm hover:shadow-md active:scale-95"
+              >
+                <Upload size={18} /> Bulk Upload
+              </button>
+              <button
+                onClick={() => { setChooserOpen(true); setSelectedType('opd'); }}
+                className="flex items-center gap-2 bg-teal-600 hover:bg-teal-700 text-white px-5 py-2.5 rounded-lg font-medium transition-all shadow-sm hover:shadow-md active:scale-95"
+              >
+                <Plus size={18} /> New Appointment
+              </button>
+            </div>
           </div>
 
           {/* Table Container */}
@@ -970,6 +1099,127 @@ const AppointmentListStaff = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Upload Modal */}
+      {isUploadModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-semibold">Bulk Upload Appointments</h3>
+              <button 
+                onClick={() => { setIsUploadModalOpen(false); setParsedData([]); setUploadProgress({ current: 0, total: 0, isUploading: false}); setFailedRowDetails(null); }} 
+                className="text-gray-500 hover:text-gray-800"
+                disabled={uploadProgress.isUploading}
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            {!uploadProgress.isUploading && !failedRowDetails && uploadProgress.total === 0 && (
+              <>
+                <p className="text-gray-600 mb-4">
+                  Upload appointments using a CSV file. Provide the Patient's UHID, Doctor's Email, and Department Name to seamlessly import them.
+                </p>
+
+                <div className="bg-gray-50 p-3 rounded-md border overflow-x-auto mb-4">
+                  <table className="text-xs">
+                    <thead className="bg-gray-200">
+                      <tr>
+                        {[
+                          'patient_uhid', 'doctor_email', 'department_name', 'appointment_date', 'start_time', 'duration', 'type', 'appointment_type', 'priority', 'status', 'notes'
+                        ].map((header) => (
+                          <th key={header} className="px-3 py-2 text-left font-medium text-gray-600 whitespace-nowrap">
+                            {header}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr className="bg-white">
+                        {[
+                          'CH260312345678', 'doctor@example.com', 'Cardiology', '2026-03-25', '2026-03-25T10:00:00Z', '30', 'time-based', 'consultation', 'Normal', 'Scheduled', 'Routine checkup'
+                        ].map((value, index) => (
+                          <td key={index} className="px-3 py-2 text-gray-700 border-t whitespace-nowrap">
+                            {value}
+                          </td>
+                        ))}
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="flex gap-4 mb-4">
+                  <button className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium" onClick={downloadDemoCSV}>Download Demo CSV</button>
+                  <button className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 font-medium" onClick={() => fileInputRef.current?.click()}>Choose & Upload CSV</button>
+                </div>
+              </>
+            )}
+
+            {uploadProgress.isUploading && (
+               <div className="py-12 text-center">
+                 <div className="animate-spin rounded-full h-12 w-12 border-4 border-teal-200 border-t-teal-600 mx-auto mb-4"></div>
+                 <h4 className="text-lg font-medium text-slate-800 mb-2">Processing Upload...</h4>
+                 <p className="text-slate-500">Uploading row {uploadProgress.current} of {uploadProgress.total}</p>
+                 <div className="w-full bg-gray-200 rounded-full h-2.5 mt-4 max-w-md mx-auto">
+                   <div className="bg-teal-600 h-2.5 rounded-full transition-all" style={{ width: `${(uploadProgress.current / uploadProgress.total) * 100}%` }}></div>
+                 </div>
+               </div>
+            )}
+
+            {failedRowDetails && (
+               <div className="py-4">
+                 <div className="p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3 text-red-700 mb-6">
+                   <AlertCircle className="mt-0.5 flex-shrink-0" />
+                   <div>
+                     <h4 className="font-bold">Error on Row {failedRowDetails.index + 1}</h4>
+                     <p className="text-sm">{failedRowDetails.error}</p>
+                   </div>
+                 </div>
+
+                 <h4 className="font-semibold mb-4 text-slate-800">Correct the fields below to continue:</h4>
+                 <div className="grid grid-cols-2 gap-4">
+                   {Object.entries(failedRowDetails.row).map(([key, value]) => (
+                     <div key={key} className="flex flex-col">
+                       <label className="text-xs font-medium text-slate-500 uppercase mb-1">{key}</label>
+                       <input 
+                         type="text" 
+                         value={value || ''} 
+                         onChange={(e) => handleCorrectionUpdate(key, e.target.value)}
+                         className="px-3 py-2 border border-slate-300 rounded focus:border-teal-500 focus:outline-none"
+                       />
+                     </div>
+                   ))}
+                 </div>
+                 
+                 <div className="mt-6 flex justify-end gap-3">
+                   <button 
+                     onClick={() => { setFailedRowDetails(null); setParsedData([]); setUploadProgress({ current: 0, total: 0, isUploading: false}); setUploadError('Upload cancelled due to validation error.'); }}
+                     className="px-4 py-2 border rounded-lg hover:bg-slate-50"
+                   >
+                     Cancel Upload
+                   </button>
+                   <button 
+                     onClick={submitCorrection}
+                     className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 font-medium tracking-wide flex items-center gap-2"
+                   >
+                     <CheckCircle size={16} /> Save & Resume Upload
+                   </button>
+                 </div>
+               </div>
+            )}
+
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileUpload}
+              className="hidden"
+              accept=".csv"
+            />
+            {uploadSuccess && <div className="mt-4 p-3 text-sm text-green-800 bg-green-100 rounded-md font-medium">{uploadSuccess}</div>}
+            {uploadError && <div className="mt-4 p-3 text-sm text-red-800 bg-red-100 rounded-md font-medium">{uploadError}</div>}
           </div>
         </div>
       )}

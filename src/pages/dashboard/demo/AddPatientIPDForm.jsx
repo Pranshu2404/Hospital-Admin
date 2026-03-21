@@ -353,13 +353,14 @@ const AddPatientIPDForm = () => {
               <div className="md:col-span-2">
                 <div className="relative">
                   <FormInput
-                    label="Aadhaar Number"
+                    label="Aadhaar Number *"
                     type="text"
                     value={formData.aadhaarNumber}
                     onChange={(e) => handleAadhaarChange(e.target.value)}
                     maxLength="14" // 12 digits + 2 spaces
                     placeholder="XXXX XXXX XXXX"
                     icon={<FaIdCard className="text-gray-400" />}
+                    required
                   />
                   {formData.aadhaarNumber && (
                     <div className="text-xs text-gray-500 mt-1 flex items-center gap-1">
