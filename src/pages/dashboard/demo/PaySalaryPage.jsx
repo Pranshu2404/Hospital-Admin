@@ -18,7 +18,6 @@ import {
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom'; // ADD THIS
 import Layout from '@/components/Layout';
-import { adminSidebar } from '@/constants/sidebarItems/demoSidebar';
 import { demoSidebar } from '@/constants/sidebarItems/demoSidebar';
 
 const PaySalaryPage = () => {
