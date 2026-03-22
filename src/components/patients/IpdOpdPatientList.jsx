@@ -685,7 +685,7 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient, updatePatientBa
                     <tr>
                       {[
                         'salutation', 'first_name', 'middle_name', 'last_name', 'email', 'phone',
-                        'gender', 'dob', 'patient_type', 'blood_group', 'address', 'city', 'state',
+                        'gender', 'dob', 'blood_group', 'address', 'city', 'state',
                         'zipCode', 'village', 'district', 'tehsil', 'aadhaar_number',
                         'emergency_contact', 'emergency_phone', 'medical_history', 'allergies', 'medications'
                       ].map((header) => (
@@ -699,7 +699,7 @@ const IpdOpdPatientList = ({ setCurrentPage, setSelectedPatient, updatePatientBa
                     <tr className="bg-white">
                       {[
                         'Mr.', 'Amit', 'Kumar', 'Sharma', 'amit.s@ex.com', '9876543210',
-                        'male', '1990-05-15', 'opd', 'O+', '123 St', 'Kanpur', 'UP',
+                        'male', '1990-05-15', 'O+', '123 St', 'Kanpur', 'UP',
                         '208001', 'N/A', 'Kanpur', 'Kanpur', '123456789012',
                         'Rajesh', '987...', 'None', 'None', 'None'
                       ].map((value, index) => (
