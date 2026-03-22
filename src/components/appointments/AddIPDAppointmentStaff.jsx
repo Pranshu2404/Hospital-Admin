@@ -2186,13 +2186,14 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
                             />
                             <div className="">
                               <FormInput
-                                label="Aadhaar Number (Optional)"
+                                label="Aadhaar Number *"
                                 type="text"
                                 value={formData2.aadhaarNumber}
                                 onChange={(e) => handleAadhaarChange(e.target.value)}
                                 maxLength="14"
                                 placeholder="XXXX XXXX XXXX"
                                 icon={<FaIdCard className="text-gray-400" />}
+                                required
                               />
                             </div>
                           </div>
