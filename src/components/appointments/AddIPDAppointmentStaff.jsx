@@ -7,11 +7,29 @@ import AppointmentInvoiceModal from './AppointmentInvoiceModal';
 import QRCodeModal from './QRCodeModal';
 import PaymentPendingModal from './PaymentPendingModal';
 import SuccessModal from './SuccessModal';
+import { useOfflineSync } from '../../hooks/useOfflineSync';
+import { useCalendarSync } from '../../hooks/useCalendarSync';
+import CalendarSyncStatus from '../common/CalendarSyncStatus';
+import {
+  addAppointmentToOffline,
+  addPatientToOffline,
+  checkOfflinePatientByPhone,
+  getSyncStats,
+  getDoctorWorkingHoursOffline,
+  getDoctorChargesOffline,
+  getHospitalChargesOffline,
+  getDepartmentsOffline,
+  getDoctorsOffline,
+  getDoctorsByDepartmentOffline,
+  getRoomsOffline,
+  getAllPatients
+} from '../../services/offlineDB';
 import {
   FaUser, FaCloudUploadAlt, FaTimes, FaIdCard, FaCalendarAlt, FaClock,
   FaUserPlus, FaCheckCircle, FaArrowLeft, FaMoneyBillWave, FaFileInvoice,
   FaPrint, FaProcedures, FaExclamationTriangle, FaArrowRight
 } from 'react-icons/fa';
+import { WifiIcon, WifiOffIcon } from 'lucide-react';
 
 // Status Badge Component for Procedures
 const StatusBadge = ({ status }) => {
@@ -153,6 +171,25 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
   const navigate = useNavigate();
   const formContainerRef = useRef(null);
 
+  // Offline sync hook
+  const { online, syncStats, triggerSync } = useOfflineSync();
+
+  // Calendar sync hook for cached data
+  const {
+    getWorkingHours,
+    getDoctorCharges: getDoctorChargesCached,
+    getHospitalCharges: getHospitalChargesCached,
+    getDepartmentsCached,
+    getDoctorsCached,
+    getDoctorsByDepartmentCached,
+    getRoomsCached,
+    syncCalendar,
+    isSyncing: isCalendarSyncing,
+    lastSyncTime,
+    syncProgress,
+    refreshCacheStats
+  } = useCalendarSync();
+
   // Helper to get local YYYY-MM-DD date string
   const getLocalDateString = () => {
     const t = new Date();
@@ -238,13 +275,17 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
   const [previousDoctorId, setPreviousDoctorId] = useState('');
   const [showActionModal, setShowActionModal] = useState(false);
 
-  // NEW: State for doctor procedures
+  // State for doctor procedures
   const [doctorProcedures, setDoctorProcedures] = useState([]);
   const [showProcedureConflict, setShowProcedureConflict] = useState(false);
   const [procedureConflictMessage, setProcedureConflictMessage] = useState('');
   const [loadingProcedures, setLoadingProcedures] = useState(false);
 
-  // New States for CSC API and Image Upload
+  // State for offline saving
+  const [savedOffline, setSavedOffline] = useState(false);
+  const [offlineAppointmentId, setOfflineAppointmentId] = useState(null);
+
+  // States for CSC API and Image Upload
   const [states, setStates] = useState([]);
   const [cities, setCities] = useState([]);
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -287,6 +328,8 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
     setNewPatientData(null);
     setDoctorProcedures([]);
     setShowProcedureConflict(false);
+    setSavedOffline(false);
+    setOfflineAppointmentId(null);
 
     setTimeout(() => {
       scrollToTop();
@@ -297,7 +340,7 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
   const resetAfterNewPatient = () => {
     setFormData(prev => ({
       ...prev,
-      patientId: newPatientData?._id || ''
+      patientId: newPatientData?._id || newPatientData?.localId || ''
     }));
     setFormData2(initialFormData2);
     setShowFields(false);
@@ -308,7 +351,75 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
     }, 100);
   };
 
-  // NEW: Fetch doctor's procedures for the selected date
+  // Manual sync handler
+  const handleManualSync = async () => {
+    await syncCalendar();
+    await refreshCacheStats();
+  };
+
+  // Load master data from offline cache when offline
+  useEffect(() => {
+    const loadOfflineMasterData = async () => {
+      if (!online) {
+        console.log('Offline mode: Loading master data from cache...');
+
+        // Load departments from cache
+        const cachedDepartments = await getDepartmentsCached();
+        if (cachedDepartments && cachedDepartments.length > 0) {
+          setDepartments(cachedDepartments);
+          console.log(`Loaded ${cachedDepartments.length} departments from cache`);
+        }
+
+        // Load doctors from cache
+        const cachedDoctors = await getDoctorsCached();
+        if (cachedDoctors && cachedDoctors.length > 0) {
+          // Doctors already have department_id from cache
+          setDoctors(cachedDoctors);
+          console.log(`Loaded ${cachedDoctors.length} doctors from cache`);
+        }
+
+        // If department is selected, filter doctors by department
+        if (formData.department && cachedDoctors.length > 0) {
+          const filtered = cachedDoctors.filter(doc => doc.department_id === formData.department);
+          setDoctors(filtered);
+        }
+
+        // Load patients from cache (for offline patient selection)
+        const cachedPatients = await getAllPatients();
+        if (cachedPatients && cachedPatients.length > 0) {
+          const formattedPatients = cachedPatients.map(p => ({
+            _id: p.localId || p.serverId,
+            localId: p.localId,
+            serverId: p.serverId,
+            salutation: p.salutation,
+            first_name: p.first_name,
+            last_name: p.last_name,
+            phone: p.phone,
+            gender: p.gender,
+            patient_image: p.patient_image,
+            patientId: p.patientId || p.localId,
+            isOffline: true
+          }));
+          setPatients(formattedPatients);
+          setFilteredPatients(formattedPatients);
+          console.log(`Loaded ${formattedPatients.length} patients from cache`);
+        }
+
+        // Load rooms from cache (for IPD)
+        if (type === 'ipd') {
+          const cachedRooms = await getRoomsCached();
+          if (cachedRooms && cachedRooms.length > 0) {
+            setRooms(cachedRooms);
+            console.log(`Loaded ${cachedRooms.length} rooms from cache`);
+          }
+        }
+      }
+    };
+
+    loadOfflineMasterData();
+  }, [online, type, formData.department, getDepartmentsCached, getDoctorsCached, getRoomsCached]);
+
+  // Fetch doctor's procedures for the selected date
   const fetchDoctorProcedures = async (doctorId, date) => {
     try {
       if (!doctorId || !date) return;
@@ -321,7 +432,6 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
       if (response.data.success) {
         setDoctorProcedures(response.data.procedures);
 
-        // Check if there are procedures at the selected time
         if (formData.start_time) {
           checkProcedureConflicts(response.data.procedures, formData.start_time, parseInt(formData.duration));
         }
@@ -333,7 +443,7 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
     }
   };
 
-  // NEW: Check for procedure conflicts
+  // Check for procedure conflicts
   const checkProcedureConflicts = (procedures, selectedTime, duration) => {
     if (!selectedTime || !procedures || procedures.length === 0) {
       setShowProcedureConflict(false);
@@ -361,8 +471,6 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
       procEndTime.setMinutes(procEndTime.getMinutes() + (procedure.duration_minutes || 30));
 
       const suggestedStart = new Date(procEndTime);
-
-      // Add a buffer of 10-30 minutes based on procedure type
       const bufferMinutes = procedure.duration_minutes >= 60 ? 30 : 10;
       suggestedStart.setMinutes(suggestedStart.getMinutes() + bufferMinutes);
 
@@ -385,7 +493,7 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
     }
   };
 
-  // NEW: Suggest next available slot after procedures
+  // Suggest next available slot after procedures
   const suggestNextAvailableSlot = () => {
     if (doctorProcedures.length === 0 || !formData.start_time) return;
 
@@ -404,7 +512,6 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
     });
 
     if (conflictingProcedures.length > 0) {
-      // Sort by end time and get the latest ending procedure
       const sortedProcs = conflictingProcedures.sort((a, b) => {
         const aEnd = new Date(a.scheduled_date).getTime() + (a.duration_minutes || 30) * 60000;
         const bEnd = new Date(b.scheduled_date).getTime() + (b.duration_minutes || 30) * 60000;
@@ -415,7 +522,6 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
       const procEnd = new Date(lastProc.scheduled_date);
       procEnd.setMinutes(procEnd.getMinutes() + (lastProc.duration_minutes || 30));
 
-      // Add appropriate buffer
       const bufferMinutes = lastProc.duration_minutes >= 60 ? 30 : 10;
       procEnd.setMinutes(procEnd.getMinutes() + bufferMinutes);
 
@@ -426,9 +532,8 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
     }
   };
 
-  // NEW: Render doctor procedures list
+  // Render doctor procedures list
   const renderDoctorProcedures = () => {
-    // Filter out completed procedures
     const activeProcedures = doctorProcedures.filter(
       (proc) => proc.status?.toLowerCase() !== 'completed'
     );
@@ -482,6 +587,51 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
         </div>
       </div>
     );
+  };
+
+  // Check if there's an offline patient with same phone
+  const checkOfflinePatient = async (phone) => {
+    if (!online) {
+      return await checkOfflinePatientByPhone(phone);
+    }
+    return null;
+  };
+
+  // Save appointment offline
+  const saveAppointmentOffline = async (appointmentData, patientLocalId) => {
+    try {
+      const localId = await addAppointmentToOffline(appointmentData, patientLocalId);
+      setOfflineAppointmentId(localId);
+      setSavedOffline(true);
+      return localId;
+    } catch (error) {
+      console.error('Error saving appointment offline:', error);
+      throw error;
+    }
+  };
+
+  // Save patient offline
+  const savePatientOffline = async (patientData) => {
+    try {
+      const localId = await addPatientToOffline(patientData);
+      return localId;
+    } catch (error) {
+      console.error('Error saving patient offline:', error);
+      throw error;
+    }
+  };
+
+  // Check appointment conflict online
+  const checkConflictOnline = async (doctorId, date, startTime, duration) => {
+    try {
+      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/appointments/check-conflict`, {
+        params: { doctorId, appointmentDate: date, startTime, duration }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error checking conflict:', error);
+      return { hasConflict: false };
+    }
   };
 
   const handleImageUpload = async (e) => {
@@ -562,15 +712,25 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
     fetchStates();
   }, []);
 
+  // Listen for manual sync events
+  useEffect(() => {
+    const handleManualSyncEvent = () => {
+      handleManualSync();
+    };
+
+    window.addEventListener('manual-calendar-sync', handleManualSyncEvent);
+    return () => window.removeEventListener('manual-calendar-sync', handleManualSyncEvent);
+  }, [syncCalendar]);
+
   // Fetch doctor procedures when doctor or date changes
   useEffect(() => {
-    if (formData.doctorId && formData.date) {
+    if (formData.doctorId && formData.date && online) {
       fetchDoctorProcedures(formData.doctorId, formData.date);
     } else {
       setDoctorProcedures([]);
       setShowProcedureConflict(false);
     }
-  }, [formData.doctorId, formData.date]);
+  }, [formData.doctorId, formData.date, online]);
 
   // Check for conflicts when time changes
   useEffect(() => {
@@ -600,7 +760,7 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
     }
   };
 
-  // Calculate charges based on doctor type
+  // Calculate charges based on doctor type (with offline cache support)
   const calculateCharges = () => {
     let charges = [];
     let total = 0;
@@ -756,37 +916,51 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
     setFormData2(prev => ({ ...prev, aadhaarNumber: formatted }));
   };
 
+  // Fetch options with offline cache support
   useEffect(() => {
     const fetchOptions = async () => {
       try {
-        const [patientRes, departmentRes, hospitalRes] = await Promise.all([
-          axios.get(`${import.meta.env.VITE_BACKEND_URL}/patients?limit=1000`),
-          axios.get(`${import.meta.env.VITE_BACKEND_URL}/departments`),
-          axios.get(`${import.meta.env.VITE_BACKEND_URL}/hospitals`)
-        ]);
+        if (online) {
+          const [patientRes, departmentRes, hospitalRes] = await Promise.all([
+            axios.get(`${import.meta.env.VITE_BACKEND_URL}/patients?limit=1000`),
+            axios.get(`${import.meta.env.VITE_BACKEND_URL}/departments`),
+            axios.get(`${import.meta.env.VITE_BACKEND_URL}/hospitals`)
+          ]);
 
-        const patientsData = Array.isArray(patientRes.data)
-          ? patientRes.data
-          : Array.isArray(patientRes.data.patients)
-            ? patientRes.data.patients
-            : [];
+          const patientsData = Array.isArray(patientRes.data)
+            ? patientRes.data
+            : Array.isArray(patientRes.data.patients)
+              ? patientRes.data.patients
+              : [];
 
-        setPatients(patientsData);
-        setFilteredPatients(patientsData);
-        setDepartments(departmentRes.data);
-        setHospitalInfo(hospitalRes.data[0]);
+          setPatients(patientsData);
+          setFilteredPatients(patientsData);
+          setDepartments(departmentRes.data);
+          setHospitalInfo(hospitalRes.data[0]);
 
-        if (formData.department) {
-          const selectedDep = departmentRes.data.find(d => d._id === formData.department);
-          if (selectedDep && (selectedDep.name.startsWith('Emergency') || selectedDep.name === 'Emergency Department (ED/ER)')) {
-            const doctorRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/doctors`);
-            setDoctors(doctorRes.data);
+          if (formData.department) {
+            const selectedDep = departmentRes.data.find(d => d._id === formData.department);
+            let doctorsData;
+
+            if (selectedDep && (selectedDep.name.startsWith('Emergency') || selectedDep.name === 'Emergency Department (ED/ER)')) {
+              const doctorRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/doctors`);
+              doctorsData = doctorRes.data;
+            } else {
+              const doctorRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/doctors/department/${formData.department}`);
+              doctorsData = doctorRes.data;
+            }
+
+            // Process doctors to extract department_id from nested department object
+            const processedDoctors = doctorsData.map(doctor => ({
+              ...doctor,
+              department_id: doctor.department?._id || doctor.department_id,
+              department_name: doctor.department?.name || null
+            }));
+
+            setDoctors(processedDoctors);
           } else {
-            const doctorRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/doctors/department/${formData.department}`);
-            setDoctors(doctorRes.data);
+            setDoctors([]);
           }
-        } else {
-          setDoctors([]);
         }
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -794,7 +968,42 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
     };
 
     fetchOptions();
-  }, [formData.department]);
+  }, [formData.department, online]);
+
+  // Auto-save departments and doctors to cache when online
+  useEffect(() => {
+    const cacheMasterData = async () => {
+      if (online && departments.length > 0) {
+        const { saveDepartmentsOffline } = await import('../../services/offlineDB');
+        await saveDepartmentsOffline(departments);
+      }
+      if (online && doctors.length > 0) {
+        const { saveDoctorsOffline } = await import('../../services/offlineDB');
+        await saveDoctorsOffline(doctors);
+      }
+    };
+    cacheMasterData();
+  }, [departments, doctors, online]);
+
+  useEffect(() => {
+    if (type === 'ipd') {
+      const fetchRooms = async () => {
+        try {
+          if (online) {
+            const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/rooms?status=Available`);
+            setRooms(res.data);
+
+            // Save rooms to offline cache
+            const { saveRoomsOffline } = await import('../../services/offlineDB');
+            await saveRoomsOffline(res.data);
+          }
+        } catch (err) {
+          console.error("Failed to fetch rooms", err);
+        }
+      };
+      fetchRooms();
+    }
+  }, [type, online]);
 
   useEffect(() => {
     if (!formData.doctorId || !formData.date || formData.type !== 'time-based') return;
@@ -1015,64 +1224,86 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
     }
   }, [formData.doctorId, formData.date, formData.duration, formData.type, existingAppointments, doctorWorkingHours]);
 
+  // Fetch hospital charges (with offline cache support)
   useEffect(() => {
-    if (hospitalId) {
-      const fetchCharges = async () => {
+    const fetchCharges = async () => {
+      if (hospitalId) {
         try {
-          const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/hospital-charges/${hospitalId}`);
-          setHospitalCharges(res.data);
+          let charges = null;
+
+          // Try to get from cache first
+          const cachedCharges = await getHospitalChargesOffline(hospitalId);
+          if (cachedCharges) {
+            charges = cachedCharges;
+            console.log('Using cached hospital charges');
+          } else if (online) {
+            // Fetch from API if online and not cached
+            const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/hospital-charges/${hospitalId}`);
+            charges = res.data;
+          }
+
+          if (charges) {
+            setHospitalCharges(charges);
+          }
         } catch (err) {
           console.error("Failed to fetch hospital charges", err);
         }
-      };
-      fetchCharges();
-    }
-  }, [hospitalId]);
+      }
+    };
+    fetchCharges();
+  }, [hospitalId, online]);
 
+  // Fetch doctor data with offline cache support
   useEffect(() => {
-    if (type === 'ipd') {
-      const fetchRooms = async () => {
+    const fetchDoctorData = async () => {
+      if (formData.doctorId && hospitalId && formData.date) {
         try {
-          const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/rooms?status=Available`);
-          setRooms(res.data);
-        } catch (err) {
-          console.error("Failed to fetch rooms", err);
-        }
-      };
-      fetchRooms();
-    }
-  }, [type]);
-
-  useEffect(() => {
-    if (formData.doctorId && hospitalId && formData.date) {
-      const fetchDoctorData = async () => {
-        try {
-          const doctorRes = await axios.get(
-            `${import.meta.env.VITE_BACKEND_URL}/doctors/${formData.doctorId}`
-          );
-          const doctorData = doctorRes.data;
-          setDoctorDetails(doctorData);
-
-          let workingHours = doctorData.timeSlots || [];
+          let doctorData = null;
+          let workingHours = [];
           let appointments = [];
           let patients = [];
 
-          try {
-            const scheduleRes = await axios.get(
-              `${import.meta.env.VITE_BACKEND_URL}/calendar/${hospitalId}/doctor/${formData.doctorId}/${formData.date}`
-            );
-            const scheduleData = scheduleRes.data;
+          // Try to get doctor details from cache first
+          const cachedDoctor = await getDoctorChargesOffline(formData.doctorId);
 
-            if (scheduleData?.workingHours?.length) {
-              workingHours = scheduleData.workingHours;
+          if (cachedDoctor) {
+            doctorData = cachedDoctor;
+            console.log('Using cached doctor data');
+          } else if (online) {
+            const doctorRes = await axios.get(
+              `${import.meta.env.VITE_BACKEND_URL}/doctors/${formData.doctorId}`
+            );
+            doctorData = doctorRes.data;
+          }
+
+          if (doctorData) {
+            setDoctorDetails(doctorData);
+          }
+
+          // Get working hours (with cache support)
+          const cachedHours = await getWorkingHours(formData.doctorId, formData.date);
+
+          if (cachedHours && cachedHours.length > 0) {
+            workingHours = cachedHours;
+            console.log('Using cached working hours');
+          } else if (online) {
+            try {
+              const scheduleRes = await axios.get(
+                `${import.meta.env.VITE_BACKEND_URL}/calendar/${hospitalId}/doctor/${formData.doctorId}/${formData.date}`
+              );
+              const scheduleData = scheduleRes.data;
+              workingHours = scheduleData.workingHours || doctorData?.timeSlots || [];
+              appointments = scheduleData.bookedAppointments || [];
+              if (formData.type === "number-based") {
+                patients = scheduleData.bookedPatients || [];
+              }
+            } catch (err) {
+              console.warn("No schedule found for this doctor/date, using default hours");
+              workingHours = doctorData?.timeSlots || [];
             }
-            console.log("Schedule Data:", scheduleData);
-            appointments = scheduleData.bookedAppointments || [];
-            if (formData.type === "number-based") {
-              patients = scheduleData.bookedPatients || [];
-            }
-          } catch (err) {
-            console.warn("No schedule found for this doctor/date");
+          } else {
+            // Offline with no cache - use default working hours from doctor data if available
+            workingHours = doctorData?.timeSlots || [];
           }
 
           setDoctorWorkingHours(workingHours);
@@ -1086,17 +1317,23 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
           setExistingAppointments([]);
           setExistingPatients([]);
         }
-      };
+      } else {
+        setExistingAppointments([]);
+        setExistingPatients([]);
+        setDoctorWorkingHours([]);
+      }
+    };
 
-      fetchDoctorData();
-    } else {
-      setExistingAppointments([]);
-      setExistingPatients([]);
-      setDoctorWorkingHours([]);
-    }
-  }, [formData.doctorId, formData.date, formData.type, hospitalId]);
+    fetchDoctorData();
+  }, [formData.doctorId, formData.date, formData.type, hospitalId, online, getWorkingHours]);
 
+  // Modified isWithinWorkingHours - SKIPS validation when offline with no data
   const isWithinWorkingHours = (time) => {
+    // If offline and no working hours data, skip validation
+    if (!online && doctorWorkingHours.length === 0) {
+      return true; // Skip validation in offline mode
+    }
+
     if (!time || doctorWorkingHours.length === 0) return false;
 
     const [hours, minutes] = time.split(':').map(Number);
@@ -1160,7 +1397,13 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
   const errors = {};
   if (!formData.department) errors.department = 'Please select a department';
   if (!formData.doctorId) errors.doctorId = 'Please select a doctor';
-  if (!showFields && !formData.patientId) errors.patientId = 'Please select a patient';
+  if (!showFields) {
+    if (online && !formData.patientId) {
+      errors.patientId = 'Please select a patient';
+    } else if (!online && !formData.patientId) {
+      errors.patientId = 'Please enter Patient ID';
+    }
+  }
   if (formData.type === 'time-based') {
     if (!formData.start_time) {
       errors.start_time = 'Please pick a start time';
@@ -1178,14 +1421,18 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
         }
       }
 
-      if (!isWithinWorkingHours(formData.start_time)) {
-        errors.start_time = 'Selected time is outside doctor working hours';
-      } else {
-        const endTime = calculateEndTime(formData.start_time, formData.duration);
-        if (!isWithinWorkingHours(endTime)) {
-          errors.start_time = 'Appointment would end outside doctor working hours.';
+      // Only validate working hours when online OR when we have working hours data
+      if (online && doctorWorkingHours.length > 0) {
+        if (!isWithinWorkingHours(formData.start_time)) {
+          errors.start_time = 'Selected time is outside doctor working hours';
+        } else {
+          const endTime = calculateEndTime(formData.start_time, formData.duration);
+          if (!isWithinWorkingHours(endTime)) {
+            errors.start_time = 'Appointment would end outside doctor working hours.';
+          }
         }
       }
+      // If offline, skip working hours validation - user can still book
     }
   }
 
@@ -1325,7 +1572,7 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
         city: formData2.city,
         state: formData2.state,
         zipCode: formData2.zipCode,
-        patient_type: 'opd',
+        patient_type: type === 'ipd' ? 'ipd' : 'opd',
         village: formData2.village,
         district: formData2.district,
         tehsil: formData2.tehsil,
@@ -1333,23 +1580,47 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
         aadhaar_number: formData2.aadhaarNumber.replace(/\s/g, '')
       };
 
-      const patientRes = await axios.post(
-        `${import.meta.env.VITE_BACKEND_URL}/patients`,
-        patientPayload
-      );
+      let patientRes;
+
+      if (online) {
+        // Online: Save to server
+        patientRes = await axios.post(
+          `${import.meta.env.VITE_BACKEND_URL}/patients`,
+          patientPayload
+        );
+      } else {
+        // Offline: Save to IndexedDB
+        const localId = await savePatientOffline(patientPayload);
+        patientRes = { data: { _id: localId, localId: localId, ...patientPayload, isOffline: true } };
+        alert(`Patient saved offline! Will sync when connection returns.`);
+      }
 
       const newPatient = patientRes.data;
       setNewPatientData(newPatient);
 
-      const allPatientsRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/patients?limit=1000`);
-      const patientsData = Array.isArray(allPatientsRes.data)
-        ? allPatientsRes.data
-        : Array.isArray(allPatientsRes.data.patients)
-          ? allPatientsRes.data.patients
-          : [];
-
-      setPatients(patientsData);
-      setFilteredPatients(patientsData);
+      if (online) {
+        const allPatientsRes = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/patients?limit=1000`);
+        const patientsData = Array.isArray(allPatientsRes.data)
+          ? allPatientsRes.data
+          : Array.isArray(allPatientsRes.data.patients)
+            ? allPatientsRes.data.patients
+            : [];
+        setPatients(patientsData);
+        setFilteredPatients(patientsData);
+      } else {
+        // Add to local patients list for offline
+        const offlinePatient = {
+          _id: newPatient.localId,
+          localId: newPatient.localId,
+          salutation: newPatient.salutation,
+          first_name: newPatient.first_name,
+          last_name: newPatient.last_name,
+          phone: newPatient.phone,
+          isOffline: true
+        };
+        setPatients(prev => [...prev, offlinePatient]);
+        setFilteredPatients(prev => [...prev, offlinePatient]);
+      }
 
       setSuccessMessage(`Patient ${formData2.firstName} ${formData2.lastName} added successfully!`);
       setShowSuccessModal(true);
@@ -1367,7 +1638,7 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
 
   const handleSelectPatientAfterSuccess = () => {
     if (newPatientData) {
-      setFormData(prev => ({ ...prev, patientId: newPatientData._id }));
+      setFormData(prev => ({ ...prev, patientId: newPatientData._id || newPatientData.localId }));
       setShowSuccessModal(false);
       setNewPatientData(null);
       resetAfterNewPatient();
@@ -1405,6 +1676,20 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
       return;
     }
 
+    // Offline mode validation - Patient ID is required
+    if (!online && !formData.patientId) {
+      alert('Please enter a Patient ID in offline mode.');
+      setIsLoading(false);
+      return;
+    }
+
+    // Online mode validation - Patient must be selected from dropdown
+    if (online && !formData.patientId) {
+      alert('Please select a patient.');
+      setIsLoading(false);
+      return;
+    }
+
     // Check for procedure conflicts before submitting
     if (showProcedureConflict) {
       const confirmProceed = window.confirm(
@@ -1426,11 +1711,16 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
     }
 
     try {
-      if (formData.type === 'time-based') {
-        const proposedEnd = calculateEndTime(formData.start_time, formData.duration);
-        const isAvailable = checkTimeSlotAvailability(formData.start_time, proposedEnd);
+      // Check time slot availability (only online)
+      if (online && formData.type === 'time-based') {
+        const conflictCheck = await checkConflictOnline(
+          formData.doctorId,
+          formData.date,
+          `${formData.date}T${formData.start_time}:00+00:00`,
+          parseInt(formData.duration)
+        );
 
-        if (!isAvailable) {
+        if (conflictCheck.hasConflict) {
           alert('The selected time slot is not available. Please choose another time.');
           setIsLoading(false);
           return;
@@ -1449,7 +1739,8 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
         priority: formData.priority,
         notes: formData.notes,
         status: 'Scheduled',
-        room_id: type === 'ipd' ? formData.roomId : null
+        room_id: type === 'ipd' ? formData.roomId : null,
+        localId: `APPT-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`
       };
 
       if (formData.type === 'time-based') {
@@ -1462,68 +1753,143 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
         const endTimeFormatted = `${String(endHours).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')}`;
 
         appointmentData.end_time = `${formData.date}T${endTimeFormatted}:00+00:00`;
-
-        console.log('Storing times as UTC:', {
-          start: appointmentData.start_time,
-          end: appointmentData.end_time
-        });
-      } else {
-        const lastSerial = existingPatients.length > 0
-          ? Math.max(...existingPatients.map(p => p.serialNumber))
-          : 0;
-        appointmentData.serialNumber = lastSerial + 1;
       }
 
-      const appointmentRes = await axios.post(
-        `${import.meta.env.VITE_BACKEND_URL}/appointments`,
-        appointmentData
-      );
+      let appointmentRes;
+      let appointmentId;
 
-      const appointmentId = appointmentRes.data._id;
-      console.log('Appointment scheduled with ID:', appointmentId, 'and status:', finalBillStatus);
+      if (online) {
+        // Online mode - save to server
+        appointmentRes = await axios.post(
+          `${import.meta.env.VITE_BACKEND_URL}/appointments`,
+          appointmentData
+        );
+        appointmentId = appointmentRes.data._id;
 
-      const billRes = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/billing`, {
-        patient_id: formData.patientId,
-        appointment_id: appointmentId,
-        total_amount: totalAmount,
-        payment_method: formData.paymentMethod,
-        status: finalBillStatus,
-        items: chargesSummary,
-        transaction_id: paymentInfo ? paymentInfo.transactionId : null,
-      });
+        // Create bill online
+        await axios.post(`${import.meta.env.VITE_BACKEND_URL}/billing`, {
+          patient_id: formData.patientId,
+          appointment_id: appointmentId,
+          total_amount: totalAmount,
+          payment_method: formData.paymentMethod,
+          status: finalBillStatus,
+          items: chargesSummary,
+          transaction_id: paymentInfo ? paymentInfo.transactionId : null,
+        });
 
-      await fetchInvoiceDetails(appointmentId);
+        // Fetch invoice details
+        await fetchInvoiceDetails(appointmentId);
 
-      const selectedPatient = filteredPatients.find(p => p._id === formData.patientId);
-      const patientName = selectedPatient ?
-        `${selectedPatient.salutation || ''} ${selectedPatient.first_name || ''} ${selectedPatient.last_name || ''}`.trim() :
-        'Unknown Patient';
+        const selectedPatient = filteredPatients.find(p => p._id === formData.patientId);
+        const patientName = selectedPatient ?
+          `${selectedPatient.salutation || ''} ${selectedPatient.first_name || ''} ${selectedPatient.last_name || ''}`.trim() :
+          'Unknown Patient';
 
-      setSuccessMessage(`Appointment for ${patientName} scheduled successfully!`);
-      setShowSuccessModal(true);
+        setSuccessMessage(`Appointment for ${patientName} scheduled successfully!`);
+        setShowSuccessModal(true);
 
-      const appointmentDetails = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/appointments/${appointmentId}`);
-      const appt = appointmentDetails.data;
-      const enriched = {
-        ...appt,
-        patientName: patientName,
-        patientSalutation: appt.patient_id?.salutation || '',
-        doctorName: `Dr. ${appt.doctor_id?.firstName || ''} ${appt.doctor_id?.lastName || ''}`.trim(),
-        departmentName: appt.department_id?.name || 'N/A',
-        date: new Date(appt.appointment_date).toLocaleDateString(),
-        time: appt.time_slot?.split(' - ')[0] || 'N/A',
-        patientId: appt.patient_id?.patientId
-      };
-      setSubmitDetails(enriched);
+        const appointmentDetails = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/appointments/${appointmentId}`);
+        const appt = appointmentDetails.data;
+        const enriched = {
+          ...appt,
+          patientName: patientName,
+          patientSalutation: appt.patient_id?.salutation || '',
+          doctorName: `Dr. ${appt.doctor_id?.firstName || ''} ${appt.doctor_id?.lastName || ''}`.trim(),
+          departmentName: appt.department_id?.name || 'N/A',
+          date: new Date(appt.appointment_date).toLocaleDateString(),
+          time: appt.time_slot?.split(' - ')[0] || 'N/A',
+          patientId: appt.patient_id?.patientId
+        };
+        setSubmitDetails(enriched);
 
-      setTimeout(() => {
-        setShowSuccessModal(false);
-        setShowActionModal(true);
-      }, 2000);
+        setTimeout(() => {
+          setShowSuccessModal(false);
+          setShowActionModal(true);
+        }, 2000);
+
+      } else {
+        // Offline mode - save to IndexedDB with manually entered Patient ID
+        const patientLocalId = formData.patientId; // Use the manually entered ID directly
+
+        console.log('Offline mode: Saving appointment with Patient ID:', patientLocalId);
+
+        // Save appointment offline
+        await saveAppointmentOffline(appointmentData, patientLocalId);
+        appointmentId = offlineAppointmentId;
+
+        setSuccessMessage(`Appointment saved offline with Patient ID: ${patientLocalId}! It will sync when connection returns.`);
+        setShowSuccessModal(true);
+
+        setTimeout(() => {
+          setShowSuccessModal(false);
+          resetFormForNextAppointment();
+        }, 3000);
+
+        setIsLoading(false);
+        return;
+      }
 
     } catch (err) {
       console.error('Error scheduling appointment:', err);
-      alert(err.response?.data?.error || 'Failed to schedule appointment.');
+
+      // If online save fails due to network, offer offline save
+      if (online && (err.message === 'Network Error' || err.code === 'ERR_NETWORK')) {
+        const saveOffline = confirm('Network error. Would you like to save this appointment offline and sync later?');
+        if (saveOffline) {
+          try {
+            let patientLocalId;
+
+            if (online) {
+              // If we were online but lost connection, use the selected patient's ID
+              const selectedPatientData = filteredPatients.find(p => p._id === formData.patientId);
+              patientLocalId = selectedPatientData?.patientId || selectedPatientData?._id || formData.patientId;
+            } else {
+              // Already offline, use the manually entered ID
+              patientLocalId = formData.patientId;
+            }
+
+            if (!patientLocalId) {
+              alert('Please enter a valid Patient ID.');
+              setIsLoading(false);
+              return;
+            }
+
+            const appointmentData = {
+              patient_id: patientLocalId,
+              doctor_id: fixedDoctorId || formData.doctorId,
+              hospital_id: hospitalId,
+              department_id: formData.department,
+              appointment_date: formData.date,
+              duration: parseInt(formData.duration),
+              type: formData.type,
+              appointment_type: formData.appointment_type,
+              priority: formData.priority,
+              notes: formData.notes,
+              status: 'Scheduled',
+              room_id: type === 'ipd' ? formData.roomId : null,
+              localId: `APPT-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`
+            };
+
+            if (formData.type === 'time-based') {
+              appointmentData.start_time = `${formData.date}T${formData.start_time}:00+00:00`;
+              const [hours, minutes] = formData.start_time.split(':').map(Number);
+              const totalMinutes = hours * 60 + minutes + parseInt(formData.duration);
+              const endHours = Math.floor(totalMinutes / 60) % 24;
+              const endMinutes = totalMinutes % 60;
+              appointmentData.end_time = `${formData.date}T${String(endHours).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')}:00+00:00`;
+            }
+
+            await saveAppointmentOffline(appointmentData, patientLocalId);
+            alert('Appointment saved offline with Patient ID: ' + patientLocalId + '! Will sync when connection returns.');
+            resetFormForNextAppointment();
+          } catch (offlineError) {
+            console.error('Offline save error:', offlineError);
+            alert('Failed to save appointment offline. Please try again.');
+          }
+        }
+      } else {
+        alert(err.response?.data?.error || 'Failed to schedule appointment.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -1705,17 +2071,53 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
             box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
           }
         }
+
+        .offline-indicator {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 4px 10px;
+          border-radius: 20px;
+          font-size: 12px;
+          font-weight: 500;
+        }
+
+        .offline-badge {
+          background-color: #fef3c7;
+          color: #92400e;
+          border: 1px solid #fde68a;
+        }
       `}</style>
 
-      <div ref={formContainerRef} className="min-h-screen">
+      <div ref={formContainerRef} className="min-h-screen pt-4">
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col md:flex-row md:items-center items-center w-full justify-between mb-8">
             <div>
               <h1 className="text-2xl font-bold text-center text-gray-800 capitalize">{type} Appointment Booking</h1>
               <p className="text-gray-500 mt-1 text-sm">
                 {showFields ? 'Add new patient details' : 'Schedule an appointment for existing or new patient'}
+                {!online && <span className="text-amber-600 ml-2">(Offline Mode - Will sync later)</span>}
               </p>
             </div>
+            <div className="mt-2 md:mt-0">
+              {!online && (
+                <div className="offline-indicator offline-badge">
+                  <WifiOffIcon className="text-amber-500" />
+                  <span>Working Offline - Using Cached Data</span>
+                </div>
+              )}
+              {online && (
+                <div className="offline-indicator bg-green-50 text-green-700 border-green-200">
+                  <WifiIcon className="text-green-500" />
+                  <span>Online</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Calendar Sync Status */}
+          <div className="mb-4">
+            <CalendarSyncStatus showDetails={true} />
           </div>
 
           <div className="relative grid grid-cols-1 lg:grid-cols-5 gap-8">
@@ -1768,41 +2170,72 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
                     {!showFields ? (
                       <>
                         <div className="space-y-4">
-                          <SearchableFormSelect
-                            label="Select Patient"
-                            value={formData.patientId}
-                            onChange={(e) => handleInputChange('patientId', e.target.value)}
-                            options={(filteredPatients || []).map(p => ({
-                              value: p._id,
-                              label: `${[p.salutation, p.first_name, p.last_name].filter(Boolean).join(' ')} - ${p.phone || 'No phone'} (${p.patientId || 'No ID'})${p.aadhaar_number ? ` - Aadhaar: ${p.aadhaar_number}` : ''}`
-                            }))}
-                            placeholder="Search for a patient..."
-                            required
-                          />
-                          {selectedPatient && (
-                            <div className="bg-teal-50 border border-teal-100 rounded-lg p-4">
-                              <div className="flex items-center">
-                                {selectedPatient.patient_image ? (
-                                  <img
-                                    src={selectedPatient.patient_image}
-                                    alt="Patient"
-                                    className="h-12 w-12 rounded-full object-cover mr-3"
-                                  />
-                                ) : (
-                                  <div className="h-12 w-12 rounded-full bg-teal-100 flex items-center justify-center text-teal-600 font-bold text-lg mr-3">
-                                    {selectedPatient.first_name?.charAt(0) || 'P'}
+                          {online ? (
+                            // Online mode - Show patient dropdown
+                            <>
+                              <SearchableFormSelect
+                                label="Select Patient"
+                                value={formData.patientId}
+                                onChange={(e) => handleInputChange('patientId', e.target.value)}
+                                options={(filteredPatients || []).map(p => ({
+                                  value: p._id,
+                                  label: `${[p.salutation, p.first_name, p.last_name].filter(Boolean).join(' ')} - ${p.phone || 'No phone'} (${p.patientId || 'No ID'})`
+                                }))}
+                                placeholder="Search for a patient..."
+                                required
+                              />
+                              {selectedPatient && (
+                                <div className="bg-teal-50 border border-teal-100 rounded-lg p-4">
+                                  <div className="flex items-center">
+                                    {selectedPatient.patient_image ? (
+                                      <img
+                                        src={selectedPatient.patient_image}
+                                        alt="Patient"
+                                        className="h-12 w-12 rounded-full object-cover mr-3"
+                                      />
+                                    ) : (
+                                      <div className="h-12 w-12 rounded-full bg-teal-100 flex items-center justify-center text-teal-600 font-bold text-lg mr-3">
+                                        {selectedPatient.first_name?.charAt(0) || 'P'}
+                                      </div>
+                                    )}
+                                    <div>
+                                      <h4 className="font-semibold text-gray-900">
+                                        {selectedPatient.salutation || ''} {selectedPatient.first_name || ''} {selectedPatient.last_name || ''}
+                                      </h4>
+                                      <p className="text-sm text-gray-600">
+                                        Phone: {selectedPatient.phone} • Gender: {selectedPatient.gender || 'N/A'}
+                                      </p>
+                                    </div>
                                   </div>
-                                )}
-                                <div>
-                                  <h4 className="font-semibold text-gray-900">
-                                    {selectedPatient.salutation || ''} {selectedPatient.first_name || ''} {selectedPatient.last_name || ''}
-                                  </h4>
+                                </div>
+                              )}
+                            </>
+                          ) : (
+                            // Offline mode - Show manual Patient ID input
+                            <>
+                              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
+                                <p className="text-sm text-amber-700">
+                                  <span className="font-semibold">Offline Mode:</span> Please enter the Patient ID manually.
+                                  The system will save the appointment and sync when online.
+                                </p>
+                              </div>
+                              <FormInput
+                                label="Patient ID"
+                                type="text"
+                                value={formData.patientId}
+                                onChange={(e) => handleInputChange('patientId', e.target.value)}
+                                placeholder="Enter Patient ID (e.g., PAT-12345)"
+                                required
+                                icon={<FaUser className="text-gray-400" />}
+                              />
+                              {formData.patientId && (
+                                <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
                                   <p className="text-sm text-gray-600">
-                                    Phone: {selectedPatient.phone} • Gender: {selectedPatient.gender || 'N/A'}
+                                    <span className="font-medium">Note:</span> Appointment will be saved offline with Patient ID: <span className="font-mono font-bold">{formData.patientId}</span>
                                   </p>
                                 </div>
-                              </div>
-                            </div>
+                              )}
+                            </>
                           )}
                         </div>
 
@@ -1813,6 +2246,7 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
                             onChange={(e) => handleInputChange('department', e.target.value)}
                             options={departments.map(dep => ({ value: dep._id, label: dep.name }))}
                             required
+                            placeholder={online ? "Select department..." : "Select from cached departments..."}
                           />
                           {!fixedDoctorId && (
                             <SearchableFormSelect
@@ -1824,6 +2258,7 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
                                 label: `${d.isFullTime ? 'Full-time' : 'Part-time'} - Dr. ${d.firstName} ${d.lastName}`
                               }))}
                               required
+                              placeholder={online ? "Select doctor..." : "Select from cached doctors..."}
                             />
                           )}
                         </div>
@@ -1909,7 +2344,7 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
                               )}
                             </div>
 
-                            {/* NEW: Procedure Conflict Warning */}
+                            {/* Procedure Conflict Warning */}
                             {showProcedureConflict && (
                               <div className="procedure-conflict-alert bg-red-50 border border-red-200 rounded-lg p-4">
                                 <div className="flex items-start gap-3">
@@ -1951,7 +2386,7 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
                           </div>
                         )}
 
-                        {/* NEW: Display Doctor's Scheduled Procedures */}
+                        {/* Display Doctor's Scheduled Procedures */}
                         {!showFields && formData.doctorId && formData.date && doctorProcedures.length > 0 && renderDoctorProcedures()}
 
                         {type === 'ipd' && (
@@ -1967,6 +2402,7 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
                               }))
                             ]}
                             required
+                            placeholder={online ? "Select room..." : "Select from cached rooms..."}
                           />
                         )}
 
@@ -2270,21 +2706,23 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
                         </>
                       ) : (
                         <>
-                          <Button
-                            variant="secondary"
-                            type="button"
-                            onClick={handleGenerateQR}
-                            disabled={isLoading || totalAmount <= 0 || !formData.patientId}
-                          >
-                            {isLoading ? 'Processing...' : 'Pay with QR Code'}
-                          </Button>
+                          {online && (
+                            <Button
+                              variant="secondary"
+                              type="button"
+                              onClick={handleGenerateQR}
+                              disabled={isLoading || totalAmount <= 0 || !formData.patientId}
+                            >
+                              {isLoading ? 'Processing...' : 'Pay with QR Code'}
+                            </Button>
+                          )}
                           <Button
                             variant="primary"
                             type="submit"
                             disabled={isLoading || !isFormValid || !formData.patientId}
                             onClick={() => setShowErrors(true)}
                           >
-                            {isLoading ? 'Scheduling...' : 'Schedule Appointment'}
+                            {isLoading ? 'Scheduling...' : (online ? 'Schedule Appointment' : 'Save Offline')}
                           </Button>
                         </>
                       )}

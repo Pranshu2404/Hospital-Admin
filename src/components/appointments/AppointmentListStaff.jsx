@@ -6,18 +6,21 @@ import {
   CheckCircle, AlertCircle, X, ChevronDown,
   Activity, Building, CheckSquare, Clock as ClockIcon,
   ChevronUp, ChevronRight, ArrowUp, ArrowDown,
-  Heart, Shield, UserCog, UserPlus, Upload
+  Heart, Shield, UserCog, UserPlus, Upload, Wifi, WifiOff
 } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import AddIPDAppointment from './AddIPDAppointment';
 import AppointmentSlipModal from './AppointmentSlipModal';
 import AppointmentCompletionSlipModal from './AppointmentCompletionSlipModal';
 import AddIPDAppointmentStaff from './AddIPDAppointmentStaff';
+import { useOfflineSync } from '../../hooks/useOfflineSync';
 
 const AppointmentListStaff = () => {
   const location = useLocation();
   const params = new URLSearchParams(location.search);
   const patientType = params.get('type');
+
+  const { online } = useOfflineSync();
 
   const [appointments, setAppointments] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -39,7 +42,7 @@ const AppointmentListStaff = () => {
 
   // Modal States
   const [chooserOpen, setChooserOpen] = useState(false);
-  const [selectedType, setSelectedType] = useState('opd'); // Default to OPD
+  const [selectedType, setSelectedType] = useState('opd');
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [isCompletionModalOpen, setIsCompletionModalOpen] = useState(false);
@@ -54,8 +57,9 @@ const AppointmentListStaff = () => {
 
   const [loading, setLoading] = useState(true);
   const [hospitalInfo, setHospitalInfo] = useState(null);
+  const [fetchError, setFetchError] = useState(null);
 
-  // Default Vitals (Normal Range / Standard placeholders)
+  // Default Vitals
   const defaultVitals = {
     bp: '120/80',
     weight: '70',
@@ -67,20 +71,26 @@ const AppointmentListStaff = () => {
     height: '170'
   };
 
-  // Vitals Form State
   const [vitals, setVitals] = useState(defaultVitals);
 
   useEffect(() => {
-    // Get user data from localStorage
     const userData = JSON.parse(localStorage.getItem('user') || '{}');
     const hospitalID = localStorage.getItem('hospitalId') || userData.hospitalID;
     
     if (hospitalID) {
       setHospitalId(hospitalID);
-      fetchVitalsConfig(hospitalID);
+      if (online) {
+        fetchVitalsConfig(hospitalID);
+      } else {
+        // Offline: use default config
+        setConfigLoading(false);
+        setVitalsConfig({
+          vitalsEnabled: true,
+          vitalsController: 'nurse'
+        });
+      }
     }
     
-    // Get user role
     if (userData.role) {
       setUserRole(userData.role);
     }
@@ -88,11 +98,19 @@ const AppointmentListStaff = () => {
     if (patientType) {
       setAppointmentType(patientType);
     }
-  }, [patientType]);
+  }, [patientType, online]);
 
   // Define fetchData with useCallback to memoize it
   const fetchData = useCallback(async () => {
+    if (!online) {
+      console.log('Offline mode - skipping appointment fetch');
+      setLoading(false);
+      setAppointments([]);
+      return;
+    }
+    
     setLoading(true);
+    setFetchError(null);
     try {
       const token = localStorage.getItem('token');
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
@@ -102,7 +120,6 @@ const AppointmentListStaff = () => {
         axios.get(`${import.meta.env.VITE_BACKEND_URL}/hospitals`)
       ]);
 
-      // Add enriched data for display
       const enriched = appointmentRes.data.map((appt) => {
         const timeInMinutes = getTimeInMinutes(appt.start_time);
         const appointmentDate = new Date(appt.appointment_date);
@@ -137,10 +154,12 @@ const AppointmentListStaff = () => {
 
     } catch (error) {
       console.error('Error fetching data:', error);
+      setFetchError(error.message);
+      setAppointments([]);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [online]);
 
   // Fetch vitals configuration
   const fetchVitalsConfig = async (hospitalId) => {
@@ -157,7 +176,6 @@ const AppointmentListStaff = () => {
       setVitalsConfig(response.data);
     } catch (err) {
       console.error('Error fetching vitals config:', err);
-      // Default to enabled if API fails
       setVitalsConfig({
         vitalsEnabled: true,
         vitalsController: 'nurse'
@@ -167,22 +185,27 @@ const AppointmentListStaff = () => {
     }
   };
 
-  // Initial data fetch
+  // Initial data fetch - only when online
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    if (online) {
+      fetchData();
+    } else {
+      setLoading(false);
+      setAppointments([]);
+    }
+  }, [fetchData, online]);
 
   // Listen for vitals config updates
   useEffect(() => {
     const handleVitalsUpdate = () => {
-      if (hospitalId) {
+      if (hospitalId && online) {
         fetchVitalsConfig(hospitalId);
       }
     };
 
     window.addEventListener('vitals-updated', handleVitalsUpdate);
     return () => window.removeEventListener('vitals-updated', handleVitalsUpdate);
-  }, [hospitalId]);
+  }, [hospitalId, online]);
 
   // Check if current user can access vitals
   const canAccessVitals = () => {
@@ -342,19 +365,17 @@ const AppointmentListStaff = () => {
 
   const filteredAppointments = appointments.filter((appointment) => {
     const matchesSearch =
-      appointment.patientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      appointment.doctorName.toLowerCase().includes(searchTerm.toLowerCase());
+      appointment.patientName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      appointment.doctorName?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = filterStatus === 'all' || appointment.status === filterStatus;
 
     let matchesDateFilter = true;
-    if (dateFilter !== 'all') {
+    if (dateFilter !== 'all' && appointment.rawDate) {
       const { start, end } = getDateRangeFromFilter();
-      if (appointment.rawDate) {
-        const appDate = new Date(appointment.rawDate);
-        appDate.setHours(0, 0, 0, 0);
-        if (start && appDate < start) matchesDateFilter = false;
-        if (end && appDate > end) matchesDateFilter = false;
-      }
+      const appDate = new Date(appointment.rawDate);
+      appDate.setHours(0, 0, 0, 0);
+      if (start && appDate < start) matchesDateFilter = false;
+      if (end && appDate > end) matchesDateFilter = false;
     }
 
     return matchesSearch && matchesStatus && matchesDateFilter;
@@ -367,7 +388,7 @@ const AppointmentListStaff = () => {
   // Calculate quick stats
   const stats = {
     total: appointments.length,
-    today: appointments.filter(a => new Date(a.rawDate).toDateString() === new Date().toDateString()).length,
+    today: appointments.filter(a => a.rawDate && new Date(a.rawDate).toDateString() === new Date().toDateString()).length,
     pending: appointments.filter(a => a.status === 'Scheduled').length,
     upcoming: filteredUpcoming.length,
     completed: filteredCompleted.length
@@ -377,6 +398,10 @@ const AppointmentListStaff = () => {
   const handleVitalsClick = (appointment) => {
     if (!canAccessVitals()) {
       alert('You do not have permission to manage vitals.');
+      return;
+    }
+    if (!online) {
+      alert('Cannot update vitals while offline. Please connect to the internet.');
       return;
     }
     setSelectedAppointment(appointment);
@@ -417,7 +442,6 @@ const AppointmentListStaff = () => {
       alert('Vitals updated successfully!');
       setIsVitalsModalOpen(false);
       
-      // Refresh appointments to show updated vitals
       fetchData();
     } catch (err) {
       console.error('Error updating vitals:', err);
@@ -449,15 +473,18 @@ const AppointmentListStaff = () => {
 
   const handleAppointmentSuccess = async () => {
     setChooserOpen(false);
-    // Refresh data after successful appointment creation
-    await fetchData();
+    if (online) {
+      await fetchData();
+    }
   };
 
   const handleCompleteClick = async (appointment, e) => {
     e.stopPropagation();
+    if (!online) {
+      alert('Cannot complete appointments while offline. Please connect to the internet.');
+      return;
+    }
     if (appointment.status !== 'Completed') {
-      // Handle completion logic here
-      // After completion, refresh data
       await fetchData();
     } else {
       setSelectedAppointment(appointment);
@@ -467,7 +494,9 @@ const AppointmentListStaff = () => {
 
   const handleModalClose = async () => {
     setChooserOpen(false);
-    await fetchData();
+    if (online) {
+      await fetchData();
+    }
   };
 
   const renderAppointmentRow = (appointment, isUpcoming = false, index = 0) => {
@@ -554,7 +583,7 @@ const AppointmentListStaff = () => {
               <Eye size={20} />
             </button>
             
-            {vitalsAccess && (
+            {vitalsAccess && online && (
               <button
                 onClick={() => handleVitalsClick(appointment)}
                 className={`p-2 rounded-lg transition-colors ${
@@ -585,8 +614,8 @@ const AppointmentListStaff = () => {
     );
   };
 
-  // Show loading state while fetching config
-  if (configLoading) {
+  // Don't show loading for config when offline - just use defaults
+  if (configLoading && online) {
     return (
       <div className="p-8 flex items-center justify-center min-h-screen">
         <div className="text-center">
@@ -601,6 +630,12 @@ const AppointmentListStaff = () => {
   const VitalsIcon = vitalsInfo.icon;
 
   const startSequentialUpload = async (data, startIndex) => {
+    if (!online) {
+      alert('Cannot upload while offline. Please connect to the internet.');
+      setIsUploadModalOpen(false);
+      return;
+    }
+    
     setUploadProgress({ current: startIndex, total: data.length, isUploading: true });
     setUploadError('');
     setFailedRowDetails(null);
@@ -709,6 +744,17 @@ const AppointmentListStaff = () => {
     <div className="p-2 bg-slate-50 min-h-screen font-sans">
       <div className="max-w-[1600px] mx-auto space-y-6">
 
+        {/* Offline Banner */}
+        {!online && (
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-center gap-3">
+            <WifiOff size={20} className="text-amber-600" />
+            <div>
+              <p className="text-amber-800 font-medium">You are currently offline</p>
+              <p className="text-amber-600 text-sm">Appointment list is not available. You can still create new appointments - they will be saved and synced when you're back online.</p>
+            </div>
+          </div>
+        )}
+
         {/* Header & Stats */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
@@ -744,7 +790,7 @@ const AppointmentListStaff = () => {
         {/* Main Content Card */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
 
-          {/* Toolbar */}
+          {/* Toolbar - Always visible, buttons enabled even offline */}
           <div className="p-5 border-b border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4 bg-white">
             <div className="flex flex-1 gap-3 w-full md:w-auto">
               <div className="relative flex-1 md:max-w-sm">
@@ -755,6 +801,7 @@ const AppointmentListStaff = () => {
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder="Search patient or doctor..."
                   className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 transition-all"
+                  disabled={!online && appointments.length === 0}
                 />
               </div>
 
@@ -763,6 +810,7 @@ const AppointmentListStaff = () => {
                   value={filterStatus}
                   onChange={(e) => setFilterStatus(e.target.value)}
                   className="appearance-none pl-4 pr-10 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-500/20 cursor-pointer hover:bg-slate-50 transition-colors"
+                  disabled={!online && appointments.length === 0}
                 >
                   <option value="all">All Status</option>
                   <option value="Scheduled">Scheduled</option>
@@ -778,6 +826,7 @@ const AppointmentListStaff = () => {
                   value={dateFilter}
                   onChange={(e) => setDateFilter(e.target.value)}
                   className="appearance-none pl-4 pr-10 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-500/20 cursor-pointer hover:bg-slate-50 transition-colors"
+                  disabled={!online && appointments.length === 0}
                 >
                   <option value="all">All Dates</option>
                   <option value="today">Today</option>
@@ -794,14 +843,14 @@ const AppointmentListStaff = () => {
                       value={customStartDate}
                       onChange={(e) => setCustomStartDate(e.target.value)}
                       className="px-3 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
-                      placeholder="Start"
+                      disabled={!online && appointments.length === 0}
                     />
                     <input
                       type="date"
                       value={customEndDate}
                       onChange={(e) => setCustomEndDate(e.target.value)}
                       className="px-3 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
-                      placeholder="End"
+                      disabled={!online && appointments.length === 0}
                     />
                   </div>
                 )}
@@ -811,11 +860,20 @@ const AppointmentListStaff = () => {
             <div className="flex gap-2">
               <button
                 onClick={() => {
+                  if (!online) {
+                    alert('Bulk upload requires internet connection. Please connect to the internet.');
+                    return;
+                  }
                   setUploadError('');
                   setUploadSuccess('');
                   setIsUploadModalOpen(true);
                 }}
-                className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-lg font-medium transition-all shadow-sm hover:shadow-md active:scale-95"
+                className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-medium transition-all shadow-sm hover:shadow-md active:scale-95 ${
+                  online 
+                    ? 'bg-indigo-600 hover:bg-indigo-700 text-white' 
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                }`}
+                disabled={!online}
               >
                 <Upload size={18} /> Bulk Upload
               </button>
@@ -828,143 +886,191 @@ const AppointmentListStaff = () => {
             </div>
           </div>
 
-          {/* Table Container */}
-          <div className="overflow-x-auto">
-            {/* Section 1: Upcoming Appointments */}
-            {sortedUpcoming.length > 0 && (
-              <div className="border-b border-slate-100">
-                <div className="px-6 py-3 bg-teal-50/50 border-b border-teal-100">
-                  <div className="flex items-center justify-between">
+          {/* Table Container - Show loading or offline message */}
+          {loading && online ? (
+            <div className="p-8 text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600 mx-auto mb-4"></div>
+              <p className="text-gray-600">Loading appointments...</p>
+            </div>
+          ) : !online && appointments.length === 0 ? (
+            <div className="w-full">
+              <div className="px-6 py-16 text-center">
+                <div className="flex flex-col items-center justify-center">
+                  <div className="bg-slate-50 p-4 rounded-full mb-3">
+                    <WifiOff size={32} className="text-slate-300" />
+                  </div>
+                  <h3 className="text-slate-800 font-medium mb-1">Offline Mode</h3>
+                  <p className="text-slate-500 text-sm max-w-md">
+                    You are currently offline. Appointment list is not available, but you can still create new appointments. 
+                    They will be saved locally and synced when you're back online.
+                  </p>
+                  <button
+                    onClick={() => { setChooserOpen(true); setSelectedType('opd'); }}
+                    className="mt-4 flex items-center gap-2 bg-teal-600 hover:bg-teal-700 text-white px-5 py-2.5 rounded-lg font-medium transition-all"
+                  >
+                    <Plus size={18} /> Create New Appointment
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : fetchError && online ? (
+            <div className="w-full">
+              <div className="px-6 py-16 text-center">
+                <div className="flex flex-col items-center justify-center">
+                  <div className="bg-red-50 p-4 rounded-full mb-3">
+                    <AlertCircle size={32} className="text-red-500" />
+                  </div>
+                  <h3 className="text-slate-800 font-medium mb-1">Failed to load appointments</h3>
+                  <p className="text-slate-500 text-sm">{fetchError}</p>
+                  <button
+                    onClick={() => fetchData()}
+                    className="mt-4 flex items-center gap-2 bg-teal-600 hover:bg-teal-700 text-white px-5 py-2.5 rounded-lg font-medium transition-all"
+                  >
+                    Retry
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              {/* Section 1: Upcoming Appointments */}
+              {sortedUpcoming.length > 0 && (
+                <div className="border-b border-slate-100">
+                  <div className="px-6 py-3 bg-teal-50/50 border-b border-teal-100">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <ClockIcon size={16} className="text-teal-600" />
+                        <h3 className="font-bold text-teal-700 text-sm uppercase tracking-wider">Upcoming Appointments ({sortedUpcoming.length})</h3>
+                      </div>
+                    </div>
+                  </div>
+                  <table className="w-full">
+                    <thead className="bg-slate-50 border-b border-slate-100">
+                      <tr>
+                        <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Patient Details</th>
+                        <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Doctor</th>
+                        <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">
+                          <div className="flex items-center gap-1">
+                            <Calendar size={12} /> Schedule
+                            <ArrowUp size={10} className="text-teal-500" />
+                          </div>
+                        </th>
+                        <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Type</th>
+                        <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
+                        <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Vitals</th>
+                        <th className="px-6 py-4 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {sortedUpcoming.map((appointment, index) => (
+                        renderAppointmentRow(appointment, true, index)
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {/* Section 2: Completed Appointments (Collapsible) */}
+              {sortedCompleted.length > 0 && (
+                <div>
+                  <button
+                    onClick={() => setCompletedCollapsed(!completedCollapsed)}
+                    className="w-full px-6 py-3 bg-green-50/50 border-b border-green-100 hover:bg-green-50 transition-colors flex items-center justify-between group"
+                  >
                     <div className="flex items-center gap-2">
-                      <ClockIcon size={16} className="text-teal-600" />
-                      <h3 className="font-bold text-teal-700 text-sm uppercase tracking-wider">Upcoming Appointments ({sortedUpcoming.length})</h3>
+                      <CheckSquare size={16} className="text-green-600" />
+                      <h3 className="font-bold text-green-700 text-sm uppercase tracking-wider">
+                        Past Appointments ({sortedCompleted.length})
+                      </h3>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {completedCollapsed ? (
+                        <ChevronRight size={20} className="text-green-500 group-hover:text-green-600 transition-colors ml-2" />
+                      ) : (
+                        <ChevronUp size={20} className="text-green-500 group-hover:text-green-600 transition-colors ml-2" />
+                      )}
+                    </div>
+                  </button>
+
+                  {!completedCollapsed && (
+                    <>
+                      <table className="w-full">
+                        <thead className="bg-slate-50 border-b border-slate-100">
+                          <tr>
+                            <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Patient Details</th>
+                            <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Doctor</th>
+                            <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">
+                              <div className="flex items-center gap-1">
+                                <Calendar size={12} /> Schedule
+                                <ArrowDown size={10} className="text-green-500" />
+                              </div>
+                            </th>
+                            <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Type</th>
+                            <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
+                            <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Vitals</th>
+                            <th className="px-6 py-4 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {sortedCompleted.map((appointment, index) => renderAppointmentRow(appointment, false, index))}
+                        </tbody>
+                      </table>
+
+                      <div className="px-6 py-2 border-t border-slate-100 bg-green-25 flex justify-center">
+                        <button
+                          onClick={() => setCompletedCollapsed(true)}
+                          className="text-xs text-green-500 hover:text-green-600 font-medium flex items-center gap-1 py-1"
+                        >
+                          <ChevronUp size={12} />
+                          Collapse Completed Appointments
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* No Appointments Found */}
+              {sortedUpcoming.length === 0 && sortedCompleted.length === 0 && online && !loading && (
+                <div className="w-full">
+                  <div className="px-6 py-16 text-center">
+                    <div className="flex flex-col items-center justify-center">
+                      <div className="bg-slate-50 p-4 rounded-full mb-3">
+                        <Calendar size={32} className="text-slate-300" />
+                      </div>
+                      <h3 className="text-slate-800 font-medium mb-1">No appointments found</h3>
+                      <p className="text-slate-500 text-sm">
+                        {searchTerm || dateFilter !== 'all' ? 'Try adjusting your filters' : 'Get started by creating a new appointment'}
+                      </p>
                     </div>
                   </div>
                 </div>
-                <table className="w-full">
-                  <thead className="bg-slate-50 border-b border-slate-100">
-                    <tr>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Patient Details</th>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Doctor</th>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">
-                        <div className="flex items-center gap-1">
-                          <Calendar size={12} /> Schedule
-                          <ArrowUp size={10} className="text-teal-500" />
-                        </div>
-                      </th>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Type</th>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
-                      <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Vitals</th>
-                      <th className="px-6 py-4 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {sortedUpcoming.map((appointment, index) => (
-                      renderAppointmentRow(appointment, true, index)
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-
-            {/* Section 2: Completed Appointments (Collapsible) */}
-            {sortedCompleted.length > 0 && (
-              <div>
-                <button
-                  onClick={() => setCompletedCollapsed(!completedCollapsed)}
-                  className="w-full px-6 py-3 bg-green-50/50 border-b border-green-100 hover:bg-green-50 transition-colors flex items-center justify-between group"
-                >
-                  <div className="flex items-center gap-2">
-                    <CheckSquare size={16} className="text-green-600" />
-                    <h3 className="font-bold text-green-700 text-sm uppercase tracking-wider">
-                      Past Appointments ({sortedCompleted.length})
-                    </h3>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {completedCollapsed ? (
-                      <ChevronRight size={20} className="text-green-500 group-hover:text-green-600 transition-colors ml-2" />
-                    ) : (
-                      <ChevronUp size={20} className="text-green-500 group-hover:text-green-600 transition-colors ml-2" />
-                    )}
-                  </div>
-                </button>
-
-                {!completedCollapsed && (
-                  <>
-                    <table className="w-full">
-                      <thead className="bg-slate-50 border-b border-slate-100">
-                        <tr>
-                          <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Patient Details</th>
-                          <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Doctor</th>
-                          <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">
-                            <div className="flex items-center gap-1">
-                              <Calendar size={12} /> Schedule
-                              <ArrowDown size={10} className="text-green-500" />
-                            </div>
-                          </th>
-                          <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Type</th>
-                          <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
-                          <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Vitals</th>
-                          <th className="px-6 py-4 text-right text-xs font-bold text-slate-500 uppercase tracking-wider">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {sortedCompleted.map((appointment, index) => renderAppointmentRow(appointment, false, index))}
-                      </tbody>
-                    </table>
-
-                    <div className="px-6 py-2 border-t border-slate-100 bg-green-25 flex justify-center">
-                      <button
-                        onClick={() => setCompletedCollapsed(true)}
-                        className="text-xs text-green-500 hover:text-green-600 font-medium flex items-center gap-1 py-1"
-                      >
-                        <ChevronUp size={12} />
-                        Collapse Completed Appointments
-                      </button>
-                    </div>
-                  </>
-                )}
-              </div>
-            )}
-
-            {/* No Appointments Found */}
-            {sortedUpcoming.length === 0 && sortedCompleted.length === 0 && (
-              <div className="w-full">
-                <div className="px-6 py-16 text-center">
-                  <div className="flex flex-col items-center justify-center">
-                    <div className="bg-slate-50 p-4 rounded-full mb-3">
-                      <Calendar size={32} className="text-slate-300" />
-                    </div>
-                    <h3 className="text-slate-800 font-medium mb-1">No appointments found</h3>
-                    <p className="text-slate-500 text-sm">
-                      {searchTerm || dateFilter !== 'all' ? 'Try adjusting your filters' : 'Get started by creating a new appointment'}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
 
           {/* Pagination Footer */}
-          <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between bg-slate-50/50">
-            <p className="text-xs text-slate-500">
-              Showing <span className="font-bold text-slate-700">{filteredAppointments.length}</span> results
-              {sortedUpcoming.length > 0 && sortedCompleted.length > 0 && (
-                <span className="ml-2">
-                  (<span className="text-teal-600">{sortedUpcoming.length} upcoming</span>,
-                  <span className="text-green-600"> {sortedCompleted.length} completed</span>)
-                </span>
-              )}
-            </p>
-            <div className="flex gap-2">
-              <button disabled className="px-3 py-1 text-xs font-medium text-slate-400 bg-white border border-slate-200 rounded cursor-not-allowed">Previous</button>
-              <button disabled className="px-3 py-1 text-xs font-medium text-slate-400 bg-white border border-slate-200 rounded cursor-not-allowed">Next</button>
+          {!loading && online && appointments.length > 0 && (
+            <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between bg-slate-50/50">
+              <p className="text-xs text-slate-500">
+                Showing <span className="font-bold text-slate-700">{filteredAppointments.length}</span> results
+                {sortedUpcoming.length > 0 && sortedCompleted.length > 0 && (
+                  <span className="ml-2">
+                    (<span className="text-teal-600">{sortedUpcoming.length} upcoming</span>,
+                    <span className="text-green-600"> {sortedCompleted.length} completed</span>)
+                  </span>
+                )}
+              </p>
+              <div className="flex gap-2">
+                <button disabled className="px-3 py-1 text-xs font-medium text-slate-400 bg-white border border-slate-200 rounded cursor-not-allowed">Previous</button>
+                <button disabled className="px-3 py-1 text-xs font-medium text-slate-400 bg-white border border-slate-200 rounded cursor-not-allowed">Next</button>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
 
-      {/* Appointment Creation Modal */}
+      {/* Appointment Creation Modal - Always accessible */}
       {chooserOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl overflow-hidden">

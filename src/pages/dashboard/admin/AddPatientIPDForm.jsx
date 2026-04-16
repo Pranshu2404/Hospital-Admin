@@ -2,7 +2,10 @@ import { useState, useEffect } from 'react';
 import { FormInput, FormSelect, FormTextarea, Button } from '../../../components/common/FormElements';
 import { SearchableFormSelect } from '../../../components/common/FormElements';
 import axios from 'axios';
-import { FaUser, FaCloudUploadAlt, FaTimes } from 'react-icons/fa';
+import { FaUser, FaCloudUploadAlt, FaTimes, FaIdCard } from 'react-icons/fa';
+import { addPatientToOffline, checkOfflinePatientByPhone } from '../../../services/offlineDB';
+import { useOfflineSync } from '../../../hooks/useOfflineSync';
+import { WifiOffIcon } from 'lucide-react';
 
 // Helper to get current IST date in YYYY-MM-DD
 function getCurrentISTDate() {
@@ -12,7 +15,18 @@ function getCurrentISTDate() {
   return istTime.toISOString().slice(0, 10);
 }
 
+// Helper to get local YYYY-MM-DD date string
+const getLocalDateString = () => {
+  const t = new Date();
+  const yyyy = t.getFullYear();
+  const mm = String(t.getMonth() + 1).padStart(2, '0');
+  const dd = String(t.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+};
+
 const AddPatientIPDForm = () => {
+  const { online, syncStats } = useOfflineSync();
+  
   const [formData, setFormData] = useState({
     salutation: 'Mr.',
     firstName: '',
@@ -45,6 +59,13 @@ const AddPatientIPDForm = () => {
   const [states, setStates] = useState([]);
   const [cities, setCities] = useState([]);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const config = {
+    headers: {
+      "X-CSCAPI-KEY": import.meta.env.VITE_CSC_API_KEY,
+    },
+  };
 
   const handleImageUpload = async (e) => {
     const file = e.target.files[0];
@@ -89,18 +110,27 @@ const AddPatientIPDForm = () => {
     setFormData(prev => ({ ...prev, aadhaarNumber: formatted }));
   };
 
-  const config = {
-    headers: {
-      "X-CSCAPI-KEY": import.meta.env.VITE_CSC_API_KEY,
-    },
-  };
-
-    const getLocalDateString = () => {
-    const t = new Date();
-    const yyyy = t.getFullYear();
-    const mm = String(t.getMonth() + 1).padStart(2, '0');
-    const dd = String(t.getDate()).padStart(2, '0');
-    return `${yyyy}-${mm}-${dd}`;
+  // Check for duplicate patient
+  const checkDuplicatePatient = async (phone) => {
+    if (!online) {
+      // Offline: check local IndexedDB
+      const existing = await checkOfflinePatientByPhone(phone);
+      if (existing) {
+        return { exists: true, patient: existing, isOffline: true };
+      }
+      return { exists: false };
+    }
+    
+    // Online: check server
+    try {
+      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/patients/check-duplicate`, {
+        params: { phone }
+      });
+      return { exists: response.data.exists, patient: response.data.patient, isOffline: false };
+    } catch (error) {
+      console.error('Error checking duplicate:', error);
+      return { exists: false };
+    }
   };
 
   // Set default admissionDate to IST date on mount
@@ -110,9 +140,26 @@ const AddPatientIPDForm = () => {
     }
   }, []);
 
-  // Fetch States on component mount
+  // Fetch Departments (only when online)
+  useEffect(() => {
+    const fetchDepartments = async () => {
+      if (!online) return;
+      
+      try {
+        const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/departments`);
+        setDepartments(res.data);
+      } catch (err) {
+        console.error('❌ Failed to load departments:', err.message);
+      }
+    };
+    fetchDepartments();
+  }, [online]);
+
+  // Fetch States on component mount (only when online)
   useEffect(() => {
     const fetchStates = async () => {
+      if (!online) return;
+      
       try {
         const response = await axios.get(
           `${import.meta.env.VITE_BASE_URL}/countries/${import.meta.env.VITE_COUNTRY_CODE}/states`,
@@ -125,22 +172,15 @@ const AddPatientIPDForm = () => {
     };
 
     fetchStates();
-  }, []);
+  }, [online]);
 
-  useEffect(() => {
-    const fetchDepartments = async () => {
-      try {
-        const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/departments`);
-        setDepartments(res.data);
-      } catch (err) {
-        console.error('❌ Failed to load departments:', err.message);
-      }
-    };
-    fetchDepartments();
-  }, []);
-
-  // Fetch Cities when state changes
+  // Fetch Cities when state changes (only when online)
   const fetchCities = async (stateIso) => {
+    if (!stateIso || !online) {
+      setCities([]);
+      return;
+    }
+    
     try {
       const response = await axios.get(
         `${import.meta.env.VITE_BASE_URL}/countries/${import.meta.env.VITE_COUNTRY_CODE}/states/${stateIso}/cities`,
@@ -159,15 +199,38 @@ const AddPatientIPDForm = () => {
       [field]: value
     }));
 
-    if (field === 'state') {
+    if (field === 'state' && online) {
       fetchCities(value);
-      setFormData(prev => ({ ...prev, city: '' })); // Reset city when state changes
+      setFormData(prev => ({ ...prev, city: '' }));
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    if (!formData.firstName || !formData.phone || !formData.dateOfBirth) {
+      alert('Please fill all required fields');
+      return;
+    }
+
+    setIsSubmitting(true);
+
     try {
+      // Check for duplicate
+      const duplicateCheck = await checkDuplicatePatient(formData.phone);
+      
+      if (duplicateCheck.exists) {
+        const action = confirm(
+          `A patient with phone number ${formData.phone} already exists.\n\n` +
+          `Existing: ${duplicateCheck.patient.first_name} ${duplicateCheck.patient.last_name || ''}\n` +
+          `Do you want to continue adding this new patient?`
+        );
+        if (!action) {
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
       const payload = {
         salutation: formData.salutation,
         first_name: formData.firstName,
@@ -193,21 +256,66 @@ const AddPatientIPDForm = () => {
         medications: formData.medications,
         blood_group: formData.bloodGroup,
         department_id: formData.department,
-        aadhaar_number: formData.aadhaarNumber.replace(/\s/g, ''),
+        aadhaar_number: formData.aadhaarNumber?.replace(/\s/g, ''),
         patient_type: 'ipd'
       };
 
-      const response = await axios.post(
-        `${import.meta.env.VITE_BACKEND_URL}/patients`,
-        payload
-      );
-
-      console.log('✅ Patient added:', response.data);
-      alert('Patient added successfully!');
-      // navigate('/dashboard/admin/patient-list'); // Assuming navigate is defined elsewhere or imported
+      if (online) {
+        // Online mode - save directly
+        const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/patients`, payload);
+        console.log('✅ Patient added online:', response.data);
+        alert('Patient added successfully!');
+        // navigate('/dashboard/admin/patient-list');
+      } else {
+        // Offline mode - save to IndexedDB
+        const localId = await addPatientToOffline(payload);
+        console.log('💾 Patient saved offline with ID:', localId);
+        alert(`Patient saved offline!\n\nData will sync automatically when internet connection is restored.\nPending syncs: ${syncStats.pendingPatients + syncStats.pendingAppointments + 1}`);
+      }
+      
     } catch (err) {
-      console.error('❌ Error adding patient:', err.response?.data || err.message);
-      alert(err.response?.data?.error || 'Failed to add patient.');
+      console.error('Error:', err);
+      
+      // If online save fails due to network, offer offline save
+      if (online && err.message === 'Network Error') {
+        const saveOffline = confirm('Network error. Would you like to save this patient offline and sync later?');
+        if (saveOffline) {
+          const payload = {
+            salutation: formData.salutation,
+            first_name: formData.firstName,
+            middle_name: formData.middleName,
+            last_name: formData.lastName,
+            patient_image: formData.patient_image,
+            email: formData.email,
+            phone: formData.phone,
+            gender: formData.gender,
+            dob: formData.dateOfBirth,
+            address: formData.address,
+            city: formData.city,
+            state: formData.state,
+            zipCode: formData.zipCode,
+            village: formData.village,
+            district: formData.district,
+            tehsil: formData.tehsil,
+            emergency_contact: formData.emergencyContact,
+            emergency_phone: formData.emergencyPhone,
+            admission_date: formData.admissionDate,
+            medical_history: formData.medicalHistory,
+            allergies: formData.allergies,
+            medications: formData.medications,
+            blood_group: formData.bloodGroup,
+            department_id: formData.department,
+            aadhaar_number: formData.aadhaarNumber?.replace(/\s/g, ''),
+            patient_type: 'ipd'
+          };
+          await addPatientToOffline(payload);
+          alert('Patient saved offline! Will sync when connection returns.');
+        }
+      } else {
+        alert(err.response?.data?.error || 'Failed to add patient.');
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -245,12 +353,37 @@ const AddPatientIPDForm = () => {
     label: city.name
   }));
 
+  const departmentOptions = departments.map(dep => ({
+    value: dep._id,
+    label: dep.name
+  }));
+
   return (
     <div className="p-6">
+      {/* Offline Mode Notice */}
+      {!online && (
+        <div className="mb-4 bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-center gap-3">
+          <WifiOffIcon className="text-amber-600 text-xl" />
+          <div>
+            <span className="font-medium text-amber-800">Offline Mode Active</span>
+            <p className="text-sm text-amber-700">
+              You are currently offline. Patient data will be saved locally and synced when connection resumes.
+              {syncStats.pendingPatients > 0 && ` (${syncStats.pendingPatients} patients pending sync)`}
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="bg-white rounded-xl shadow-sm border border-gray-100">
         <div className="p-6 border-b border-gray-100">
           <h2 className="text-2xl font-bold text-gray-900">Add Patient</h2>
-          <p className="text-gray-600 mt-1">Enter patient details for admission</p>
+          <p className="text-gray-600 mt-1">
+            Enter patient details for admission
+            {!online && <span className="text-amber-600 ml-2">(Offline Mode - Will sync later)</span>}
+            {online && syncStats.pendingPatients > 0 && (
+              <span className="text-teal-600 ml-2">({syncStats.pendingPatients} pending in queue)</span>
+            )}
+          </p>
         </div>
 
         <form onSubmit={handleSubmit} className="p-6">
@@ -309,15 +442,66 @@ const AddPatientIPDForm = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <SearchableFormSelect label="Salutation" value={formData.salutation} onChange={(e) => handleInputChange('salutation', e.target.value)} options={[{ value: 'Mr.', label: 'Mr.' }, { value: 'Mrs.', label: 'Mrs.' }, { value: 'Ms.', label: 'Ms.' }, { value: 'Dr.', label: 'Dr.' }, { value: 'Prof.', label: 'Prof.' }]} required />
-              <FormInput label="First Name" value={formData.firstName} onChange={(e) => handleInputChange('firstName', e.target.value)} required />
-              <FormInput label="Middle Name" value={formData.middleName} onChange={(e) => handleInputChange('middleName', e.target.value)} />
-              <FormInput label="Last Name" value={formData.lastName} onChange={(e) => handleInputChange('lastName', e.target.value)} />
-              <FormInput label="Email" type="email" value={formData.email} onChange={(e) => handleInputChange('email', e.target.value)} />
-              <FormInput label="Phone Number" type="tel" value={formData.phone} onChange={(e) => handleInputChange('phone', e.target.value)} required />
-              <FormInput label="Date of Birth" type="date" value={formData.dateOfBirth} onChange={(e) => handleInputChange('dateOfBirth', e.target.value)} required max={getLocalDateString()}/>
-              <SearchableFormSelect label="Gender" value={formData.gender} onChange={(e) => handleInputChange('gender', e.target.value)} options={genderOptions} />
-              <SearchableFormSelect label="Blood Group" value={formData.bloodGroup} onChange={(e) => handleInputChange('bloodGroup', e.target.value)} options={bloodGroupOptions} />
+              <SearchableFormSelect 
+                label="Salutation" 
+                value={formData.salutation} 
+                onChange={(e) => handleInputChange('salutation', e.target.value)} 
+                options={salutationOptions} 
+                required 
+              />
+              <FormInput 
+                label="First Name" 
+                value={formData.firstName} 
+                onChange={(e) => handleInputChange('firstName', e.target.value)} 
+                required 
+              />
+              <FormInput 
+                label="Middle Name" 
+                value={formData.middleName} 
+                onChange={(e) => handleInputChange('middleName', e.target.value)} 
+              />
+              <FormInput 
+                label="Last Name" 
+                value={formData.lastName} 
+                onChange={(e) => handleInputChange('lastName', e.target.value)} 
+              />
+              <FormInput 
+                label="Email" 
+                type="email" 
+                value={formData.email} 
+                onChange={(e) => handleInputChange('email', e.target.value)} 
+              />
+              <FormInput 
+                label="Phone Number" 
+                type="tel" 
+                value={formData.phone} 
+                onChange={(e) => handleInputChange('phone', e.target.value.replace(/\D/g, '').slice(0, 10))} 
+                required 
+                maxLength={10}
+                inputMode="numeric"
+                pattern="^[6-9]\d{9}$"
+                title="10 digit Indian mobile number starting with 6-9"
+              />
+              <FormInput 
+                label="Date of Birth" 
+                type="date" 
+                value={formData.dateOfBirth} 
+                onChange={(e) => handleInputChange('dateOfBirth', e.target.value)} 
+                required 
+                max={getLocalDateString()}
+              />
+              <SearchableFormSelect 
+                label="Gender" 
+                value={formData.gender} 
+                onChange={(e) => handleInputChange('gender', e.target.value)} 
+                options={genderOptions} 
+              />
+              <SearchableFormSelect 
+                label="Blood Group" 
+                value={formData.bloodGroup} 
+                onChange={(e) => handleInputChange('bloodGroup', e.target.value)} 
+                options={bloodGroupOptions} 
+              />
               <div className="md:col-span-3">
                 <div className="relative">
                   <FormInput
@@ -325,8 +509,9 @@ const AddPatientIPDForm = () => {
                     type="text"
                     value={formData.aadhaarNumber}
                     onChange={(e) => handleAadhaarChange(e.target.value)}
-                    maxLength="14" // 12 digits + 2 spaces
+                    maxLength="14"
                     placeholder="XXXX XXXX XXXX"
+                    icon={<FaIdCard className="text-gray-400" />}
                     required
                   />
                   {formData.aadhaarNumber && formData.aadhaarNumber.replace(/\s/g, '').length !== 12 && (
@@ -339,19 +524,74 @@ const AddPatientIPDForm = () => {
             </div>
           </div>
 
-          {/* Rest of the form remains the same... */}
           {/* Address Information */}
           <div className="mb-8">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Address Information</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormTextarea label="Address" value={formData.address} onChange={(e) => handleInputChange('address', e.target.value)} rows={3} className="md:col-span-2" />
-              {/* Modified City and State inputs to Select */}
-              <SearchableFormSelect label="State" value={formData.state} onChange={(e) => handleInputChange('state', e.target.value)} options={stateOptions} />
-              <SearchableFormSelect label="City" value={formData.city} onChange={(e) => handleInputChange('city', e.target.value)} options={cityOptions} disabled={!formData.state} />
-              <FormInput label="District" value={formData.district} onChange={(e) => handleInputChange('district', e.target.value)} />
-              <FormInput label="Tehsil" value={formData.tehsil} onChange={(e) => handleInputChange('tehsil', e.target.value)} />
-              <FormInput label="Village" value={formData.village} onChange={(e) => handleInputChange('village', e.target.value)} />
-              <FormInput label="ZIP Code" value={formData.zipCode} onChange={(e) => handleInputChange('zipCode', e.target.value)} />
+              <FormTextarea 
+                label="Address" 
+                value={formData.address} 
+                onChange={(e) => handleInputChange('address', e.target.value)} 
+                rows={3} 
+                className="md:col-span-2" 
+              />
+              
+              {/* State Field - Dropdown when online, Text input when offline */}
+              {online ? (
+                <SearchableFormSelect 
+                  label="State" 
+                  value={formData.state} 
+                  onChange={(e) => handleInputChange('state', e.target.value)} 
+                  options={stateOptions} 
+                />
+              ) : (
+                <FormInput
+                  label="State"
+                  value={formData.state}
+                  onChange={(e) => handleInputChange('state', e.target.value)}
+                  placeholder="Enter state name"
+                />
+              )}
+
+              {/* City Field - Dropdown when online AND state selected, Text input when offline */}
+              {online && formData.state ? (
+                <SearchableFormSelect 
+                  label="City" 
+                  value={formData.city} 
+                  onChange={(e) => handleInputChange('city', e.target.value)} 
+                  options={cityOptions} 
+                  disabled={!formData.state}
+                />
+              ) : (
+                <FormInput
+                  label="City"
+                  value={formData.city}
+                  onChange={(e) => handleInputChange('city', e.target.value)}
+                  placeholder={online ? "Select a state first" : "Enter city name"}
+                  disabled={online && !formData.state}
+                />
+              )}
+
+              <FormInput 
+                label="District" 
+                value={formData.district} 
+                onChange={(e) => handleInputChange('district', e.target.value)} 
+              />
+              <FormInput 
+                label="Tehsil" 
+                value={formData.tehsil} 
+                onChange={(e) => handleInputChange('tehsil', e.target.value)} 
+              />
+              <FormInput 
+                label="Village" 
+                value={formData.village} 
+                onChange={(e) => handleInputChange('village', e.target.value)} 
+              />
+              <FormInput 
+                label="ZIP Code" 
+                value={formData.zipCode} 
+                onChange={(e) => handleInputChange('zipCode', e.target.value)} 
+              />
             </div>
           </div>
 
@@ -359,8 +599,18 @@ const AddPatientIPDForm = () => {
           <div className="mb-8">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Emergency Contact</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormInput label="Contact Name" value={formData.emergencyContact} onChange={(e) => handleInputChange('emergencyContact', e.target.value)} />
-              <FormInput label="Contact Phone" type="tel" value={formData.emergencyPhone} onChange={(e) => handleInputChange('emergencyPhone', e.target.value)} />
+              <FormInput 
+                label="Contact Name" 
+                value={formData.emergencyContact} 
+                onChange={(e) => handleInputChange('emergencyContact', e.target.value)} 
+              />
+              <FormInput 
+                label="Contact Phone" 
+                type="tel" 
+                value={formData.emergencyPhone} 
+                onChange={(e) => handleInputChange('emergencyPhone', e.target.value.replace(/\D/g, '').slice(0, 10))} 
+                maxLength={10}
+              />
             </div>
           </div>
 
@@ -372,10 +622,17 @@ const AddPatientIPDForm = () => {
                 label="Department"
                 value={formData.department}
                 onChange={(e) => handleInputChange('department', e.target.value)}
-                options={departments.map(dep => ({ value: dep._id, label: dep.name }))}
+                options={departmentOptions}
                 required
+                disabled={!online} // Disable department selection when offline
               />
-              <FormInput label="Admission Date" type="date" value={formData.admissionDate} onChange={(e) => handleInputChange('admissionDate', e.target.value)} required />
+              <FormInput 
+                label="Admission Date" 
+                type="date" 
+                value={formData.admissionDate} 
+                onChange={(e) => handleInputChange('admissionDate', e.target.value)} 
+                required 
+              />
             </div>
           </div>
 
@@ -383,15 +640,36 @@ const AddPatientIPDForm = () => {
           <div className="mb-8">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Medical Information</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormInput label="Medical History" value={formData.medicalHistory} onChange={(e) => handleInputChange('medicalHistory', e.target.value)} />
-              <FormInput label="Allergies" value={formData.allergies} onChange={(e) => handleInputChange('allergies', e.target.value)} />
-              <FormInput label="Medications" value={formData.medications} onChange={(e) => handleInputChange('medications', e.target.value)} />
+              <FormInput 
+                label="Medical History" 
+                value={formData.medicalHistory} 
+                onChange={(e) => handleInputChange('medicalHistory', e.target.value)} 
+              />
+              <FormInput 
+                label="Allergies" 
+                value={formData.allergies} 
+                onChange={(e) => handleInputChange('allergies', e.target.value)} 
+              />
+              <FormInput 
+                label="Medications" 
+                value={formData.medications} 
+                onChange={(e) => handleInputChange('medications', e.target.value)} 
+              />
             </div>
           </div>
 
           <div className="flex justify-end space-x-4">
             <Button variant="secondary" type="button">Cancel</Button>
-            <Button variant="primary" type="submit">Add Patient</Button>
+            <Button variant="primary" type="submit" disabled={isSubmitting}>
+              {isSubmitting ? (
+                <div className="flex items-center gap-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                  Saving...
+                </div>
+              ) : (
+                online ? 'Add Patient' : 'Save Offline'
+              )}
+            </Button>
           </div>
         </form>
       </div>
