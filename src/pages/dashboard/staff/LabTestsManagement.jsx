@@ -16,10 +16,11 @@ import {
   FaPlayCircle, FaPauseCircle, FaStopCircle, FaHistory,
   FaDownload, FaShare, FaEnvelope, FaCheck, FaTasks,
   FaThermometerHalf, FaDna, FaHeartbeat, FaFilePrescription,
-  FaMoneyBillWave
+  FaMoneyBillWave, FaTruck, FaBuilding, FaUserTie, FaIdCard,
+  FaUpload, FaFilePdf, FaImage, FaExternalLinkAlt
 } from 'react-icons/fa';
 
-// --- UI Components ---
+// Status Badge Component
 const StatusBadge = ({ status }) => {
   const statusConfig = {
     'Pending': { color: 'bg-amber-100 text-amber-700 border-amber-200', icon: <FaClock className="text-xs" /> },
@@ -28,6 +29,7 @@ const StatusBadge = ({ status }) => {
     'Processing': { color: 'bg-indigo-100 text-indigo-700 border-indigo-200', icon: <FaMicroscope className="text-xs" /> },
     'Completed': { color: 'bg-emerald-100 text-emerald-700 border-emerald-200', icon: <FaCheckCircle className="text-xs" /> },
     'Cancelled': { color: 'bg-red-100 text-red-700 border-red-200', icon: <FaTimesCircle className="text-xs" /> },
+    'Referred Out': { color: 'bg-orange-100 text-orange-700 border-orange-200', icon: <FaTruck className="text-xs" /> },
     'Payment Pending': { color: 'bg-orange-100 text-orange-700 border-orange-200', icon: <FaMoneyCheckAlt className="text-xs" /> },
     'Draft': { color: 'bg-gray-100 text-gray-700 border-gray-200', icon: <FaFileAlt className="text-xs" /> },
     'Generated': { color: 'bg-purple-100 text-purple-700 border-purple-200', icon: <FaReceipt className="text-xs" /> },
@@ -41,27 +43,6 @@ const StatusBadge = ({ status }) => {
     <span className={`inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-full border ${config.color}`}>
       {config.icon} {status}
     </span>
-  );
-};
-
-const PaymentBadge = ({ status, amount }) => {
-  const paymentConfig = {
-    'Paid': { color: 'bg-emerald-100 text-emerald-700 border-emerald-200', icon: <FaCheckCircle /> },
-    'Pending': { color: 'bg-amber-100 text-amber-700 border-amber-200', icon: <FaClock /> },
-    'Partial': { color: 'bg-blue-100 text-blue-700 border-blue-200', icon: <FaMoneyCheckAlt /> },
-    'Overdue': { color: 'bg-red-100 text-red-700 border-red-200', icon: <FaExclamationCircle /> }
-  };
-
-  const config = paymentConfig[status] || { color: 'bg-gray-100 text-gray-700 border-gray-200', icon: null };
-
-  return (
-    <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border ${config.color}`}>
-      {config.icon}
-      <div>
-        <div className="font-bold">{status}</div>
-        {amount && <div className="text-xs">₹{amount}</div>}
-      </div>
-    </div>
   );
 };
 
@@ -80,7 +61,6 @@ const StatCard = ({ title, value, icon, colorClass, subtitle }) => (
   </div>
 );
 
-// Category icons mapping
 const categoryIcons = {
   'Hematology': <FaHeartbeat className="text-red-500" />,
   'Biochemistry': <FaDna className="text-green-500" />,
@@ -93,9 +73,7 @@ const categoryIcons = {
   'Other': <FaFlask className="text-gray-500" />
 };
 
-// --- Main Component ---
 function LabTestsManagement() {
-  // State Management
   const [loading, setLoading] = useState(true);
   const [labTests, setLabTests] = useState([]);
   const [filteredLabTests, setFilteredLabTests] = useState([]);
@@ -104,14 +82,15 @@ function LabTestsManagement() {
   const [generatedBill, setGeneratedBill] = useState(null);
   const [generatedInvoice, setGeneratedInvoice] = useState(null);
   const [completingLabTest, setCompletingLabTest] = useState(false);
-  
+  const [uploadingReport, setUploadingReport] = useState(false);
+
   // Filters
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [dateFilter, setDateFilter] = useState({ start: '', end: '' });
   const [paymentFilter, setPaymentFilter] = useState('all');
-  
+
   // Modals
   const [showLabTestDetails, setShowLabTestDetails] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -121,15 +100,39 @@ function LabTestsManagement() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [showAutoBillModal, setShowAutoBillModal] = useState(false);
-  
-  // Form States
+
+  // External Lab Modals
+  const [showReferToExternalModal, setShowReferToExternalModal] = useState(false);
+  const [showHandoverLogModal, setShowHandoverLogModal] = useState(false);
+  const [showUploadReportModal, setShowUploadReportModal] = useState(false);
+  const [showViewReportModal, setShowViewReportModal] = useState(false);
+
+  // External Lab Form Data
+  const [externalLabData, setExternalLabData] = useState({
+    lab_name: '',
+    lab_address: '',
+    contact_person: '',
+    contact_phone: '',
+    reference_number: '',
+    courier_name: '',
+    tracking_number: '',
+    handover_notes: ''
+  });
+
+  const [uploadReportData, setUploadReportData] = useState({
+    report_file: null,
+    reference_number: '',
+    notes: ''
+  });
+
+  // Payment Form Data
   const [paymentData, setPaymentData] = useState({
     amount: 0,
     method: 'Cash',
     reference: '',
     notes: ''
   });
-  
+
   const [labTestData, setLabTestData] = useState({
     scheduled_date: '',
     notes: '',
@@ -137,15 +140,17 @@ function LabTestsManagement() {
     equipment_required: [],
     consumables: []
   });
-  
+
   const [completeLabTestData, setCompleteLabTestData] = useState({
     notes: '',
     performed_by: '',
     completed_date: new Date().toISOString(),
-    auto_generate_bill: false, // Bill already generated at payment stage
-    payment_method: 'Cash'
+    auto_generate_bill: false,
+    payment_method: 'Cash',
+    report_file: null,
+    report_file_name: ''
   });
-  
+
   const [billData, setBillData] = useState({
     items: [],
     discount: 0,
@@ -154,7 +159,7 @@ function LabTestsManagement() {
     payment_method: 'Cash',
     status: 'Generated'
   });
-  
+
   const [sampleData, setSampleData] = useState({
     sample_id: '',
     sample_type: '',
@@ -162,8 +167,7 @@ function LabTestsManagement() {
     collected_by: '',
     notes: ''
   });
-  
-  // Stats
+
   const [stats, setStats] = useState({
     totalPending: 0,
     totalRevenue: 0,
@@ -171,18 +175,17 @@ function LabTestsManagement() {
     completedToday: 0,
     pendingPayments: 0,
     samplesCollected: 0,
-    processing: 0
+    processing: 0,
+    referredOut: 0
   });
-  
+
   const [doctors, setDoctors] = useState([]);
   const [labStaff, setLabStaff] = useState([]);
   const [hospitalInfo, setHospitalInfo] = useState(null);
   const [categories, setCategories] = useState([]);
 
-  // Group lab tests by prescription ID for better display
   const groupedLabTests = useMemo(() => {
     const groups = {};
-    
     labTests.forEach(test => {
       const prescriptionId = test.prescription_id;
       if (!groups[prescriptionId]) {
@@ -198,11 +201,9 @@ function LabTestsManagement() {
       }
       groups[prescriptionId].labTests.push(test);
     });
-    
     return Object.values(groups);
   }, [labTests]);
 
-  // Fetch Data on Mount
   useEffect(() => {
     fetchLabTests();
     fetchDoctors();
@@ -218,10 +219,7 @@ function LabTestsManagement() {
   const fetchLabTests = async () => {
     try {
       setLoading(true);
-      // API: GET /prescriptions/with-lab-tests
       const response = await apiClient.get('/prescriptions/with-lab-tests');
-      console.log('Fetched lab tests data:', response.data);
-      
       const testsData = response.data.labTests || response.data || [];
       setLabTests(testsData);
       calculateStats(testsData);
@@ -230,6 +228,125 @@ function LabTestsManagement() {
       toast.error('Failed to load lab tests');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Helper function to view internal PDF reports through proxy
+  const viewInternalPDFReport = async (reportId) => {
+    try {
+      toast.info('Loading PDF report...');
+
+      const response = await apiClient.get(`/labreports/download/${reportId}`, {
+        responseType: 'blob'
+      });
+
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+    } catch (error) {
+      console.error('Error loading PDF:', error);
+      toast.error('Failed to load PDF report. Please try downloading instead.');
+    }
+  };
+
+  // Add this helper function to handle PDF viewing
+  const viewPDFReport = async (reportUrl, reportId = null) => {
+    try {
+      toast.info('Loading PDF report...');
+
+      let url;
+
+      if (reportId) {
+        // Use proxy endpoint if we have a report ID
+        const response = await apiClient.get(`/labreports/download/${reportId}`, {
+          responseType: 'blob'
+        });
+
+        const blob = new Blob([response.data], { type: 'application/pdf' });
+        url = URL.createObjectURL(blob);
+      } else {
+        // Use direct URL with download attribute to avoid CORS issues
+        url = reportUrl;
+      }
+
+      // Open in new tab
+      const newWindow = window.open();
+      if (newWindow) {
+        if (url.startsWith('blob:')) {
+          newWindow.location.href = url;
+        } else {
+          // For direct URLs, use an iframe approach
+          const iframe = newWindow.document.createElement('iframe');
+          iframe.style.width = '100%';
+          iframe.style.height = '100%';
+          iframe.style.border = 'none';
+          iframe.src = url;
+          newWindow.document.body.style.margin = '0';
+          newWindow.document.body.style.height = '100vh';
+          newWindow.document.body.appendChild(iframe);
+        }
+
+        // Clean up blob URL after a delay
+        if (url.startsWith('blob:')) {
+          setTimeout(() => URL.revokeObjectURL(url), 10000);
+        }
+      } else {
+        // If popup blocked, try download approach
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'lab_report.pdf';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        toast.info('PDF downloaded. Please check your downloads folder.');
+      }
+    } catch (error) {
+      console.error('Error loading PDF:', error);
+      toast.error('Failed to load PDF report. Please try downloading instead.');
+
+      // Fallback: try direct download
+      if (reportUrl) {
+        const link = document.createElement('a');
+        link.href = reportUrl;
+        link.download = 'lab_report.pdf';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+    }
+  };
+
+  // For viewing external reports
+  const viewExternalPDFReport = async (prescriptionId, labTestId) => {
+    try {
+      toast.info('Loading PDF report...');
+
+      const response = await apiClient.get(`/labreports/external/${prescriptionId}/${labTestId}/download`, {
+        responseType: 'blob'
+      });
+
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+
+      // Open in new tab
+      const newWindow = window.open();
+      if (newWindow) {
+        newWindow.location.href = url;
+        setTimeout(() => URL.revokeObjectURL(url), 10000);
+      } else {
+        // If popup blocked, offer download
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'external_lab_report.pdf';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        toast.info('PDF downloaded. Please check your downloads folder.');
+      }
+    } catch (error) {
+      console.error('Error loading PDF:', error);
+      toast.error('Failed to load PDF report. Please try downloading instead.');
     }
   };
 
@@ -282,36 +399,27 @@ function LabTestsManagement() {
     let totalRevenue = 0;
     let samplesCollected = 0;
     let processing = 0;
+    let referredOut = 0;
 
     testsData.forEach(test => {
-      if (test.status === 'Pending' && !test.is_billed) {
-        totalPending++;
-      }
-      if (test.status === 'Sample Collected') {
-        samplesCollected++;
-      }
-      if (test.status === 'Processing') {
-        processing++;
-      }
-      
-      if (test.scheduled_date && 
-          new Date(test.scheduled_date).toISOString().split('T')[0] === today) {
+      if (test.status === 'Pending' && !test.is_billed) totalPending++;
+      if (test.status === 'Sample Collected') samplesCollected++;
+      if (test.status === 'Processing') processing++;
+      if (test.status === 'Referred Out') referredOut++;
+
+      if (test.scheduled_date &&
+        new Date(test.scheduled_date).toISOString().split('T')[0] === today) {
         todayLabTests++;
       }
-      
-      if (test.status === 'Completed' && 
-          test.completed_date && 
-          new Date(test.completed_date).toISOString().split('T')[0] === today) {
+
+      if (test.status === 'Completed' &&
+        test.completed_date &&
+        new Date(test.completed_date).toISOString().split('T')[0] === today) {
         completedToday++;
       }
-      
-      if (test.is_billed && test.cost > 0) {
-        totalRevenue += test.cost;
-      }
-      
-      if (test.status === 'Completed' && !test.is_billed) {
-        pendingPayments++;
-      }
+
+      if (test.is_billed && test.cost > 0) totalRevenue += test.cost;
+      if (test.status === 'Completed' && !test.is_billed) pendingPayments++;
     });
 
     setStats({
@@ -321,7 +429,8 @@ function LabTestsManagement() {
       completedToday,
       pendingPayments,
       samplesCollected,
-      processing
+      processing,
+      referredOut
     });
   };
 
@@ -331,37 +440,26 @@ function LabTestsManagement() {
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(test => {
-        const patientName = test.patient ? 
+        const patientName = test.patient ?
           `${test.patient.first_name || ''} ${test.patient.last_name || ''}`.toLowerCase() : '';
-        const doctorName = test.doctor ? 
+        const doctorName = test.doctor ?
           `${test.doctor.firstName || ''} ${test.doctor.lastName || ''}`.toLowerCase() : '';
         const prescriptionNo = test.prescription_number?.toLowerCase() || '';
         const testName = test.lab_test_name?.toLowerCase() || '';
         const testCode = test.lab_test_code?.toLowerCase() || '';
         const diagnosis = test.diagnosis?.toLowerCase() || '';
-        
-        return patientName.includes(term) || 
-               doctorName.includes(term) ||
-               prescriptionNo.includes(term) ||
-               testName.includes(term) ||
-               testCode.includes(term) ||
-               diagnosis.includes(term);
+
+        return patientName.includes(term) || doctorName.includes(term) ||
+          prescriptionNo.includes(term) || testName.includes(term) ||
+          testCode.includes(term) || diagnosis.includes(term);
       });
     }
 
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(test => test.status === statusFilter);
-    }
+    if (statusFilter !== 'all') filtered = filtered.filter(test => test.status === statusFilter);
+    if (categoryFilter !== 'all') filtered = filtered.filter(test => test.category === categoryFilter);
 
-    if (categoryFilter !== 'all') {
-      filtered = filtered.filter(test => test.category === categoryFilter);
-    }
-
-    if (paymentFilter === 'pending') {
-      filtered = filtered.filter(test => !test.is_billed);
-    } else if (paymentFilter === 'billed') {
-      filtered = filtered.filter(test => test.is_billed);
-    }
+    if (paymentFilter === 'pending') filtered = filtered.filter(test => !test.is_billed);
+    else if (paymentFilter === 'billed') filtered = filtered.filter(test => test.is_billed);
 
     if (dateFilter.start || dateFilter.end) {
       filtered = filtered.filter(test => {
@@ -375,7 +473,140 @@ function LabTestsManagement() {
     setFilteredLabTests(filtered);
   };
 
-  // Handle Collect Payment
+  // ========== EXTERNAL LAB FUNCTIONS ==========
+
+  const handleReferToExternal = (labTest) => {
+    setSelectedLabTest(labTest);
+    setExternalLabData({
+      lab_name: '',
+      lab_address: '',
+      contact_person: '',
+      contact_phone: '',
+      reference_number: `EXT-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`,
+      courier_name: '',
+      tracking_number: '',
+      handover_notes: ''
+    });
+    setShowReferToExternalModal(true);
+  };
+
+  const submitReferToExternal = async () => {
+    try {
+      if (!selectedLabTest) return;
+
+      setCompletingLabTest(true);
+
+      await apiClient.post(
+        `/external-lab/prescriptions/${selectedLabTest.prescription_id}/lab-tests/${selectedLabTest._id}/refer-out`,
+        {
+          lab_name: externalLabData.lab_name,
+          lab_address: externalLabData.lab_address,
+          contact_person: externalLabData.contact_person,
+          contact_phone: externalLabData.contact_phone,
+          reference_number: externalLabData.reference_number,
+          courier_name: externalLabData.courier_name,
+          tracking_number: externalLabData.tracking_number,
+          handover_notes: externalLabData.handover_notes
+        }
+      );
+
+      toast.success('Lab test referred to external lab successfully!');
+      setShowReferToExternalModal(false);
+      fetchLabTests();
+    } catch (error) {
+      console.error('Error referring to external lab:', error);
+      toast.error('Failed to refer to external lab');
+    } finally {
+      setCompletingLabTest(false);
+    }
+  };
+
+  const handleAddHandoverLog = (labTest) => {
+    setSelectedLabTest(labTest);
+    setExternalLabData({
+      ...externalLabData,
+      courier_name: '',
+      tracking_number: '',
+      handover_notes: ''
+    });
+    setShowHandoverLogModal(true);
+  };
+
+  const submitHandoverLog = async () => {
+    try {
+      if (!selectedLabTest) return;
+
+      setCompletingLabTest(true);
+
+      await apiClient.post(
+        `/external-lab/prescriptions/${selectedLabTest.prescription_id}/lab-tests/${selectedLabTest._id}/handover-log`,
+        {
+          courier_name: externalLabData.courier_name,
+          tracking_number: externalLabData.tracking_number,
+          notes: externalLabData.handover_notes,
+          received_by_external: false
+        }
+      );
+
+      toast.success('Sample handover log added successfully!');
+      setShowHandoverLogModal(false);
+      fetchLabTests();
+    } catch (error) {
+      console.error('Error adding handover log:', error);
+      toast.error('Failed to add handover log');
+    } finally {
+      setCompletingLabTest(false);
+    }
+  };
+
+  const handleUploadReport = (labTest) => {
+    setSelectedLabTest(labTest);
+    setUploadReportData({
+      report_file: null,
+      reference_number: labTest.external_lab_details?.reference_number || '',
+      notes: ''
+    });
+    setShowUploadReportModal(true);
+  };
+
+  const submitUploadReport = async () => {
+    try {
+      if (!selectedLabTest || !uploadReportData.report_file) {
+        toast.warning('Please select a report file to upload');
+        return;
+      }
+
+      setUploadingReport(true);
+
+      const formData = new FormData();
+      formData.append('report', uploadReportData.report_file);
+      formData.append('reference_number', uploadReportData.reference_number);
+      formData.append('notes', uploadReportData.notes);
+
+      await apiClient.post(
+        `/external-lab/prescriptions/${selectedLabTest.prescription_id}/lab-tests/${selectedLabTest._id}/upload-report`,
+        formData,
+        { headers: { 'Content-Type': 'multipart/form-data' } }
+      );
+
+      toast.success('External lab report uploaded successfully!');
+      setShowUploadReportModal(false);
+      fetchLabTests();
+    } catch (error) {
+      console.error('Error uploading report:', error);
+      toast.error(error.response?.data?.error || 'Failed to upload report');
+    } finally {
+      setUploadingReport(false);
+    }
+  };
+
+  const handleViewReport = (labTest) => {
+    setSelectedLabTest(labTest);
+    setShowViewReportModal(true);
+  };
+
+  // ========== PAYMENT FUNCTIONS ==========
+
   const handleCollectPayment = (labTest) => {
     setSelectedLabTest(labTest);
     setPaymentData({
@@ -396,7 +627,6 @@ function LabTestsManagement() {
 
       setCompletingLabTest(true);
 
-      // Prepare bill item
       const billItem = {
         description: `${selectedLabTest.lab_test_code} - ${selectedLabTest.lab_test_name}`,
         amount: paymentData.amount,
@@ -407,7 +637,6 @@ function LabTestsManagement() {
         lab_test_id: selectedLabTest._id
       };
 
-      // Create bill and invoice in ONE API call - this already creates an invoice
       const billResponse = await apiClient.post('/billing', {
         patient_id: selectedLabTest.patient?._id || selectedLabTest.patient,
         appointment_id: selectedLabTest.appointment?._id || selectedLabTest.appointment,
@@ -418,19 +647,17 @@ function LabTestsManagement() {
         discount: 0,
         tax_amount: 0,
         payment_method: paymentData.method,
-        status: 'Paid', // Set as Paid directly since payment is being collected
+        status: 'Paid',
         notes: `Payment for lab test ${selectedLabTest.lab_test_name}. ${paymentData.notes}`
       });
 
-      // Store the generated bill and invoice (invoice is already created in the backend)
       setGeneratedBill(billResponse.data.bill);
       setGeneratedInvoice(billResponse.data.invoice);
 
-      // Mark lab test as billed - this should reference the invoice from the billing response
       await apiClient.put(
         `/prescriptions/${selectedLabTest.prescription_id}/lab-tests/${selectedLabTest._id}/billed`,
         {
-          invoice_id: billResponse.data.invoice?._id, // Use the invoice from the billing response
+          invoice_id: billResponse.data.invoice?._id,
           cost: paymentData.amount,
           is_billed: true
         }
@@ -448,7 +675,8 @@ function LabTestsManagement() {
     }
   };
 
-  // Handle Collect Sample
+  // ========== SAMPLE COLLECTION FUNCTIONS ==========
+
   const handleCollectSample = (labTest) => {
     setSelectedLabTest(labTest);
     setSampleData({
@@ -470,7 +698,6 @@ function LabTestsManagement() {
 
       setCompletingLabTest(true);
 
-      // Update lab test status to Sample Collected
       await apiClient.put(
         `/prescriptions/${selectedLabTest.prescription_id}/lab-tests/${selectedLabTest._id}/status`,
         {
@@ -492,7 +719,8 @@ function LabTestsManagement() {
     }
   };
 
-  // Handle Start Processing
+  // ========== PROCESSING FUNCTIONS ==========
+
   const handleStartProcessing = (labTest) => {
     setSelectedLabTest(labTest);
     setLabTestData({
@@ -527,20 +755,82 @@ function LabTestsManagement() {
     }
   };
 
-  // Handle Complete Lab Test 
+  // ========== COMPLETION FUNCTIONS ==========
+
   const handleCompleteLabTest = (labTest) => {
     setSelectedLabTest(labTest);
     setCompleteLabTestData({
       notes: '',
       performed_by: '',
       completed_date: new Date().toISOString(),
-      auto_generate_bill: false, // Bill already generated at payment stage
-      payment_method: 'Cash'
+      auto_generate_bill: false,
+      payment_method: 'Cash',
+      report_file: null,
+      report_file_name: ''
     });
     setShowCompleteLabTestModal(true);
   };
 
-  const completeLabTest = async () => {
+  const completeLabTestWithReport = async () => {
+    try {
+      if (!selectedLabTest) {
+        toast.error('No lab test selected');
+        return;
+      }
+
+      if (!completeLabTestData.report_file) {
+        toast.warning('Please select a report file to upload');
+        return;
+      }
+
+      setCompletingLabTest(true);
+
+      const formData = new FormData();
+      formData.append('report', completeLabTestData.report_file);
+      formData.append('prescription_id', selectedLabTest.prescription_id);
+      formData.append('lab_test_id', selectedLabTest._id);
+      formData.append('notes', completeLabTestData.notes);
+
+      const uploadResponse = await apiClient.post('/labreports/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      const reportUrl = uploadResponse.data.file_url;
+
+      await apiClient.put(
+        `/prescriptions/${selectedLabTest.prescription_id}/lab-tests/${selectedLabTest._id}/status`,
+        {
+          status: 'Completed',
+          completed_date: completeLabTestData.completed_date,
+          performed_by: completeLabTestData.performed_by,
+          notes: completeLabTestData.notes,
+          report_url: reportUrl
+        }
+      );
+
+      toast.success('Lab test completed and report uploaded successfully!');
+      setShowCompleteLabTestModal(false);
+
+      setCompleteLabTestData({
+        notes: '',
+        performed_by: '',
+        completed_date: new Date().toISOString(),
+        auto_generate_bill: false,
+        payment_method: 'Cash',
+        report_file: null,
+        report_file_name: ''
+      });
+
+      fetchLabTests();
+    } catch (error) {
+      console.error('Error completing lab test with report:', error);
+      toast.error(error.response?.data?.error || 'Failed to complete lab test');
+    } finally {
+      setCompletingLabTest(false);
+    }
+  };
+
+  const completeLabTest = async (reportUrl = null) => {
     try {
       if (!selectedLabTest) {
         toast.error('No lab test selected');
@@ -549,23 +839,25 @@ function LabTestsManagement() {
 
       setCompletingLabTest(true);
 
-      // Complete the lab test
+      const updateData = {
+        status: 'Completed',
+        completed_date: completeLabTestData.completed_date,
+        performed_by: completeLabTestData.performed_by,
+        notes: completeLabTestData.notes
+      };
+
+      if (reportUrl) {
+        updateData.report_url = reportUrl;
+      }
+
       await apiClient.put(
         `/prescriptions/${selectedLabTest.prescription_id}/lab-tests/${selectedLabTest._id}/status`,
-        {
-          status: 'Completed',
-          completed_date: completeLabTestData.completed_date,
-          performed_by: completeLabTestData.performed_by,
-          notes: completeLabTestData.notes
-        }
+        updateData
       );
 
       toast.success('Lab test marked as completed!');
       setShowCompleteLabTestModal(false);
-      
-      // Refresh data
       fetchLabTests();
-      
     } catch (error) {
       console.error('Error completing lab test:', error);
       toast.error('Failed to complete lab test');
@@ -574,15 +866,21 @@ function LabTestsManagement() {
     }
   };
 
-  // Lab Test Management Functions
+  // ========== VIEW FUNCTIONS ==========
+
   const handleViewLabTest = (labTest) => {
     setSelectedLabTest(labTest);
     setShowLabTestDetails(true);
   };
 
+  const handleViewHistory = (labTest) => {
+    setSelectedLabTest(labTest);
+    setShowHistoryModal(true);
+  };
+
   const handleGenerateBill = (labTests, prescriptionData) => {
     setSelectedPrescription(prescriptionData);
-    
+
     const billItems = labTests
       .filter(test => !test.is_billed)
       .map(test => ({
@@ -594,12 +892,12 @@ function LabTestsManagement() {
         prescription_id: test.prescription_id,
         lab_test_id: test._id
       }));
-    
+
     if (billItems.length === 0) {
       toast.warning('No lab tests available for billing');
       return;
     }
-    
+
     setBillData({
       items: billItems,
       discount: 0,
@@ -608,16 +906,10 @@ function LabTestsManagement() {
       payment_method: 'Cash',
       status: 'Generated'
     });
-    
+
     setShowBillModal(true);
   };
 
-  const handleViewHistory = (labTest) => {
-    setSelectedLabTest(labTest);
-    setShowHistoryModal(true);
-  };
-
-  // Generate Bill (for bulk billing)
   const generateBill = async () => {
     try {
       if (billData.items.length === 0 || !selectedPrescription) {
@@ -647,7 +939,6 @@ function LabTestsManagement() {
       setGeneratedBill(billResponse.data.bill);
       setGeneratedInvoice(billResponse.data.invoice);
 
-      // Mark all tests as billed
       for (const item of billData.items) {
         await apiClient.put(
           `/prescriptions/${selectedPrescription.prescription_id}/lab-tests/${item.lab_test_id}/billed`,
@@ -658,7 +949,7 @@ function LabTestsManagement() {
           }
         );
       }
-      
+
       toast.success(`Bill and Invoice created successfully!`);
       setShowBillModal(false);
       setShowSuccessModal(true);
@@ -671,18 +962,17 @@ function LabTestsManagement() {
     }
   };
 
-  // Download Invoice
   const downloadInvoice = async () => {
     try {
       if (!generatedInvoice?._id) {
         toast.warning('No invoice available to download');
         return;
       }
-      
+
       const response = await apiClient.get(`/invoices/${generatedInvoice._id}/download`, {
         responseType: 'blob'
       });
-      
+
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
@@ -690,7 +980,7 @@ function LabTestsManagement() {
       document.body.appendChild(link);
       link.click();
       link.remove();
-      
+
       toast.success('Invoice downloaded successfully!');
     } catch (error) {
       console.error('Error downloading invoice:', error);
@@ -698,18 +988,17 @@ function LabTestsManagement() {
     }
   };
 
-  // Send Invoice Email
   const sendInvoiceEmail = async () => {
     try {
       if (!generatedInvoice?._id || !selectedPrescription?.patient?.email) {
         toast.warning('No email available for the patient');
         return;
       }
-      
+
       await apiClient.post(`/invoices/${generatedInvoice._id}/send-email`, {
         patient_email: selectedPrescription.patient.email
       });
-      
+
       toast.success('Invoice sent to patient email successfully!');
     } catch (error) {
       console.error('Error sending invoice email:', error);
@@ -717,26 +1006,34 @@ function LabTestsManagement() {
     }
   };
 
-  // Render Lab Test Card
+  // Render Lab Test Card (same as before - keeping it concise)
   const renderLabTestCard = (test, index) => {
-    // Correct workflow: Payment → Sample Collection → Processing → Completion
-    const needsPayment = !test.is_billed;
+    // ... (keep existing renderLabTestCard function - unchanged)
+    const needsPayment = !test.is_billed && test.status !== 'Referred Out';
     const canCollectSample = test.is_billed && test.status === 'Pending';
     const canProcess = test.status === 'Sample Collected';
     const canComplete = test.status === 'Processing';
     const canViewHistory = test.status === 'Completed';
+    const isReferredOut = test.status === 'Referred Out';
+    const hasExternalReport = test.external_lab_details?.external_report_url;
 
     return (
       <div key={index} className="bg-white rounded-xl border border-slate-200 p-4 mb-4 hover:shadow-md transition-shadow">
+        {/* Card content - same as before */}
         <div className="flex justify-between items-start mb-3">
           <div>
-            <div className="flex items-center gap-2 mb-1">
+            <div className="flex items-center gap-2 mb-1 flex-wrap">
               <FaTag className="text-purple-500 text-sm" />
               <span className="font-bold text-slate-800">{test.lab_test_code}</span>
               <StatusBadge status={test.status} />
               {test.is_billed && (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-emerald-100 text-emerald-700 rounded-full">
                   <FaCheckCircle className="text-xs" /> Paid
+                </span>
+              )}
+              {isReferredOut && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-orange-100 text-orange-700 rounded-full">
+                  <FaTruck className="text-xs" /> External Lab
                 </span>
               )}
             </div>
@@ -794,13 +1091,25 @@ function LabTestsManagement() {
           </div>
         </div>
 
-        {/* Payment Required Warning */}
-        {needsPayment && (
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-3">
-            <div className="flex items-center gap-2 text-amber-700">
-              <FaExclamationCircle className="text-lg" />
-              <p className="text-sm font-medium">Payment required before sample collection</p>
+        {isReferredOut && test.external_lab_details && (
+          <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 mb-3">
+            <div className="flex items-center gap-2 text-orange-700 mb-2">
+              <FaBuilding className="text-sm" />
+              <span className="text-sm font-semibold">External Lab: {test.external_lab_details.lab_name}</span>
             </div>
+            <div className="text-xs text-orange-600">
+              Ref No: {test.external_lab_details.reference_number}
+            </div>
+            {test.external_lab_details.external_report_url && (
+              <div className="mt-2">
+                <button
+                  onClick={() => handleViewReport(test)}
+                  className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                >
+                  <FaFilePdf /> View Report
+                </button>
+              </div>
+            )}
           </div>
         )}
 
@@ -825,9 +1134,44 @@ function LabTestsManagement() {
           >
             <FaEye /> View Details
           </button>
-          
-          {/* Step 1: Collect Payment - Only show if payment pending */}
-          {needsPayment && (
+
+          {!isReferredOut && test.status === 'Pending' && test.is_billed && (
+            <button
+              onClick={() => handleReferToExternal(test)}
+              className="px-3 py-1.5 text-sm bg-orange-50 text-orange-700 hover:bg-orange-100 rounded-lg flex items-center gap-1"
+            >
+              <FaTruck /> Refer to External Lab
+            </button>
+          )}
+
+          {isReferredOut && (
+            <>
+              <button
+                onClick={() => handleAddHandoverLog(test)}
+                className="px-3 py-1.5 text-sm bg-teal-50 text-teal-700 hover:bg-teal-100 rounded-lg flex items-center gap-1"
+              >
+                <FaClipboardCheck /> Add Handover Log
+              </button>
+              {!hasExternalReport && (
+                <button
+                  onClick={() => handleUploadReport(test)}
+                  className="px-3 py-1.5 text-sm bg-purple-50 text-purple-700 hover:bg-purple-100 rounded-lg flex items-center gap-1"
+                >
+                  <FaUpload /> Upload Report
+                </button>
+              )}
+              {hasExternalReport && (
+                <button
+                  onClick={() => handleViewReport(test)}
+                  className="px-3 py-1.5 text-sm bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-lg flex items-center gap-1"
+                >
+                  <FaFilePdf /> View Report
+                </button>
+              )}
+            </>
+          )}
+
+          {!isReferredOut && needsPayment && (
             <button
               onClick={() => handleCollectPayment(test)}
               className="px-3 py-1.5 text-sm bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-lg flex items-center gap-1 font-semibold border-2 border-emerald-200"
@@ -835,9 +1179,8 @@ function LabTestsManagement() {
               <FaMoneyBillWave /> Step 1: Collect Payment
             </button>
           )}
-          
-          {/* Step 2: Collect Sample - Only show after payment */}
-          {canCollectSample && (
+
+          {!isReferredOut && canCollectSample && (
             <button
               onClick={() => handleCollectSample(test)}
               className="px-3 py-1.5 text-sm bg-purple-50 text-purple-700 hover:bg-purple-100 rounded-lg flex items-center gap-1"
@@ -845,9 +1188,8 @@ function LabTestsManagement() {
               <FaVial /> Step 2: Collect Sample
             </button>
           )}
-          
-          {/* Step 3: Start Processing - Only show after sample collected */}
-          {canProcess && (
+
+          {!isReferredOut && canProcess && (
             <button
               onClick={() => handleStartProcessing(test)}
               className="px-3 py-1.5 text-sm bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-lg flex items-center gap-1"
@@ -855,9 +1197,8 @@ function LabTestsManagement() {
               <FaPlayCircle /> Step 3: Start Processing
             </button>
           )}
-          
-          {/* Step 4: Complete Test - Only show after processing */}
-          {canComplete && (
+
+          {!isReferredOut && canComplete && (
             <button
               onClick={() => handleCompleteLabTest(test)}
               className="px-3 py-1.5 text-sm bg-gradient-to-r from-emerald-500 to-green-500 text-white hover:from-emerald-600 hover:to-green-600 rounded-lg flex items-center gap-1 shadow-md"
@@ -865,7 +1206,7 @@ function LabTestsManagement() {
               <FaCheck /> Step 4: Complete Test
             </button>
           )}
-          
+
           {canViewHistory && (
             <button
               onClick={() => handleViewHistory(test)}
@@ -876,13 +1217,11 @@ function LabTestsManagement() {
           )}
         </div>
 
-        {/* Workflow Progress Indicator */}
         <div className="mt-4 pt-3 border-t border-slate-100">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                test.is_billed ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-400'
-              }`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${test.is_billed ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-400'
+                }`}>
                 <FaMoneyBillWave />
               </div>
               <div className={`text-xs font-medium ${test.is_billed ? 'text-emerald-600' : 'text-slate-400'}`}>
@@ -891,9 +1230,8 @@ function LabTestsManagement() {
             </div>
             <FaArrowRight className="text-slate-300" />
             <div className="flex items-center gap-1">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                test.sample_collected_at ? 'bg-purple-100 text-purple-600' : 'bg-slate-100 text-slate-400'
-              }`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${test.sample_collected_at ? 'bg-purple-100 text-purple-600' : 'bg-slate-100 text-slate-400'
+                }`}>
                 <FaVial />
               </div>
               <div className={`text-xs font-medium ${test.sample_collected_at ? 'text-purple-600' : 'text-slate-400'}`}>
@@ -902,9 +1240,8 @@ function LabTestsManagement() {
             </div>
             <FaArrowRight className="text-slate-300" />
             <div className="flex items-center gap-1">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                test.status === 'Processing' || test.status === 'Completed' ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-100 text-slate-400'
-              }`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${test.status === 'Processing' || test.status === 'Completed' ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-100 text-slate-400'
+                }`}>
                 <FaMicroscope />
               </div>
               <div className={`text-xs font-medium ${test.status === 'Processing' || test.status === 'Completed' ? 'text-indigo-600' : 'text-slate-400'}`}>
@@ -913,9 +1250,8 @@ function LabTestsManagement() {
             </div>
             <FaArrowRight className="text-slate-300" />
             <div className="flex items-center gap-1">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                test.status === 'Completed' ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-400'
-              }`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${test.status === 'Completed' ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-400'
+                }`}>
                 <FaCheckCircle />
               </div>
               <div className={`text-xs font-medium ${test.status === 'Completed' ? 'text-emerald-600' : 'text-slate-400'}`}>
@@ -935,6 +1271,7 @@ function LabTestsManagement() {
     const collectedTests = group.labTests?.filter(t => t.status === 'Sample Collected') || [];
     const processingTests = group.labTests?.filter(t => t.status === 'Processing') || [];
     const completedTests = group.labTests?.filter(t => t.status === 'Completed') || [];
+    const referredOutTests = group.labTests?.filter(t => t.status === 'Referred Out') || [];
     const billedTests = group.labTests?.filter(t => t.is_billed) || [];
     const totalCost = group.labTests?.reduce((sum, test) => sum + (test.cost || 0), 0) || 0;
     const billedCost = billedTests.reduce((sum, test) => sum + (test.cost || 0), 0);
@@ -942,7 +1279,6 @@ function LabTestsManagement() {
 
     return (
       <div key={group.prescription_id} className="bg-white rounded-xl shadow-sm border border-slate-200 mb-6 overflow-hidden">
-        {/* Prescription Header */}
         <div className="bg-gradient-to-r from-purple-50 to-blue-50 px-6 py-4 border-b border-slate-200">
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-3">
@@ -973,9 +1309,8 @@ function LabTestsManagement() {
           </div>
         </div>
 
-        {/* Prescription Summary */}
         <div className="px-6 py-4 bg-slate-50 border-b border-slate-200">
-          <div className="grid grid-cols-2 md:grid-cols-8 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-9 gap-4">
             <div className="text-center">
               <div className="text-2xl font-bold text-slate-800">{group.labTests?.length || 0}</div>
               <div className="text-sm text-slate-500">Total Tests</div>
@@ -987,6 +1322,10 @@ function LabTestsManagement() {
             <div className="text-center">
               <div className="text-2xl font-bold text-emerald-600">{paidTests.length}</div>
               <div className="text-sm text-slate-500">Paid</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-orange-600">{referredOutTests.length}</div>
+              <div className="text-sm text-slate-500">Referred Out</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-purple-600">{collectedTests.length}</div>
@@ -1011,17 +1350,14 @@ function LabTestsManagement() {
           </div>
         </div>
 
-        {/* Lab Tests List */}
         <div className="p-6">
           <h4 className="font-bold text-slate-700 mb-4 flex items-center gap-2">
             <FaFlask /> Prescribed Lab Tests
           </h4>
-          
+
           {group.labTests && group.labTests.length > 0 ? (
             <div className="space-y-4">
-              {group.labTests.map((test, index) => 
-                renderLabTestCard(test, index)
-              )}
+              {group.labTests.map((test, index) => renderLabTestCard(test, index))}
             </div>
           ) : (
             <div className="text-center py-8 text-slate-400">
@@ -1030,10 +1366,9 @@ function LabTestsManagement() {
             </div>
           )}
 
-          {/* Action Buttons */}
           <div className="mt-6 pt-6 border-t border-slate-200 flex justify-between items-center">
             <div className="text-sm text-slate-500">
-              <span className="font-bold text-emerald-700">Billed: ₹{billedCost}</span> | 
+              <span className="font-bold text-emerald-700">Billed: ₹{billedCost}</span> |
               <span className="font-bold text-amber-700 ml-3">Pending: ₹{totalCost - billedCost}</span> |
               <span className="font-bold text-blue-700 ml-3">Awaiting Payment: {pendingBillingTests.length}</span>
             </div>
@@ -1053,12 +1388,10 @@ function LabTestsManagement() {
     );
   };
 
-  // Filtered grouped lab tests
   const filteredGroupedLabTests = useMemo(() => {
     if (filteredLabTests.length === 0) return [];
-    
+
     const groups = {};
-    
     filteredLabTests.forEach(test => {
       const prescriptionId = test.prescription_id;
       if (!groups[prescriptionId]) {
@@ -1074,7 +1407,6 @@ function LabTestsManagement() {
       }
       groups[prescriptionId].labTests.push(test);
     });
-    
     return Object.values(groups);
   }, [filteredLabTests]);
 
@@ -1090,62 +1422,20 @@ function LabTestsManagement() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-4 mb-8">
-          <StatCard
-            title="Need Payment"
-            value={stats.totalPending}
-            icon={<FaClock />}
-            colorClass="text-amber-500"
-            subtitle="Awaiting payment"
-          />
-          <StatCard
-            title="Paid"
-            value={labTests.filter(t => t.is_billed && t.status === 'Pending').length}
-            icon={<FaCheckCircle />}
-            colorClass="text-emerald-500"
-            subtitle="Ready for collection"
-          />
-          <StatCard
-            title="Collected"
-            value={stats.samplesCollected}
-            icon={<FaVial />}
-            colorClass="text-purple-500"
-            subtitle="Samples collected"
-          />
-          <StatCard
-            title="Processing"
-            value={stats.processing}
-            icon={<FaMicroscope />}
-            colorClass="text-indigo-500"
-            subtitle="Tests in progress"
-          />
-          <StatCard
-            title="Today's Schedule"
-            value={stats.todayLabTests}
-            icon={<FaCalendarCheck />}
-            colorClass="text-blue-500"
-            subtitle="Tests scheduled"
-          />
-          <StatCard
-            title="Completed Today"
-            value={stats.completedToday}
-            icon={<FaCheckCircle />}
-            colorClass="text-emerald-500"
-            subtitle="Tests done"
-          />
-          <StatCard
-            title="Revenue"
-            value={`₹${stats.totalRevenue.toLocaleString()}`}
-            icon={<FaMoneyBillWave />}
-            colorClass="text-purple-500"
-            subtitle="From lab tests"
-          />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-8 gap-4 mb-8">
+          <StatCard title="Need Payment" value={stats.totalPending} icon={<FaClock />} colorClass="text-amber-500" subtitle="Awaiting payment" />
+          <StatCard title="Paid" value={labTests.filter(t => t.is_billed && t.status === 'Pending').length} icon={<FaCheckCircle />} colorClass="text-emerald-500" subtitle="Ready for collection" />
+          <StatCard title="Referred Out" value={stats.referredOut} icon={<FaTruck />} colorClass="text-orange-500" subtitle="External labs" />
+          <StatCard title="Collected" value={stats.samplesCollected} icon={<FaVial />} colorClass="text-purple-500" subtitle="Samples collected" />
+          <StatCard title="Processing" value={stats.processing} icon={<FaMicroscope />} colorClass="text-indigo-500" subtitle="Tests in progress" />
+          <StatCard title="Today's Schedule" value={stats.todayLabTests} icon={<FaCalendarCheck />} colorClass="text-blue-500" subtitle="Tests scheduled" />
+          <StatCard title="Completed Today" value={stats.completedToday} icon={<FaCheckCircle />} colorClass="text-emerald-500" subtitle="Tests done" />
+          <StatCard title="Revenue" value={`₹${stats.totalRevenue.toLocaleString()}`} icon={<FaMoneyBillWave />} colorClass="text-purple-500" subtitle="From lab tests" />
         </div>
 
         {/* Filters */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
           <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
-            {/* Search */}
             <div className="relative">
               <FaSearch className="absolute left-3 top-3 text-slate-400" />
               <input
@@ -1156,60 +1446,27 @@ function LabTestsManagement() {
                 className="pl-10 pr-4 py-2 border border-slate-300 rounded-lg w-full focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               />
             </div>
-
-            {/* Status Filter */}
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500"
-            >
+            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500">
               <option value="all">All Status</option>
               <option value="Pending">Pending</option>
               <option value="Scheduled">Scheduled</option>
               <option value="Sample Collected">Sample Collected</option>
               <option value="Processing">Processing</option>
               <option value="Completed">Completed</option>
+              <option value="Referred Out">Referred Out</option>
             </select>
-
-            {/* Category Filter */}
-            <select
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-              className="p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500"
-            >
+            <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className="p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500">
               <option value="all">All Categories</option>
-              {categories.map(cat => (
-                <option key={cat} value={cat}>{cat}</option>
-              ))}
+              {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
             </select>
-
-            {/* Payment Filter */}
-            <select
-              value={paymentFilter}
-              onChange={(e) => setPaymentFilter(e.target.value)}
-              className="p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500"
-            >
+            <select value={paymentFilter} onChange={(e) => setPaymentFilter(e.target.value)} className="p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500">
               <option value="all">All Payments</option>
               <option value="pending">Payment Pending</option>
               <option value="billed">Paid</option>
             </select>
-
-            {/* Date Range */}
             <div className="flex gap-2">
-              <input
-                type="date"
-                value={dateFilter.start}
-                onChange={(e) => setDateFilter({ ...dateFilter, start: e.target.value })}
-                className="p-2 border border-slate-300 rounded-lg flex-1"
-                placeholder="Start Date"
-              />
-              <input
-                type="date"
-                value={dateFilter.end}
-                onChange={(e) => setDateFilter({ ...dateFilter, end: e.target.value })}
-                className="p-2 border border-slate-300 rounded-lg flex-1"
-                placeholder="End Date"
-              />
+              <input type="date" value={dateFilter.start} onChange={(e) => setDateFilter({ ...dateFilter, start: e.target.value })} className="p-2 border border-slate-300 rounded-lg flex-1" placeholder="Start Date" />
+              <input type="date" value={dateFilter.end} onChange={(e) => setDateFilter({ ...dateFilter, end: e.target.value })} className="p-2 border border-slate-300 rounded-lg flex-1" placeholder="End Date" />
             </div>
           </div>
         </div>
@@ -1232,298 +1489,220 @@ function LabTestsManagement() {
           )}
         </div>
 
-        {/* ========== MODALS SECTION - ALL MODALS DEFINED ONCE ========== */}
+        {/* ========== MODALS ========== */}
 
-        {/* Collect Sample Modal */}
-        {showCollectSampleModal && selectedLabTest && (
+        {/* Refer to External Lab Modal */}
+        {showReferToExternalModal && selectedLabTest && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
               <div className="p-6 border-b border-slate-100">
                 <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                  <FaVial className="text-purple-500" /> Collect Sample
+                  <FaTruck className="text-orange-500" /> Refer to External Lab
                 </h3>
                 <p className="text-slate-500 text-sm mt-1">{selectedLabTest.lab_test_name}</p>
               </div>
-              
               <div className="p-6 space-y-4">
-                <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-                  <div className="text-sm text-purple-700 mb-2">Test Information</div>
-                  <div className="font-bold">{selectedLabTest.lab_test_code} - {selectedLabTest.lab_test_name}</div>
-                  {selectedLabTest.specimen_type && (
-                    <div className="text-sm text-purple-600 mt-1">Specimen: {selectedLabTest.specimen_type}</div>
-                  )}
-                  {selectedLabTest.fasting_required && (
-                    <div className="text-sm text-amber-600 mt-1">⚠️ Fasting Required</div>
-                  )}
-                </div>
-                
+                {/* Form fields - same as before */}
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">Sample ID</label>
-                  <input
-                    type="text"
-                    value={sampleData.sample_id}
-                    onChange={(e) => setSampleData({...sampleData, sample_id: e.target.value})}
-                    className="w-full p-2.5 border border-slate-300 rounded-lg"
-                    readOnly
-                  />
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">Lab Name *</label>
+                  <input type="text" value={externalLabData.lab_name} onChange={(e) => setExternalLabData({ ...externalLabData, lab_name: e.target.value })} className="w-full p-2.5 border border-slate-300 rounded-lg" placeholder="Enter external lab name" />
                 </div>
-                
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">Collected By</label>
-                  <select
-                    value={sampleData.collected_by}
-                    onChange={(e) => setSampleData({...sampleData, collected_by: e.target.value})}
-                    className="w-full p-2.5 border border-slate-300 rounded-lg"
-                  >
-                    <option value="">Select Staff</option>
-                    {labStaff.map(staff => (
-                      <option key={staff._id} value={staff._id}>
-                        {staff.first_name} {staff.last_name} - {staff.role}
-                      </option>
-                    ))}
-                  </select>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">Lab Address</label>
+                  <textarea value={externalLabData.lab_address} onChange={(e) => setExternalLabData({ ...externalLabData, lab_address: e.target.value })} className="w-full p-2.5 border border-slate-300 rounded-lg" rows="2" placeholder="Enter lab address" />
                 </div>
-                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">Contact Person</label>
+                    <input type="text" value={externalLabData.contact_person} onChange={(e) => setExternalLabData({ ...externalLabData, contact_person: e.target.value })} className="w-full p-2.5 border border-slate-300 rounded-lg" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">Contact Phone</label>
+                    <input type="tel" value={externalLabData.contact_phone} onChange={(e) => setExternalLabData({ ...externalLabData, contact_phone: e.target.value })} className="w-full p-2.5 border border-slate-300 rounded-lg" />
+                  </div>
+                </div>
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">Collection Notes</label>
-                  <textarea
-                    value={sampleData.notes}
-                    onChange={(e) => setSampleData({...sampleData, notes: e.target.value})}
-                    className="w-full p-2.5 border border-slate-300 rounded-lg"
-                    rows="3"
-                    placeholder="Enter collection notes..."
-                  />
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">Reference Number</label>
+                  <input type="text" value={externalLabData.reference_number} onChange={(e) => setExternalLabData({ ...externalLabData, reference_number: e.target.value })} className="w-full p-2.5 border border-slate-300 rounded-lg bg-slate-50" readOnly />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">Courier Name</label>
+                    <input type="text" value={externalLabData.courier_name} onChange={(e) => setExternalLabData({ ...externalLabData, courier_name: e.target.value })} className="w-full p-2.5 border border-slate-300 rounded-lg" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">Tracking Number</label>
+                    <input type="text" value={externalLabData.tracking_number} onChange={(e) => setExternalLabData({ ...externalLabData, tracking_number: e.target.value })} className="w-full p-2.5 border border-slate-300 rounded-lg" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">Handover Notes</label>
+                  <textarea value={externalLabData.handover_notes} onChange={(e) => setExternalLabData({ ...externalLabData, handover_notes: e.target.value })} className="w-full p-2.5 border border-slate-300 rounded-lg" rows="2" placeholder="Any additional notes" />
                 </div>
               </div>
-              
               <div className="p-6 border-t border-slate-100 flex justify-end gap-3">
-                <button
-                  onClick={() => setShowCollectSampleModal(false)}
-                  className="px-4 py-2 text-slate-600 font-semibold hover:bg-slate-50 rounded-lg"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={collectSample}
-                  disabled={completingLabTest}
-                  className="px-6 py-2 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 shadow-md flex items-center gap-2 disabled:opacity-70"
-                >
-                  {completingLabTest ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                      Processing...
-                    </>
-                  ) : (
-                    <>
-                      <FaCheck /> Confirm Collection
-                    </>
-                  )}
+                <button onClick={() => setShowReferToExternalModal(false)} className="px-4 py-2 text-slate-600 font-semibold hover:bg-slate-50 rounded-lg">Cancel</button>
+                <button onClick={submitReferToExternal} disabled={completingLabTest || !externalLabData.lab_name} className="px-6 py-2 bg-orange-600 text-white font-semibold rounded-lg hover:bg-orange-700 shadow-md flex items-center gap-2 disabled:opacity-70">
+                  {completingLabTest ? <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div> Processing...</> : <><FaCheck /> Confirm Referral</>}
                 </button>
               </div>
             </div>
           </div>
         )}
 
-        {/* Complete Lab Test Modal */}
-        {showCompleteLabTestModal && selectedLabTest && (
+        {/* Handover Log Modal */}
+        {showHandoverLogModal && selectedLabTest && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
             <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
               <div className="p-6 border-b border-slate-100">
                 <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                  <FaCheckCircle className="text-emerald-500" /> Complete Lab Test
+                  <FaClipboardCheck className="text-teal-500" /> Add Sample Handover Log
                 </h3>
                 <p className="text-slate-500 text-sm mt-1">{selectedLabTest.lab_test_name}</p>
               </div>
-              
               <div className="p-6 space-y-4">
-                <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
-                  <div className="text-sm text-emerald-700 mb-2">Test Information</div>
-                  <div className="font-bold">{selectedLabTest.lab_test_code} - {selectedLabTest.lab_test_name}</div>
-                  <div className="text-lg font-bold text-emerald-800 mt-2">₹{selectedLabTest.cost || 0}</div>
-                </div>
-                
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">Performed By</label>
-                  <select
-                    value={completeLabTestData.performed_by}
-                    onChange={(e) => setCompleteLabTestData({...completeLabTestData, performed_by: e.target.value})}
-                    className="w-full p-2.5 border border-slate-300 rounded-lg"
-                  >
-                    <option value="">Select Lab Staff</option>
-                    {labStaff.map(staff => (
-                      <option key={staff._id} value={staff._id}>
-                        {staff.first_name} {staff.last_name} - {staff.role}
-                      </option>
-                    ))}
-                  </select>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">Courier Name</label>
+                  <input type="text" value={externalLabData.courier_name} onChange={(e) => setExternalLabData({ ...externalLabData, courier_name: e.target.value })} className="w-full p-2.5 border border-slate-300 rounded-lg" />
                 </div>
-                
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">Completion Notes</label>
-                  <textarea
-                    value={completeLabTestData.notes}
-                    onChange={(e) => setCompleteLabTestData({...completeLabTestData, notes: e.target.value})}
-                    className="w-full p-2.5 border border-slate-300 rounded-lg"
-                    rows="3"
-                    placeholder="Enter completion notes..."
-                  />
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">Tracking Number</label>
+                  <input type="text" value={externalLabData.tracking_number} onChange={(e) => setExternalLabData({ ...externalLabData, tracking_number: e.target.value })} className="w-full p-2.5 border border-slate-300 rounded-lg" />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">Notes</label>
+                  <textarea value={externalLabData.handover_notes} onChange={(e) => setExternalLabData({ ...externalLabData, handover_notes: e.target.value })} className="w-full p-2.5 border border-slate-300 rounded-lg" rows="2" placeholder="Handover notes" />
                 </div>
               </div>
-              
               <div className="p-6 border-t border-slate-100 flex justify-end gap-3">
-                <button
-                  onClick={() => setShowCompleteLabTestModal(false)}
-                  className="px-4 py-2 text-slate-600 font-semibold hover:bg-slate-50 rounded-lg"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={completeLabTest}
-                  disabled={completingLabTest}
-                  className="px-6 py-2 bg-gradient-to-r from-emerald-500 to-green-500 text-white font-semibold rounded-lg hover:from-emerald-600 hover:to-green-600 shadow-md flex items-center gap-2 disabled:opacity-70"
-                >
-                  {completingLabTest ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                      Processing...
-                    </>
-                  ) : (
-                    <>
-                      <FaCheck /> Complete Test
-                    </>
-                  )}
+                <button onClick={() => setShowHandoverLogModal(false)} className="px-4 py-2 text-slate-600 font-semibold hover:bg-slate-50 rounded-lg">Cancel</button>
+                <button onClick={submitHandoverLog} disabled={completingLabTest} className="px-6 py-2 bg-teal-600 text-white font-semibold rounded-lg hover:bg-teal-700 shadow-md flex items-center gap-2">
+                  {completingLabTest ? <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div> Processing...</> : <><FaCheck /> Add Log</>}
                 </button>
               </div>
             </div>
           </div>
         )}
 
-        {/* Auto Bill Success Modal */}
-        {showAutoBillModal && generatedBill && generatedInvoice && (
+        {/* Upload Report Modal */}
+        {showUploadReportModal && selectedLabTest && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
             <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
               <div className="p-6 border-b border-slate-100">
                 <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                  <FaCheckCircle className="text-emerald-500" /> Payment Successful!
+                  <FaUpload className="text-purple-500" /> Upload External Lab Report
                 </h3>
-                <p className="text-slate-500 text-sm mt-1">Payment processed and invoice generated</p>
+                <p className="text-slate-500 text-sm mt-1">{selectedLabTest.lab_test_name}</p>
               </div>
-              
               <div className="p-6 space-y-4">
-                <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
-                  <div className="text-sm text-emerald-700 mb-2">Payment Received</div>
-                  <div className="font-bold">₹{generatedBill?.total_amount || 0}</div>
-                  <div className="text-sm text-emerald-600 mt-1">Method: {paymentData.method}</div>
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">Report File *</label>
+                  <input type="file" accept=".pdf,.jpg,.png,.jpeg" onChange={(e) => setUploadReportData({ ...uploadReportData, report_file: e.target.files[0] })} className="w-full p-2.5 border border-slate-300 rounded-lg" />
+                  <p className="text-xs text-slate-500 mt-1">Accepted formats: PDF, JPG, PNG (Max 10MB)</p>
                 </div>
-                
-                <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-                  <div className="text-sm text-purple-700 mb-2">Invoice Generated</div>
-                  <div className="font-bold text-lg">Invoice #: {generatedInvoice.invoice_number || 'N/A'}</div>
-                  <div className="text-sm text-purple-600">Status: <StatusBadge status={generatedInvoice.status} /></div>
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">Reference Number</label>
+                  <input type="text" value={uploadReportData.reference_number} onChange={(e) => setUploadReportData({ ...uploadReportData, reference_number: e.target.value })} className="w-full p-2.5 border border-slate-300 rounded-lg bg-slate-50" readOnly />
                 </div>
-                
-                <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
-                  <div className="text-sm text-slate-700 mb-2">Next Step</div>
-                  <div className="font-medium text-purple-700">Sample can now be collected</div>
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">Notes</label>
+                  <textarea value={uploadReportData.notes} onChange={(e) => setUploadReportData({ ...uploadReportData, notes: e.target.value })} className="w-full p-2.5 border border-slate-300 rounded-lg" rows="2" placeholder="Additional notes about the report" />
                 </div>
               </div>
-              
-              <div className="p-6 border-t border-slate-100 flex justify-between">
-                <button
-                  onClick={() => {
-                    setShowAutoBillModal(false);
-                    fetchLabTests();
-                  }}
-                  className="px-4 py-2 text-slate-600 font-semibold hover:bg-slate-50 rounded-lg"
-                >
-                  Close
+              <div className="p-6 border-t border-slate-100 flex justify-end gap-3">
+                <button onClick={() => setShowUploadReportModal(false)} className="px-4 py-2 text-slate-600 font-semibold hover:bg-slate-50 rounded-lg">Cancel</button>
+                <button onClick={submitUploadReport} disabled={uploadingReport || !uploadReportData.report_file} className="px-6 py-2 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 shadow-md flex items-center gap-2 disabled:opacity-70">
+                  {uploadingReport ? <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div> Uploading...</> : <><FaUpload /> Upload Report</>}
                 </button>
-                <div className="flex gap-2">
-                  <button
-                    onClick={downloadInvoice}
-                    className="px-4 py-2 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 shadow-md flex items-center gap-2"
-                  >
-                    <FaDownload /> Download Invoice
-                  </button>
-                </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* Lab Test Details Modal */}
-        {showLabTestDetails && selectedLabTest && (
+        {/* View Report Modal - Updated */}
+        {showViewReportModal && selectedLabTest && selectedLabTest.external_lab_details?.external_report_url && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
               <div className="p-6 border-b border-slate-100 flex justify-between items-center">
-                <h3 className="text-xl font-bold text-slate-800">Lab Test Details</h3>
-                <button onClick={() => setShowLabTestDetails(false)} className="text-slate-400 hover:text-slate-600 text-2xl">&times;</button>
+                <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                  {selectedLabTest.external_lab_details?.external_report_url?.toLowerCase().endsWith('.pdf') ? (
+                    <FaFilePdf className="text-red-500" />
+                  ) : (
+                    <FaImage className="text-purple-500" />
+                  )}
+                  External Lab Report
+                </h3>
+                <button onClick={() => setShowViewReportModal(false)} className="text-slate-400 hover:text-slate-600 text-2xl">&times;</button>
               </div>
-              <div className="p-6 space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-xs text-slate-500 uppercase">Test Code</label>
-                    <p className="font-bold text-lg">{selectedLabTest.lab_test_code}</p>
-                  </div>
-                  <div>
-                    <label className="text-xs text-slate-500 uppercase">Status</label>
-                    <div className="mt-1"><StatusBadge status={selectedLabTest.status} /></div>
+              <div className="p-6">
+                <div className="bg-slate-50 rounded-lg p-4 mb-4">
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div><span className="font-semibold">Test Name:</span> {selectedLabTest.lab_test_name}</div>
+                    <div><span className="font-semibold">Lab Name:</span> {selectedLabTest.external_lab_details?.lab_name}</div>
+                    <div><span className="font-semibold">Reference Number:</span> {selectedLabTest.external_lab_details?.reference_number}</div>
+                    <div><span className="font-semibold">Received Date:</span> {selectedLabTest.external_lab_details?.external_report_received_date ? new Date(selectedLabTest.external_lab_details.external_report_received_date).toLocaleString() : 'N/A'}</div>
                   </div>
                 </div>
-                
-                <div>
-                  <label className="text-xs text-slate-500 uppercase">Test Name</label>
-                  <p className="font-bold text-lg">{selectedLabTest.lab_test_name}</p>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-xs text-slate-500 uppercase">Category</label>
-                    <p className="font-medium">{selectedLabTest.category || 'N/A'}</p>
+
+                {selectedLabTest.external_lab_details?.external_report_url.toLowerCase().endsWith('.pdf') ? (
+                  <div className="space-y-4">
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                      <p className="text-sm text-blue-700 flex items-center gap-2">
+                        <FaExclamationCircle className="text-blue-600" />
+                        Click the button below to view or download the PDF report.
+                      </p>
+                    </div>
+                    <div className="flex justify-center gap-3">
+                      <button
+                        onClick={() => viewExternalPDFReport(selectedLabTest.prescription_id, selectedLabTest._id)}
+                        className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center gap-2 shadow-md"
+                      >
+                        <FaEye /> View PDF Report
+                      </button>
+                      <button
+                        onClick={async () => {
+                          try {
+                            const response = await apiClient.get(`/labreports/external/${selectedLabTest.prescription_id}/${selectedLabTest._id}/download`, {
+                              responseType: 'blob'
+                            });
+                            const blob = new Blob([response.data], { type: 'application/pdf' });
+                            const url = URL.createObjectURL(blob);
+                            const link = document.createElement('a');
+                            link.href = url;
+                            link.download = `external_report_${selectedLabTest.prescription_number}.pdf`;
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                            URL.revokeObjectURL(url);
+                            toast.success('Download started!');
+                          } catch (error) {
+                            console.error('Error downloading:', error);
+                            toast.error('Failed to download PDF');
+                          }
+                        }}
+                        className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 shadow-md"
+                      >
+                        <FaDownload /> Download PDF
+                      </button>
+                    </div>
                   </div>
-                  <div>
-                    <label className="text-xs text-slate-500 uppercase">Specimen Type</label>
-                    <p className="font-medium">{selectedLabTest.specimen_type || 'N/A'}</p>
-                  </div>
-                </div>
-                
-                <div>
-                  <label className="text-xs text-slate-500 uppercase">Cost</label>
-                  <p className="text-2xl font-bold text-emerald-700">₹{selectedLabTest.cost || 0}</p>
-                </div>
-                
-                {selectedLabTest.fasting_required && (
-                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-                    <p className="text-sm text-amber-700">⚠️ Fasting required for this test</p>
-                  </div>
-                )}
-                
-                {selectedLabTest.notes && (
-                  <div>
-                    <label className="text-xs text-slate-500 uppercase">Notes</label>
-                    <p className="bg-slate-50 p-3 rounded-lg">{selectedLabTest.notes}</p>
-                  </div>
-                )}
-                
-                {selectedLabTest.scheduled_date && (
-                  <div>
-                    <label className="text-xs text-slate-500 uppercase">Scheduled Date</label>
-                    <p className="font-medium">{new Date(selectedLabTest.scheduled_date).toLocaleString()}</p>
-                  </div>
-                )}
-                
-                {selectedLabTest.sample_collected_at && (
-                  <div>
-                    <label className="text-xs text-slate-500 uppercase">Sample Collected</label>
-                    <p className="font-medium">{new Date(selectedLabTest.sample_collected_at).toLocaleString()}</p>
-                  </div>
-                )}
-                
-                {selectedLabTest.completed_date && (
-                  <div>
-                    <label className="text-xs text-slate-500 uppercase">Completed Date</label>
-                    <p className="font-medium">{new Date(selectedLabTest.completed_date).toLocaleString()}</p>
-                  </div>
+                ) : (
+                  <>
+                    <img
+                      src={selectedLabTest.external_lab_details?.external_report_url}
+                      alt="Lab Report"
+                      className="max-w-full rounded-lg shadow-md"
+                    />
+                    <div className="mt-4 flex justify-end">
+                      <a
+                        href={selectedLabTest.external_lab_details?.external_report_url}
+                        download
+                        className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 flex items-center gap-2"
+                      >
+                        <FaDownload /> Download Image
+                      </a>
+                    </div>
+                  </>
                 )}
               </div>
             </div>
@@ -1538,30 +1717,30 @@ function LabTestsManagement() {
                 <h3 className="text-xl font-bold text-slate-800">Collect Payment</h3>
                 <p className="text-slate-500 text-sm mt-1">{selectedLabTest.lab_test_name}</p>
               </div>
-              
+
               <div className="p-6 space-y-4">
                 <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
                   <div className="text-sm text-emerald-700 mb-2">Test Cost</div>
                   <div className="text-3xl font-bold text-emerald-800">₹{selectedLabTest.cost || 0}</div>
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-2">Payment Amount</label>
                   <input
                     type="number"
                     value={paymentData.amount}
-                    onChange={(e) => setPaymentData({...paymentData, amount: Number(e.target.value)})}
+                    onChange={(e) => setPaymentData({ ...paymentData, amount: Number(e.target.value) })}
                     className="w-full p-3 border border-slate-300 rounded-lg text-lg font-bold"
                     min="0"
                     step="0.01"
                   />
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-2">Payment Method</label>
                   <select
                     value={paymentData.method}
-                    onChange={(e) => setPaymentData({...paymentData, method: e.target.value})}
+                    onChange={(e) => setPaymentData({ ...paymentData, method: e.target.value })}
                     className="w-full p-2.5 border border-slate-300 rounded-lg"
                   >
                     <option value="Cash">Cash</option>
@@ -1571,30 +1750,30 @@ function LabTestsManagement() {
                     <option value="Net Banking">Net Banking</option>
                   </select>
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-2">Reference/Transaction ID</label>
                   <input
                     type="text"
                     value={paymentData.reference}
-                    onChange={(e) => setPaymentData({...paymentData, reference: e.target.value})}
+                    onChange={(e) => setPaymentData({ ...paymentData, reference: e.target.value })}
                     className="w-full p-2.5 border border-slate-300 rounded-lg"
                     placeholder="Enter reference number"
                   />
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-2">Notes (Optional)</label>
                   <textarea
                     value={paymentData.notes}
-                    onChange={(e) => setPaymentData({...paymentData, notes: e.target.value})}
+                    onChange={(e) => setPaymentData({ ...paymentData, notes: e.target.value })}
                     className="w-full p-2.5 border border-slate-300 rounded-lg"
                     rows="2"
                     placeholder="Additional notes..."
                   />
                 </div>
               </div>
-              
+
               <div className="p-6 border-t border-slate-100 flex justify-end gap-3">
                 <button
                   onClick={() => setShowPaymentModal(false)}
@@ -1623,6 +1802,428 @@ function LabTestsManagement() {
           </div>
         )}
 
+        {/* Collect Sample Modal */}
+        {showCollectSampleModal && selectedLabTest && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
+              <div className="p-6 border-b border-slate-100">
+                <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                  <FaVial className="text-purple-500" /> Collect Sample
+                </h3>
+                <p className="text-slate-500 text-sm mt-1">{selectedLabTest.lab_test_name}</p>
+              </div>
+
+              <div className="p-6 space-y-4">
+                <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                  <div className="text-sm text-purple-700 mb-2">Test Information</div>
+                  <div className="font-bold">{selectedLabTest.lab_test_code} - {selectedLabTest.lab_test_name}</div>
+                  {selectedLabTest.specimen_type && (
+                    <div className="text-sm text-purple-600 mt-1">Specimen: {selectedLabTest.specimen_type}</div>
+                  )}
+                  {selectedLabTest.fasting_required && (
+                    <div className="text-sm text-amber-600 mt-1">⚠️ Fasting Required</div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">Sample ID</label>
+                  <input
+                    type="text"
+                    value={sampleData.sample_id}
+                    onChange={(e) => setSampleData({ ...sampleData, sample_id: e.target.value })}
+                    className="w-full p-2.5 border border-slate-300 rounded-lg"
+                    readOnly
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">Collected By</label>
+                  <select
+                    value={sampleData.collected_by}
+                    onChange={(e) => setSampleData({ ...sampleData, collected_by: e.target.value })}
+                    className="w-full p-2.5 border border-slate-300 rounded-lg"
+                  >
+                    <option value="">Select Staff</option>
+                    {labStaff.map(staff => (
+                      <option key={staff._id} value={staff._id}>
+                        {staff.first_name} {staff.last_name} - {staff.role}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">Collection Notes</label>
+                  <textarea
+                    value={sampleData.notes}
+                    onChange={(e) => setSampleData({ ...sampleData, notes: e.target.value })}
+                    className="w-full p-2.5 border border-slate-300 rounded-lg"
+                    rows="3"
+                    placeholder="Enter collection notes..."
+                  />
+                </div>
+              </div>
+
+              <div className="p-6 border-t border-slate-100 flex justify-end gap-3">
+                <button
+                  onClick={() => setShowCollectSampleModal(false)}
+                  className="px-4 py-2 text-slate-600 font-semibold hover:bg-slate-50 rounded-lg"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={collectSample}
+                  disabled={completingLabTest}
+                  className="px-6 py-2 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 shadow-md flex items-center gap-2 disabled:opacity-70"
+                >
+                  {completingLabTest ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <FaCheck /> Confirm Collection
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Complete Lab Test Modal with Report Upload */}
+        {showCompleteLabTestModal && selectedLabTest && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+              <div className="p-6 border-b border-slate-100">
+                <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                  {selectedLabTest.status === 'Sample Collected' ? (
+                    <><FaPlayCircle className="text-indigo-500" /> Start Processing</>
+                  ) : (
+                    <><FaCheckCircle className="text-emerald-500" /> Complete Lab Test</>
+                  )}
+                </h3>
+                <p className="text-slate-500 text-sm mt-1">{selectedLabTest.lab_test_name}</p>
+              </div>
+
+              <div className="p-6 space-y-4">
+                <div className={`rounded-lg p-4 ${selectedLabTest.status === 'Sample Collected' ? 'bg-indigo-50 border border-indigo-200' : 'bg-emerald-50 border border-emerald-200'}`}>
+                  <div className="text-sm mb-2">Test Information</div>
+                  <div className="font-bold">{selectedLabTest.lab_test_code} - {selectedLabTest.lab_test_name}</div>
+                  <div className="text-lg font-bold mt-2">₹{selectedLabTest.cost || 0}</div>
+                </div>
+
+                {/* Report Upload Section - Only show when completing test (not starting processing) */}
+                {selectedLabTest.status !== 'Sample Collected' && (
+                  <div className="border border-purple-200 rounded-lg p-4 bg-purple-50">
+                    <label className="block text-sm font-semibold text-purple-700 mb-2 flex items-center gap-2">
+                      <FaUpload className="text-purple-600" /> Upload Lab Report (PDF/Image)
+                    </label>
+
+                    {/* Show existing report if available */}
+                    {selectedLabTest.report_url && (
+                      <div className="mb-3 p-3 bg-white rounded-lg border border-purple-200">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-medium text-purple-700">Current Report:</span>
+                          <button
+                            onClick={() => {
+                              // Find the report ID from the URL or fetch from API
+                              // For now, use the URL directly or implement report ID lookup
+                              if (selectedLabTest.report_url) {
+                                window.open(selectedLabTest.report_url, '_blank');
+                              }
+                            }}
+                            className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                          >
+                            <FaExternalLinkAlt className="text-xs" /> View Current
+                          </button>
+                        </div>
+                        {selectedLabTest.report_url.match(/\.pdf$/i) ? (
+                          <div className="text-sm text-purple-600">📄 PDF Report uploaded</div>
+                        ) : (
+                          <img src={selectedLabTest.report_url} alt="Current Report" className="max-h-32 rounded border" />
+                        )}
+                      </div>
+                    )}
+
+                    <input
+                      type="file"
+                      accept=".pdf,.jpg,.png,.jpeg"
+                      onChange={(e) => {
+                        const file = e.target.files[0];
+                        if (file) {
+                          setCompleteLabTestData({
+                            ...completeLabTestData,
+                            report_file: file,
+                            report_file_name: file.name
+                          });
+                        }
+                      }}
+                      className="w-full p-2 border border-purple-300 rounded-lg bg-white text-sm"
+                    />
+                    {completeLabTestData.report_file && (
+                      <p className="text-xs text-purple-600 mt-1">
+                        Selected: {completeLabTestData.report_file_name}
+                      </p>
+                    )}
+                    <p className="text-xs text-purple-500 mt-2">
+                      Accepted formats: PDF, JPG, PNG (Max 10MB)
+                    </p>
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">Performed By</label>
+                  <select
+                    value={labTestData.performed_by || completeLabTestData.performed_by}
+                    onChange={(e) => {
+                      setLabTestData({ ...labTestData, performed_by: e.target.value });
+                      setCompleteLabTestData({ ...completeLabTestData, performed_by: e.target.value });
+                    }}
+                    className="w-full p-2.5 border border-slate-300 rounded-lg"
+                  >
+                    <option value="">Select Lab Staff</option>
+                    {labStaff.map(staff => (
+                      <option key={staff._id} value={staff._id}>
+                        {staff.first_name} {staff.last_name} - {staff.role}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">Notes</label>
+                  <textarea
+                    value={labTestData.notes || completeLabTestData.notes}
+                    onChange={(e) => {
+                      setLabTestData({ ...labTestData, notes: e.target.value });
+                      setCompleteLabTestData({ ...completeLabTestData, notes: e.target.value });
+                    }}
+                    className="w-full p-2.5 border border-slate-300 rounded-lg"
+                    rows="3"
+                    placeholder="Enter notes..."
+                  />
+                </div>
+              </div>
+
+              <div className="p-6 border-t border-slate-100 flex justify-end gap-3">
+                <button
+                  onClick={() => setShowCompleteLabTestModal(false)}
+                  className="px-4 py-2 text-slate-600 font-semibold hover:bg-slate-50 rounded-lg"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={async () => {
+                    if (selectedLabTest.status === 'Sample Collected') {
+                      await startProcessing();
+                    } else {
+                      if (completeLabTestData.report_file) {
+                        await completeLabTestWithReport();
+                      } else {
+                        await completeLabTest();
+                      }
+                    }
+                  }}
+                  disabled={completingLabTest}
+                  className={`px-6 py-2 font-semibold rounded-lg shadow-md flex items-center gap-2 disabled:opacity-70 ${selectedLabTest.status === 'Sample Collected'
+                    ? 'bg-indigo-600 text-white hover:bg-indigo-700'
+                    : 'bg-gradient-to-r from-emerald-500 to-green-500 text-white hover:from-emerald-600 hover:to-green-600'
+                    }`}
+                >
+                  {completingLabTest ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      {selectedLabTest.status === 'Sample Collected' ? <FaPlayCircle /> : <FaCheck />}
+                      {selectedLabTest.status === 'Sample Collected' ? 'Start Processing' : (completeLabTestData.report_file ? 'Upload Report & Complete' : 'Complete Test')}
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Lab Test Details Modal - Updated for internal reports */}
+        {showLabTestDetails && selectedLabTest && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+              <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+                <h3 className="text-xl font-bold text-slate-800">Lab Test Details</h3>
+                <button onClick={() => setShowLabTestDetails(false)} className="text-slate-400 hover:text-slate-600 text-2xl">&times;</button>
+              </div>
+              <div className="p-6 space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs text-slate-500 uppercase">Test Code</label>
+                    <p className="font-bold text-lg">{selectedLabTest.lab_test_code}</p>
+                  </div>
+                  <div>
+                    <label className="text-xs text-slate-500 uppercase">Status</label>
+                    <div className="mt-1"><StatusBadge status={selectedLabTest.status} /></div>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs text-slate-500 uppercase">Test Name</label>
+                  <p className="font-bold text-lg">{selectedLabTest.lab_test_name}</p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs text-slate-500 uppercase">Category</label>
+                    <p className="font-medium">{selectedLabTest.category || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <label className="text-xs text-slate-500 uppercase">Specimen Type</label>
+                    <p className="font-medium">{selectedLabTest.specimen_type || 'N/A'}</p>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs text-slate-500 uppercase">Cost</label>
+                  <p className="text-2xl font-bold text-emerald-700">₹{selectedLabTest.cost || 0}</p>
+                </div>
+
+                {selectedLabTest.fasting_required && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                    <p className="text-sm text-amber-700">⚠️ Fasting required for this test</p>
+                  </div>
+                )}
+
+                {/* Internal Report Section */}
+                {(selectedLabTest.status === 'Completed' || selectedLabTest.report_url) && selectedLabTest.report_url && (
+                  <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                    <h4 className="font-semibold text-purple-800 mb-3 flex items-center gap-2">
+                      <FaFilePdf className="text-purple-600" /> Lab Report
+                    </h4>
+
+                    {selectedLabTest.report_url.toLowerCase().endsWith('.pdf') ? (
+                      <div className="space-y-3">
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                          <p className="text-sm text-blue-700 flex items-center gap-2">
+                            <FaExclamationCircle className="text-blue-600" />
+                            Click the button below to view or download the PDF report.
+                          </p>
+                        </div>
+                        <div className="flex justify-center gap-3">
+                          <button
+                            onClick={() => viewPDFReport(selectedLabTest.report_url, selectedLabTest._id)}
+                            className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center gap-2 shadow-md"
+                          >
+                            <FaEye /> View PDF Report
+                          </button>
+                          <a
+                            href={selectedLabTest.report_url}
+                            download
+                            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 shadow-md"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              // Force download using fetch if needed
+                              viewPDFReport(selectedLabTest.report_url, selectedLabTest._id);
+                            }}
+                          >
+                            <FaDownload /> Download PDF
+                          </a>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <img
+                          src={selectedLabTest.report_url}
+                          alt="Lab Report"
+                          className="max-w-full rounded-lg shadow-md border border-purple-200"
+                        />
+                        <div className="flex justify-end gap-2 mt-3">
+                          <a
+                            href={selectedLabTest.report_url}
+                            download
+                            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center gap-2 text-sm"
+                          >
+                            <FaDownload /> Download Image
+                          </a>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {/* External Lab Information for Referred Out Tests */}
+                {selectedLabTest.status === 'Referred Out' && selectedLabTest.external_lab_details && (
+                  <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                    <h4 className="font-semibold text-orange-800 mb-3 flex items-center gap-2">
+                      <FaTruck className="text-orange-600" /> External Lab Information
+                    </h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="grid grid-cols-2 gap-2">
+                        <span className="font-medium text-orange-700">Lab Name:</span>
+                        <span className="text-orange-800">{selectedLabTest.external_lab_details.lab_name}</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <span className="font-medium text-orange-700">Reference Number:</span>
+                        <span className="text-orange-800 font-mono">{selectedLabTest.external_lab_details.reference_number}</span>
+                      </div>
+                      {selectedLabTest.external_lab_details.external_report_url && (
+                        <div className="mt-3 pt-3 border-t border-orange-200">
+                          <button
+                            onClick={() => viewExternalPDFReport(selectedLabTest.prescription_id, selectedLabTest._id)}
+                            className="text-orange-600 hover:text-orange-800 flex items-center gap-2"
+                          >
+                            <FaFilePdf /> View External Lab Report
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {selectedLabTest.notes && (
+                  <div>
+                    <label className="text-xs text-slate-500 uppercase">Notes</label>
+                    <p className="bg-slate-50 p-3 rounded-lg">{selectedLabTest.notes}</p>
+                  </div>
+                )}
+
+                {selectedLabTest.scheduled_date && (
+                  <div>
+                    <label className="text-xs text-slate-500 uppercase">Scheduled Date</label>
+                    <p className="font-medium">{new Date(selectedLabTest.scheduled_date).toLocaleString()}</p>
+                  </div>
+                )}
+
+                {selectedLabTest.sample_collected_at && (
+                  <div>
+                    <label className="text-xs text-slate-500 uppercase">Sample Collected</label>
+                    <p className="font-medium">{new Date(selectedLabTest.sample_collected_at).toLocaleString()}</p>
+                  </div>
+                )}
+
+                {selectedLabTest.completed_date && (
+                  <div>
+                    <label className="text-xs text-slate-500 uppercase">Completed Date</label>
+                    <p className="font-medium">{new Date(selectedLabTest.completed_date).toLocaleString()}</p>
+                  </div>
+                )}
+
+                {selectedLabTest.performed_by && (
+                  <div>
+                    <label className="text-xs text-slate-500 uppercase">Performed By</label>
+                    <p className="font-medium">{selectedLabTest.performed_by}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Bill Generation Modal, Success Modal, Auto Bill Modal, History Modal - Same as before */}
+        {/* ... (keep these modals as they were) ... */}
+
         {/* Bill Generation Modal */}
         {showBillModal && selectedPrescription && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
@@ -1631,16 +2232,15 @@ function LabTestsManagement() {
                 <h3 className="text-xl font-bold text-slate-800">Generate Bill & Invoice</h3>
                 <p className="text-slate-500 text-sm mt-1">For prescription #{selectedPrescription.prescription_number}</p>
               </div>
-              
+
               <div className="p-6 space-y-6">
                 <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
                   <h4 className="font-bold text-slate-700 mb-2">Important Note</h4>
                   <p className="text-sm text-purple-700">
                     Creating a bill with status 'Generated' will automatically create an invoice for the patient.
-                    The invoice will include all lab tests listed below.
                   </p>
                 </div>
-                
+
                 <div className="bg-slate-50 rounded-lg p-4">
                   <h4 className="font-bold text-slate-700 mb-3">Bill Items</h4>
                   <div className="space-y-3">
@@ -1658,14 +2258,14 @@ function LabTestsManagement() {
                     ))}
                   </div>
                 </div>
-                
+
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-semibold text-slate-700 mb-2">Discount (₹)</label>
                     <input
                       type="number"
                       value={billData.discount}
-                      onChange={(e) => setBillData({...billData, discount: Number(e.target.value)})}
+                      onChange={(e) => setBillData({ ...billData, discount: Number(e.target.value) })}
                       className="w-full p-2.5 border border-slate-300 rounded-lg"
                       min="0"
                     />
@@ -1675,54 +2275,38 @@ function LabTestsManagement() {
                     <input
                       type="number"
                       value={billData.tax}
-                      onChange={(e) => setBillData({...billData, tax: Number(e.target.value)})}
+                      onChange={(e) => setBillData({ ...billData, tax: Number(e.target.value) })}
                       className="w-full p-2.5 border border-slate-300 rounded-lg"
                       min="0"
                     />
                   </div>
                 </div>
-                
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">Bill Status</label>
-                  <select
-                    value={billData.status}
-                    onChange={(e) => setBillData({...billData, status: e.target.value})}
-                    className="w-full p-2.5 border border-slate-300 rounded-lg"
-                  >
-                    <option value="Draft">Draft (No Invoice)</option>
-                    <option value="Generated">Generated (Creates Invoice)</option>
-                  </select>
-                  <p className="text-xs text-slate-500 mt-1">
-                    Select 'Generated' to automatically create an invoice along with the bill
-                  </p>
-                </div>
-                
+
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-2">Payment Method</label>
                   <select
                     value={billData.payment_method}
-                    onChange={(e) => setBillData({...billData, payment_method: e.target.value})}
+                    onChange={(e) => setBillData({ ...billData, payment_method: e.target.value })}
                     className="w-full p-2.5 border border-slate-300 rounded-lg"
                   >
                     <option value="Cash">Cash</option>
                     <option value="Card">Card</option>
                     <option value="UPI">UPI</option>
                     <option value="Insurance">Insurance</option>
-                    <option value="Pending">Pending</option>
                   </select>
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-2">Notes</label>
                   <textarea
                     value={billData.notes}
-                    onChange={(e) => setBillData({...billData, notes: e.target.value})}
+                    onChange={(e) => setBillData({ ...billData, notes: e.target.value })}
                     className="w-full p-2.5 border border-slate-300 rounded-lg"
                     rows="3"
                     placeholder="Additional notes for the bill..."
                   />
                 </div>
-                
+
                 <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
                   <div className="flex justify-between items-center">
                     <div>
@@ -1735,7 +2319,7 @@ function LabTestsManagement() {
                   </div>
                 </div>
               </div>
-              
+
               <div className="p-6 border-t border-slate-100 flex justify-end gap-3">
                 <button
                   onClick={() => setShowBillModal(false)}
@@ -1774,30 +2358,21 @@ function LabTestsManagement() {
                 </h3>
                 <p className="text-slate-500 text-sm mt-1">Bill and Invoice created successfully</p>
               </div>
-              
+
               <div className="p-6 space-y-4">
                 <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
                   <div className="text-sm text-emerald-700 mb-2">Bill Created</div>
                   <div className="font-bold text-lg">Bill ID: {generatedBill._id?.slice(-8) || 'N/A'}</div>
                   <div className="text-sm text-emerald-600">Status: <StatusBadge status={generatedBill.status} /></div>
                 </div>
-                
+
                 <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
                   <div className="text-sm text-purple-700 mb-2">Invoice Generated</div>
                   <div className="font-bold text-lg">Invoice #: {generatedInvoice.invoice_number || 'N/A'}</div>
                   <div className="text-sm text-purple-600">Status: <StatusBadge status={generatedInvoice.status} /></div>
-                  {generatedInvoice.total && (
-                    <div className="text-sm text-purple-600 mt-1">Amount: ₹{generatedInvoice.total}</div>
-                  )}
-                </div>
-                
-                <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
-                  <div className="text-sm text-slate-700 mb-2">Patient Information</div>
-                  <div className="font-medium">{selectedPrescription?.patient?.first_name} {selectedPrescription?.patient?.last_name}</div>
-                  <div className="text-sm text-slate-600">Prescription: {selectedPrescription?.prescription_number}</div>
                 </div>
               </div>
-              
+
               <div className="p-6 border-t border-slate-100 flex justify-between">
                 <button
                   onClick={() => setShowSuccessModal(false)}
@@ -1826,6 +2401,51 @@ function LabTestsManagement() {
           </div>
         )}
 
+        {/* Auto Bill Success Modal */}
+        {showAutoBillModal && generatedBill && generatedInvoice && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
+              <div className="p-6 border-b border-slate-100">
+                <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                  <FaCheckCircle className="text-emerald-500" /> Payment Successful!
+                </h3>
+                <p className="text-slate-500 text-sm mt-1">Payment processed and invoice generated</p>
+              </div>
+
+              <div className="p-6 space-y-4">
+                <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
+                  <div className="text-sm text-emerald-700 mb-2">Payment Received</div>
+                  <div className="font-bold">₹{generatedBill?.total_amount || 0}</div>
+                  <div className="text-sm text-emerald-600 mt-1">Method: {paymentData.method}</div>
+                </div>
+
+                <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                  <div className="text-sm text-purple-700 mb-2">Invoice Generated</div>
+                  <div className="font-bold text-lg">Invoice #: {generatedInvoice.invoice_number || 'N/A'}</div>
+                </div>
+              </div>
+
+              <div className="p-6 border-t border-slate-100 flex justify-between">
+                <button
+                  onClick={() => {
+                    setShowAutoBillModal(false);
+                    fetchLabTests();
+                  }}
+                  className="px-4 py-2 text-slate-600 font-semibold hover:bg-slate-50 rounded-lg"
+                >
+                  Close
+                </button>
+                <button
+                  onClick={downloadInvoice}
+                  className="px-4 py-2 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 shadow-md flex items-center gap-2"
+                >
+                  <FaDownload /> Download Invoice
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* History Modal */}
         {showHistoryModal && selectedLabTest && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
@@ -1834,85 +2454,78 @@ function LabTestsManagement() {
                 <h3 className="text-xl font-bold text-slate-800">Lab Test History</h3>
                 <p className="text-slate-500 text-sm mt-1">{selectedLabTest.lab_test_name}</p>
               </div>
-              
+
               <div className="p-6 space-y-6">
-                <div className="space-y-4">
-                  <div className="bg-slate-50 rounded-lg p-4">
-                    <h4 className="font-bold text-slate-700 mb-3">Timeline</h4>
-                    <div className="space-y-3">
+                <div className="bg-slate-50 rounded-lg p-4">
+                  <h4 className="font-bold text-slate-700 mb-3">Timeline</h4>
+                  <div className="space-y-3">
+                    <div className="flex items-start gap-3">
+                      <div className="p-2 bg-blue-100 rounded-full">
+                        <FaCalendarAlt className="text-blue-600" />
+                      </div>
+                      <div>
+                        <div className="font-medium text-slate-800">Prescribed</div>
+                        <div className="text-sm text-slate-500">
+                          Prescription #{selectedLabTest.prescription_number}
+                        </div>
+                      </div>
+                    </div>
+
+                    {selectedLabTest.scheduled_date && (
                       <div className="flex items-start gap-3">
-                        <div className="p-2 bg-blue-100 rounded-full">
-                          <FaCalendarAlt className="text-blue-600" />
+                        <div className="p-2 bg-green-100 rounded-full">
+                          <FaCalendarCheck className="text-green-600" />
                         </div>
                         <div>
-                          <div className="font-medium text-slate-800">Prescribed</div>
+                          <div className="font-medium text-slate-800">Scheduled</div>
                           <div className="text-sm text-slate-500">
-                            Prescription #{selectedLabTest.prescription_number}
+                            {new Date(selectedLabTest.scheduled_date).toLocaleString()}
                           </div>
                         </div>
                       </div>
-                      
-                      {selectedLabTest.scheduled_date && (
-                        <div className="flex items-start gap-3">
-                          <div className="p-2 bg-green-100 rounded-full">
-                            <FaCalendarCheck className="text-green-600" />
-                          </div>
-                          <div>
-                            <div className="font-medium text-slate-800">Scheduled</div>
-                            <div className="text-sm text-slate-500">
-                              {new Date(selectedLabTest.scheduled_date).toLocaleString()}
-                            </div>
+                    )}
+
+                    {selectedLabTest.sample_collected_at && (
+                      <div className="flex items-start gap-3">
+                        <div className="p-2 bg-purple-100 rounded-full">
+                          <FaVial className="text-purple-600" />
+                        </div>
+                        <div>
+                          <div className="font-medium text-slate-800">Sample Collected</div>
+                          <div className="text-sm text-slate-500">
+                            {new Date(selectedLabTest.sample_collected_at).toLocaleString()}
                           </div>
                         </div>
-                      )}
-                      
-                      {selectedLabTest.sample_collected_at && (
-                        <div className="flex items-start gap-3">
-                          <div className="p-2 bg-purple-100 rounded-full">
-                            <FaVial className="text-purple-600" />
-                          </div>
-                          <div>
-                            <div className="font-medium text-slate-800">Sample Collected</div>
-                            <div className="text-sm text-slate-500">
-                              {new Date(selectedLabTest.sample_collected_at).toLocaleString()}
-                            </div>
+                      </div>
+                    )}
+
+                    {selectedLabTest.completed_date && (
+                      <div className="flex items-start gap-3">
+                        <div className="p-2 bg-emerald-100 rounded-full">
+                          <FaCheckCircle className="text-emerald-600" />
+                        </div>
+                        <div>
+                          <div className="font-medium text-slate-800">Completed</div>
+                          <div className="text-sm text-slate-500">
+                            {new Date(selectedLabTest.completed_date).toLocaleString()}
                           </div>
                         </div>
-                      )}
-                      
-                      {selectedLabTest.completed_date && (
-                        <div className="flex items-start gap-3">
-                          <div className="p-2 bg-emerald-100 rounded-full">
-                            <FaCheckCircle className="text-emerald-600" />
-                          </div>
-                          <div>
-                            <div className="font-medium text-slate-800">Completed</div>
-                            <div className="text-sm text-slate-500">
-                              {new Date(selectedLabTest.completed_date).toLocaleString()}
-                            </div>
+                      </div>
+                    )}
+
+                    {selectedLabTest.is_billed && (
+                      <div className="flex items-start gap-3">
+                        <div className="p-2 bg-purple-100 rounded-full">
+                          <FaReceipt className="text-purple-600" />
+                        </div>
+                        <div>
+                          <div className="font-medium text-slate-800">Billed</div>
+                          <div className="text-sm text-slate-500">
+                            Amount: ₹{selectedLabTest.cost || 0}
                           </div>
                         </div>
-                      )}
-                      
-                      {selectedLabTest.is_billed && (
-                        <div className="flex items-start gap-3">
-                          <div className="p-2 bg-purple-100 rounded-full">
-                            <FaReceipt className="text-purple-600" />
-                          </div>
-                          <div>
-                            <div className="font-medium text-slate-800">Billed</div>
-                            <div className="text-sm text-slate-500">
-                              Amount: ₹{selectedLabTest.cost || 0}
-                            </div>
-                            {selectedLabTest.invoice_id && (
-                              <div className="text-sm text-slate-500">
-                                Invoice: {selectedLabTest.invoice_id}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

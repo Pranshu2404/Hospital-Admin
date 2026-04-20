@@ -1,4 +1,4 @@
-import { FaTachometerAlt, FaPrescriptionBottleAlt, FaUserMd, FaCalendarCheck } from 'react-icons/fa';
+import { FaTachometerAlt, FaPrescriptionBottleAlt, FaUserMd, FaCalendarCheck, FaFlask } from 'react-icons/fa';
 
 export const nurseSidebar = [
     {
@@ -15,5 +15,10 @@ export const nurseSidebar = [
         label: 'Profile',
         path: '/dashboard/nurse/profile',
         icon: FaUserMd
-    }
+    },
+    {
+        label: 'Lab Tests',
+        icon: FaFlask,
+        path: '/dashboard/nurse/lab-tests',
+      },
 ];

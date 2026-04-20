@@ -8,11 +8,325 @@ import {
   FaHistory, FaCalendarCheck, FaPrescriptionBottleAlt,
   FaFlask, FaFileAlt, FaChevronDown, FaChevronUp, FaCapsules, FaHeartbeat, FaMagic, FaTimesCircle,
   FaProcedures, FaSearch, FaVial, FaMicroscope, FaThermometerHalf, FaDna,
-  FaUserMd, FaUserNurse, FaUserTie, FaExclamationTriangle, FaEdit
+  FaUserMd, FaUserNurse, FaUserTie, FaExclamationTriangle, FaEdit,
+  FaFolderOpen, FaFolderPlus, FaCheckDouble
 } from 'react-icons/fa';
 import { summarizePatientHistory } from '@/utils/geminiService';
 import Layout from '@/components/Layout';
 import { doctorSidebar } from '@/constants/sidebarItems/doctorSidebar';
+
+// Episode Type Options
+const episodeTypeOptions = [
+  { value: 'Pregnancy', label: '🤰 Pregnancy' },
+  { value: 'Diabetes Care', label: '🩸 Diabetes Care' },
+  { value: 'Hypertension Management', label: '❤️ Hypertension Management' },
+  { value: 'Post-Surgery Follow-up', label: '🏥 Post-Surgery Follow-up' },
+  { value: 'Cardiac Care', label: '💓 Cardiac Care' },
+  { value: 'Respiratory Care', label: '🌬️ Respiratory Care' },
+  { value: 'Orthopedic Care', label: '🦴 Orthopedic Care' },
+  { value: 'Mental Health', label: '🧠 Mental Health' },
+  { value: 'Chronic Disease Management', label: '📋 Chronic Disease Management' },
+  { value: 'Rehabilitation', label: '🔄 Rehabilitation' },
+  { value: 'Palliative Care', label: '🤝 Palliative Care' },
+  { value: 'General', label: '📝 General' },
+  { value: 'Other', label: '📌 Other' }
+];
+
+// Episode Status Badge Component
+const EpisodeStatusBadge = ({ status }) => {
+  const config = {
+    Active: { color: 'bg-green-100 text-green-700 border-green-200', label: 'Active' },
+    Resolved: { color: 'bg-blue-100 text-blue-700 border-blue-200', label: 'Resolved' },
+    Closed: { color: 'bg-gray-100 text-gray-700 border-gray-200', label: 'Closed' },
+    Transferred: { color: 'bg-purple-100 text-purple-700 border-purple-200', label: 'Transferred' }
+  };
+  const { color, label } = config[status] || config.Active;
+  return <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full border ${color}`}>{label}</span>;
+};
+
+// Episode Modal Component
+// Episode Modal Component
+const EpisodeModal = ({ isOpen, onClose, onConfirm, suggestions, diagnosis, patientName }) => {
+  const [selectedType, setSelectedType] = useState('General');
+  const [customTitle, setCustomTitle] = useState('');
+  const [customDiagnosis, setCustomDiagnosis] = useState('');
+
+  // Reset and auto-fill when modal opens or diagnosis changes
+  useEffect(() => {
+    if (isOpen) {
+      // Set diagnosis from prop
+      if (diagnosis) {
+        setCustomDiagnosis(diagnosis);
+      }
+      
+      // Generate default title
+      const defaultTitle = `${selectedType} Management - ${diagnosis || 'Patient'}`;
+      setCustomTitle(defaultTitle);
+    }
+  }, [isOpen, diagnosis, selectedType]);
+
+  // Update title when type or diagnosis changes while modal is open
+  useEffect(() => {
+    if (isOpen) {
+      const autoTitle = `${selectedType} Management - ${customDiagnosis || diagnosis || 'Patient'}`;
+      // Only auto-update if user hasn't manually changed the title
+      if (!customTitle || customTitle === `${selectedType} Management - ${diagnosis || 'Patient'}`) {
+        setCustomTitle(autoTitle);
+      }
+    }
+  }, [selectedType, customDiagnosis, isOpen]);
+
+  if (!isOpen) return null;
+
+  const handleUseExisting = (episode) => {
+    onConfirm('use_existing', episode);
+  };
+
+  const handleCreateNew = () => {
+    onConfirm('create_new', {
+      title: customTitle || `${selectedType} - ${customDiagnosis}`,
+      episodeType: selectedType,
+      diagnosis: customDiagnosis
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="sticky top-0 bg-white border-b p-5 rounded-t-2xl">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-teal-100 rounded-xl">
+                <FaFolderPlus className="text-teal-600 text-xl" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-gray-800">Episode of Care</h2>
+                <p className="text-sm text-gray-500">Group related visits for {patientName}</p>
+              </div>
+            </div>
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+              <FaTimes size={20} />
+            </button>
+          </div>
+        </div>
+
+        <div className="p-5 space-y-5">
+          {/* Existing Episodes Suggestions */}
+          {suggestions && (suggestions.active?.length > 0 || suggestions.recentClosed?.length > 0) && (
+            <div>
+              <h3 className="font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                <FaFolderOpen className="text-teal-500" />
+                Existing Episodes for {diagnosis}
+              </h3>
+
+              {suggestions.active?.length > 0 && (
+                <div className="mb-4">
+                  <p className="text-xs font-semibold text-green-600 mb-2">ACTIVE EPISODES</p>
+                  {suggestions.active.map(ep => (
+                    <div key={ep._id} className="bg-green-50 border border-green-200 rounded-xl p-4 mb-3 hover:shadow-md transition-shadow">
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-bold text-gray-800">{ep.title}</span>
+                            <EpisodeStatusBadge status={ep.status} />
+                          </div>
+                          <p className="text-sm text-gray-600">Diagnosis: {ep.diagnosis}</p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            Started: {new Date(ep.startDate).toLocaleDateString()}
+                            {ep.stats && ` • ${ep.stats.appointments} visits`}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => handleUseExisting(ep)}
+                          className="px-3 py-1.5 bg-teal-600 text-white text-sm rounded-lg hover:bg-teal-700"
+                        >
+                          Continue Episode
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {suggestions.recentClosed?.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold text-gray-500 mb-2">RECENTLY CLOSED</p>
+                  {suggestions.recentClosed.map(ep => (
+                    <div key={ep._id} className="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-3">
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-bold text-gray-800">{ep.title}</span>
+                            <EpisodeStatusBadge status={ep.status} />
+                          </div>
+                          <p className="text-sm text-gray-600">Diagnosis: {ep.diagnosis}</p>
+                          <p className="text-xs text-gray-500">
+                            Closed: {new Date(ep.endDate).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => handleUseExisting(ep)}
+                          className="px-3 py-1.5 bg-gray-600 text-white text-sm rounded-lg hover:bg-gray-700"
+                        >
+                          Reopen Episode
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <hr className="my-4" />
+            </div>
+          )}
+
+          {/* Create New Episode */}
+          <div>
+            <h3 className="font-semibold text-gray-700 mb-3">Create New Episode</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Episode Type</label>
+                <select
+                  value={selectedType}
+                  onChange={(e) => setSelectedType(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500"
+                >
+                  {episodeTypeOptions.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Episode Title</label>
+                <input
+                  type="text"
+                  value={customTitle}
+                  onChange={(e) => setCustomTitle(e.target.value)}
+                  placeholder={`e.g., ${selectedType} Management - ${customDiagnosis || diagnosis || 'Patient'}`}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500"
+                />
+                <p className="text-xs text-gray-400 mt-1">
+                  Tip: You can edit this title manually
+                </p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Diagnosis</label>
+                <input
+                  type="text"
+                  value={customDiagnosis}
+                  onChange={(e) => setCustomDiagnosis(e.target.value)}
+                  placeholder="Enter diagnosis"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="sticky bottom-0 bg-white border-t p-4 flex justify-end gap-3 rounded-b-2xl">
+          <button onClick={onClose} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">
+            Cancel
+          </button>
+          <button 
+            onClick={handleCreateNew} 
+            className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700"
+            disabled={!customDiagnosis.trim()}
+          >
+            Create New Episode
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Episode Timeline Component
+const EpisodeTimeline = ({ episode, appointments, prescriptions, labReports, onClose }) => {
+  const allEvents = [
+    ...appointments.map(a => ({ type: 'appointment', date: a.appointment_date || a.created_at, data: a })),
+    ...prescriptions.map(p => ({ type: 'prescription', date: p.created_at, data: p })),
+    ...labReports.map(l => ({ type: 'lab_report', date: l.created_at, data: l }))
+  ].sort((a, b) => new Date(a.date) - new Date(b.date));
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="sticky top-0 bg-white border-b p-5">
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className="text-xl font-bold text-gray-800">{episode.title}</h2>
+              <div className="flex items-center gap-3 mt-1">
+                <EpisodeStatusBadge status={episode.status} />
+                <span className="text-sm text-gray-500">
+                  {new Date(episode.startDate).toLocaleDateString()} - {episode.endDate ? new Date(episode.endDate).toLocaleDateString() : 'Present'}
+                </span>
+              </div>
+            </div>
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+              <FaTimes size={20} />
+            </button>
+          </div>
+        </div>
+
+        <div className="p-5 space-y-5">
+          {/* Episode Details */}
+          <div className="bg-teal-50 rounded-xl p-4">
+            <p className="font-semibold text-teal-800">Diagnosis</p>
+            <p className="text-gray-700">{episode.diagnosis}</p>
+            {episode.clinicalNotes && (
+              <>
+                <p className="font-semibold text-teal-800 mt-3">Clinical Notes</p>
+                <p className="text-gray-700 text-sm">{episode.clinicalNotes}</p>
+              </>
+            )}
+          </div>
+
+          {/* Timeline */}
+          <div>
+            <h3 className="font-semibold text-gray-700 mb-4">Episode Timeline</h3>
+            <div className="relative pl-6 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-teal-200">
+              {allEvents.map((event, idx) => (
+                <div key={idx} className="relative mb-4 pb-2">
+                  <div className="absolute -left-6 top-1 w-3 h-3 rounded-full bg-teal-500"></div>
+                  <div className="bg-white border rounded-lg p-3 hover:shadow-md transition-shadow">
+                    <div className="flex items-center gap-2 mb-2">
+                      {event.type === 'appointment' && <FaCalendarCheck className="text-teal-500" />}
+                      {event.type === 'prescription' && <FaFilePrescription className="text-blue-500" />}
+                      {event.type === 'lab_report' && <FaFlask className="text-amber-500" />}
+                      <span className="text-xs text-gray-500">{new Date(event.date).toLocaleString()}</span>
+                    </div>
+                    <div className="text-sm">
+                      {event.type === 'appointment' && (
+                        <div>
+                          <span className="font-medium">Appointment</span>
+                          <p className="text-gray-600 mt-1">
+                            Dr. {event.data.doctor_id?.firstName} {event.data.doctor_id?.lastName}
+                          </p>
+                          {event.data.notes && <p className="text-xs text-gray-500 mt-1">{event.data.notes}</p>}
+                        </div>
+                      )}
+                      {event.type === 'prescription' && (
+                        <div>
+                          <span className="font-medium">Prescription #{event.data.prescription_number}</span>
+                          <p className="text-gray-600 text-xs mt-1">{event.data.diagnosis}</p>
+                        </div>
+                      )}
+                      {event.type === 'lab_report' && (
+                        <div>
+                          <span className="font-medium">Lab Report</span>
+                          <p className="text-gray-600 text-xs mt-1">{event.data.test_name}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const SearchableFormSelect = ({
   label,
@@ -375,11 +689,6 @@ const SearchableFormSelect = ({
                         {opt.fasting_required && <span>• Fasting Required</span>}
                       </div>
                     )}
-
-                    {/* Show match indicator for debugging (remove in production) */}
-                    {/* {opt.score && (
-                      <div className="text-[8px] text-gray-300 mt-0.5">Score: {opt.score}</div>
-                    )} */}
                   </div>
                 </div>
               ))}
@@ -425,6 +734,15 @@ const AppointmentDetails = () => {
   const [activeTab, setActiveTab] = useState('current');
   const [expandedPrescription, setExpandedPrescription] = useState(null);
   const [currentDoctorDept, setCurrentDoctorDept] = useState(null);
+
+  // Episode of Care State
+  const [showEpisodeModal, setShowEpisodeModal] = useState(false);
+  const [currentEpisode, setCurrentEpisode] = useState(null);
+  const [episodeSuggestions, setEpisodeSuggestions] = useState(null);
+  const [showEpisodeTimeline, setShowEpisodeTimeline] = useState(false);
+  const [episodeTimelineData, setEpisodeTimelineData] = useState(null);
+  const [loadingEpisode, setLoadingEpisode] = useState(false);
+  const [selectedEpisodeId, setSelectedEpisodeId] = useState(null);
 
   // Vitals configuration state
   const [vitalsConfig, setVitalsConfig] = useState({
@@ -569,6 +887,171 @@ const AppointmentDetails = () => {
   const [summary, setSummary] = useState('');
   const [summarizing, setSummarizing] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
+
+  // Check for existing episodes based on diagnosis
+  const checkExistingEpisodes = async (diagnosis) => {
+    const patientId = appointment.patient_id?._id || appointment.patient_id;
+    if (!patientId || !diagnosis) return;
+
+    setLoadingEpisode(true);
+    try {
+      console.log('Checking episodes for:', { patientId, diagnosis });
+
+      const response = await axios.get(
+        `${import.meta.env.VITE_BACKEND_URL}/episodes/suggest`, {
+        params: {
+          patientId: patientId,
+          diagnosis: diagnosis
+        }
+      });
+
+      console.log('Episode check response:', response.data);
+
+      if (response.data.success) {
+        setEpisodeSuggestions(response.data.suggestions);
+
+        const activeCount = response.data.suggestions?.active?.length || 0;
+        const closedCount = response.data.suggestions?.recentClosed?.length || 0;
+        console.log(`Found ${activeCount} active episodes, ${closedCount} recent closed episodes`);
+
+        console.log('Showing episode modal for episode creation');
+        setShowEpisodeModal(true);
+
+        // Optional: Show a message if no episodes found
+        if (activeCount === 0 && closedCount === 0) {
+          setMessage('No existing episodes found. You can create a new one below.');
+          setTimeout(() => setMessage(''), 3000);
+        }
+      }
+    } catch (error) {
+      console.error('Error checking episodes:', error);
+      console.error('Error details:', error.response?.data);
+      // Even on error, show the modal to allow episode creation
+      setEpisodeSuggestions({ active: [], recentClosed: [] });
+      setShowEpisodeModal(true);
+    } finally {
+      setLoadingEpisode(false);
+    }
+  };
+
+  // Create new episode
+  const createEpisode = async (episodeData) => {
+    // Ensure we have the patient ID as a string
+    let patientId = appointment.patient_id;
+    if (typeof patientId === 'object') {
+      patientId = patientId._id;
+    }
+
+    const doctorId = localStorage.getItem('doctorId');
+
+    console.log('Creating episode with data:', {
+      patientId,
+      doctorId,
+      episodeData,
+      appointmentId: appointment._id
+    });
+
+    if (!patientId) {
+      console.error('No patient ID found');
+      setMessage('Cannot create episode: Patient ID missing');
+      return null;
+    }
+
+    if (!doctorId) {
+      console.error('No doctor ID found in localStorage');
+      setMessage('Cannot create episode: Doctor ID missing. Please login again.');
+      return null;
+    }
+
+    try {
+      const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/episodes`, {
+        patientId: patientId, // Send as string ID
+        title: episodeData.title,
+        episodeType: episodeData.episodeType,
+        diagnosis: episodeData.diagnosis,
+        createdBy: doctorId,
+        createdByRole: 'doctor'
+      });
+
+      console.log('Episode creation response:', response.data);
+
+      if (response.data.success) {
+        setCurrentEpisode(response.data.episode);
+
+        // Link current appointment to episode
+        console.log('Linking appointment to episode:', response.data.episode._id);
+        const linkResult = await linkAppointmentToEpisode(response.data.episode._id);
+        console.log('Link result:', linkResult);
+
+        if (linkResult) {
+          setMessage(`Episode "${episodeData.title}" created and linked successfully!`);
+        } else {
+          setMessage(`Episode created but failed to link to current appointment.`);
+        }
+
+        setTimeout(() => setMessage(''), 3000);
+        return response.data.episode;
+      } else {
+        console.error('Episode creation failed:', response.data);
+        setMessage('Failed to create episode: ' + (response.data.error || 'Unknown error'));
+        return null;
+      }
+    } catch (error) {
+      console.error('Error creating episode:', error);
+      console.error('Error response:', error.response?.data);
+      const errorMsg = error.response?.data?.error || error.response?.data?.message || error.message;
+      setMessage('Failed to create episode: ' + errorMsg);
+      return null;
+    }
+  };
+
+  // Link appointment to episode
+  const linkAppointmentToEpisode = async (episodeId) => {
+    try {
+      await axios.post(`${import.meta.env.VITE_BACKEND_URL}/appointments/link-episode`, {
+        appointmentId: appointment._id,
+        episodeId
+      });
+
+      // Update local appointment state
+      setAppointment(prev => ({ ...prev, episodeId }));
+      return true;
+    } catch (error) {
+      console.error('Error linking appointment:', error);
+      return false;
+    }
+  };
+
+  // Use existing episode
+  const useExistingEpisode = async (episode) => {
+    setCurrentEpisode(episode);
+    await linkAppointmentToEpisode(episode._id);
+    setMessage(`Linked to existing episode: ${episode.title}`);
+    setShowEpisodeModal(false);
+  };
+
+  // Handle episode modal action
+  const handleEpisodeAction = async (action, data) => {
+    if (action === 'use_existing') {
+      await useExistingEpisode(data);
+    } else if (action === 'create_new') {
+      await createEpisode(data);
+    }
+    setShowEpisodeModal(false);
+  };
+
+  // Fetch episode timeline
+  const fetchEpisodeTimeline = async (episodeId) => {
+    try {
+      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/episodes/${episodeId}/timeline`);
+      if (response.data.success) {
+        setEpisodeTimelineData(response.data);
+        setShowEpisodeTimeline(true);
+      }
+    } catch (error) {
+      console.error('Error fetching episode timeline:', error);
+    }
+  };
 
   useEffect(() => {
     // Get hospital ID from localStorage
@@ -1760,7 +2243,7 @@ const AppointmentDetails = () => {
           </nav>
         </div>
 
-        {/* Patient History Tabs Content - Keep existing content */}
+        {/* Patient History Tabs Content */}
         <div className="p-4">
           {loadingHistory ? (
             <div className="flex items-center justify-center py-8">
@@ -1771,7 +2254,6 @@ const AppointmentDetails = () => {
             <>
               {activeTab === 'summary' && (
                 <div className="space-y-4">
-                  {/* Keep existing summary content */}
                   <div className="mb-6">
                     {!showSummary ? (
                       <div className="text-center py-8">
@@ -1899,7 +2381,6 @@ const AppointmentDetails = () => {
 
               {activeTab === 'prescriptions' && (
                 <div className="space-y-4">
-                  {/* Keep existing prescriptions content */}
                   {pastPrescriptions.length > 0 ? (
                     pastPrescriptions.map((rx, idx) => (
                       <div key={rx._id} className="bg-gradient-to-br from-slate-50 to-white border border-slate-200 rounded-xl overflow-hidden hover:shadow-md transition-all duration-200">
@@ -1929,7 +2410,6 @@ const AppointmentDetails = () => {
 
                         {expandedPrescription === rx._id && (
                           <div className="px-6 py-5 space-y-5">
-                            {/* Keep existing expanded prescription content */}
                             {rx.presenting_complaint && (
                               <div className="bg-rose-50 rounded-lg p-4 border border-rose-200">
                                 <div className="flex items-start gap-3">
@@ -2111,7 +2591,6 @@ const AppointmentDetails = () => {
 
               {activeTab === 'appointments' && (
                 <div className="space-y-4">
-                  {/* Keep existing appointments content */}
                   {pastAppointments.length > 0 ? (
                     pastAppointments.map((apt, idx) => (
                       <div key={apt._id} className="bg-gradient-to-br from-slate-50 to-white border border-slate-200 rounded-xl overflow-hidden hover:shadow-md transition-all duration-200">
@@ -2370,6 +2849,34 @@ const AppointmentDetails = () => {
                 </div>
               </div>
 
+              {/* Episode of Care Card - Add this after the Patient Info Card */}
+              {currentEpisode && (
+                <div className="bg-teal-50 rounded-xl shadow-sm border border-teal-200 overflow-hidden">
+                  <div className="bg-teal-100 px-4 py-3 border-b border-teal-200 flex items-center justify-between">
+                    <div className="flex items-center">
+                      <div className="h-8 w-8 rounded-full bg-teal-200 flex items-center justify-center text-teal-700 mr-2 text-sm">
+                        <FaFolderOpen />
+                      </div>
+                      <h3 className="font-semibold text-teal-800 text-md">Active Episode</h3>
+                    </div>
+                    <button
+                      onClick={() => fetchEpisodeTimeline(currentEpisode._id)}
+                      className="text-teal-600 hover:text-teal-800 text-sm font-medium"
+                    >
+                      View Timeline →
+                    </button>
+                  </div>
+                  <div className="p-4">
+                    <p className="font-bold text-teal-900">{currentEpisode.title}</p>
+                    <p className="text-sm text-teal-700 mt-1">{currentEpisode.diagnosis}</p>
+                    <EpisodeStatusBadge status={currentEpisode.status} />
+                    <p className="text-xs text-teal-600 mt-2">
+                      Started: {new Date(currentEpisode.startDate).toLocaleDateString()}
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* Vitals Card */}
               <div className="bg-white rounded-xl shadow-sm border border-teal-100 overflow-hidden">
                 <div className="bg-teal-50 px-4 py-3 border-b border-teal-100 flex items-center justify-between">
@@ -2534,7 +3041,6 @@ const AppointmentDetails = () => {
                             </div>
 
                             <div className="p-6 space-y-6 flex-grow">
-                              {/* Keep all existing prescription form fields */}
                               <div className="mb-4">
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
                                   Presenting Complaint
@@ -2591,6 +3097,18 @@ const AppointmentDetails = () => {
                                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
                                 />
                               </div>
+
+                              {/* If no episode and diagnosis is entered in prescription, show suggestion */}
+                              {!currentEpisode && prescription.diagnosis && prescription.diagnosis.length > 2 && (
+                                <button
+                                  type="button"
+                                  onClick={() => checkExistingEpisodes(prescription.diagnosis)}
+                                  className="w-full mt-2 py-2 bg-teal-50 border border-teal-200 rounded-lg text-teal-700 text-sm font-medium hover:bg-teal-100 transition-colors flex items-center justify-center gap-2"
+                                >
+                                  <FaFolderPlus size={14} />
+                                  Create Episode for "{prescription.diagnosis.substring(0, 30)}..."
+                                </button>
+                              )}
 
                               {/* Procedures Section */}
                               <div>
@@ -3190,6 +3708,27 @@ const AppointmentDetails = () => {
           </div>
         </div>
       </div>
+
+      {/* Episode Modal */}
+      <EpisodeModal
+        isOpen={showEpisodeModal}
+        onClose={() => setShowEpisodeModal(false)}
+        onConfirm={handleEpisodeAction}
+        suggestions={episodeSuggestions}
+        diagnosis={prescription.diagnosis}
+        patientName={patientName}
+      />
+
+      {/* Episode Timeline Modal */}
+      {showEpisodeTimeline && episodeTimelineData && (
+        <EpisodeTimeline
+          episode={episodeTimelineData.episode}
+          appointments={episodeTimelineData.appointments || []}
+          prescriptions={episodeTimelineData.prescriptions || []}
+          labReports={episodeTimelineData.labReports || []}
+          onClose={() => setShowEpisodeTimeline(false)}
+        />
+      )}
 
       {/* Vitals Modal */}
       {isVitalsModalOpen && (

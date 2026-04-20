@@ -192,6 +192,7 @@ import DemoStaffLoginPage from './pages/dashboard/demo/staff-login';
 import SyncManager from './components/SyncManager';
 import OfflineStatusBanner from './components/common/OfflineStatusBanner';
 import { useOfflineSync } from './hooks/useOfflineSync';
+import LabNurseDashboard from './pages/dashboard/nurse/LabNurseDashboard';
 
 // Custom Layout Wrappers with Offline Banner
 const AdminLayout = ({ children }) => {
@@ -1124,6 +1125,16 @@ export default function App() {
               }
             />
             <Route
+              path="/dashboard/nurse/lab-tests"
+              element={
+                <ProtectedRoute role="nurse">
+                  <NurseLayout>
+                    <LabNurseDashboard />
+                  </NurseLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/dashboard/staff/patient-profile"
               element={
                 <ProtectedRoute role="staff">
@@ -1153,6 +1164,7 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
+
             <Route
               path="/dashboard/staff/update-patient/:id"
               element={
