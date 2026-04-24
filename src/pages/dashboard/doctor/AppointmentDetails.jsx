@@ -14,6 +14,7 @@ import {
 import { summarizePatientHistory } from '@/utils/geminiService';
 import Layout from '@/components/Layout';
 import { doctorSidebar } from '@/constants/sidebarItems/doctorSidebar';
+import ICDSearch from './ICDSearch';
 
 // Episode Type Options
 const episodeTypeOptions = [
@@ -45,7 +46,6 @@ const EpisodeStatusBadge = ({ status }) => {
 };
 
 // Episode Modal Component
-// Episode Modal Component
 const EpisodeModal = ({ isOpen, onClose, onConfirm, suggestions, diagnosis, patientName }) => {
   const [selectedType, setSelectedType] = useState('General');
   const [customTitle, setCustomTitle] = useState('');
@@ -58,7 +58,7 @@ const EpisodeModal = ({ isOpen, onClose, onConfirm, suggestions, diagnosis, pati
       if (diagnosis) {
         setCustomDiagnosis(diagnosis);
       }
-      
+
       // Generate default title
       const defaultTitle = `${selectedType} Management - ${diagnosis || 'Patient'}`;
       setCustomTitle(defaultTitle);
@@ -226,8 +226,8 @@ const EpisodeModal = ({ isOpen, onClose, onConfirm, suggestions, diagnosis, pati
           <button onClick={onClose} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">
             Cancel
           </button>
-          <button 
-            onClick={handleCreateNew} 
+          <button
+            onClick={handleCreateNew}
             className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700"
             disabled={!customDiagnosis.trim()}
           >
@@ -734,6 +734,22 @@ const AppointmentDetails = () => {
   const [activeTab, setActiveTab] = useState('current');
   const [expandedPrescription, setExpandedPrescription] = useState(null);
   const [currentDoctorDept, setCurrentDoctorDept] = useState(null);
+  const [icd11Data, setIcd11Data] = useState(null);
+
+  // Handler for ICD selection
+  const handleICDSelect = (selected) => {
+    console.log('ICD Selected:', selected); // Debug log
+    if (selected) {
+      setIcd11Data(selected);
+      setPrescription(prev => ({
+        ...prev,
+        diagnosis: selected.display
+      }));
+    } else {
+      setIcd11Data(null);
+      setPrescription(prev => ({ ...prev, diagnosis: '' }));
+    }
+  };
 
   // Episode of Care State
   const [showEpisodeModal, setShowEpisodeModal] = useState(false);
@@ -742,7 +758,6 @@ const AppointmentDetails = () => {
   const [showEpisodeTimeline, setShowEpisodeTimeline] = useState(false);
   const [episodeTimelineData, setEpisodeTimelineData] = useState(null);
   const [loadingEpisode, setLoadingEpisode] = useState(false);
-  const [selectedEpisodeId, setSelectedEpisodeId] = useState(null);
 
   // Vitals configuration state
   const [vitalsConfig, setVitalsConfig] = useState({
@@ -934,7 +949,7 @@ const AppointmentDetails = () => {
     }
   };
 
-  // Create new episode
+  // Create new episode - Updated to include ICD code
   const createEpisode = async (episodeData) => {
     // Ensure we have the patient ID as a string
     let patientId = appointment.patient_id;
@@ -948,7 +963,8 @@ const AppointmentDetails = () => {
       patientId,
       doctorId,
       episodeData,
-      appointmentId: appointment._id
+      appointmentId: appointment._id,
+      icdCode: icd11Data?.code || null
     });
 
     if (!patientId) {
@@ -965,10 +981,11 @@ const AppointmentDetails = () => {
 
     try {
       const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/episodes`, {
-        patientId: patientId, // Send as string ID
+        patientId: patientId,
         title: episodeData.title,
         episodeType: episodeData.episodeType,
         diagnosis: episodeData.diagnosis,
+        icdCode: icd11Data?.code || null, // Add ICD code from selected diagnosis
         createdBy: doctorId,
         createdByRole: 'doctor'
       });
@@ -2007,6 +2024,7 @@ const AppointmentDetails = () => {
         doctor_id: appointment.doctor_id?._id || appointment.doctor_id,
         appointment_id: appointment._id,
         diagnosis: prescription.diagnosis.trim(),
+        diagnosis_icd11_code: icd11Data.code || null, // Add this line
         symptoms: prescription.symptoms?.trim() || '',
         notes: prescription.notes?.trim() || '',
         investigation: prescription.investigation?.trim() || '',
@@ -3084,18 +3102,31 @@ const AppointmentDetails = () => {
                               </div>
 
                               <div className="mb-4">
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                  Diagnosis / Provisional Diagnosis <span className="text-red-500">*</span>
-                                </label>
-                                <input
-                                  type="text"
-                                  name="diagnosis"
-                                  value={prescription.diagnosis}
-                                  onChange={handleInputChange}
-                                  placeholder="e.g. Acute Viral Fever"
+                                <ICDSearch
+                                  onSelect={handleICDSelect}
+                                  value={icd11Data?.display || ''}
+                                  label="Diagnosis (ICD-11)"
+                                  placeholder="Search diagnosis by name or code..."
                                   required={true}
-                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
                                 />
+
+                                {/* Optional: Manual override */}
+                                <div className="relative mt-3">
+                                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <FaStethoscope className="text-slate-400 text-sm" />
+                                  </div>
+                                  <input
+                                    type="text"
+                                    name="diagnosis"
+                                    value={prescription.diagnosis}
+                                    onChange={handleInputChange}
+                                    placeholder="Or enter diagnosis manually..."
+                                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
+                                  />
+                                </div>
+                                <p className="text-xs text-gray-400 mt-1">
+                                  Search for ICD-11 codes above, or type a free-text diagnosis below
+                                </p>
                               </div>
 
                               {/* If no episode and diagnosis is entered in prescription, show suggestion */}
