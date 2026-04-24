@@ -3,13 +3,14 @@ import {
   FaChartLine,
   FaCalendarCheck,
   FaFileAlt,
-  FaUserMd,
-  FaFileMedical,
   FaUsers,
   FaUserCircle,
   FaUserFriends,
   FaLock,
   FaMoneyBill,
+  FaUserInjured,
+  FaStethoscope,
+  FaHospitalUser,
 } from 'react-icons/fa';
 import { DepartmentIcon } from '../../components/common/Icons';
 
@@ -26,6 +27,14 @@ export const doctorSidebar = [
   //     { label: 'Doctor Details', path: '/dashboard/doctor/doctor-details/1' },
   //   ],
   // },
+  {
+  label: 'IPD Patients',
+  icon: FaHospitalUser,
+  submenu: [
+    { label: 'My IPD Patients', path: '/dashboard/doctor/ipd/patients', icon: FaUserInjured },
+    // { label: 'Discharge Summary', path: '/dashboard/doctor/ipd/discharge-summary', icon: FaFileAlt },
+  ],
+},
   { label: 'My Patients', path: '/dashboard/doctor/patients', icon: FaUserFriends },
   { label: 'My Department', path: '/dashboard/doctor/department', icon: DepartmentIcon },
   { label: 'Reports & Tests', path: '/dashboard/doctor/reports', icon: FaUsers },

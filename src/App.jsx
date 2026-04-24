@@ -193,6 +193,21 @@ import SyncManager from './components/SyncManager';
 import OfflineStatusBanner from './components/common/OfflineStatusBanner';
 import { useOfflineSync } from './hooks/useOfflineSync';
 import LabNurseDashboard from './pages/dashboard/nurse/LabNurseDashboard';
+import IPDDashboard from './pages/dashboard/staff/ipd/IPDDashboard';
+import AdmitPatient from './pages/dashboard/staff/ipd/AdmitPatient';
+import ActiveAdmissions from './pages/dashboard/staff/ipd/ActiveAdmissions';
+import BedBoard from './pages/dashboard/staff/ipd/BedBoard';
+import IPDPatientFile from './pages/dashboard/staff/ipd/IPDPatientFile';
+import RunningBill from './pages/dashboard/staff/ipd/RunningBill';
+import DischargeSummary from './pages/dashboard/staff/ipd/DischargeSummary';
+import WardDashboard from './pages/dashboard/nurse/ipd/WardDashboard';
+import NurseAssignedPatients from './pages/dashboard/nurse/ipd/NurseAssignedPatients';
+import NurseVitalsRecording from './pages/dashboard/nurse/ipd/NurseVitalsRecording';
+import NurseMedicationChart from './pages/dashboard/nurse/ipd/NurseMedicationChart';
+import DoctorIPDPatients from './pages/dashboard/doctor/ipd/DoctorIPDPatients';
+import DoctorWardRounds from './pages/dashboard/doctor/ipd/DoctorWardRounds';
+import NurseNursingNotes from './pages/dashboard/nurse/ipd/NurseNursingNotes';
+import ShiftHandover from './pages/dashboard/nurse/ipd/ShiftHandover';
 
 // Custom Layout Wrappers with Offline Banner
 const AdminLayout = ({ children }) => {
@@ -1175,6 +1190,53 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
+
+            <Route path="/dashboard/staff/ipd/dashboard" element={<ProtectedRoute role="staff"><StaffLayout><IPDDashboard /></StaffLayout></ProtectedRoute>} />
+            <Route path="/dashboard/staff/ipd/admit" element={<ProtectedRoute role="staff"><StaffLayout><AdmitPatient /></StaffLayout></ProtectedRoute>} />
+            <Route path="/dashboard/staff/ipd/admissions" element={<ProtectedRoute role="staff"><StaffLayout><ActiveAdmissions /></StaffLayout></ProtectedRoute>} />
+            <Route path="/dashboard/staff/ipd/beds" element={<ProtectedRoute role="staff"><StaffLayout><BedBoard /></StaffLayout></ProtectedRoute>} />
+            <Route path="/dashboard/staff/ipd/patient/:id" element={<ProtectedRoute role="staff"><StaffLayout><IPDPatientFile /></StaffLayout></ProtectedRoute>} />
+            <Route
+              path="/dashboard/staff/ipd/billing"
+              element={
+                <ProtectedRoute role="staff">
+                  <StaffLayout>
+                    <RunningBill />
+                  </StaffLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard/staff/ipd/patient/:id/billing"
+              element={
+                <ProtectedRoute role="staff">
+                  <StaffLayout>
+                    <RunningBill />
+                  </StaffLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard/staff/ipd/patient/:id/discharge-summary"
+              element={
+                <ProtectedRoute role="staff">
+                  <StaffLayout>
+                    <DischargeSummary />
+                  </StaffLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route path="/dashboard/nurse/ipd/ward" element={<ProtectedRoute role="nurse"><NurseLayout><WardDashboard /></NurseLayout></ProtectedRoute>} />
+            <Route path="/dashboard/nurse/ipd/patients" element={<ProtectedRoute role="nurse"><NurseLayout><NurseAssignedPatients /></NurseLayout></ProtectedRoute>} />
+            <Route path="/dashboard/nurse/ipd/vitals" element={<ProtectedRoute role="nurse"><NurseLayout><NurseVitalsRecording /></NurseLayout></ProtectedRoute>} />
+            <Route path="/dashboard/nurse/ipd/patient/:id/vitals" element={<ProtectedRoute role="nurse"><NurseLayout><NurseVitalsRecording /></NurseLayout></ProtectedRoute>} />
+            <Route path="/dashboard/nurse/ipd/medications" element={<ProtectedRoute role="nurse"><NurseLayout><NurseMedicationChart /></NurseLayout></ProtectedRoute>} />
+            <Route path="/dashboard/nurse/ipd/patient/:id/medications" element={<ProtectedRoute role="nurse"><NurseLayout><NurseMedicationChart /></NurseLayout></ProtectedRoute>} />
+            <Route path="/dashboard/nurse/ipd/nursing-notes" element={<ProtectedRoute role="nurse"><NurseLayout><NurseNursingNotes /></NurseLayout></ProtectedRoute>} />
+            <Route path="/dashboard/nurse/ipd/handover" element={<ProtectedRoute role="nurse"><NurseLayout><ShiftHandover /></NurseLayout></ProtectedRoute>} />
+
+            <Route path="/dashboard/doctor/ipd/patients" element={<ProtectedRoute role="doctor"><DoctorLayout><DoctorIPDPatients /></DoctorLayout></ProtectedRoute>} />
+            <Route path="/dashboard/doctor/ipd/patient/:id/rounds" element={<ProtectedRoute role="doctor"><DoctorLayout><DoctorWardRounds /></DoctorLayout></ProtectedRoute>} />
 
             {/* Pharmacy Routes with Tracker */}
             <Route
