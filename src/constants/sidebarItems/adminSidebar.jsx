@@ -1,9 +1,15 @@
-// constants/sidebarItems/adminSidebar.js
 import {
   FaBook,
   FaClinicMedical,
   FaLock,
-  FaFlask, // Add this
+  FaFlask,
+  FaHospitalUser,
+  FaBed,
+  FaBuilding,
+  FaChartLine,
+  FaUserInjured,
+  FaFileInvoiceDollar,
+  FaSignOutAlt,
 } from 'react-icons/fa';
 import { HomeIcon } from '@radix-ui/react-icons';
 import {
@@ -14,7 +20,6 @@ import {
   PatientIcon,
   StaffIcon,
   UserProfileIcon,
-  RoomIcon,
 } from '../../components/common/Icons';
 
 export const adminSidebar = [
@@ -36,6 +41,24 @@ export const adminSidebar = [
       { label: 'Add Department', path: '/dashboard/admin/add-department' },
       { label: 'Add HOD', path: '/dashboard/admin/add-hod-main' },
       { label: 'HOD List', path: '/dashboard/admin/DepartmentList' },
+    ],
+  },
+  {
+    label: 'IPD Management',
+    icon: FaHospitalUser,
+    submenu: [
+      { label: 'IPD Dashboard', path: '/dashboard/admin/ipd/dashboard', icon: FaChartLine },
+      { label: 'Admit Patient', path: '/dashboard/admin/ipd/admit', icon: FaUserInjured },
+      { label: 'Active Admissions', path: '/dashboard/admin/ipd/admissions', icon: FaHospitalUser },
+    ],
+  },
+  {
+    label: 'Facility Setup',
+    icon: FaBuilding,
+    submenu: [
+      { label: 'Manage Wards', path: '/dashboard/admin/wards', icon: FaBuilding },
+      { label: 'Manage Rooms', path: '/dashboard/admin/rooms', icon: FaBed },
+      { label: 'Manage Beds', path: '/dashboard/admin/beds', icon: FaBed },
     ],
   },
   {
@@ -61,15 +84,6 @@ export const adminSidebar = [
     icon: FaLock,
     path: '/dashboard/admin/staff-login',
   },
-  // {
-  //   label: 'Rooms',
-  //   icon: RoomIcon,
-  //   path: '/dashboard/admin/room-list',
-  //   submenu: [
-  //     { label: 'Add Room', path: '/dashboard/admin/add-room' },
-  //     { label: 'Room List', path: '/dashboard/admin/room-list' },
-  //   ],
-  // },
   {
     label: 'Patients',
     icon: PatientIcon,

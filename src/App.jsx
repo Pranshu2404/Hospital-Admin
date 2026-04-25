@@ -208,6 +208,14 @@ import DoctorIPDPatients from './pages/dashboard/doctor/ipd/DoctorIPDPatients';
 import DoctorWardRounds from './pages/dashboard/doctor/ipd/DoctorWardRounds';
 import NurseNursingNotes from './pages/dashboard/nurse/ipd/NurseNursingNotes';
 import ShiftHandover from './pages/dashboard/nurse/ipd/ShiftHandover';
+import AdminIPDDashboard from './pages/dashboard/admin/ipd/AdminIPDDashboard';
+import AdminAdmitPatient from './pages/dashboard/admin/ipd/AdminAdmitPatient';
+import AdminActiveAdmissions from './pages/dashboard/admin/ipd/AdminActiveAdmissions';
+import WardManagement from './pages/dashboard/admin/WardManagement';
+import RoomManagement from './pages/dashboard/admin/RoomManagement';
+import BedManagement from './pages/dashboard/admin/BedManagement';
+import AddDoctorRound from './pages/dashboard/staff/ipd/AddDoctorRound';
+import AddVitals from './pages/dashboard/staff/ipd/AddVitals';
 
 // Custom Layout Wrappers with Offline Banner
 const AdminLayout = ({ children }) => {
@@ -844,6 +852,14 @@ export default function App() {
               }
             />
 
+            <Route path="/dashboard/admin/ipd/dashboard" element={<ProtectedRoute role="admin"><AdminLayout><AdminIPDDashboard /></AdminLayout></ProtectedRoute>} />
+            <Route path="/dashboard/admin/ipd/admit" element={<ProtectedRoute role="admin"><AdminLayout><AdminAdmitPatient /></AdminLayout></ProtectedRoute>} />
+            <Route path="/dashboard/admin/ipd/admissions" element={<ProtectedRoute role="admin"><AdminLayout><AdminActiveAdmissions /></AdminLayout></ProtectedRoute>} />
+
+            <Route path="/dashboard/admin/wards" element={<ProtectedRoute role="admin"><AdminLayout><WardManagement /></AdminLayout></ProtectedRoute>} />
+            <Route path="/dashboard/admin/rooms" element={<ProtectedRoute role="admin"><AdminLayout><RoomManagement /></AdminLayout></ProtectedRoute>} />
+            <Route path="/dashboard/admin/beds" element={<ProtectedRoute role="admin"><AdminLayout><BedManagement /></AdminLayout></ProtectedRoute>} />
+
             {/* Doctor Routes with Tracker */}
             <Route
               path="/dashboard/doctor"
@@ -1222,6 +1238,26 @@ export default function App() {
                 <ProtectedRoute role="staff">
                   <StaffLayout>
                     <DischargeSummary />
+                  </StaffLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard/staff/ipd/patient/:id/rounds/add"
+              element={
+                <ProtectedRoute role="staff">
+                  <StaffLayout>
+                    <AddDoctorRound />
+                  </StaffLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard/staff/ipd/patient/:id/vitals/add"
+              element={
+                <ProtectedRoute role="staff">
+                  <StaffLayout>
+                    <AddVitals />
                   </StaffLayout>
                 </ProtectedRoute>
               }

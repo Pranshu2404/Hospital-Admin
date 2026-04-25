@@ -4,7 +4,11 @@ import { staffSidebar } from '@/constants/sidebarItems/staffSidebar';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
-import { FaSearch, FaUserMd, FaBed, FaHospitalUser, FaUserPlus, FaCreditCard, FaNotesMedical, FaUserFriends } from 'react-icons/fa';
+import { 
+  FaSearch, FaUserMd, FaBed, FaHospitalUser, FaUserPlus, 
+  FaCreditCard, FaNotesMedical, FaUserFriends, FaBuilding, 
+  FaDoorOpen, FaMoneyBillWave
+} from 'react-icons/fa';
 
 const API_URL = import.meta.env.VITE_BACKEND_URL;
 
@@ -14,10 +18,14 @@ const AdmitPatient = () => {
   const [patients, setPatients] = useState([]);
   const [doctors, setDoctors] = useState([]);
   const [departments, setDepartments] = useState([]);
+  const [wards, setWards] = useState([]);
+  const [rooms, setRooms] = useState([]);
   const [availableBeds, setAvailableBeds] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [currentStep, setCurrentStep] = useState(1);
+  const [selectedWard, setSelectedWard] = useState('');
+  const [selectedRoom, setSelectedRoom] = useState('');
   
   const [formData, setFormData] = useState({
     patientId: '',
@@ -42,17 +50,24 @@ const AdmitPatient = () => {
   }, []);
 
   useEffect(() => {
-    if (formData.departmentId) {
+    if (selectedWard) {
+      fetchRoomsByWard();
+    }
+  }, [selectedWard]);
+
+  useEffect(() => {
+    if (selectedRoom) {
       fetchAvailableBeds();
     }
-  }, [formData.departmentId]);
+  }, [selectedRoom]);
 
   const fetchInitialData = async () => {
     try {
-      const [patientsRes, doctorsRes, departmentsRes] = await Promise.all([
+      const [patientsRes, doctorsRes, departmentsRes, wardsRes] = await Promise.all([
         axios.get(`${API_URL}/patients?limit=1000`),
         axios.get(`${API_URL}/doctors`),
-        axios.get(`${API_URL}/departments`)
+        axios.get(`${API_URL}/departments`),
+        axios.get(`${API_URL}/wards`)
       ]);
       
       const patientsData = Array.isArray(patientsRes.data) 
@@ -61,18 +76,33 @@ const AdmitPatient = () => {
       setPatients(patientsData);
       setDoctors(doctorsRes.data || []);
       setDepartments(departmentsRes.data || []);
+      setWards(wardsRes.data.wards || []);
     } catch (error) {
       console.error('Error fetching data:', error);
       toast.error('Failed to load initial data');
     }
   };
 
+  const fetchRoomsByWard = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/rooms`);
+      const filteredRooms = (response.data || []).filter(room => room.wardId._id === selectedWard);
+      setRooms(filteredRooms);
+      setSelectedRoom('');
+      setFormData(prev => ({ ...prev, bedId: '' }));
+      setAvailableBeds([]);
+    } catch (error) {
+      console.error('Error fetching rooms:', error);
+    }
+  };
+
   const fetchAvailableBeds = async () => {
     try {
-      const bedsRes = await axios.get(`${API_URL}/ipd/beds/available`, { 
-        params: { wardId: formData.departmentId } 
+      const response = await axios.get(`${API_URL}/ipd/beds/available`, { 
+        params: { roomId: selectedRoom } 
       });
-      setAvailableBeds(bedsRes.data.beds || []);
+      setAvailableBeds(response.data.beds || []);
+      setFormData(prev => ({ ...prev, bedId: '' }));
     } catch (error) {
       console.error('Error fetching beds:', error);
     }
@@ -86,6 +116,13 @@ const AdmitPatient = () => {
     setFormData(prev => ({
       ...prev,
       attendant: { ...prev.attendant, [field]: value }
+    }));
+  };
+
+  const handleInsuranceChange = (field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      insuranceDetails: { ...prev.insuranceDetails, [field]: value }
     }));
   };
 
@@ -187,7 +224,7 @@ const AdmitPatient = () => {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Step 1: Patient Selection */}
+          {/* STEP 1: Patient Selection */}
           {currentStep === 1 && (
             <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
               <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
@@ -207,21 +244,25 @@ const AdmitPatient = () => {
                     />
                   </div>
                   <div className="max-h-80 overflow-y-auto border border-slate-100 rounded-xl divide-y divide-slate-100">
-                    {filteredPatients.map(patient => (
-                      <div
-                        key={patient._id}
-                        onClick={() => setSelectedPatient(patient)}
-                        className="p-4 hover:bg-teal-50/50 cursor-pointer transition-colors flex justify-between items-center"
-                      >
-                        <div>
-                          <p className="font-medium text-slate-800">{patient.first_name} {patient.last_name}</p>
-                          <p className="text-sm text-slate-400">ID: {patient.patientId} | Phone: {patient.phone}</p>
+                    {filteredPatients.length === 0 ? (
+                      <div className="p-8 text-center text-slate-400">No patients found</div>
+                    ) : (
+                      filteredPatients.map(patient => (
+                        <div
+                          key={patient._id}
+                          onClick={() => setSelectedPatient(patient)}
+                          className="p-4 hover:bg-teal-50/50 cursor-pointer transition-colors flex justify-between items-center"
+                        >
+                          <div>
+                            <p className="font-medium text-slate-800">{patient.first_name} {patient.last_name}</p>
+                            <p className="text-sm text-slate-400">ID: {patient.patientId} | Phone: {patient.phone}</p>
+                          </div>
+                          <button className="text-teal-600 text-sm font-medium px-3 py-1.5 rounded-lg hover:bg-teal-100 transition-colors">
+                            Select
+                          </button>
                         </div>
-                        <button className="text-teal-600 text-sm font-medium px-3 py-1.5 rounded-lg hover:bg-teal-100 transition-colors">
-                          Select
-                        </button>
-                      </div>
-                    ))}
+                      ))
+                    )}
                   </div>
                 </>
               ) : (
@@ -253,7 +294,7 @@ const AdmitPatient = () => {
             </div>
           )}
 
-          {/* Step 2: Admission Details */}
+          {/* STEP 2: Admission Details with Ward → Room → Bed hierarchy */}
           {currentStep === 2 && selectedPatient && (
             <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
               <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
@@ -265,7 +306,7 @@ const AdmitPatient = () => {
                   <select
                     value={formData.admissionType}
                     onChange={(e) => handleInputChange('admissionType', e.target.value)}
-                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500/20"
                   >
                     <option value="Planned">Planned</option>
                     <option value="Emergency">Emergency</option>
@@ -279,7 +320,7 @@ const AdmitPatient = () => {
                   <select
                     value={formData.departmentId}
                     onChange={(e) => handleInputChange('departmentId', e.target.value)}
-                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500/20"
                   >
                     <option value="">Select Department</option>
                     {departments.map(dept => (
@@ -293,7 +334,7 @@ const AdmitPatient = () => {
                   <select
                     value={formData.primaryDoctorId}
                     onChange={(e) => handleInputChange('primaryDoctorId', e.target.value)}
-                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500/20"
                   >
                     <option value="">Select Doctor</option>
                     {doctors.map(doc => (
@@ -304,22 +345,69 @@ const AdmitPatient = () => {
                   </select>
                 </div>
                 
+                {/* Ward Selection */}
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Select Bed *</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    <FaBuilding className="inline mr-1" size={12} /> Select Ward *
+                  </label>
                   <select
-                    value={formData.bedId}
-                    onChange={(e) => handleInputChange('bedId', e.target.value)}
-                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 disabled:bg-slate-100 disabled:cursor-not-allowed"
-                    disabled={!formData.departmentId}
+                    value={selectedWard}
+                    onChange={(e) => setSelectedWard(e.target.value)}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500/20"
                   >
-                    <option value="">Select Bed</option>
-                    {availableBeds.map(bed => (
-                      <option key={bed._id} value={bed._id}>
-                        {bed.bedNumber} - {bed.bedType} (₹{bed.dailyCharge}/day)
-                      </option>
+                    <option value="">Select Ward</option>
+                    {wards.map(ward => (
+                      <option key={ward._id} value={ward._id}>{ward.name}</option>
                     ))}
                   </select>
                 </div>
+
+                {/* Room Selection */}
+                {selectedWard && (
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      <FaDoorOpen className="inline mr-1" size={12} /> Select Room *
+                    </label>
+                    <select
+                      value={selectedRoom}
+                      onChange={(e) => setSelectedRoom(e.target.value)}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+                    >
+                      <option value="">Select Room</option>
+                      {rooms.map(room => (
+                        <option key={room._id} value={room._id}>{room.room_number} ({room.type})</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {/* Bed Selection */}
+                {selectedRoom && (
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      <FaBed className="inline mr-1" size={12} /> Select Bed *
+                    </label>
+                    <select
+                      value={formData.bedId}
+                      onChange={(e) => handleInputChange('bedId', e.target.value)}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+                    >
+                      <option value="">Select Bed</option>
+                      {availableBeds.length === 0 ? (
+                        <option value="" disabled>No beds available</option>
+                      ) : (
+                        availableBeds.map(bed => (
+                          <option key={bed._id} value={bed._id}>
+                            {bed.bedNumber} - {bed.bedType} (₹{bed.dailyCharge}/day)
+                          </option>
+                        ))
+                      )}
+                    </select>
+                    {availableBeds.length === 0 && selectedRoom && (
+                      <p className="text-xs text-amber-600 mt-1">No beds available in this room</p>
+                    )}
+                  </div>
+                )}
               </div>
               
               <div className="flex justify-between gap-3 mt-6">
@@ -332,7 +420,13 @@ const AdmitPatient = () => {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setCurrentStep(3)}
+                  onClick={() => {
+                    if (!formData.bedId) {
+                      toast.error('Please select a bed');
+                      return;
+                    }
+                    setCurrentStep(3);
+                  }}
                   className="px-6 py-2.5 bg-teal-600 text-white rounded-xl hover:bg-teal-700 transition-all"
                 >
                   Next: Clinical Info →
@@ -341,7 +435,7 @@ const AdmitPatient = () => {
             </div>
           )}
 
-          {/* Step 3: Clinical Information */}
+          {/* STEP 3: Clinical Information */}
           {currentStep === 3 && selectedPatient && (
             <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
               <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
@@ -353,7 +447,7 @@ const AdmitPatient = () => {
                   <textarea
                     value={formData.provisionalDiagnosis}
                     onChange={(e) => handleInputChange('provisionalDiagnosis', e.target.value)}
-                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500/20"
                     rows="3"
                     placeholder="Enter provisional diagnosis..."
                   />
@@ -363,7 +457,7 @@ const AdmitPatient = () => {
                   <textarea
                     value={formData.chiefComplaints}
                     onChange={(e) => handleInputChange('chiefComplaints', e.target.value)}
-                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500/20"
                     rows="3"
                     placeholder="Enter chief complaints..."
                   />
@@ -373,9 +467,19 @@ const AdmitPatient = () => {
                   <textarea
                     value={formData.historyOfPresentIllness}
                     onChange={(e) => handleInputChange('historyOfPresentIllness', e.target.value)}
-                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500/20"
                     rows="2"
-                    placeholder="Enter history..."
+                    placeholder="Enter history of present illness..."
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Past Medical History</label>
+                  <textarea
+                    value={formData.pastMedicalHistory}
+                    onChange={(e) => handleInputChange('pastMedicalHistory', e.target.value)}
+                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+                    rows="2"
+                    placeholder="Enter past medical history..."
                   />
                 </div>
               </div>
@@ -399,7 +503,7 @@ const AdmitPatient = () => {
             </div>
           )}
 
-          {/* Step 4: Attendant & Payment Details */}
+          {/* STEP 4: Attendant & Payment Details */}
           {currentStep === 4 && selectedPatient && (
             <>
               <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
@@ -413,7 +517,7 @@ const AdmitPatient = () => {
                       type="text"
                       value={formData.attendant.name}
                       onChange={(e) => handleAttendantChange('name', e.target.value)}
-                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500/20"
                     />
                   </div>
                   <div>
@@ -422,7 +526,7 @@ const AdmitPatient = () => {
                       type="text"
                       value={formData.attendant.relation}
                       onChange={(e) => handleAttendantChange('relation', e.target.value)}
-                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500/20"
                     />
                   </div>
                   <div>
@@ -431,7 +535,7 @@ const AdmitPatient = () => {
                       type="tel"
                       value={formData.attendant.mobile}
                       onChange={(e) => handleAttendantChange('mobile', e.target.value)}
-                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500/20"
                     />
                   </div>
                   <div>
@@ -440,7 +544,7 @@ const AdmitPatient = () => {
                       type="text"
                       value={formData.attendant.address}
                       onChange={(e) => handleAttendantChange('address', e.target.value)}
-                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500/20"
                     />
                   </div>
                 </div>
@@ -448,7 +552,7 @@ const AdmitPatient = () => {
 
               <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
                 <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-                  <FaCreditCard className="text-teal-500" /> Payment Details
+                  <FaMoneyBillWave className="text-teal-500" /> Payment Details
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div>
@@ -456,7 +560,7 @@ const AdmitPatient = () => {
                     <select
                       value={formData.paymentType}
                       onChange={(e) => handleInputChange('paymentType', e.target.value)}
-                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500/20"
                     >
                       <option value="Cash">Cash</option>
                       <option value="Insurance">Insurance</option>
@@ -470,10 +574,69 @@ const AdmitPatient = () => {
                       type="number"
                       value={formData.advanceAmount}
                       onChange={(e) => handleInputChange('advanceAmount', e.target.value)}
-                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+                      min="0"
                     />
                   </div>
                 </div>
+                
+                {/* Insurance Details - shown only when Insurance is selected */}
+                {formData.paymentType === 'Insurance' && (
+                  <div className="mt-4 p-4 bg-slate-50 rounded-xl">
+                    <h3 className="font-medium text-slate-700 mb-3">Insurance Details</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-medium text-slate-600 mb-1">Provider</label>
+                        <input
+                          type="text"
+                          value={formData.insuranceDetails.provider}
+                          onChange={(e) => handleInsuranceChange('provider', e.target.value)}
+                          className="w-full p-2 bg-white border border-slate-200 rounded-lg"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-slate-600 mb-1">Policy Number</label>
+                        <input
+                          type="text"
+                          value={formData.insuranceDetails.policyNumber}
+                          onChange={(e) => handleInsuranceChange('policyNumber', e.target.value)}
+                          className="w-full p-2 bg-white border border-slate-200 rounded-lg"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-slate-600 mb-1">TPA Name</label>
+                        <input
+                          type="text"
+                          value={formData.insuranceDetails.tpaName}
+                          onChange={(e) => handleInsuranceChange('tpaName', e.target.value)}
+                          className="w-full p-2 bg-white border border-slate-200 rounded-lg"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-slate-600 mb-1">Pre-auth Number</label>
+                        <input
+                          type="text"
+                          value={formData.insuranceDetails.preAuthNumber}
+                          onChange={(e) => handleInsuranceChange('preAuthNumber', e.target.value)}
+                          className="w-full p-2 bg-white border border-slate-200 rounded-lg"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+                <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                  <FaNotesMedical className="text-teal-500" /> Admission Notes
+                </h2>
+                <textarea
+                  value={formData.admissionNotes}
+                  onChange={(e) => handleInputChange('admissionNotes', e.target.value)}
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+                  rows="3"
+                  placeholder="Any additional notes about the admission..."
+                />
               </div>
 
               <div className="flex justify-between gap-3">

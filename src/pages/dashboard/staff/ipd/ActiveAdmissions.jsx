@@ -25,9 +25,7 @@ const ActiveAdmissions = () => {
   const fetchAdmissions = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API_URL}/ipd/admissions`, {
-        params: { status: 'Admitted,Under Treatment,Discharge Initiated' }
-      });
+      const response = await axios.get(`${API_URL}/ipd/admissions`);
       setAdmissions(response.data.admissions || []);
     } catch (error) {
       console.error('Error fetching admissions:', error);
