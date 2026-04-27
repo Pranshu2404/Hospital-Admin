@@ -9,7 +9,7 @@ import {
   FaFlask, FaFileAlt, FaChevronDown, FaChevronUp, FaCapsules, FaHeartbeat, FaMagic, FaTimesCircle,
   FaProcedures, FaSearch, FaVial, FaMicroscope, FaThermometerHalf, FaDna,
   FaUserMd, FaUserNurse, FaUserTie, FaExclamationTriangle, FaEdit,
-  FaFolderOpen, FaFolderPlus, FaCheckDouble
+  FaFolderOpen, FaFolderPlus, FaCheckDouble, FaXRay
 } from 'react-icons/fa';
 import { summarizePatientHistory } from '@/utils/geminiService';
 import Layout from '@/components/Layout';
@@ -51,25 +51,19 @@ const EpisodeModal = ({ isOpen, onClose, onConfirm, suggestions, diagnosis, pati
   const [customTitle, setCustomTitle] = useState('');
   const [customDiagnosis, setCustomDiagnosis] = useState('');
 
-  // Reset and auto-fill when modal opens or diagnosis changes
   useEffect(() => {
     if (isOpen) {
-      // Set diagnosis from prop
       if (diagnosis) {
         setCustomDiagnosis(diagnosis);
       }
-
-      // Generate default title
       const defaultTitle = `${selectedType} Management - ${diagnosis || 'Patient'}`;
       setCustomTitle(defaultTitle);
     }
   }, [isOpen, diagnosis, selectedType]);
 
-  // Update title when type or diagnosis changes while modal is open
   useEffect(() => {
     if (isOpen) {
       const autoTitle = `${selectedType} Management - ${customDiagnosis || diagnosis || 'Patient'}`;
-      // Only auto-update if user hasn't manually changed the title
       if (!customTitle || customTitle === `${selectedType} Management - ${diagnosis || 'Patient'}`) {
         setCustomTitle(autoTitle);
       }
@@ -111,7 +105,6 @@ const EpisodeModal = ({ isOpen, onClose, onConfirm, suggestions, diagnosis, pati
         </div>
 
         <div className="p-5 space-y-5">
-          {/* Existing Episodes Suggestions */}
           {suggestions && (suggestions.active?.length > 0 || suggestions.recentClosed?.length > 0) && (
             <div>
               <h3 className="font-semibold text-gray-700 mb-3 flex items-center gap-2">
@@ -179,7 +172,6 @@ const EpisodeModal = ({ isOpen, onClose, onConfirm, suggestions, diagnosis, pati
             </div>
           )}
 
-          {/* Create New Episode */}
           <div>
             <h3 className="font-semibold text-gray-700 mb-3">Create New Episode</h3>
             <div className="space-y-4">
@@ -240,11 +232,12 @@ const EpisodeModal = ({ isOpen, onClose, onConfirm, suggestions, diagnosis, pati
 };
 
 // Episode Timeline Component
-const EpisodeTimeline = ({ episode, appointments, prescriptions, labReports, onClose }) => {
+const EpisodeTimeline = ({ episode, appointments, prescriptions, labReports, radiologyReports, onClose }) => {
   const allEvents = [
     ...appointments.map(a => ({ type: 'appointment', date: a.appointment_date || a.created_at, data: a })),
     ...prescriptions.map(p => ({ type: 'prescription', date: p.created_at, data: p })),
-    ...labReports.map(l => ({ type: 'lab_report', date: l.created_at, data: l }))
+    ...labReports.map(l => ({ type: 'lab_report', date: l.created_at, data: l })),
+    ...radiologyReports.map(r => ({ type: 'radiology', date: r.created_at, data: r }))
   ].sort((a, b) => new Date(a.date) - new Date(b.date));
 
   return (
@@ -268,7 +261,6 @@ const EpisodeTimeline = ({ episode, appointments, prescriptions, labReports, onC
         </div>
 
         <div className="p-5 space-y-5">
-          {/* Episode Details */}
           <div className="bg-teal-50 rounded-xl p-4">
             <p className="font-semibold text-teal-800">Diagnosis</p>
             <p className="text-gray-700">{episode.diagnosis}</p>
@@ -280,7 +272,6 @@ const EpisodeTimeline = ({ episode, appointments, prescriptions, labReports, onC
             )}
           </div>
 
-          {/* Timeline */}
           <div>
             <h3 className="font-semibold text-gray-700 mb-4">Episode Timeline</h3>
             <div className="relative pl-6 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-teal-200">
@@ -292,6 +283,7 @@ const EpisodeTimeline = ({ episode, appointments, prescriptions, labReports, onC
                       {event.type === 'appointment' && <FaCalendarCheck className="text-teal-500" />}
                       {event.type === 'prescription' && <FaFilePrescription className="text-blue-500" />}
                       {event.type === 'lab_report' && <FaFlask className="text-amber-500" />}
+                      {event.type === 'radiology' && <FaXRay className="text-purple-500" />}
                       <span className="text-xs text-gray-500">{new Date(event.date).toLocaleString()}</span>
                     </div>
                     <div className="text-sm">
@@ -316,6 +308,12 @@ const EpisodeTimeline = ({ episode, appointments, prescriptions, labReports, onC
                           <p className="text-gray-600 text-xs mt-1">{event.data.test_name}</p>
                         </div>
                       )}
+                      {event.type === 'radiology' && (
+                        <div>
+                          <span className="font-medium">Radiology Report</span>
+                          <p className="text-gray-600 text-xs mt-1">{event.data.imaging_test_name}</p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -328,6 +326,7 @@ const EpisodeTimeline = ({ episode, appointments, prescriptions, labReports, onC
   );
 };
 
+// SearchableFormSelect Component
 const SearchableFormSelect = ({
   label,
   value,
@@ -373,7 +372,6 @@ const SearchableFormSelect = ({
 
   useEffect(() => {
     const valueChanged = value !== lastValueRef.current;
-
     if (valueChanged) {
       lastValueRef.current = value;
       syncFromValue();
@@ -392,10 +390,8 @@ const SearchableFormSelect = ({
       return;
     }
 
-    // Split search term into words for better matching
     const searchWords = term.split(/\s+/).filter(word => word.length > 0);
 
-    // Filter and score options
     const filtered = normalizedOptions
       .map(opt => {
         const haystack = [
@@ -404,50 +400,35 @@ const SearchableFormSelect = ({
           opt.name,
           opt.category,
           opt.specimen_type,
-          opt.description
+          opt.description,
+          opt.modality
         ].filter(Boolean).join(' ').toLowerCase();
 
-        // Calculate score: higher score means better match
         let score = 0;
 
-        // Check if starts with search term (highest priority)
         if (haystack.startsWith(term)) {
           score += 100;
         }
-        // Check if any word starts with search term
         else if (haystack.split(/\s+/).some(word => word.startsWith(term))) {
           score += 50;
         }
-        // Check if contains search term
         else if (haystack.includes(term)) {
           score += 25;
         }
 
-        // Check for word boundary matches
         searchWords.forEach(word => {
           if (word.length > 0) {
-            if (haystack.startsWith(word)) {
-              score += 10;
-            } else if (haystack.includes(` ${word}`)) {
-              score += 5;
-            } else if (haystack.includes(word)) {
-              score += 1;
-            }
+            if (haystack.startsWith(word)) score += 10;
+            else if (haystack.includes(` ${word}`)) score += 5;
+            else if (haystack.includes(word)) score += 1;
           }
         });
 
-        return {
-          ...opt,
-          score
-        };
+        return { ...opt, score };
       })
-      .filter(opt => opt.score > 0) // Only keep matches
+      .filter(opt => opt.score > 0)
       .sort((a, b) => {
-        // Sort by score (highest first)
-        if (b.score !== a.score) {
-          return b.score - a.score;
-        }
-        // If scores are equal, sort alphabetically
+        if (b.score !== a.score) return b.score - a.score;
         return (a.label || '').localeCompare(b.label || '');
       })
       .slice(0, 20);
@@ -464,18 +445,13 @@ const SearchableFormSelect = ({
 
     if (isFocused && searchTerm.length >= minSearchChars) {
       const cachedResult = searchCacheRef.current.get(searchTerm);
-      if (cachedResult) {
-        console.log(`Using cached results for "${searchTerm}"`);
-        return;
-      }
+      if (cachedResult) return;
 
       searchCacheRef.current.set(searchTerm, 'pending');
 
-      const rapidTypingDelay = Math.max(debounceDelay, 2000);
-
       searchTimeoutRef.current = setTimeout(() => {
         onSearch(searchTerm);
-      }, rapidTypingDelay);
+      }, Math.max(debounceDelay, 2000));
     }
     else if (isFocused && searchTerm.length === 0) {
       onSearch('');
@@ -504,11 +480,9 @@ const SearchableFormSelect = ({
     setSearchTerm(opt.label);
     setIsOpen(false);
     setActiveIndex(0);
-
     if (opt.value && opt.label) {
       searchCacheRef.current.set(opt.label, [opt]);
     }
-
     setTimeout(() => inputRef.current?.focus(), 0);
   };
 
@@ -532,13 +506,11 @@ const SearchableFormSelect = ({
     const next = e.target.value;
     setSearchTerm(next);
     setActiveIndex(0);
-
     if (next.trim()) setIsOpen(true);
     else {
       setIsOpen(false);
       emitChange('', null);
     }
-
     if (freeSolo) {
       emitChange(next, null);
     }
@@ -564,14 +536,12 @@ const SearchableFormSelect = ({
         if (allowCustom && freeSolo && searchTerm.trim() && !hasExactMatch) {
           emitChange(searchTerm.trim(), null);
           setIsOpen(false);
-
-          const customOption = {
+                    const customOption = {
             label: searchTerm.trim(),
             value: searchTerm.trim(),
             isCustom: true
           };
           searchCacheRef.current.set(searchTerm.trim(), [customOption]);
-
           return;
         }
         break;
@@ -606,7 +576,6 @@ const SearchableFormSelect = ({
         if (!freeSolo) syncFromValue();
       }
     };
-
     document.addEventListener("mousedown", clickOutside);
     return () => document.removeEventListener("mousedown", clickOutside);
   }, [freeSolo, syncFromValue]);
@@ -615,6 +584,7 @@ const SearchableFormSelect = ({
     if (type === "medicine") return <FaCapsules className="text-purple-500 text-sm" />;
     if (type === "procedure") return <FaProcedures className="text-blue-500 text-sm" />;
     if (type === "labtest") return <FaMicroscope className="text-amber-500 text-sm" />;
+    if (type === "radiology") return <FaXRay className="text-purple-500 text-sm" />;
     return <FaSearch className="text-gray-400 text-sm" />;
   };
 
@@ -680,13 +650,15 @@ const SearchableFormSelect = ({
                       {opt.isCustom && <span className="ml-2 text-xs text-gray-500">(Custom)</span>}
                     </div>
 
-                    {(opt.name || opt.specimen_type || opt.category || opt.base_price) && (
+                    {(opt.name || opt.specimen_type || opt.category || opt.base_price || opt.modality) && (
                       <div className="text-xs text-gray-500 mt-0.5">
                         {opt.name && <span>{opt.name} </span>}
                         {typeof opt.base_price !== 'undefined' && <span>• ₹{opt.base_price || 0} </span>}
                         {opt.specimen_type && <span>• {opt.specimen_type} </span>}
                         {opt.category && <span>• {opt.category}</span>}
+                        {opt.modality && <span>• {opt.modality}</span>}
                         {opt.fasting_required && <span>• Fasting Required</span>}
+                        {opt.contrast_required && <span>• Contrast Required</span>}
                       </div>
                     )}
                   </div>
@@ -736,9 +708,8 @@ const AppointmentDetails = () => {
   const [currentDoctorDept, setCurrentDoctorDept] = useState(null);
   const [icd11Data, setIcd11Data] = useState(null);
 
-  // Handler for ICD selection
   const handleICDSelect = (selected) => {
-    console.log('ICD Selected:', selected); // Debug log
+    console.log('ICD Selected:', selected);
     if (selected) {
       setIcd11Data(selected);
       setPrescription(prev => ({
@@ -769,7 +740,6 @@ const AppointmentDetails = () => {
   const [userRole, setUserRole] = useState('doctor');
   const [isVitalsModalOpen, setIsVitalsModalOpen] = useState(false);
 
-  // Default Vitals
   const defaultVitals = {
     bp: '120/80',
     weight: '70',
@@ -781,7 +751,6 @@ const AppointmentDetails = () => {
     height: '170'
   };
 
-  // Vitals Form State
   const [vitals, setVitals] = useState(defaultVitals);
 
   // State for medicine search
@@ -802,10 +771,17 @@ const AppointmentDetails = () => {
   const [searchingLabTests, setSearchingLabTests] = useState(false);
   const [labTestErrors, setLabTestErrors] = useState({});
 
+  // NEW: State for radiology test search
+  const [radiologyOptions, setRadiologyOptions] = useState([]);
+  const [loadingRadiology, setLoadingRadiology] = useState(false);
+  const [searchingRadiology, setSearchingRadiology] = useState(false);
+  const [radiologyErrors, setRadiologyErrors] = useState({});
+
   // State to track expanded indexes
   const [expandedMedicineIndex, setExpandedMedicineIndex] = useState(0);
   const [expandedProcedureIndex, setExpandedProcedureIndex] = useState(0);
   const [expandedLabTestIndex, setExpandedLabTestIndex] = useState(0);
+  const [expandedRadiologyIndex, setExpandedRadiologyIndex] = useState(0);
 
   // Frequency options
   const frequencyOptions = [
@@ -829,13 +805,11 @@ const AppointmentDetails = () => {
     { value: 'q.o.d.', label: 'Every other day' }
   ];
 
-  // Duration options
   const durationOptions = Array.from({ length: 30 }, (_, i) => ({
     value: `${i + 1} days`,
     label: `${i + 1} day${i > 0 ? 's' : ''}`
   }));
 
-  // Route options
   const routeOptions = [
     { value: "Oral", label: "Oral" },
     { value: "Sublingual", label: "Sublingual" },
@@ -851,7 +825,6 @@ const AppointmentDetails = () => {
     { value: "Other", label: "Other" }
   ];
 
-  // Medicine type options
   const medicineTypeOptions = [
     { value: "Tablet", label: "Tablet" },
     { value: "Capsule", label: "Capsule" },
@@ -867,23 +840,36 @@ const AppointmentDetails = () => {
     { value: "Other", label: "Other" }
   ];
 
+  // UPDATED: Prescription state with proper field names for new models
   const [prescription, setPrescription] = useState({
     diagnosis: '',
     notes: '',
     investigation: '',
     presenting_complaint: '',
     history_of_presenting_complaint: '',
-    recommendedProcedures: [{
+    procedure_requests: [{
       procedure_code: '',
       procedure_name: '',
-      notes: ''
+      notes: '',
+      priority: 'Routine',
+      cost: 0
     }],
-    recommendedLabTests: [{
+    lab_test_requests: [{
       lab_test_code: '',
       lab_test_name: '',
       notes: '',
-      fasting_required: false,
-      specimen_type: ''
+      priority: 'Routine',
+      clinical_history: '',
+      cost: 0
+    }],
+    radiology_test_requests: [{
+      imaging_test_code: '',
+      imaging_test_name: '',
+      category: '',
+      notes: '',
+      priority: 'Routine',
+      clinical_history: '',
+      cost: 0
     }],
     items: [{
       medicine_name: '',
@@ -903,15 +889,13 @@ const AppointmentDetails = () => {
   const [summarizing, setSummarizing] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
 
-  // Check for existing episodes based on diagnosis
+  // Check for existing episodes
   const checkExistingEpisodes = async (diagnosis) => {
     const patientId = appointment.patient_id?._id || appointment.patient_id;
     if (!patientId || !diagnosis) return;
 
     setLoadingEpisode(true);
     try {
-      console.log('Checking episodes for:', { patientId, diagnosis });
-
       const response = await axios.get(
         `${import.meta.env.VITE_BACKEND_URL}/episodes/suggest`, {
         params: {
@@ -940,8 +924,6 @@ const AppointmentDetails = () => {
       }
     } catch (error) {
       console.error('Error checking episodes:', error);
-      console.error('Error details:', error.response?.data);
-      // Even on error, show the modal to allow episode creation
       setEpisodeSuggestions({ active: [], recentClosed: [] });
       setShowEpisodeModal(true);
     } finally {
@@ -949,7 +931,6 @@ const AppointmentDetails = () => {
     }
   };
 
-  // Create new episode - Updated to include ICD code
   const createEpisode = async (episodeData) => {
     // Ensure we have the patient ID as a string
     let patientId = appointment.patient_id;
@@ -985,52 +966,32 @@ const AppointmentDetails = () => {
         title: episodeData.title,
         episodeType: episodeData.episodeType,
         diagnosis: episodeData.diagnosis,
-        icdCode: icd11Data?.code || null, // Add ICD code from selected diagnosis
+        icdCode: icd11Data?.code || null,
         createdBy: doctorId,
         createdByRole: 'doctor'
       });
 
-      console.log('Episode creation response:', response.data);
-
       if (response.data.success) {
         setCurrentEpisode(response.data.episode);
-
-        // Link current appointment to episode
-        console.log('Linking appointment to episode:', response.data.episode._id);
-        const linkResult = await linkAppointmentToEpisode(response.data.episode._id);
-        console.log('Link result:', linkResult);
-
-        if (linkResult) {
-          setMessage(`Episode "${episodeData.title}" created and linked successfully!`);
-        } else {
-          setMessage(`Episode created but failed to link to current appointment.`);
-        }
-
+        await linkAppointmentToEpisode(response.data.episode._id);
+        setMessage(`Episode "${episodeData.title}" created and linked successfully!`);
         setTimeout(() => setMessage(''), 3000);
         return response.data.episode;
-      } else {
-        console.error('Episode creation failed:', response.data);
-        setMessage('Failed to create episode: ' + (response.data.error || 'Unknown error'));
-        return null;
       }
+      return null;
     } catch (error) {
       console.error('Error creating episode:', error);
-      console.error('Error response:', error.response?.data);
-      const errorMsg = error.response?.data?.error || error.response?.data?.message || error.message;
-      setMessage('Failed to create episode: ' + errorMsg);
+      setMessage('Failed to create episode: ' + (error.response?.data?.error || error.message));
       return null;
     }
   };
 
-  // Link appointment to episode
   const linkAppointmentToEpisode = async (episodeId) => {
     try {
       await axios.post(`${import.meta.env.VITE_BACKEND_URL}/appointments/link-episode`, {
         appointmentId: appointment._id,
         episodeId
       });
-
-      // Update local appointment state
       setAppointment(prev => ({ ...prev, episodeId }));
       return true;
     } catch (error) {
@@ -1039,7 +1000,6 @@ const AppointmentDetails = () => {
     }
   };
 
-  // Use existing episode
   const useExistingEpisode = async (episode) => {
     setCurrentEpisode(episode);
     await linkAppointmentToEpisode(episode._id);
@@ -1047,7 +1007,6 @@ const AppointmentDetails = () => {
     setShowEpisodeModal(false);
   };
 
-  // Handle episode modal action
   const handleEpisodeAction = async (action, data) => {
     if (action === 'use_existing') {
       await useExistingEpisode(data);
@@ -1057,7 +1016,6 @@ const AppointmentDetails = () => {
     setShowEpisodeModal(false);
   };
 
-  // Fetch episode timeline
   const fetchEpisodeTimeline = async (episodeId) => {
     try {
       const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/episodes/${episodeId}/timeline`);
@@ -1071,7 +1029,6 @@ const AppointmentDetails = () => {
   };
 
   useEffect(() => {
-    // Get hospital ID from localStorage
     const hospitalID = localStorage.getItem('hospitalId');
     const userData = JSON.parse(localStorage.getItem('user') || '{}');
 
@@ -1079,13 +1036,9 @@ const AppointmentDetails = () => {
       setHospitalId(hospitalID);
       fetchVitalsConfig(hospitalID);
     }
-
-    if (userData.role) {
-      setUserRole(userData.role);
-    }
+    if (userData.role) setUserRole(userData.role);
   }, []);
 
-  // Fetch vitals configuration
   const fetchVitalsConfig = async (hospitalId) => {
     try {
       setConfigLoading(true);
@@ -1097,78 +1050,39 @@ const AppointmentDetails = () => {
       setVitalsConfig(response.data);
     } catch (err) {
       console.error('Error fetching vitals config:', err);
-      setVitalsConfig({
-        vitalsEnabled: true,
-        vitalsController: 'doctor'
-      });
+      setVitalsConfig({ vitalsEnabled: true, vitalsController: 'doctor' });
     } finally {
       setConfigLoading(false);
     }
   };
 
-  // Listen for vitals config updates
   useEffect(() => {
     const handleVitalsUpdate = () => {
-      if (hospitalId) {
-        fetchVitalsConfig(hospitalId);
-      }
+      if (hospitalId) fetchVitalsConfig(hospitalId);
     };
-
     window.addEventListener('vitals-updated', handleVitalsUpdate);
     return () => window.removeEventListener('vitals-updated', handleVitalsUpdate);
   }, [hospitalId]);
 
-  // Check if doctor can access vitals
-  const canAccessVitals = () => {
-    return vitalsConfig.vitalsEnabled && vitalsConfig.vitalsController === 'doctor';
-  };
+  const canAccessVitals = () => vitalsConfig.vitalsEnabled && vitalsConfig.vitalsController === 'doctor';
 
-  // Get vitals access message
   const getVitalsAccessMessage = () => {
     if (!vitalsConfig.vitalsEnabled) {
-      return {
-        message: 'Vitals collection is currently disabled',
-        color: 'gray',
-        icon: FaExclamationTriangle
-      };
+      return { message: 'Vitals collection is currently disabled', color: 'gray', icon: FaExclamationTriangle };
     }
-
     switch (vitalsConfig.vitalsController) {
-      case 'doctor':
-        return {
-          message: 'You have full access to manage vitals',
-          color: 'blue',
-          icon: FaUserMd
-        };
-      case 'nurse':
-        return {
-          message: 'Vitals are managed by Nurses',
-          color: 'green',
-          icon: FaUserNurse
-        };
-      case 'registrar':
-        return {
-          message: 'Vitals are managed by Registrars',
-          color: 'purple',
-          icon: FaUserTie
-        };
-      default:
-        return {
-          message: 'Vitals access information',
-          color: 'gray',
-          icon: FaExclamationTriangle
-        };
+      case 'doctor': return { message: 'You have full access to manage vitals', color: 'blue', icon: FaUserMd };
+      case 'nurse': return { message: 'Vitals are managed by Nurses', color: 'green', icon: FaUserNurse };
+      case 'registrar': return { message: 'Vitals are managed by Registrars', color: 'purple', icon: FaUserTie };
+      default: return { message: 'Vitals access information', color: 'gray', icon: FaExclamationTriangle };
     }
   };
 
-  // Vitals handlers
   const handleVitalsClick = () => {
     if (!canAccessVitals()) {
       alert('You do not have permission to manage vitals.');
       return;
     }
-
-    // Pre-fill with existing vitals if available
     setVitals({
       bp: appointment.vitals?.bp || defaultVitals.bp,
       weight: appointment.vitals?.weight || defaultVitals.weight,
@@ -1188,13 +1102,11 @@ const AppointmentDetails = () => {
 
   const submitVitals = async (e) => {
     e.preventDefault();
-
     if (!canAccessVitals()) {
       alert('Vitals access has been revoked or reassigned.');
       setIsVitalsModalOpen(false);
       return;
     }
-
     try {
       const token = localStorage.getItem('token');
       await axios.put(
@@ -1202,13 +1114,9 @@ const AppointmentDetails = () => {
         { ...vitals },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-
       setMessage('Vitals updated successfully!');
       setIsVitalsModalOpen(false);
-
-      // Refresh appointment data to show updated vitals
       fetchAppointment();
-
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
       console.error('Error updating vitals:', err);
@@ -1216,20 +1124,14 @@ const AppointmentDetails = () => {
     }
   };
 
-  // Fetch medicines (with optional dosage_form filter for faster search)
+  // Fetch functions
   const fetchMedicines = async (searchTerm = '', dosageForm = '') => {
     if (searchTerm.length < 2 && searchTerm !== '') return;
-
     setSearchingMedicines(true);
     try {
       const params = { q: searchTerm, limit: 30 };
-      if (dosageForm) {
-        params.dosage_form = dosageForm;
-      }
-      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/NLEMmedicines/search`, {
-        params
-      });
-
+      if (dosageForm) params.dosage_form = dosageForm;
+      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/NLEMmedicines/search`, { params });
       if (response.data.data && response.data.data.medicines) {
         const medicineOpts = response.data.data.medicines.map(med => ({
           label: med.medicine_name + (med.strength ? ` ${med.strength}` : '') + (med.dosage_form ? ` (${med.dosage_form})` : ''),
@@ -1250,16 +1152,13 @@ const AppointmentDetails = () => {
     }
   };
 
-  // Fetch procedures
   const fetchProcedures = async (searchTerm = '') => {
     if (searchTerm.length < 2 && searchTerm !== '') return;
-
     setSearchingProcedures(true);
     try {
       const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/procedures/search`, {
         params: { q: searchTerm, limit: 20 }
       });
-
       if (response.data.data && response.data.data.procedures) {
         const procedureOpts = response.data.data.procedures.map(proc => ({
           label: proc.code,
@@ -1280,16 +1179,13 @@ const AppointmentDetails = () => {
     }
   };
 
-  // Fetch lab tests
   const fetchLabTests = async (searchTerm = '') => {
     if (searchTerm.length < 2 && searchTerm !== '') return;
-
     setSearchingLabTests(true);
     try {
       const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/labtests/search`, {
         params: { q: searchTerm, limit: 20 }
       });
-
       if (response.data.data && response.data.data.labTests) {
         const labTestOpts = response.data.data.labTests.map(test => ({
           label: test.code,
@@ -1312,33 +1208,60 @@ const AppointmentDetails = () => {
     }
   };
 
-  // Load initial data
+  // NEW: Fetch radiology tests
+  const fetchRadiologyTests = async (searchTerm = '') => {
+    if (searchTerm.length < 2 && searchTerm !== '') return;
+    setSearchingRadiology(true);
+    try {
+      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/imaging-tests/search`, {
+        params: { q: searchTerm, limit: 20 }
+      });
+      if (response.data.data && response.data.data.imagingTests) {
+        const radiologyOpts = response.data.data.imagingTests.map(test => ({
+          label: test.code,
+          value: test.code,
+          name: test.name,
+          category: test.category,
+          base_price: test.base_price,
+          modality: test.modality,
+          contrast_required: test.contrast_required,
+          preparation_instructions: test.preparation_instructions,
+          turnaround_time_hours: test.turnaround_time_hours
+        }));
+        setRadiologyOptions(radiologyOpts);
+      }
+    } catch (error) {
+      console.error('Error fetching radiology tests:', error);
+      setRadiologyOptions([]);
+    } finally {
+      setSearchingRadiology(false);
+    }
+  };
+
   useEffect(() => {
     const loadInitialData = async () => {
       setLoadingProcedures(true);
       setLoadingLabTests(true);
-
+      setLoadingRadiology(true);
       try {
-        // Medicines are now loaded on-demand when type is selected
         await fetchProcedures('');
         await fetchLabTests('');
+        await fetchRadiologyTests('');
       } catch (error) {
         console.error('Error loading initial data:', error);
       } finally {
         setLoadingProcedures(false);
         setLoadingLabTests(false);
+        setLoadingRadiology(false);
       }
     };
-
     loadInitialData();
   }, []);
 
-  // Fetch current doctor's department
   useEffect(() => {
     const fetchCurrentDoctorDept = async () => {
       const doctorId = localStorage.getItem('doctorId');
       if (!doctorId) return;
-
       try {
         const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/doctors/${doctorId}`);
         if (res.data) {
@@ -1349,7 +1272,6 @@ const AppointmentDetails = () => {
         console.error("Error fetching current doctor details:", error);
       }
     };
-
     fetchCurrentDoctorDept();
   }, []);
 
@@ -1425,7 +1347,6 @@ const AppointmentDetails = () => {
     try {
       const res = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/prescriptions?appointment_id=${encodeURIComponent(aid)}&limit=20`);
       const list = res.data.prescriptions || res.data || [];
-
       if (!list || list.length === 0) setMessage('No prescriptions found for this appointment');
       setPastPrescriptions(list);
     } catch (err) {
@@ -1490,10 +1411,8 @@ const AppointmentDetails = () => {
       const dailyFrequency = frequencyMap[frequency];
       return dailyFrequency > 0 ? durationDays * dailyFrequency : '';
     }
-
     const numericMatch = frequency.match(/(\d+)\s*(?:times|time)\s*(?:daily|per day)/i);
     if (numericMatch) return durationDays * parseInt(numericMatch[1]);
-
     return '';
   };
 
@@ -1502,6 +1421,7 @@ const AppointmentDetails = () => {
     setPrescription(prev => ({ ...prev, [name]: value }));
   };
 
+  // Medicine handlers
   const addMedicine = () => {
     const newIndex = prescription.items.length;
     setPrescription(prev => ({
@@ -1527,49 +1447,79 @@ const AppointmentDetails = () => {
     setPrescription(prev => ({ ...prev, items: newItems }));
   };
 
+  // Procedure handlers
   const addProcedure = () => {
-    const newIndex = prescription.recommendedProcedures.length;
+    const newIndex = prescription.procedure_requests.length;
     setPrescription(prev => ({
       ...prev,
-      recommendedProcedures: [...prev.recommendedProcedures, {
+      procedure_requests: [...prev.procedure_requests, {
         procedure_code: '',
         procedure_name: '',
-        notes: ''
+        notes: '',
+        priority: 'Routine',
+        cost: 0
       }]
     }));
     setExpandedProcedureIndex(newIndex);
   };
 
   const removeProcedure = (index) => {
-    const newProcedures = [...prescription.recommendedProcedures];
+    const newProcedures = [...prescription.procedure_requests];
     newProcedures.splice(index, 1);
-    setPrescription(prev => ({ ...prev, recommendedProcedures: newProcedures }));
+    setPrescription(prev => ({ ...prev, procedure_requests: newProcedures }));
   };
 
+  // Lab Test handlers
   const addLabTest = () => {
-    const newIndex = prescription.recommendedLabTests.length;
+    const newIndex = prescription.lab_test_requests.length;
     setPrescription(prev => ({
       ...prev,
-      recommendedLabTests: [...prev.recommendedLabTests, {
+      lab_test_requests: [...prev.lab_test_requests, {
         lab_test_code: '',
         lab_test_name: '',
         notes: '',
-        fasting_required: false,
-        specimen_type: ''
+        priority: 'Routine',
+        clinical_history: '',
+        cost: 0
       }]
     }));
     setExpandedLabTestIndex(newIndex);
   };
 
   const removeLabTest = (index) => {
-    const newLabTests = [...prescription.recommendedLabTests];
+    const newLabTests = [...prescription.lab_test_requests];
     newLabTests.splice(index, 1);
-    setPrescription(prev => ({ ...prev, recommendedLabTests: newLabTests }));
+    setPrescription(prev => ({ ...prev, lab_test_requests: newLabTests }));
   };
 
+  // NEW: Radiology handlers
+  const addRadiology = () => {
+    const newIndex = prescription.radiology_test_requests.length;
+    setPrescription(prev => ({
+      ...prev,
+      radiology_test_requests: [...prev.radiology_test_requests, {
+        imaging_test_code: '',
+        imaging_test_name: '',
+        category: '',
+        notes: '',
+        priority: 'Routine',
+        clinical_history: '',
+        cost: 0
+      }]
+    }));
+    setExpandedRadiologyIndex(newIndex);
+  };
+
+  const removeRadiology = (index) => {
+    const newRadiology = [...prescription.radiology_test_requests];
+    newRadiology.splice(index, 1);
+    setPrescription(prev => ({ ...prev, radiology_test_requests: newRadiology }));
+  };
+
+  // Change handlers
   const handleProcedureChange = (index, e) => {
     const { name, value, _selectedOption } = e.target;
-    const newProcedures = [...prescription.recommendedProcedures];
+    const newProcedures = [...prescription.procedure_requests];
 
     if (name === 'procedure_code') {
       if (!value) {
@@ -1577,8 +1527,7 @@ const AppointmentDetails = () => {
           ...newProcedures[index],
           procedure_code: '',
           procedure_name: '',
-          base_price: 0,
-          category: '',
+          cost: 0,
           notes: newProcedures[index].notes || ''
         };
       } else if (_selectedOption) {
@@ -1586,26 +1535,21 @@ const AppointmentDetails = () => {
           ...newProcedures[index],
           procedure_code: value,
           procedure_name: _selectedOption.name || '',
-          base_price: _selectedOption.base_price || 0,
-          category: _selectedOption.category,
+          cost: _selectedOption.base_price || 0,
           notes: newProcedures[index].notes || ''
         };
       } else {
-        newProcedures[index] = {
-          ...newProcedures[index],
-          procedure_code: value
-        };
+        newProcedures[index] = { ...newProcedures[index], procedure_code: value };
       }
     } else {
       newProcedures[index][name] = value;
     }
-
-    setPrescription(prev => ({ ...prev, recommendedProcedures: newProcedures }));
+    setPrescription(prev => ({ ...prev, procedure_requests: newProcedures }));
   };
 
   const handleLabTestChange = (index, e) => {
     const { name, value, _selectedOption } = e.target;
-    const newLabTests = [...prescription.recommendedLabTests];
+    const newLabTests = [...prescription.lab_test_requests];
 
     if (name === 'lab_test_code') {
       if (!value) {
@@ -1613,10 +1557,7 @@ const AppointmentDetails = () => {
           ...newLabTests[index],
           lab_test_code: '',
           lab_test_name: '',
-          base_price: 0,
-          category: '',
-          fasting_required: false,
-          specimen_type: '',
+          cost: 0,
           notes: newLabTests[index].notes || ''
         };
       } else if (_selectedOption) {
@@ -1624,26 +1565,49 @@ const AppointmentDetails = () => {
           ...newLabTests[index],
           lab_test_code: value,
           lab_test_name: _selectedOption.name || '',
-          base_price: _selectedOption.base_price || 0,
-          category: _selectedOption.category,
-          fasting_required: _selectedOption.fasting_required || false,
-          specimen_type: _selectedOption.specimen_type || '',
-          turnaround_time_hours: _selectedOption.turnaround_time_hours,
+          cost: _selectedOption.base_price || 0,
           notes: newLabTests[index].notes || ''
         };
       } else {
-        newLabTests[index] = {
-          ...newLabTests[index],
-          lab_test_code: value
-        };
+        newLabTests[index] = { ...newLabTests[index], lab_test_code: value };
       }
-    } else if (name === 'fasting_required') {
-      newLabTests[index].fasting_required = e.target.checked;
     } else {
       newLabTests[index][name] = value;
     }
+    setPrescription(prev => ({ ...prev, lab_test_requests: newLabTests }));
+  };
 
-    setPrescription(prev => ({ ...prev, recommendedLabTests: newLabTests }));
+  // NEW: Radiology change handler
+  const handleRadiologyChange = (index, e) => {
+    const { name, value, _selectedOption } = e.target;
+    const newRadiology = [...prescription.radiology_test_requests];
+
+    if (name === 'imaging_test_code') {
+      if (!value) {
+        newRadiology[index] = {
+          ...newRadiology[index],
+          imaging_test_code: '',
+          imaging_test_name: '',
+          category: '',
+          cost: 0,
+          notes: newRadiology[index].notes || ''
+        };
+      } else if (_selectedOption) {
+        newRadiology[index] = {
+          ...newRadiology[index],
+          imaging_test_code: value,
+          imaging_test_name: _selectedOption.name || '',
+          category: _selectedOption.category || '',
+          cost: _selectedOption.base_price || 0,
+          notes: newRadiology[index].notes || ''
+        };
+      } else {
+        newRadiology[index] = { ...newRadiology[index], imaging_test_code: value };
+      }
+    } else {
+      newRadiology[index][name] = value;
+    }
+    setPrescription(prev => ({ ...prev, radiology_test_requests: newRadiology }));
   };
 
   const handleMedicineChange = (index, e) => {
@@ -1822,7 +1786,6 @@ const AppointmentDetails = () => {
   const handleImageUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-
     if (!file.type.startsWith('image/')) {
       setMessage('Please select an image file');
       return;
@@ -1848,18 +1811,15 @@ const AppointmentDetails = () => {
 
   const removeImage = () => {
     setPrescription(prev => ({ ...prev, prescriptionImage: null }));
-    setMessage('');
   };
 
   const handleSubmitPrescription = async (e) => {
     e.preventDefault();
     setSubmitting(true);
     setMessage('');
-
     setMedicineErrors({});
     setProcedureErrors({});
     setLabTestErrors({});
-
     if (!prescription.diagnosis.trim()) {
       setMessage('Diagnosis is required');
       setSubmitting(false);
@@ -1874,7 +1834,6 @@ const AppointmentDetails = () => {
       if (!item.dosage.trim()) errors.push('Dosage is required');
       if (!item.frequency) errors.push('Frequency is required');
       if (!item.duration) errors.push('Duration is required');
-
       if (errors.length > 0) {
         medicineErrorsLocal[index] = errors;
         hasMedicineErrors = true;
@@ -1882,53 +1841,18 @@ const AppointmentDetails = () => {
     });
     setMedicineErrors(medicineErrorsLocal);
 
-    const procedureErrorsLocal = {};
-    let hasProcedureErrors = false;
-    prescription.recommendedProcedures.forEach((proc, index) => {
-      const errors = [];
-      if (proc.procedure_code && !proc.procedure_name) {
-        errors.push('Procedure name is required when code is selected');
-      }
-      if (errors.length > 0) {
-        procedureErrorsLocal[index] = errors;
-        hasProcedureErrors = true;
-      }
-    });
-    setProcedureErrors(procedureErrorsLocal);
-
-    const labTestErrorsLocal = {};
-    let hasLabTestErrors = false;
-    prescription.recommendedLabTests.forEach((test, index) => {
-      const errors = [];
-      if (test.lab_test_code && !test.lab_test_name) {
-        errors.push('Lab test name is required when code is selected');
-      }
-      if (errors.length > 0) {
-        labTestErrorsLocal[index] = errors;
-        hasLabTestErrors = true;
-      }
-    });
-    setLabTestErrors(labTestErrorsLocal);
-
-    if (hasMedicineErrors || hasProcedureErrors || hasLabTestErrors) {
-      setMessage('Please fix all validation errors before submitting');
+    if (hasMedicineErrors) {
+      setMessage('Please fill all required medicine fields');
       setSubmitting(false);
       return;
     }
 
     try {
-      const validItems = prescription.items.filter(item =>
-        item.medicine_name.trim() && item.dosage.trim()
-      );
+      const validItems = prescription.items.filter(item => item.medicine_name.trim() && item.dosage.trim());
 
-      if (validItems.length === 0) {
-        setMessage('At least one valid medicine is required');
-        setSubmitting(false);
-        return;
-      }
-
-      const proceduresWithCosts = await Promise.all(
-        prescription.recommendedProcedures
+      // Prepare procedure_requests with costs
+      const procedureRequests = await Promise.all(
+        prescription.procedure_requests
           .filter(proc => proc.procedure_code && proc.procedure_name)
           .map(async (proc) => {
             try {
@@ -1936,22 +1860,13 @@ const AppointmentDetails = () => {
                 `${import.meta.env.VITE_BACKEND_URL}/procedures/${proc.procedure_code}`
               );
               const procedureData = procedureResponse.data.data || procedureResponse.data;
-
-              await axios.post(
-                `${import.meta.env.VITE_BACKEND_URL}/procedures/${proc.procedure_code}/increment-usage`
-              );
-
+              await axios.post(`${import.meta.env.VITE_BACKEND_URL}/procedures/${proc.procedure_code}/increment-usage`);
               return {
                 procedure_code: proc.procedure_code,
                 procedure_name: proc.procedure_name,
                 notes: proc.notes?.trim() || '',
-                status: 'Pending',
-                cost: procedureData.base_price || 0,
-                base_price: procedureData.base_price || 0,
-                category: procedureData.category,
-                duration_minutes: procedureData.duration_minutes,
-                insurance_coverage: procedureData.insurance_coverage,
-                is_billed: false
+                priority: proc.priority || 'Routine',
+                cost: procedureData.base_price || 0
               };
             } catch (error) {
               console.warn(`Could not fetch procedure ${proc.procedure_code}:`, error);
@@ -1959,20 +1874,16 @@ const AppointmentDetails = () => {
                 procedure_code: proc.procedure_code,
                 procedure_name: proc.procedure_name,
                 notes: proc.notes?.trim() || '',
-                status: 'Pending',
-                cost: 0,
-                base_price: 0,
-                category: 'Other',
-                duration_minutes: 30,
-                insurance_coverage: 'Partial',
-                is_billed: false
+                priority: proc.priority || 'Routine',
+                cost: 0
               };
             }
           })
       );
 
-      const labTestsWithCosts = await Promise.all(
-        prescription.recommendedLabTests
+      // Prepare lab_test_requests with costs
+      const labTestRequests = await Promise.all(
+        prescription.lab_test_requests
           .filter(test => test.lab_test_code && test.lab_test_name)
           .map(async (test) => {
             try {
@@ -1980,24 +1891,14 @@ const AppointmentDetails = () => {
                 `${import.meta.env.VITE_BACKEND_URL}/labtests/${test.lab_test_code}`
               );
               const labTestData = labTestResponse.data.data || labTestResponse.data;
-
-              await axios.post(
-                `${import.meta.env.VITE_BACKEND_URL}/labtests/${test.lab_test_code}/increment-usage`
-              );
-
+              await axios.post(`${import.meta.env.VITE_BACKEND_URL}/labtests/${test.lab_test_code}/increment-usage`);
               return {
                 lab_test_code: test.lab_test_code,
                 lab_test_name: test.lab_test_name,
                 notes: test.notes?.trim() || '',
-                status: 'Pending',
-                cost: labTestData.base_price || 0,
-                base_price: labTestData.base_price || 0,
-                category: labTestData.category,
-                specimen_type: labTestData.specimen_type || test.specimen_type,
-                fasting_required: labTestData.fasting_required || test.fasting_required || false,
-                turnaround_time_hours: labTestData.turnaround_time_hours,
-                insurance_coverage: labTestData.insurance_coverage || 'Partial',
-                is_billed: false
+                priority: test.priority || 'Routine',
+                clinical_history: test.clinical_history || '',
+                cost: labTestData.base_price || 0
               };
             } catch (error) {
               console.warn(`Could not fetch lab test ${test.lab_test_code}:`, error);
@@ -2005,15 +1906,44 @@ const AppointmentDetails = () => {
                 lab_test_code: test.lab_test_code,
                 lab_test_name: test.lab_test_name,
                 notes: test.notes?.trim() || '',
-                status: 'Pending',
-                cost: 0,
-                base_price: 0,
-                category: 'Other',
-                specimen_type: test.specimen_type || '',
-                fasting_required: test.fasting_required || false,
-                turnaround_time_hours: 24,
-                insurance_coverage: 'Partial',
-                is_billed: false
+                priority: test.priority || 'Routine',
+                clinical_history: test.clinical_history || '',
+                cost: 0
+              };
+            }
+          })
+      );
+
+      // NEW: Prepare radiology_test_requests with costs
+      const radiologyRequests = await Promise.all(
+        prescription.radiology_test_requests
+          .filter(rad => rad.imaging_test_code && rad.imaging_test_name)
+          .map(async (rad) => {
+            try {
+              const radiologyResponse = await axios.get(
+                `${import.meta.env.VITE_BACKEND_URL}/imaging-tests/${rad.imaging_test_code}`
+              );
+              const radiologyData = radiologyResponse.data.data || radiologyResponse.data;
+              await axios.post(`${import.meta.env.VITE_BACKEND_URL}/imaging-tests/${rad.imaging_test_code}/increment-usage`);
+              return {
+                imaging_test_code: rad.imaging_test_code,
+                imaging_test_name: rad.imaging_test_name,
+                category: radiologyData.category || rad.category,
+                notes: rad.notes?.trim() || '',
+                priority: rad.priority || 'Routine',
+                clinical_history: rad.clinical_history || '',
+                cost: radiologyData.base_price || 0
+              };
+            } catch (error) {
+              console.warn(`Could not fetch radiology test ${rad.imaging_test_code}:`, error);
+              return {
+                imaging_test_code: rad.imaging_test_code,
+                imaging_test_name: rad.imaging_test_name,
+                category: rad.category || 'Other',
+                notes: rad.notes?.trim() || '',
+                priority: rad.priority || 'Routine',
+                clinical_history: rad.clinical_history || '',
+                cost: 0
               };
             }
           })
@@ -2024,14 +1954,15 @@ const AppointmentDetails = () => {
         doctor_id: appointment.doctor_id?._id || appointment.doctor_id,
         appointment_id: appointment._id,
         diagnosis: prescription.diagnosis.trim(),
-        diagnosis_icd11_code: icd11Data.code || null, // Add this line
+        diagnosis_icd11_code: icd11Data?.code || null,
         symptoms: prescription.symptoms?.trim() || '',
         notes: prescription.notes?.trim() || '',
         investigation: prescription.investigation?.trim() || '',
         presenting_complaint: prescription.presenting_complaint?.trim() || '',
         history_of_presenting_complaint: prescription.history_of_presenting_complaint?.trim() || '',
-        recommendedProcedures: proceduresWithCosts,
-        recommendedLabTests: labTestsWithCosts,
+        procedure_requests: procedureRequests,
+        lab_test_requests: labTestRequests,
+        radiology_test_requests: radiologyRequests,
         items: validItems.map(item => ({
           medicine_name: item.medicine_name.trim(),
           dosage: item.dosage.trim(),
@@ -2046,11 +1977,7 @@ const AppointmentDetails = () => {
         prescription_image: prescription.prescriptionImage,
         follow_up_date: prescription.followUpDate || null,
         is_repeatable: prescription.isRepeatable || false,
-        repeat_count: prescription.repeatCount || 0,
-        has_procedures: proceduresWithCosts.length > 0,
-        procedures_status: proceduresWithCosts.length > 0 ? 'Pending' : 'None',
-        has_lab_tests: labTestsWithCosts.length > 0,
-        lab_tests_status: labTestsWithCosts.length > 0 ? 'Pending' : 'None'
+        repeat_count: prescription.repeatCount || 0
       };
 
       const prescriptionResponse = await axios.post(
@@ -2060,24 +1987,6 @@ const AppointmentDetails = () => {
       );
 
       const savedPrescription = prescriptionResponse.data;
-
-      const proceduresWithPrice = proceduresWithCosts.filter(proc => proc.cost > 0);
-      const labTestsWithPrice = labTestsWithCosts.filter(test => test.cost > 0);
-
-      let procedureBillingNote = '';
-      let labTestBillingNote = '';
-
-      if (proceduresWithPrice.length > 0) {
-        const totalProcedureCost = proceduresWithPrice.reduce((sum, proc) => sum + proc.cost, 0);
-        procedureBillingNote = ` ${proceduresWithPrice.length} procedure(s) added with total cost: ₹${totalProcedureCost}. `;
-        procedureBillingNote += `These procedures will need to be billed separately by the billing department.`;
-      }
-
-      if (labTestsWithPrice.length > 0) {
-        const totalLabTestCost = labTestsWithPrice.reduce((sum, test) => sum + test.cost, 0);
-        labTestBillingNote = ` ${labTestsWithPrice.length} lab test(s) added with total cost: ₹${totalLabTestCost}. `;
-        labTestBillingNote += `These tests will need to be billed separately by the billing department.`;
-      }
 
       await axios.put(
         `${import.meta.env.VITE_BACKEND_URL}/appointments/${appointment._id}/complete`
@@ -2097,34 +2006,33 @@ const AppointmentDetails = () => {
       }
 
       let successMessage = 'Prescription saved successfully. ';
-      if (procedureBillingNote) successMessage += procedureBillingNote;
-      if (labTestBillingNote) successMessage += labTestBillingNote;
+      if (procedureRequests.length > 0) {
+        successMessage += ` ${procedureRequests.length} procedure(s) recommended.`;
+      }
+      if (labTestRequests.length > 0) {
+        successMessage += ` ${labTestRequests.length} lab test(s) recommended.`;
+      }
+      if (radiologyRequests.length > 0) {
+        successMessage += ` ${radiologyRequests.length} radiology test(s) recommended.`;
+      }
       successMessage += ` ${validItems.length} medicine(s) prescribed.`;
       if (salaryInfoLocal) {
         successMessage += ` Appointment salary credited: ₹${salaryInfoLocal.amount}.`;
         setSalaryInfo(salaryInfoLocal);
       }
-      successMessage += ' Appointment completed successfully.';
       setMessage(successMessage);
 
+      // Reset form
       setPrescription({
         diagnosis: '',
         notes: '',
         investigation: '',
         presenting_complaint: '',
         history_of_presenting_complaint: '',
-        recommendedProcedures: [],
-        recommendedLabTests: [],
-        items: [{
-          medicine_name: '',
-          dosage: '',
-          medicine_type: '',
-          route_of_administration: '',
-          duration: '',
-          frequency: '',
-          instructions: '',
-          quantity: ''
-        }],
+        procedure_requests: [{ procedure_code: '', procedure_name: '', notes: '', priority: 'Routine', cost: 0 }],
+        lab_test_requests: [{ lab_test_code: '', lab_test_name: '', notes: '', priority: 'Routine', clinical_history: '', cost: 0 }],
+        radiology_test_requests: [{ imaging_test_code: '', imaging_test_name: '', category: '', notes: '', priority: 'Routine', clinical_history: '', cost: 0 }],
+        items: [{ medicine_name: '', dosage: '', medicine_type: '', route_of_administration: '', duration: '', frequency: '', instructions: '', quantity: '' }],
         prescriptionImage: null
       });
 
@@ -2134,12 +2042,12 @@ const AppointmentDetails = () => {
             message: 'Appointment completed and prescription saved successfully.',
             prescriptionId: savedPrescription._id,
             prescriptionNumber: savedPrescription.prescription_number,
-            hasProcedures: proceduresWithPrice.length > 0,
-            proceduresCount: proceduresWithPrice.length,
-            totalProcedureCost: proceduresWithPrice.reduce((sum, proc) => sum + proc.cost, 0),
-            hasLabTests: labTestsWithPrice.length > 0,
-            labTestsCount: labTestsWithPrice.length,
-            totalLabTestCost: labTestsWithPrice.reduce((sum, test) => sum + test.cost, 0),
+            hasProcedures: procedureRequests.length > 0,
+            proceduresCount: procedureRequests.length,
+            hasLabTests: labTestRequests.length > 0,
+            labTestsCount: labTestRequests.length,
+            hasRadiology: radiologyRequests.length > 0,
+            radiologyCount: radiologyRequests.length,
             medicineCount: validItems.length,
             salaryCredited: !!salaryInfoLocal
           }
@@ -2147,26 +2055,14 @@ const AppointmentDetails = () => {
       }, 3000);
     } catch (err) {
       console.error('Error submitting prescription:', err);
-
       let errorMessage = 'Error submitting prescription.';
-      if (err.response) {
-        if (err.response.data?.error) errorMessage = err.response.data.error;
-        else if (err.response.data?.message) errorMessage = err.response.data.message;
-        else if (err.response.status === 400) errorMessage = 'Validation error. Please check your inputs.';
-        else if (err.response.status === 401) errorMessage = 'Authentication required. Please login again.';
-        else if (err.response.status === 403) errorMessage = 'You do not have permission to create prescriptions.';
-        else if (err.response.status === 404) errorMessage = 'Appointment not found.';
-        else if (err.response.status === 422) errorMessage = 'Invalid procedure or lab test selection. Please try again.';
-        else if (err.response.status >= 500) errorMessage = 'Server error. Please try again later.';
-      } else if (err.request) {
-        errorMessage = 'Network error. Please check your connection.';
-      } else {
-        errorMessage = err.message || 'Unknown error occurred.';
-      }
-
+      if (err.response?.data?.error) errorMessage = err.response.data.error;
+      else if (err.response?.data?.message) errorMessage = err.response.data.message;
+      else if (err.request) errorMessage = 'Network error. Please check your connection.';
+      else errorMessage = err.message || 'Unknown error occurred.';
       setMessage(errorMessage);
+    } finally {
       setSubmitting(false);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
@@ -2188,16 +2084,12 @@ const AppointmentDetails = () => {
         age: calculateAge(appointment.patient_id?.dob),
         gender: appointment.patient_id?.gender || 'Unknown'
       };
-
       const result = await summarizePatientHistory(pastPrescriptions, patientDetails);
       let cleanResult = result.replace(/\*\*/g, '');
       const lines = cleanResult.split('\n');
       if (lines.length > 0 && lines[0].toLowerCase().includes('patient summary')) {
         cleanResult = lines.slice(1).join('\n').trim();
-      } else {
-        cleanResult = cleanResult.trim();
       }
-
       setSummary(cleanResult);
     } catch (error) {
       console.error('Summarization failed:', error);
@@ -2209,9 +2101,7 @@ const AppointmentDetails = () => {
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('en-IN', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric'
+      day: '2-digit', month: 'short', year: 'numeric'
     });
   };
 
@@ -2261,7 +2151,6 @@ const AppointmentDetails = () => {
           </nav>
         </div>
 
-        {/* Patient History Tabs Content */}
         <div className="p-4">
           {loadingHistory ? (
             <div className="flex items-center justify-center py-8">
@@ -2727,7 +2616,6 @@ const AppointmentDetails = () => {
     );
   };
 
-  // Show loading state while fetching config
   if (configLoading) {
     return (
       <Layout sidebarItems={doctorSidebar} section={'Doctor'}>
@@ -2765,7 +2653,6 @@ const AppointmentDetails = () => {
     <Layout sidebarItems={doctorSidebar} section={'Doctor'}>
       <div className="min-h-screen bg-slate-50/50 p-6 md:p-2 font-sans">
         <div className="max-w-6xl mx-auto">
-
           <div className="flex items-center justify-between mb-8">
             <button
               onClick={() => navigate('/dashboard/doctor/appointments')}
@@ -2792,16 +2679,13 @@ const AppointmentDetails = () => {
             </div>
           )}
 
-          {/* Vitals Access Banner */}
           {!vitalsConfig.vitalsEnabled ? (
             <div className="bg-gray-50 border-l-4 border-gray-400 p-4 rounded-lg mb-6">
               <div className="flex items-center gap-3">
                 <FaExclamationTriangle className="text-gray-500" size={24} />
                 <div>
                   <h3 className="font-semibold text-gray-700">Vitals Collection Disabled</h3>
-                  <p className="text-gray-600 text-sm">
-                    The hospital administrator has disabled vitals collection.
-                  </p>
+                  <p className="text-gray-600 text-sm">The hospital administrator has disabled vitals collection.</p>
                 </div>
               </div>
             </div>
@@ -2810,9 +2694,7 @@ const AppointmentDetails = () => {
               <div className="flex items-center gap-3">
                 <VitalsIcon className={`text-${vitalsInfo.color}-600`} size={24} />
                 <div>
-                  <h3 className={`font-semibold text-${vitalsInfo.color}-700`}>
-                    {vitalsInfo.message}
-                  </h3>
+                  <h3 className={`font-semibold text-${vitalsInfo.color}-700`}>{vitalsInfo.message}</h3>
                   <p className={`text-${vitalsInfo.color}-600 text-sm`}>
                     You have view-only access to vitals. Vitals can only be recorded by {vitalsConfig.vitalsController}s.
                   </p>
@@ -2823,15 +2705,10 @@ const AppointmentDetails = () => {
 
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
             <div className="lg:col-span-1 space-y-4">
-              {/* Patient Info Card */}
               <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                 <div className="bg-slate-50 px-4 py-3 border-b border-slate-100 flex items-center">
                   {appointment.patient_id?.patient_image ? (
-                    <img
-                      src={appointment.patient_id.patient_image}
-                      alt={appointment.patient_id?.first_name || 'Patient'}
-                      className="h-8 w-8 rounded-full object-cover mr-2"
-                    />
+                    <img src={appointment.patient_id.patient_image} alt="Patient" className="h-8 w-8 rounded-full object-cover mr-2" />
                   ) : (
                     <div className="h-8 w-8 rounded-full bg-teal-100 flex items-center justify-center text-teal-600 mr-2 text-sm">
                       <FaUser />
@@ -2840,437 +2717,143 @@ const AppointmentDetails = () => {
                   <h3 className="font-semibold text-slate-800 text-md">Patient</h3>
                 </div>
                 <div className="p-4 space-y-3">
-                  <div>
-                    <label className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Full Name</label>
-                    <p className="text-slate-700 font-medium text-sm">{patientName}</p>
+                  <div><label className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Full Name</label><p className="text-slate-700 font-medium text-sm">{patientName}</p></div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div><label className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Gender</label><p className="text-slate-700 text-sm">{appointment.patient_id?.gender || '--'}</p></div>
+                    <div><label className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Age</label><p className="text-slate-700 text-sm">{calculateAge(appointment.patient_id?.dob)} yrs</p></div>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Gender</label>
-                      <p className="text-slate-700 text-sm">{appointment.patient_id?.gender || '--'}</p>
-                    </div>
-                    <div>
-                      <label className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Age</label>
-                      <p className="text-slate-700 text-sm">{calculateAge(appointment.patient_id?.dob)} yrs</p>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Blood</label>
-                      <p className="text-slate-700 text-sm">{appointment.patient_id?.blood_group || '--'}</p>
-                    </div>
-                    <div>
-                      <label className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Phone</label>
-                      <p className="text-slate-700 text-sm truncate">{appointment.patient_id?.phone || '--'}</p>
-                    </div>
+                    <div><label className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Blood</label><p className="text-slate-700 text-sm">{appointment.patient_id?.blood_group || '--'}</p></div>
+                    <div><label className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Phone</label><p className="text-slate-700 text-sm truncate">{appointment.patient_id?.phone || '--'}</p></div>
                   </div>
                 </div>
               </div>
 
-              {/* Episode of Care Card - Add this after the Patient Info Card */}
               {currentEpisode && (
                 <div className="bg-teal-50 rounded-xl shadow-sm border border-teal-200 overflow-hidden">
                   <div className="bg-teal-100 px-4 py-3 border-b border-teal-200 flex items-center justify-between">
-                    <div className="flex items-center">
-                      <div className="h-8 w-8 rounded-full bg-teal-200 flex items-center justify-center text-teal-700 mr-2 text-sm">
-                        <FaFolderOpen />
-                      </div>
-                      <h3 className="font-semibold text-teal-800 text-md">Active Episode</h3>
-                    </div>
-                    <button
-                      onClick={() => fetchEpisodeTimeline(currentEpisode._id)}
-                      className="text-teal-600 hover:text-teal-800 text-sm font-medium"
-                    >
-                      View Timeline →
-                    </button>
+                    <div className="flex items-center"><div className="h-8 w-8 rounded-full bg-teal-200 flex items-center justify-center text-teal-700 mr-2"><FaFolderOpen /></div><h3 className="font-semibold text-teal-800 text-md">Active Episode</h3></div>
+                    <button onClick={() => fetchEpisodeTimeline(currentEpisode._id)} className="text-teal-600 hover:text-teal-800 text-sm font-medium">View Timeline →</button>
                   </div>
                   <div className="p-4">
                     <p className="font-bold text-teal-900">{currentEpisode.title}</p>
                     <p className="text-sm text-teal-700 mt-1">{currentEpisode.diagnosis}</p>
                     <EpisodeStatusBadge status={currentEpisode.status} />
-                    <p className="text-xs text-teal-600 mt-2">
-                      Started: {new Date(currentEpisode.startDate).toLocaleDateString()}
-                    </p>
+                    <p className="text-xs text-teal-600 mt-2">Started: {new Date(currentEpisode.startDate).toLocaleDateString()}</p>
                   </div>
                 </div>
               )}
 
-              {/* Vitals Card */}
               <div className="bg-white rounded-xl shadow-sm border border-teal-100 overflow-hidden">
                 <div className="bg-teal-50 px-4 py-3 border-b border-teal-100 flex items-center justify-between">
-                  <div className="flex items-center">
-                    <div className="h-8 w-8 rounded-full bg-teal-100 flex items-center justify-center text-teal-600 mr-2 text-sm">
-                      <FaHeartbeat />
-                    </div>
-                    <h3 className="font-semibold text-slate-800 text-md">Vitals</h3>
-                  </div>
-                  {canAccessVitals() && (
-                    <button
-                      onClick={handleVitalsClick}
-                      className="p-1.5 text-teal-600 hover:bg-teal-200 rounded-lg transition-colors"
-                      title="Update Vitals"
-                    >
-                      <FaEdit size={16} />
-                    </button>
-                  )}
+                  <div className="flex items-center"><div className="h-8 w-8 rounded-full bg-teal-100 flex items-center justify-center text-teal-600 mr-2"><FaHeartbeat /></div><h3 className="font-semibold text-slate-800 text-md">Vitals</h3></div>
+                  {canAccessVitals() && <button onClick={handleVitalsClick} className="p-1.5 text-teal-600 hover:bg-teal-200 rounded-lg" title="Update Vitals"><FaEdit size={16} /></button>}
                 </div>
-
-                {appointment.vitals && (appointment.vitals.bp || appointment.vitals.pulse || appointment.vitals.weight || appointment.vitals.spo2 || appointment.vitals.temperature || appointment.vitals.respiratory_rate || appointment.vitals.random_blood_sugar || appointment.vitals.height) ? (
-                  <div className="p-4">
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="text-center p-2 bg-slate-50 rounded border border-slate-100">
-                        <span className="block text-xs text-slate-500 uppercase font-bold mb-1">Height</span>
-                        <span className="text-md font-bold text-slate-800">{appointment.vitals?.height || '--'} <span className="text-[10px] text-slate-400">cm</span></span>
-                      </div>
-                      <div className="text-center p-2 bg-slate-50 rounded border border-slate-100">
-                        <span className="block text-xs text-slate-500 uppercase font-bold mb-1">Weight</span>
-                        <span className="text-md font-bold text-slate-800">{appointment.vitals?.weight || '--'} <span className="text-[10px] text-slate-400">kg</span></span>
-                      </div>
-                      <div className="text-center p-2 bg-slate-50 rounded border border-slate-100">
-                        <span className="block text-xs text-slate-500 uppercase font-bold mb-1">BP</span>
-                        <span className="text-md font-bold text-slate-800">{appointment.vitals?.bp || '--'}</span>
-                      </div>
-                      <div className="text-center p-2 bg-slate-50 rounded border border-slate-100">
-                        <span className="block text-xs text-slate-500 uppercase font-bold mb-1">Pulse</span>
-                        <span className="text-md font-bold text-slate-800">{appointment.vitals?.pulse || '--'} <span className="text-[10px] text-slate-400">bpm</span></span>
-                      </div>
-
-                      <div className="text-center p-2 bg-slate-50 rounded border border-slate-100">
-                        <span className="block text-xs text-slate-500 uppercase font-bold mb-1">SPO2</span>
-                        <span className="text-md font-bold text-slate-800">{appointment.vitals?.spo2 || '--'} <span className="text-[10px] text-slate-400">%</span></span>
-                      </div>
-                      <div className="text-center p-2 bg-slate-50 rounded border border-slate-100">
-                        <span className="block text-xs text-slate-500 uppercase font-bold mb-1">RR</span>
-                        <span className="text-md font-bold text-slate-800">{appointment.vitals?.respiratory_rate || '--'} <span className="text-[10px] text-slate-400">/min</span></span>
-                      </div>
-                      <div className="text-center p-2 bg-slate-50 rounded border border-slate-100">
-                        <span className="block text-xs text-slate-500 uppercase font-bold mb-1">RBS</span>
-                        <span className="text-md font-bold text-slate-800">{appointment.vitals?.random_blood_sugar || '--'} <span className="text-[10px] text-slate-400">mg/dL</span></span>
-                      </div>
-
-                      {appointment.vitals?.temperature && (
-                        <div className="text-center p-2 bg-slate-50 rounded border border-slate-100">
-                          <span className="block text-xs text-slate-500 uppercase font-bold mb-1">Temp</span>
-                          <span className="text-md font-bold text-slate-800">{appointment.vitals.temperature} <span className="text-[10px] text-slate-400">°F</span></span>
-                        </div>
-                      )}
-                    </div>
-                    {appointment.vitals?.recorded_at && (
-                      <p className="text-xs text-slate-400 mt-2 text-right">
-                        Recorded: {new Date(appointment.vitals.recorded_at).toLocaleString()}
-                      </p>
-                    )}
+                {appointment.vitals && (appointment.vitals.bp || appointment.vitals.pulse || appointment.vitals.weight) ? (
+                  <div className="p-4"><div className="grid grid-cols-2 gap-3">
+                    <div className="text-center p-2 bg-slate-50 rounded"><span className="block text-xs text-slate-500 uppercase font-bold mb-1">Height</span><span className="text-md font-bold text-slate-800">{appointment.vitals?.height || '--'} <span className="text-[10px]">cm</span></span></div>
+                    <div className="text-center p-2 bg-slate-50 rounded"><span className="block text-xs text-slate-500 uppercase font-bold mb-1">Weight</span><span className="text-md font-bold text-slate-800">{appointment.vitals?.weight || '--'} <span className="text-[10px]">kg</span></span></div>
+                    <div className="text-center p-2 bg-slate-50 rounded"><span className="block text-xs text-slate-500 uppercase font-bold mb-1">BP</span><span className="text-md font-bold text-slate-800">{appointment.vitals?.bp || '--'}</span></div>
+                    <div className="text-center p-2 bg-slate-50 rounded"><span className="block text-xs text-slate-500 uppercase font-bold mb-1">Pulse</span><span className="text-md font-bold text-slate-800">{appointment.vitals?.pulse || '--'} <span className="text-[10px]">bpm</span></span></div>
+                    <div className="text-center p-2 bg-slate-50 rounded"><span className="block text-xs text-slate-500 uppercase font-bold mb-1">SPO2</span><span className="text-md font-bold text-slate-800">{appointment.vitals?.spo2 || '--'} <span className="text-[10px]">%</span></span></div>
+                    <div className="text-center p-2 bg-slate-50 rounded"><span className="block text-xs text-slate-500 uppercase font-bold mb-1">RR</span><span className="text-md font-bold text-slate-800">{appointment.vitals?.respiratory_rate || '--'} <span className="text-[10px]">/min</span></span></div>
+                    <div className="text-center p-2 bg-slate-50 rounded"><span className="block text-xs text-slate-500 uppercase font-bold mb-1">RBS</span><span className="text-md font-bold text-slate-800">{appointment.vitals?.random_blood_sugar || '--'} <span className="text-[10px]">mg/dL</span></span></div>
+                    {appointment.vitals?.temperature && <div className="text-center p-2 bg-slate-50 rounded"><span className="block text-xs text-slate-500 uppercase font-bold mb-1">Temp</span><span className="text-md font-bold text-slate-800">{appointment.vitals.temperature} <span className="text-[10px]">°F</span></span></div>}
+                  </div>
+                    {appointment.vitals?.recorded_at && <p className="text-xs text-slate-400 mt-2 text-right">Recorded: {new Date(appointment.vitals.recorded_at).toLocaleString()}</p>}
                   </div>
                 ) : (
-                  <div className="p-6 text-center">
-                    <p className="text-sm text-slate-400">No vitals recorded yet</p>
-                    {canAccessVitals() && (
-                      <button
-                        onClick={handleVitalsClick}
-                        className="mt-2 text-teal-600 text-sm font-medium hover:underline flex items-center justify-center gap-1 mx-auto"
-                      >
-                        <FaPlus size={12} /> Add Vitals
-                      </button>
-                    )}
-                  </div>
+                  <div className="p-6 text-center"><p className="text-sm text-slate-400">No vitals recorded yet</p>{canAccessVitals() && <button onClick={handleVitalsClick} className="mt-2 text-teal-600 text-sm font-medium hover:underline flex items-center justify-center gap-1 mx-auto"><FaPlus size={12} /> Add Vitals</button>}</div>
                 )}
               </div>
 
-              {/* Session Card */}
               <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                <div className="bg-slate-50 px-4 py-3 border-b border-slate-100 flex items-center">
-                  <div className="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 mr-2 text-sm">
-                    <FaClock />
-                  </div>
-                  <h3 className="font-semibold text-slate-800 text-md">Session</h3>
-                </div>
+                <div className="bg-slate-50 px-4 py-3 border-b border-slate-100 flex items-center"><div className="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 mr-2"><FaClock /></div><h3 className="font-semibold text-slate-800 text-md">Session</h3></div>
                 <div className="p-4 space-y-2">
-                  <div className="flex justify-between pb-2">
-                    <span className="text-slate-500 text-sm">Date</span>
-                    <span className="font-medium text-slate-700 text-xs">{new Date(appointment.appointment_date).toLocaleDateString()}</span>
-                  </div>
-                  <div className="flex justify-between pb-2">
-                    <span className="text-slate-500 text-sm">Time</span>
-                    <span className="font-medium text-slate-700 text-xs">
-                      {appointment.time_slot
-                        ? appointment.time_slot.split('-')[0].trim()
-                        : (appointment.start_time
-                          ? new Date(appointment.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                          : (appointment.time
-                            ? appointment.time
-                            : 'N/A'))}
-                    </span>
-                  </div>
-                  <div className="flex justify-between pb-2">
-                    <span className="text-slate-500 text-sm">Type</span>
-                    <span className="font-medium text-slate-700 text-xs capitalize">{appointment.type}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500 text-sm">Priority</span>
-                    <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${appointment.priority === 'High' ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'
-                      }`}>
-                      {appointment.priority}
-                    </span>
-                  </div>
+                  <div className="flex justify-between pb-2"><span className="text-slate-500 text-sm">Date</span><span className="font-medium text-slate-700 text-xs">{new Date(appointment.appointment_date).toLocaleDateString()}</span></div>
+                  <div className="flex justify-between pb-2"><span className="text-slate-500 text-sm">Time</span><span className="font-medium text-slate-700 text-xs">{appointment.time_slot ? appointment.time_slot.split('-')[0].trim() : (appointment.start_time ? new Date(appointment.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A')}</span></div>
+                  <div className="flex justify-between pb-2"><span className="text-slate-500 text-sm">Type</span><span className="font-medium text-slate-700 text-xs capitalize">{appointment.type}</span></div>
+                  <div className="flex justify-between"><span className="text-slate-500 text-sm">Priority</span><span className={`px-1.5 py-0.5 rounded text-xs font-medium ${appointment.priority === 'High' ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'}`}>{appointment.priority}</span></div>
                 </div>
               </div>
             </div>
 
             <div className="lg:col-span-3 space-y-6">
               <PatientHistoryTabs />
-
-              {activeTab === 'current' ? (
+              {activeTab === 'current' && (
                 <>
                   <div className="bg-white rounded-xl shadow-sm border border-slate-200">
                     {appointment.status === 'Completed' ? (
                       <div className="flex flex-col items-center justify-center h-full min-h-[400px] text-center p-8">
-                        <div className="h-20 w-20 bg-green-50 rounded-full flex items-center justify-center mb-6">
-                          <FaCheckCircle className="text-4xl text-green-500" />
-                        </div>
+                        <div className="h-20 w-20 bg-green-50 rounded-full flex items-center justify-center mb-6"><FaCheckCircle className="text-4xl text-green-500" /></div>
                         <h2 className="text-2xl font-bold text-slate-800 mb-2">Consultation Completed</h2>
                         <p className="text-slate-500 max-w-md">The prescription has been issued and saved to the patient's record.</p>
-
-                        <button onClick={() => navigate('/dashboard/doctor/appointments')} className="mt-8 text-teal-600 font-medium hover:underline">
-                          Return to Dashboard
-                        </button>
+                        <button onClick={() => navigate('/dashboard/doctor/appointments')} className="mt-8 text-teal-600 font-medium hover:underline">Return to Dashboard</button>
                       </div>
                     ) : (
                       <>
                         {!showPrescriptionForm ? (
                           <div className="flex flex-col items-center justify-center h-full min-h-[400px] text-center p-8">
-                            <div className="h-24 w-24 bg-slate-50 rounded-full flex items-center justify-center mb-6 border border-slate-100">
-                              <FaNotesMedical className="text-4xl text-slate-300" />
-                            </div>
+                            <div className="h-24 w-24 bg-slate-50 rounded-full flex items-center justify-center mb-6 border border-slate-100"><FaNotesMedical className="text-4xl text-slate-300" /></div>
                             <h3 className="text-xl font-semibold text-slate-800 mb-2">Start Consultation</h3>
                             <p className="text-slate-500 max-w-sm mb-8">Begin the diagnosis process to prescribe medication and complete this appointment.</p>
-                            <button
-                              onClick={() => setShowPrescriptionForm(true)}
-                              className="bg-teal-600 hover:bg-teal-700 text-white font-medium py-3 px-8 rounded-lg shadow-lg shadow-teal-600/20 transition-all transform hover:-translate-y-1"
-                            >
-                              Create Prescription
-                            </button>
+                            <button onClick={() => setShowPrescriptionForm(true)} className="bg-teal-600 hover:bg-teal-700 text-white font-medium py-3 px-8 rounded-lg shadow-lg shadow-teal-600/20 transition-all">Create Prescription</button>
                           </div>
                         ) : (
                           <form onSubmit={handleSubmitPrescription} className="flex flex-col h-full">
-                            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                              <h3 className="font-bold text-slate-800 flex items-center">
-                                <FaFilePrescription className="mr-2 text-teal-600" /> New Prescription
-                              </h3>
-                            </div>
+                            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50"><h3 className="font-bold text-slate-800 flex items-center"><FaFilePrescription className="mr-2 text-teal-600" /> New Prescription</h3></div>
 
                             <div className="p-6 space-y-6 flex-grow">
                               <div className="mb-4">
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                  Presenting Complaint
-                                </label>
-                                <textarea
-                                  name="presenting_complaint"
-                                  value={prescription.presenting_complaint}
-                                  onChange={handleInputChange}
-                                  placeholder="Chief complaint or main reason for visit..."
-                                  rows={2}
-                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
-                                />
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Presenting Complaint</label>
+                                <textarea name="presenting_complaint" value={prescription.presenting_complaint} onChange={handleInputChange} placeholder="Chief complaint or main reason for visit..." rows={2} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500" />
                               </div>
 
                               <div className="mb-4">
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                  History of Presenting Complaint
-                                </label>
-                                <textarea
-                                  name="history_of_presenting_complaint"
-                                  value={prescription.history_of_presenting_complaint}
-                                  onChange={handleInputChange}
-                                  placeholder="Detailed history of the presenting complaint..."
-                                  rows={3}
-                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
-                                />
+                                <label className="block text-sm font-medium text-gray-700 mb-2">History of Presenting Complaint</label>
+                                <textarea name="history_of_presenting_complaint" value={prescription.history_of_presenting_complaint} onChange={handleInputChange} placeholder="Detailed history of the presenting complaint..." rows={3} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500" />
                               </div>
 
                               <div className="mb-4">
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                  Clinical Notes
-                                </label>
-                                <textarea
-                                  name="notes"
-                                  value={prescription.notes}
-                                  onChange={handleInputChange}
-                                  placeholder="Any additional observations..."
-                                  rows={3}
-                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
-                                />
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Clinical Notes</label>
+                                <textarea name="notes" value={prescription.notes} onChange={handleInputChange} placeholder="Any additional observations..." rows={3} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500" />
                               </div>
 
                               <div className="mb-4">
-                                <ICDSearch
-                                  onSelect={handleICDSelect}
-                                  value={icd11Data?.display || ''}
-                                  label="Diagnosis (ICD-11)"
-                                  placeholder="Search diagnosis by name or code..."
-                                  required={true}
-                                />
-
-                                {/* Optional: Manual override */}
+                                <ICDSearch onSelect={handleICDSelect} value={icd11Data?.display || ''} label="Diagnosis (ICD-11)" placeholder="Search diagnosis by name or code..." required={true} />
                                 <div className="relative mt-3">
-                                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <FaStethoscope className="text-slate-400 text-sm" />
-                                  </div>
-                                  <input
-                                    type="text"
-                                    name="diagnosis"
-                                    value={prescription.diagnosis}
-                                    onChange={handleInputChange}
-                                    placeholder="Or enter diagnosis manually..."
-                                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
-                                  />
+                                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><FaStethoscope className="text-slate-400 text-sm" /></div>
+                                  <input type="text" name="diagnosis" value={prescription.diagnosis} onChange={handleInputChange} placeholder="Or enter diagnosis manually..." className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500" />
                                 </div>
-                                <p className="text-xs text-gray-400 mt-1">
-                                  Search for ICD-11 codes above, or type a free-text diagnosis below
-                                </p>
+                                <p className="text-xs text-gray-400 mt-1">Search for ICD-11 codes above, or type a free-text diagnosis below</p>
                               </div>
 
-                              {/* If no episode and diagnosis is entered in prescription, show suggestion */}
                               {!currentEpisode && prescription.diagnosis && prescription.diagnosis.length > 2 && (
-                                <button
-                                  type="button"
-                                  onClick={() => checkExistingEpisodes(prescription.diagnosis)}
-                                  className="w-full mt-2 py-2 bg-teal-50 border border-teal-200 rounded-lg text-teal-700 text-sm font-medium hover:bg-teal-100 transition-colors flex items-center justify-center gap-2"
-                                >
-                                  <FaFolderPlus size={14} />
-                                  Create Episode for "{prescription.diagnosis.substring(0, 30)}..."
-                                </button>
+                                <button type="button" onClick={() => checkExistingEpisodes(prescription.diagnosis)} className="w-full mt-2 py-2 bg-teal-50 border border-teal-200 rounded-lg text-teal-700 text-sm font-medium hover:bg-teal-100 transition-colors flex items-center justify-center gap-2"><FaFolderPlus size={14} /> Create Episode for "{prescription.diagnosis.substring(0, 30)}..."</button>
                               )}
 
-                              {/* Procedures Section */}
                               <div>
-                                <div className="flex justify-between items-center mb-4">
-                                  <label className="text-sm font-semibold text-slate-700">Recommended Procedures</label>
-                                  <button
-                                    type="button"
-                                    onClick={addProcedure}
-                                    className="text-teal-600 text-sm font-semibold hover:text-teal-700 flex items-center"
-                                  >
-                                    <FaPlus className="mr-1" /> Add Procedure
-                                  </button>
-                                </div>
-
-                                {prescription.recommendedProcedures.length > 0 && (
+                                <div className="flex justify-between items-center mb-4"><label className="text-sm font-semibold text-slate-700">Recommended Procedures</label><button type="button" onClick={addProcedure} className="text-teal-600 text-sm font-semibold hover:text-teal-700"><FaPlus className="mr-1 inline" /> Add Procedure</button></div>
+                                {prescription.procedure_requests.length > 0 && (
                                   <div className="space-y-3 mb-4">
-                                    {prescription.recommendedProcedures.map((proc, index) => {
+                                    {prescription.procedure_requests.map((proc, index) => {
                                       const isExpanded = expandedProcedureIndex === index;
                                       const isFilled = proc.procedure_code && proc.procedure_name;
-
                                       return (
-                                        <div
-                                          key={index}
-                                          className={`rounded-lg border transition-all ${isExpanded
-                                            ? 'border-blue-200 bg-blue-50 shadow-md'
-                                            : 'border-blue-100 bg-blue-50 hover:border-blue-300'
-                                            }`}
-                                        >
-                                          {/* Procedure header and content */}
+                                        <div key={index} className={`rounded-lg border transition-all ${isExpanded ? 'border-blue-200 bg-blue-50 shadow-md' : 'border-blue-100 bg-blue-50'}`}>
                                           <div className="flex items-center justify-between">
-                                            <button
-                                              type="button"
-                                              onClick={() => setExpandedProcedureIndex(isExpanded ? -1 : index)}
-                                              className="flex-1 px-4 py-2 flex justify-between items-center hover:bg-blue-100 rounded-lg transition-colors text-left"
-                                            >
-                                              <div className="flex items-center gap-3 flex-1">
-                                                <div className={`h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold ${isExpanded ? 'bg-blue-100 text-blue-600' : 'bg-slate-200 text-slate-600'
-                                                  }`}>
-                                                  {index + 1}
-                                                </div>
-                                                {isExpanded ? (
-                                                  <div className="text-xs font-bold text-blue-400 uppercase">Procedure #{index + 1}</div>
-                                                ) : (
-                                                  <div className="flex-1 min-w-0">
-                                                    {isFilled ? (
-                                                      <div className="flex flex-wrap items-center gap-2">
-                                                        <span className="font-medium text-slate-800 truncate">{proc.procedure_code}</span>
-                                                        <span className="text-xs bg-slate-200 text-slate-700 px-2 py-0.5 rounded">{proc.procedure_name}</span>
-                                                        {proc.notes && (
-                                                          <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded truncate">{proc.notes}</span>
-                                                        )}
-                                                      </div>
-                                                    ) : (
-                                                      <span className="text-sm text-slate-500 italic">Empty - Click to fill</span>
-                                                    )}
-                                                  </div>
-                                                )}
-                                              </div>
-                                              <div className={`text-slate-400 transition-transform ml-2 flex-shrink-0 ${isExpanded ? 'rotate-180' : ''}`}>
-                                                <FaChevronDown size={14} />
-                                              </div>
+                                            <button type="button" onClick={() => setExpandedProcedureIndex(isExpanded ? -1 : index)} className="flex-1 px-4 py-2 flex justify-between items-center hover:bg-blue-100 rounded-lg text-left">
+                                              <div className="flex items-center gap-3 flex-1"><div className={`h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold ${isExpanded ? 'bg-blue-100 text-blue-600' : 'bg-slate-200 text-slate-600'}`}>{index + 1}</div>{isExpanded ? <div className="text-xs font-bold text-blue-400 uppercase">Procedure #{index + 1}</div> : <div className="flex-1 min-w-0">{isFilled ? <div className="flex flex-wrap items-center gap-2"><span className="font-medium text-slate-800 truncate">{proc.procedure_code}</span><span className="text-xs bg-slate-200 text-slate-700 px-2 py-0.5 rounded">{proc.procedure_name}</span></div> : <span className="text-sm text-slate-500 italic">Empty - Click to fill</span>}</div>}</div>
+                                              <div className={`text-slate-400 transition-transform ml-2 ${isExpanded ? 'rotate-180' : ''}`}><FaChevronDown size={14} /></div>
                                             </button>
-                                            {!isExpanded && prescription.recommendedProcedures.length > 0 && (
-                                              <button
-                                                type="button"
-                                                onClick={() => removeProcedure(index)}
-                                                className="text-slate-400 hover:text-red-500 transition-colors p-2 flex-shrink-0"
-                                              >
-                                                <FaTrash size={14} />
-                                              </button>
-                                            )}
+                                            {!isExpanded && prescription.procedure_requests.length > 0 && <button type="button" onClick={() => removeProcedure(index)} className="text-slate-400 hover:text-red-500 p-2"><FaTrash size={14} /></button>}
                                           </div>
-
                                           {isExpanded && (
-                                            <div className="border-t border-blue-200 p-3 rounded-b-lg">
-                                              <div className="flex justify-between items-start mb-2">
-                                                <button onClick={() => removeProcedure(index)} className="text-blue-400 hover:text-red-500 transition-colors ml-auto">
-                                                  <FaTrash size={14} />
-                                                </button>
-                                              </div>
-
+                                            <div className="border-t border-blue-200 p-3">
                                               <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
-                                                <div className="md:col-span-5">
-                                                  <SearchableFormSelect
-                                                    label="Procedure Name/Code"
-                                                    value={proc.procedure_code}
-                                                    onChange={(e) => handleProcedureChange(index, e)}
-                                                    options={procedureOptions}
-                                                    placeholder="Search procedure..."
-                                                    type="procedure"
-                                                    name="procedure_code"
-                                                    loading={searchingProcedures}
-                                                    error={procedureErrors[index]}
-                                                    onSearch={fetchProcedures}
-                                                    debounceDelay={1000}
-                                                    minSearchChars={0}
-                                                    allowCustom={true}
-                                                    freeSolo={true}
-                                                  />
-                                                </div>
-
-                                                <div className="md:col-span-3">
-                                                  <div className="mb-0">
-                                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
-                                                      Details
-                                                    </label>
-                                                    <input
-                                                      type="text"
-                                                      value={proc.procedure_name || ''}
-                                                      readOnly={true}
-                                                      placeholder="Auto-fill"
-                                                      className="w-full mt-1 px-3 py-3 text-sm border border-gray-300 rounded-lg bg-white focus:ring-1 focus:ring-teal-500 transition-colors"
-                                                    />
-                                                  </div>
-                                                </div>
-
-                                                <div className="md:col-span-4">
-                                                  <div className="mb-0">
-                                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                                                      Notes
-                                                    </label>
-                                                    <textarea
-                                                      name="notes"
-                                                      value={proc.notes || ''}
-                                                      onChange={(e) => handleProcedureChange(index, e)}
-                                                      placeholder="Notes..."
-                                                      rows={1}
-                                                      className="w-full px-3 py-3 text-sm border border-gray-300 rounded-lg focus:ring-1 focus:ring-teal-500 transition-colors bg-white"
-                                                    />
-                                                  </div>
-                                                </div>
+                                                <div className="md:col-span-5"><SearchableFormSelect label="Procedure Name/Code" value={proc.procedure_code} onChange={(e) => handleProcedureChange(index, e)} options={procedureOptions} placeholder="Search procedure..." type="procedure" name="procedure_code" loading={searchingProcedures} onSearch={fetchProcedures} debounceDelay={1000} minSearchChars={0} allowCustom={true} freeSolo={true} /></div>
+                                                <div className="md:col-span-3"><label className="block text-xs font-bold text-slate-500 uppercase mb-1">Details</label><input type="text" value={proc.procedure_name || ''} readOnly placeholder="Auto-fill" className="w-full px-3 py-3 text-sm border rounded-lg bg-white" /></div>
+                                                <div className="md:col-span-4"><label className="block text-xs font-bold text-slate-500 uppercase mb-1">Notes</label><textarea name="notes" value={proc.notes || ''} onChange={(e) => handleProcedureChange(index, e)} placeholder="Notes..." rows={1} className="w-full px-3 py-3 text-sm border rounded-lg bg-white" /></div>
                                               </div>
                                             </div>
                                           )}
@@ -3281,170 +2864,28 @@ const AppointmentDetails = () => {
                                 )}
                               </div>
 
-                              {/* Lab Tests Section */}
                               <div>
-                                <div className="flex justify-between items-center mb-4">
-                                  <label className="text-sm font-semibold text-slate-700">Recommended Lab Tests</label>
-                                  <button
-                                    type="button"
-                                    onClick={addLabTest}
-                                    className="text-teal-600 text-sm font-semibold hover:text-teal-700 flex items-center"
-                                  >
-                                    <FaPlus className="mr-1" /> Add Lab Test
-                                  </button>
-                                </div>
-
-                                {prescription.recommendedLabTests.length > 0 && (
+                                <div className="flex justify-between items-center mb-4"><label className="text-sm font-semibold text-slate-700">Recommended Lab Tests</label><button type="button" onClick={addLabTest} className="text-teal-600 text-sm font-semibold hover:text-teal-700"><FaPlus className="mr-1 inline" /> Add Lab Test</button></div>
+                                {prescription.lab_test_requests.length > 0 && (
                                   <div className="space-y-3 mb-4">
-                                    {prescription.recommendedLabTests.map((test, index) => {
+                                    {prescription.lab_test_requests.map((test, index) => {
                                       const isExpanded = expandedLabTestIndex === index;
                                       const isFilled = test.lab_test_code && test.lab_test_name;
-
                                       return (
-                                        <div
-                                          key={index}
-                                          className={`rounded-lg border transition-all ${isExpanded
-                                            ? 'border-amber-200 bg-amber-50 shadow-md'
-                                            : 'border-amber-100 bg-amber-50 hover:border-amber-300'
-                                            }`}
-                                        >
-                                          {/* Lab test header and content */}
+                                        <div key={index} className={`rounded-lg border transition-all ${isExpanded ? 'border-amber-200 bg-amber-50 shadow-md' : 'border-amber-100 bg-amber-50'}`}>
                                           <div className="flex items-center justify-between">
-                                            <button
-                                              type="button"
-                                              onClick={() => setExpandedLabTestIndex(isExpanded ? -1 : index)}
-                                              className="flex-1 px-4 py-2 flex justify-between items-center hover:bg-amber-100 rounded-lg transition-colors text-left"
-                                            >
-                                              <div className="flex items-center gap-3 flex-1">
-                                                <div className={`h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold ${isExpanded ? 'bg-amber-100 text-amber-600' : 'bg-slate-200 text-slate-600'
-                                                  }`}>
-                                                  {index + 1}
-                                                </div>
-                                                {isExpanded ? (
-                                                  <div className="text-xs font-bold text-amber-400 uppercase">Lab Test #{index + 1}</div>
-                                                ) : (
-                                                  <div className="flex-1 min-w-0">
-                                                    {isFilled ? (
-                                                      <div className="flex flex-wrap items-center gap-2">
-                                                        <span className="font-medium text-slate-800 truncate">{test.lab_test_code}</span>
-                                                        <span className="text-xs bg-slate-200 text-slate-700 px-2 py-0.5 rounded">{test.lab_test_name}</span>
-                                                        {test.fasting_required && (
-                                                          <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded">Fasting</span>
-                                                        )}
-                                                        {test.notes && (
-                                                          <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded truncate">{test.notes}</span>
-                                                        )}
-                                                      </div>
-                                                    ) : (
-                                                      <span className="text-sm text-slate-500 italic">Empty - Click to fill</span>
-                                                    )}
-                                                  </div>
-                                                )}
-                                              </div>
-                                              <div className={`text-slate-400 transition-transform ml-2 flex-shrink-0 ${isExpanded ? 'rotate-180' : ''}`}>
-                                                <FaChevronDown size={14} />
-                                              </div>
+                                            <button type="button" onClick={() => setExpandedLabTestIndex(isExpanded ? -1 : index)} className="flex-1 px-4 py-2 flex justify-between items-center hover:bg-amber-100 rounded-lg text-left">
+                                              <div className="flex items-center gap-3 flex-1"><div className={`h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold ${isExpanded ? 'bg-amber-100 text-amber-600' : 'bg-slate-200 text-slate-600'}`}>{index + 1}</div>{isExpanded ? <div className="text-xs font-bold text-amber-400 uppercase">Lab Test #{index + 1}</div> : <div className="flex-1 min-w-0">{isFilled ? <div className="flex flex-wrap items-center gap-2"><span className="font-medium text-slate-800 truncate">{test.lab_test_code}</span><span className="text-xs bg-slate-200 text-slate-700 px-2 py-0.5 rounded">{test.lab_test_name}</span></div> : <span className="text-sm text-slate-500 italic">Empty - Click to fill</span>}</div>}</div>
+                                              <div className={`text-slate-400 transition-transform ml-2 ${isExpanded ? 'rotate-180' : ''}`}><FaChevronDown size={14} /></div>
                                             </button>
-                                            {!isExpanded && prescription.recommendedLabTests.length > 0 && (
-                                              <button
-                                                type="button"
-                                                onClick={() => removeLabTest(index)}
-                                                className="text-slate-400 hover:text-red-500 transition-colors p-2 flex-shrink-0"
-                                              >
-                                                <FaTrash size={14} />
-                                              </button>
-                                            )}
+                                            {!isExpanded && prescription.lab_test_requests.length > 0 && <button type="button" onClick={() => removeLabTest(index)} className="text-slate-400 hover:text-red-500 p-2"><FaTrash size={14} /></button>}
                                           </div>
-
                                           {isExpanded && (
-                                            <div className="border-t border-amber-200 p-3 rounded-b-lg">
-                                              <div className="flex justify-between items-start mb-2">
-                                                <button onClick={() => removeLabTest(index)} className="text-amber-400 hover:text-red-500 transition-colors ml-auto">
-                                                  <FaTrash size={14} />
-                                                </button>
-                                              </div>
-
+                                            <div className="border-t border-amber-200 p-3">
                                               <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
-                                                <div className="md:col-span-5">
-                                                  <SearchableFormSelect
-                                                    label="Lab Test Name/Code"
-                                                    value={test.lab_test_code}
-                                                    onChange={(e) => handleLabTestChange(index, e)}
-                                                    options={labTestOptions}
-                                                    placeholder="Search lab test..."
-                                                    type="labtest"
-                                                    name="lab_test_code"
-                                                    loading={searchingLabTests}
-                                                    error={labTestErrors[index]}
-                                                    onSearch={fetchLabTests}
-                                                    debounceDelay={1000}
-                                                    minSearchChars={0}
-                                                    allowCustom={true}
-                                                    freeSolo={true}
-                                                  />
-                                                </div>
-
-                                                <div className="md:col-span-4">
-                                                  <div className="mb-0">
-                                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
-                                                      Details
-                                                    </label>
-                                                    <input
-                                                      type="text"
-                                                      value={test.lab_test_name || ''}
-                                                      readOnly={true}
-                                                      placeholder="Auto-fill"
-                                                      className="w-full mt-1 px-3 py-3 text-sm border border-gray-300 rounded-lg bg-white focus:ring-1 focus:ring-teal-500 transition-colors"
-                                                    />
-                                                  </div>
-                                                </div>
-
-                                                <div className="md:col-span-3">
-                                                  <div className="mb-0">
-                                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
-                                                      Specimen Type
-                                                    </label>
-                                                    <input
-                                                      type="text"
-                                                      value={test.specimen_type || ''}
-                                                      readOnly={true}
-                                                      placeholder="Auto-fill"
-                                                      className="w-full mt-1 px-3 py-3 text-sm border border-gray-300 rounded-lg bg-white focus:ring-1 focus:ring-teal-500 transition-colors"
-                                                    />
-                                                  </div>
-                                                </div>
-
-                                                <div className="md:col-span-12">
-                                                  <div className="flex items-center mb-3">
-                                                    <input
-                                                      type="checkbox"
-                                                      id={`fasting-${index}`}
-                                                      name="fasting_required"
-                                                      checked={test.fasting_required || false}
-                                                      onChange={(e) => handleLabTestChange(index, e)}
-                                                      className="h-4 w-4 text-teal-600 focus:ring-teal-500 border-gray-300 rounded"
-                                                    />
-                                                    <label htmlFor={`fasting-${index}`} className="ml-2 block text-sm text-slate-700">
-                                                      Fasting Required
-                                                    </label>
-                                                  </div>
-                                                </div>
-
-                                                <div className="md:col-span-12">
-                                                  <div className="mb-0">
-                                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                                                      Notes / Instructions
-                                                    </label>
-                                                    <textarea
-                                                      name="notes"
-                                                      value={test.notes || ''}
-                                                      onChange={(e) => handleLabTestChange(index, e)}
-                                                      placeholder="e.g. First morning void, 8-12 hour fasting required, etc."
-                                                      rows={2}
-                                                      className="w-full px-3 py-3 text-sm border border-gray-300 rounded-lg focus:ring-1 focus:ring-teal-500 transition-colors bg-white"
-                                                    />
-                                                  </div>
-                                                </div>
+                                                <div className="md:col-span-5"><SearchableFormSelect label="Lab Test Name/Code" value={test.lab_test_code} onChange={(e) => handleLabTestChange(index, e)} options={labTestOptions} placeholder="Search lab test..." type="labtest" name="lab_test_code" loading={searchingLabTests} onSearch={fetchLabTests} debounceDelay={1000} minSearchChars={0} allowCustom={true} freeSolo={true} /></div>
+                                                <div className="md:col-span-4"><label className="block text-xs font-bold text-slate-500 uppercase mb-1">Details</label><input type="text" value={test.lab_test_name || ''} readOnly placeholder="Auto-fill" className="w-full px-3 py-3 text-sm border rounded-lg bg-white" /></div>
+                                                <div className="md:col-span-3"><label className="block text-xs font-bold text-slate-500 uppercase mb-1">Notes</label><textarea name="notes" value={test.notes || ''} onChange={(e) => handleLabTestChange(index, e)} placeholder="Notes..." rows={1} className="w-full px-3 py-3 text-sm border rounded-lg bg-white" /></div>
                                               </div>
                                             </div>
                                           )}
@@ -3455,205 +2896,64 @@ const AppointmentDetails = () => {
                                 )}
                               </div>
 
-                              {/* Medicines Section */}
                               <div>
-                                <div className="flex justify-between items-center mb-4">
-                                  <label className="text-sm font-semibold text-slate-700">Prescribed Medicines</label>
-                                  <button
-                                    type="button"
-                                    onClick={addMedicine}
-                                    className="text-teal-600 text-sm font-semibold hover:text-teal-700 flex items-center"
-                                  >
-                                    <FaPlus className="mr-1" /> Add Medicine
-                                  </button>
-                                </div>
+                                <div className="flex justify-between items-center mb-4"><label className="text-sm font-semibold text-slate-700">Recommended Radiology Tests</label><button type="button" onClick={addRadiology} className="text-teal-600 text-sm font-semibold hover:text-teal-700"><FaPlus className="mr-1 inline" /> Add Radiology Test</button></div>
+                                {prescription.radiology_test_requests.length > 0 && (
+                                  <div className="space-y-3 mb-4">
+                                    {prescription.radiology_test_requests.map((rad, index) => {
+                                      const isExpanded = expandedRadiologyIndex === index;
+                                      const isFilled = rad.imaging_test_code && rad.imaging_test_name;
+                                      return (
+                                        <div key={index} className={`rounded-lg border transition-all ${isExpanded ? 'border-purple-200 bg-purple-50 shadow-md' : 'border-purple-100 bg-purple-50'}`}>
+                                          <div className="flex items-center justify-between">
+                                            <button type="button" onClick={() => setExpandedRadiologyIndex(isExpanded ? -1 : index)} className="flex-1 px-4 py-2 flex justify-between items-center hover:bg-purple-100 rounded-lg text-left">
+                                              <div className="flex items-center gap-3 flex-1"><div className={`h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold ${isExpanded ? 'bg-purple-100 text-purple-600' : 'bg-slate-200 text-slate-600'}`}>{index + 1}</div>{isExpanded ? <div className="text-xs font-bold text-purple-400 uppercase">Radiology #{index + 1}</div> : <div className="flex-1 min-w-0">{isFilled ? <div className="flex flex-wrap items-center gap-2"><span className="font-medium text-slate-800 truncate">{rad.imaging_test_code}</span><span className="text-xs bg-slate-200 text-slate-700 px-2 py-0.5 rounded">{rad.imaging_test_name}</span></div> : <span className="text-sm text-slate-500 italic">Empty - Click to fill</span>}</div>}</div>
+                                              <div className={`text-slate-400 transition-transform ml-2 ${isExpanded ? 'rotate-180' : ''}`}><FaChevronDown size={14} /></div>
+                                            </button>
+                                            {!isExpanded && prescription.radiology_test_requests.length > 0 && <button type="button" onClick={() => removeRadiology(index)} className="text-slate-400 hover:text-red-500 p-2"><FaTrash size={14} /></button>}
+                                          </div>
+                                          {isExpanded && (
+                                            <div className="border-t border-purple-200 p-3">
+                                              <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+                                                <div className="md:col-span-5"><SearchableFormSelect label="Radiology Test Name/Code" value={rad.imaging_test_code} onChange={(e) => handleRadiologyChange(index, e)} options={radiologyOptions} placeholder="Search radiology test..." type="radiology" name="imaging_test_code" loading={searchingRadiology} onSearch={fetchRadiologyTests} debounceDelay={1000} minSearchChars={0} allowCustom={true} freeSolo={true} /></div>
+                                                <div className="md:col-span-3"><label className="block text-xs font-bold text-slate-500 uppercase mb-1">Details</label><input type="text" value={rad.imaging_test_name || ''} readOnly placeholder="Auto-fill" className="w-full px-3 py-3 text-sm border rounded-lg bg-white" /></div>
+                                                <div className="md:col-span-4"><label className="block text-xs font-bold text-slate-500 uppercase mb-1">Notes / Clinical History</label><textarea name="notes" value={rad.notes || ''} onChange={(e) => handleRadiologyChange(index, e)} placeholder="Clinical history or notes..." rows={1} className="w-full px-3 py-3 text-sm border rounded-lg bg-white" /></div>
+                                              </div>
+                                            </div>
+                                          )}
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </div>
 
+                              <div>
+                                <div className="flex justify-between items-center mb-4"><label className="text-sm font-semibold text-slate-700">Prescribed Medicines</label><button type="button" onClick={addMedicine} className="text-teal-600 text-sm font-semibold hover:text-teal-700"><FaPlus className="mr-1 inline" /> Add Medicine</button></div>
                                 <div className="space-y-3">
                                   {prescription.items.map((item, index) => {
                                     const isExpanded = expandedMedicineIndex === index;
                                     const isFilled = item.medicine_name && item.dosage && item.frequency;
-
                                     return (
-                                      <div
-                                        key={index}
-                                        className={`rounded-lg border transition-all ${isExpanded
-                                          ? 'border-teal-200 bg-teal-50 shadow-md'
-                                          : 'border-teal-100 bg-teal-50 hover:border-teal-300'
-                                          }`}
-                                      >
-                                        {/* Medicine header and content */}
+                                      <div key={index} className={`rounded-lg border transition-all ${isExpanded ? 'border-teal-200 bg-teal-50 shadow-md' : 'border-teal-100 bg-teal-50'}`}>
                                         <div className="flex items-center justify-between">
-                                          <button
-                                            type="button"
-                                            onClick={() => setExpandedMedicineIndex(isExpanded ? -1 : index)}
-                                            className="flex-1 px-4 py-2 flex justify-between items-center hover:bg-teal-100 rounded-lg transition-colors text-left"
-                                          >
-                                            <div className="flex items-center gap-3 flex-1">
-                                              <div className={`h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold ${isExpanded ? 'bg-teal-100 text-teal-600' : 'bg-slate-200 text-slate-600'
-                                                }`}>
-                                                {index + 1}
-                                              </div>
-                                              {isExpanded ? (
-                                                <div className="text-xs font-bold text-slate-400 uppercase">Medicine #{index + 1}</div>
-                                              ) : (
-                                                <div className="flex-1 min-w-0">
-                                                  {isFilled ? (
-                                                    <div className="flex flex-wrap items-center gap-2">
-                                                      <span className="font-medium text-slate-800 truncate">{item.medicine_name}</span>
-                                                      <span className="text-xs bg-slate-200 text-slate-700 px-2 py-0.5 rounded">{item.dosage}</span>
-                                                      <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded">{item.frequency}</span>
-                                                      {item.route_of_administration && (
-                                                        <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">{item.route_of_administration}</span>
-                                                      )}
-                                                    </div>
-                                                  ) : (
-                                                    <span className="text-sm text-slate-500 italic">Empty - Click to fill</span>
-                                                  )}
-                                                </div>
-                                              )}
-                                            </div>
-                                            <div className={`text-slate-400 transition-transform ml-2 flex-shrink-0 ${isExpanded ? 'rotate-180' : ''}`}>
-                                              <FaChevronDown size={14} />
-                                            </div>
+                                          <button type="button" onClick={() => setExpandedMedicineIndex(isExpanded ? -1 : index)} className="flex-1 px-4 py-2 flex justify-between items-center hover:bg-teal-100 rounded-lg text-left">
+                                            <div className="flex items-center gap-3 flex-1"><div className={`h-6 w-6 rounded-full flex items-center justify-center text-xs font-bold ${isExpanded ? 'bg-teal-100 text-teal-600' : 'bg-slate-200 text-slate-600'}`}>{index + 1}</div>{isExpanded ? <div className="text-xs font-bold text-slate-400 uppercase">Medicine #{index + 1}</div> : <div className="flex-1 min-w-0">{isFilled ? <div className="flex flex-wrap items-center gap-2"><span className="font-medium text-slate-800 truncate">{item.medicine_name}</span><span className="text-xs bg-slate-200 text-slate-700 px-2 py-0.5 rounded">{item.dosage}</span><span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded">{item.frequency}</span></div> : <span className="text-sm text-slate-500 italic">Empty - Click to fill</span>}</div>}</div>
+                                            <div className={`text-slate-400 transition-transform ml-2 ${isExpanded ? 'rotate-180' : ''}`}><FaChevronDown size={14} /></div>
                                           </button>
-                                          {!isExpanded && prescription.items.length > 1 && (
-                                            <button
-                                              type="button"
-                                              onClick={() => removeMedicine(index)}
-                                              className="text-slate-400 hover:text-red-500 transition-colors p-2 flex-shrink-0"
-                                            >
-                                              <FaTrash size={14} />
-                                            </button>
-                                          )}
+                                          {!isExpanded && prescription.items.length > 1 && <button type="button" onClick={() => removeMedicine(index)} className="text-slate-400 hover:text-red-500 p-2"><FaTrash size={14} /></button>}
                                         </div>
-
                                         {isExpanded && (
-                                          <div className="border-t border-slate-200 p-3 rounded-b-lg">
-                                            <div className="flex justify-between items-start mb-2">
-                                              <button onClick={() => removeMedicine(index)} className="text-slate-400 hover:text-red-500 transition-colors ml-auto">
-                                                <FaTrash size={14} />
-                                              </button>
-                                            </div>
-
+                                          <div className="border-t border-teal-200 p-3">
                                             <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
-                                              <div className="md:col-span-2">
-                                                <SearchableFormSelect
-                                                  label={<>Type <span className="text-red-500">*</span></>}
-                                                  value={item.medicine_type || ''}
-                                                  onChange={(e) => handleMedicineChange(index, e)}
-                                                  options={medicineTypeOptions}
-                                                  placeholder="Select type"
-                                                  name="medicine_type"
-                                                  allowCustom={false}
-                                                  freeSolo={false}
-                                                />
-                                              </div>
-                                              <div className="md:col-span-4">
-                                                <SearchableFormSelect
-                                                  label="Medicine Name"
-                                                  value={item.medicine_name}
-                                                  onChange={(e) => handleMedicineChange(index, e)}
-                                                  options={medicineOptions}
-                                                  placeholder={item.medicine_type ? `Search ${item.medicine_type.toLowerCase()}s...` : 'Select type first'}
-                                                  required
-                                                  type="medicine"
-                                                  name="medicine_name"
-                                                  loading={searchingMedicines}
-                                                  error={medicineErrors[index]}
-                                                  onSearch={(searchTerm) => fetchMedicines(searchTerm, item.medicine_type || '')}
-                                                  debounceDelay={300}
-                                                  minSearchChars={0}
-                                                  allowCustom={true}
-                                                  freeSolo={true}
-                                                  disabled={!item.medicine_type}
-                                                />
-                                              </div>
-                                              <div className="md:col-span-2">
-                                                <div className="mb-0">
-                                                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
-                                                    Dosage <span className="text-red-500">*</span>
-                                                  </label>
-                                                  <input
-                                                    type="text"
-                                                    name="dosage"
-                                                    value={item.dosage}
-                                                    onChange={(e) => handleMedicineChange(index, e)}
-                                                    placeholder="500mg"
-                                                    required={true}
-                                                    className="w-full mt-1 px-3 py-3 text-sm border border-gray-300 rounded-lg focus:ring-1 focus:ring-teal-500 transition-colors bg-grey-100"
-                                                  />
-                                                </div>
-                                              </div>
-                                              <div className="md:col-span-2">
-                                                <SearchableFormSelect
-                                                  label="Route"
-                                                  value={item.route_of_administration || ""}
-                                                  onChange={(e) => handleMedicineChange(index, e)}
-                                                  options={routeOptions}
-                                                  placeholder="Route"
-                                                  name="route_of_administration"
-                                                  allowCustom={false}
-                                                  freeSolo={false}
-                                                />
-                                              </div>
-                                              <div className="md:col-span-2">
-                                                <SearchableFormSelect
-                                                  label="Frequency"
-                                                  value={item.frequency}
-                                                  onChange={(e) => handleMedicineChange(index, e)}
-                                                  options={frequencyOptions}
-                                                  placeholder="Freq"
-                                                  name="frequency"
-                                                  required={true}
-                                                  allowCustom={false}
-                                                  freeSolo={false}
-                                                />
-                                              </div>
-
-                                              <div className="md:col-span-2">
-                                                <SearchableFormSelect
-                                                  label="Duration"
-                                                  value={item.duration}
-                                                  onChange={(e) => handleMedicineChange(index, e)}
-                                                  options={durationOptions}
-                                                  placeholder="Dur"
-                                                  name="duration"
-                                                  required={true}
-                                                  allowCustom={false}
-                                                  freeSolo={false}
-                                                />
-                                              </div>
-                                              <div className="md:col-span-2">
-                                                <div className="mb-0">
-                                                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
-                                                    Qty
-                                                  </label>
-                                                  <input
-                                                    type="text"
-                                                    name="quantity"
-                                                    value={item.quantity}
-                                                    onChange={(e) => handleMedicineChange(index, e)}
-                                                    placeholder="Qty"
-                                                    readOnly={true}
-                                                    className="w-full mt-1 px-3 py-3 text-sm border border-gray-300 rounded-lg bg-gray-100 focus:ring-1 focus:ring-teal-500 transition-colors"
-                                                  />
-                                                </div>
-                                              </div>
-                                              <div className="md:col-span-8">
-                                                <div className="mb-0">
-                                                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
-                                                    Instructions
-                                                  </label>
-                                                  <input
-                                                    type="text"
-                                                    name="instructions"
-                                                    value={item.instructions}
-                                                    onChange={(e) => handleMedicineChange(index, e)}
-                                                    placeholder="e.g. After food with water"
-                                                    className="w-full mt-1 px-3 py-3 text-sm border border-gray-300 rounded-lg focus:ring-1 focus:ring-teal-500 transition-colors bg-white"
-                                                  />
-                                                </div>
-                                              </div>
+                                              <div className="md:col-span-2"><SearchableFormSelect label="Type" value={item.medicine_type || ''} onChange={(e) => handleMedicineChange(index, e)} options={medicineTypeOptions} placeholder="Select type" name="medicine_type" allowCustom={false} freeSolo={false} /></div>
+                                              <div className="md:col-span-4"><SearchableFormSelect label="Medicine Name" value={item.medicine_name} onChange={(e) => handleMedicineChange(index, e)} options={medicineOptions} placeholder={item.medicine_type ? `Search ${item.medicine_type.toLowerCase()}s...` : 'Select type first'} required type="medicine" name="medicine_name" loading={searchingMedicines} error={medicineErrors[index]} onSearch={(searchTerm) => fetchMedicines(searchTerm, item.medicine_type || '')} debounceDelay={300} minSearchChars={0} allowCustom={true} freeSolo={true} disabled={!item.medicine_type} /></div>
+                                              <div className="md:col-span-2"><label className="block text-xs font-bold text-slate-500 uppercase mb-1">Dosage <span className="text-red-500">*</span></label><input type="text" name="dosage" value={item.dosage} onChange={(e) => handleMedicineChange(index, e)} placeholder="500mg" required className="w-full px-3 py-3 text-sm border rounded-lg bg-white" /></div>
+                                              <div className="md:col-span-2"><SearchableFormSelect label="Route" value={item.route_of_administration || ""} onChange={(e) => handleMedicineChange(index, e)} options={routeOptions} placeholder="Route" name="route_of_administration" allowCustom={false} freeSolo={false} /></div>
+                                              <div className="md:col-span-2"><SearchableFormSelect label="Frequency" value={item.frequency} onChange={(e) => handleMedicineChange(index, e)} options={frequencyOptions} placeholder="Freq" name="frequency" required allowCustom={false} freeSolo={false} /></div>
+                                              <div className="md:col-span-2"><SearchableFormSelect label="Duration" value={item.duration} onChange={(e) => handleMedicineChange(index, e)} options={durationOptions} placeholder="Dur" name="duration" required allowCustom={false} freeSolo={false} /></div>
+                                              <div className="md:col-span-2"><label className="block text-xs font-bold text-slate-500 uppercase mb-1">Qty</label><input type="text" name="quantity" value={item.quantity} onChange={(e) => handleMedicineChange(index, e)} placeholder="Qty" readOnly className="w-full px-3 py-3 text-sm border rounded-lg bg-gray-100" /></div>
+                                              <div className="md:col-span-8"><label className="block text-xs font-bold text-slate-500 uppercase mb-1">Instructions</label><input type="text" name="instructions" value={item.instructions} onChange={(e) => handleMedicineChange(index, e)} placeholder="e.g. After food with water" className="w-full px-3 py-3 text-sm border rounded-lg bg-white" /></div>
                                             </div>
                                           </div>
                                         )}
@@ -3663,70 +2963,18 @@ const AppointmentDetails = () => {
                                 </div>
                               </div>
 
-                              {/* Image Upload Section */}
                               <div className="bg-slate-50 rounded-lg border-2 border-dashed border-slate-300 p-6 text-center hover:bg-slate-100 transition-colors">
                                 {!prescription.prescriptionImage ? (
-                                  <div className="relative">
-                                    <input
-                                      type="file"
-                                      accept="image/*"
-                                      onChange={handleImageUpload}
-                                      disabled={uploadingImage}
-                                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                    />
-                                    <div className="flex flex-col items-center">
-                                      {uploadingImage ? (
-                                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600 mb-2"></div>
-                                      ) : (
-                                        <FaCloudUploadAlt className="text-3xl text-slate-400 mb-2" />
-                                      )}
-                                      <span className="text-sm font-medium text-slate-600">
-                                        {uploadingImage ? 'Uploading...' : 'Click to upload prescription image (Optional)'}
-                                      </span>
-                                      <span className="text-xs text-slate-400 mt-1">Supports JPG, PNG</span>
-                                    </div>
-                                  </div>
+                                  <div className="relative"><input type="file" accept="image/*" onChange={handleImageUpload} disabled={uploadingImage} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" /><div className="flex flex-col items-center">{uploadingImage ? <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600 mb-2"></div> : <FaCloudUploadAlt className="text-3xl text-slate-400 mb-2" />}<span className="text-sm font-medium text-slate-600">{uploadingImage ? 'Uploading...' : 'Click to upload prescription image (Optional)'}</span><span className="text-xs text-slate-400 mt-1">Supports JPG, PNG</span></div></div>
                                 ) : (
-                                  <div className="relative group">
-                                    <img
-                                      src={prescription.prescriptionImage}
-                                      alt="Prescription Preview"
-                                      className="max-h-64 mx-auto rounded-lg shadow-sm border border-slate-200 object-contain"
-                                    />
-                                    <button
-                                      type="button"
-                                      onClick={removeImage}
-                                      className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
-                                    >
-                                      <FaTimes />
-                                    </button>
-                                    <p className="text-xs text-green-600 mt-2 font-medium flex items-center justify-center">
-                                      <FaCheckCircle className="mr-1" /> Image attached successfully
-                                    </p>
-                                  </div>
+                                  <div className="relative group"><img src={prescription.prescriptionImage} alt="Prescription Preview" className="max-h-64 mx-auto rounded-lg shadow-sm border border-slate-200 object-contain" /><button type="button" onClick={removeImage} className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"><FaTimes /></button><p className="text-xs text-green-600 mt-2 font-medium flex items-center justify-center"><FaCheckCircle className="mr-1" /> Image attached successfully</p></div>
                                 )}
                               </div>
                             </div>
 
                             <div className="p-6 bg-slate-50 border-t border-slate-200 flex justify-between items-center rounded-b-xl">
-                              <button
-                                type="button"
-                                onClick={() => setShowPrescriptionForm(false)}
-                                className="text-slate-500 hover:text-slate-700 font-medium px-4 py-2"
-                              >
-                                Cancel
-                              </button>
-                              <button
-                                type="submit"
-                                disabled={submitting || calculatingSalary}
-                                className="bg-teal-600 hover:bg-teal-700 text-white font-semibold py-2.5 px-6 rounded-lg shadow-md hover:shadow-lg transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center"
-                              >
-                                {submitting ? (
-                                  <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div> Saving...</>
-                                ) : (
-                                  <>Complete Consultation <FaCheckCircle className="ml-2" /></>
-                                )}
-                              </button>
+                              <button type="button" onClick={() => setShowPrescriptionForm(false)} className="text-slate-500 hover:text-slate-700 font-medium px-4 py-2">Cancel</button>
+                              <button type="submit" disabled={submitting || calculatingSalary} className="bg-teal-600 hover:bg-teal-700 text-white font-semibold py-2.5 px-6 rounded-lg shadow-md hover:shadow-lg transition-all disabled:opacity-70 flex items-center">{submitting ? <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div> Saving...</> : <>Complete Consultation <FaCheckCircle className="ml-2" /></>}</button>
                             </div>
                           </form>
                         )}
@@ -3734,133 +2982,35 @@ const AppointmentDetails = () => {
                     )}
                   </div>
                 </>
-              ) : null}
+              )}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Episode Modal */}
-      <EpisodeModal
-        isOpen={showEpisodeModal}
-        onClose={() => setShowEpisodeModal(false)}
-        onConfirm={handleEpisodeAction}
-        suggestions={episodeSuggestions}
-        diagnosis={prescription.diagnosis}
-        patientName={patientName}
-      />
+      <EpisodeModal isOpen={showEpisodeModal} onClose={() => setShowEpisodeModal(false)} onConfirm={handleEpisodeAction} suggestions={episodeSuggestions} diagnosis={prescription.diagnosis} patientName={patientName} />
 
-      {/* Episode Timeline Modal */}
       {showEpisodeTimeline && episodeTimelineData && (
-        <EpisodeTimeline
-          episode={episodeTimelineData.episode}
-          appointments={episodeTimelineData.appointments || []}
-          prescriptions={episodeTimelineData.prescriptions || []}
-          labReports={episodeTimelineData.labReports || []}
-          onClose={() => setShowEpisodeTimeline(false)}
-        />
+        <EpisodeTimeline episode={episodeTimelineData.episode} appointments={episodeTimelineData.appointments || []} prescriptions={episodeTimelineData.prescriptions || []} labReports={episodeTimelineData.labReports || []} radiologyReports={episodeTimelineData.radiologyReports || []} onClose={() => setShowEpisodeTimeline(false)} />
       )}
 
-      {/* Vitals Modal */}
       {isVitalsModalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold text-gray-800">Update Vitals</h2>
-              <button
-                onClick={() => setIsVitalsModalOpen(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <FaTimes size={20} />
-              </button>
-            </div>
-            <p className="text-sm text-gray-500 mb-6">
-              Patient: {patientName}
-            </p>
-
+            <div className="flex justify-between items-center mb-4"><h2 className="text-xl font-bold text-gray-800">Update Vitals</h2><button onClick={() => setIsVitalsModalOpen(false)} className="text-gray-400 hover:text-gray-600"><FaTimes size={20} /></button></div>
+            <p className="text-sm text-gray-500 mb-6">Patient: {patientName}</p>
             <form onSubmit={submitVitals} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Height (cm)</label>
-                  <input
-                    type="text" name="height" value={vitals.height} onChange={handleVitalsChange}
-                    placeholder="e.g. 170"
-                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Weight (kg)</label>
-                  <input
-                    type="text" name="weight" value={vitals.weight} onChange={handleVitalsChange}
-                    placeholder="e.g. 70"
-                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Blood Pressure</label>
-                  <input
-                    type="text" name="bp" value={vitals.bp} onChange={handleVitalsChange}
-                    placeholder="e.g. 120/80"
-                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Pulse (bpm)</label>
-                  <input
-                    type="text" name="pulse" value={vitals.pulse} onChange={handleVitalsChange}
-                    placeholder="e.g. 72"
-                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">SPO2 (%)</label>
-                  <input
-                    type="text" name="spo2" value={vitals.spo2} onChange={handleVitalsChange}
-                    placeholder="e.g. 98"
-                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Temperature (°F)</label>
-                  <input
-                    type="text" name="temperature" value={vitals.temperature} onChange={handleVitalsChange}
-                    placeholder="e.g. 98.6"
-                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">RR (breaths/min)</label>
-                  <input
-                    type="text" name="respiratory_rate" value={vitals.respiratory_rate} onChange={handleVitalsChange}
-                    placeholder="e.g. 16"
-                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">RBS (mg/dL)</label>
-                  <input
-                    type="text" name="random_blood_sugar" value={vitals.random_blood_sugar} onChange={handleVitalsChange}
-                    placeholder="e.g. 100"
-                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500"
-                  />
-                </div>
+                <div><label className="block text-xs font-bold text-gray-500 uppercase mb-1">Height (cm)</label><input type="text" name="height" value={vitals.height} onChange={handleVitalsChange} placeholder="e.g. 170" className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500" /></div>
+                <div><label className="block text-xs font-bold text-gray-500 uppercase mb-1">Weight (kg)</label><input type="text" name="weight" value={vitals.weight} onChange={handleVitalsChange} placeholder="e.g. 70" className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500" /></div>
+                <div><label className="block text-xs font-bold text-gray-500 uppercase mb-1">Blood Pressure</label><input type="text" name="bp" value={vitals.bp} onChange={handleVitalsChange} placeholder="e.g. 120/80" className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500" /></div>
+                <div><label className="block text-xs font-bold text-gray-500 uppercase mb-1">Pulse (bpm)</label><input type="text" name="pulse" value={vitals.pulse} onChange={handleVitalsChange} placeholder="e.g. 72" className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500" /></div>
+                <div><label className="block text-xs font-bold text-gray-500 uppercase mb-1">SPO2 (%)</label><input type="text" name="spo2" value={vitals.spo2} onChange={handleVitalsChange} placeholder="e.g. 98" className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500" /></div>
+                <div><label className="block text-xs font-bold text-gray-500 uppercase mb-1">Temperature (°F)</label><input type="text" name="temperature" value={vitals.temperature} onChange={handleVitalsChange} placeholder="e.g. 98.6" className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500" /></div>
+                <div><label className="block text-xs font-bold text-gray-500 uppercase mb-1">RR (breaths/min)</label><input type="text" name="respiratory_rate" value={vitals.respiratory_rate} onChange={handleVitalsChange} placeholder="e.g. 16" className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500" /></div>
+                <div><label className="block text-xs font-bold text-gray-500 uppercase mb-1">RBS (mg/dL)</label><input type="text" name="random_blood_sugar" value={vitals.random_blood_sugar} onChange={handleVitalsChange} placeholder="e.g. 100" className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500" /></div>
               </div>
-
-              <div className="flex justify-end gap-3 mt-6">
-                <button
-                  type="button"
-                  onClick={() => setIsVitalsModalOpen(false)}
-                  className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700"
-                >
-                  Save Vitals
-                </button>
-              </div>
+              <div className="flex justify-end gap-3 mt-6"><button type="button" onClick={() => setIsVitalsModalOpen(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">Cancel</button><button type="submit" className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700">Save Vitals</button></div>
             </form>
           </div>
         </div>
