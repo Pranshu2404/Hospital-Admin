@@ -536,7 +536,7 @@ const SearchableFormSelect = ({
         if (allowCustom && freeSolo && searchTerm.trim() && !hasExactMatch) {
           emitChange(searchTerm.trim(), null);
           setIsOpen(false);
-                    const customOption = {
+          const customOption = {
             label: searchTerm.trim(),
             value: searchTerm.trim(),
             isCustom: true
@@ -1210,28 +1210,46 @@ const AppointmentDetails = () => {
 
   // NEW: Fetch radiology tests
   const fetchRadiologyTests = async (searchTerm = '') => {
-    if (searchTerm.length < 2 && searchTerm !== '') return;
-    setSearchingRadiology(true);
     try {
-      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/imaging-tests/search`, {
-        params: { q: searchTerm, limit: 20 }
+      setSearchingRadiology(true);
+
+      // Build query parameters
+      const params = {
+        limit: 20,
+        active_only: true  // Only fetch active tests
+      };
+
+      // Add search filter if provided
+      if (searchTerm && searchTerm.trim().length >= 2) {
+        params.search = searchTerm.trim();
+      }
+
+      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/radiology/tests`, {
+        params: params
       });
-      if (response.data.data && response.data.data.imagingTests) {
-        const radiologyOpts = response.data.data.imagingTests.map(test => ({
-          label: test.code,
+
+      if (response.data && response.data.data) {
+        const radiologyOpts = response.data.data.map(test => ({
+          label: `${test.code} - ${test.name}`,
           value: test.code,
           name: test.name,
-          category: test.category,
-          base_price: test.base_price,
-          modality: test.modality,
-          contrast_required: test.contrast_required,
-          preparation_instructions: test.preparation_instructions,
-          turnaround_time_hours: test.turnaround_time_hours
+          category: test.category || 'Other',
+          base_price: test.base_price || 0,
+          contrast_required: test.contrast_required || false,
+          contrast_details: test.contrast_details || '',
+          preparation_instructions: test.preparation_instructions || '',
+          contraindications: test.contraindications || '',
+          turnaround_time_hours: test.turnaround_time_hours || 24,
+          is_active: test.is_active
         }));
+
         setRadiologyOptions(radiologyOpts);
+      } else {
+        setRadiologyOptions([]);
       }
     } catch (error) {
       console.error('Error fetching radiology tests:', error);
+      toast.error('Failed to load radiology tests');
       setRadiologyOptions([]);
     } finally {
       setSearchingRadiology(false);
@@ -1328,6 +1346,7 @@ const AppointmentDetails = () => {
           return docDept === currentDoctorDept;
         });
       }
+      console.log(appts)
       setPastAppointments(appts);
     } catch (err) {
       console.error('Error fetching patient history:', err);
@@ -1820,12 +1839,15 @@ const AppointmentDetails = () => {
     setMedicineErrors({});
     setProcedureErrors({});
     setLabTestErrors({});
+    setRadiologyErrors({});
+
     if (!prescription.diagnosis.trim()) {
       setMessage('Diagnosis is required');
       setSubmitting(false);
       return;
     }
 
+    // Validate medicines
     const medicineErrorsLocal = {};
     let hasMedicineErrors = false;
     prescription.items.forEach((item, index) => {
@@ -1841,8 +1863,23 @@ const AppointmentDetails = () => {
     });
     setMedicineErrors(medicineErrorsLocal);
 
-    if (hasMedicineErrors) {
-      setMessage('Please fill all required medicine fields');
+    // Validate radiology tests
+    const radiologyErrorsLocal = {};
+    let hasRadiologyErrors = false;
+    prescription.radiology_test_requests.forEach((rad, index) => {
+      const errors = [];
+      if (rad.imaging_test_code && !rad.imaging_test_name) {
+        errors.push('Test name is required');
+      }
+      if (errors.length > 0) {
+        radiologyErrorsLocal[index] = errors;
+        hasRadiologyErrors = true;
+      }
+    });
+    setRadiologyErrors(radiologyErrorsLocal);
+
+    if (hasMedicineErrors || hasRadiologyErrors) {
+      setMessage('Please fill all required fields');
       setSubmitting(false);
       return;
     }
@@ -1850,7 +1887,14 @@ const AppointmentDetails = () => {
     try {
       const validItems = prescription.items.filter(item => item.medicine_name.trim() && item.dosage.trim());
 
-      // Prepare procedure_requests with costs
+      if (validItems.length === 0 && prescription.procedure_requests.length === 0 &&
+        prescription.lab_test_requests.length === 0 && prescription.radiology_test_requests.length === 0) {
+        setMessage('Please add at least one medicine, procedure, lab test, or radiology test');
+        setSubmitting(false);
+        return;
+      }
+
+      // ========== PROCESS PROCEDURES ==========
       const procedureRequests = await Promise.all(
         prescription.procedure_requests
           .filter(proc => proc.procedure_code && proc.procedure_name)
@@ -1881,7 +1925,7 @@ const AppointmentDetails = () => {
           })
       );
 
-      // Prepare lab_test_requests with costs
+      // ========== PROCESS LAB TESTS ==========
       const labTestRequests = await Promise.all(
         prescription.lab_test_requests
           .filter(test => test.lab_test_code && test.lab_test_name)
@@ -1914,41 +1958,55 @@ const AppointmentDetails = () => {
           })
       );
 
-      // NEW: Prepare radiology_test_requests with costs
-      const radiologyRequests = await Promise.all(
+      // ========== PROCESS RADIOLOGY TESTS ==========
+      // First, fetch imaging test details by code
+      const radiologyRequestsData = await Promise.all(
         prescription.radiology_test_requests
           .filter(rad => rad.imaging_test_code && rad.imaging_test_name)
           .map(async (rad) => {
             try {
+              // Fetch imaging test by code using search endpoint
               const radiologyResponse = await axios.get(
-                `${import.meta.env.VITE_BACKEND_URL}/imaging-tests/${rad.imaging_test_code}`
+                `${import.meta.env.VITE_BACKEND_URL}/radiology/tests?search=${encodeURIComponent(rad.imaging_test_code)}`
               );
-              const radiologyData = radiologyResponse.data.data || radiologyResponse.data;
-              await axios.post(`${import.meta.env.VITE_BACKEND_URL}/imaging-tests/${rad.imaging_test_code}/increment-usage`);
+              const tests = radiologyResponse.data.data || [];
+              const imagingTest = tests.find(t => t.code === rad.imaging_test_code);
+
+              if (!imagingTest) {
+                throw new Error(`Imaging test not found: ${rad.imaging_test_code}`);
+              }
+
               return {
-                imaging_test_code: rad.imaging_test_code,
-                imaging_test_name: rad.imaging_test_name,
-                category: radiologyData.category || rad.category,
-                notes: rad.notes?.trim() || '',
-                priority: rad.priority || 'Routine',
+                imaging_test_id: imagingTest._id,
+                imaging_test_code: imagingTest.code,
+                imaging_test_name: imagingTest.name,
+                category: imagingTest.category || rad.category,
                 clinical_history: rad.clinical_history || '',
-                cost: radiologyData.base_price || 0
+                priority: rad.priority || 'Routine',
+                scheduled_date: rad.scheduled_date || null,
+                notes: rad.notes?.trim() || '',
+                contrast_required: imagingTest.contrast_required || false,
+                cost: imagingTest.base_price || 0
               };
             } catch (error) {
               console.warn(`Could not fetch radiology test ${rad.imaging_test_code}:`, error);
               return {
+                imaging_test_id: null,
                 imaging_test_code: rad.imaging_test_code,
                 imaging_test_name: rad.imaging_test_name,
                 category: rad.category || 'Other',
-                notes: rad.notes?.trim() || '',
-                priority: rad.priority || 'Routine',
                 clinical_history: rad.clinical_history || '',
+                priority: rad.priority || 'Routine',
+                scheduled_date: rad.scheduled_date || null,
+                notes: rad.notes?.trim() || '',
+                contrast_required: false,
                 cost: 0
               };
             }
           })
       );
 
+      // ========== CREATE PRESCRIPTION ==========
       const prescriptionData = {
         patient_id: appointment.patient_id?._id || appointment.patient_id,
         doctor_id: appointment.doctor_id?._id || appointment.doctor_id,
@@ -1960,9 +2018,39 @@ const AppointmentDetails = () => {
         investigation: prescription.investigation?.trim() || '',
         presenting_complaint: prescription.presenting_complaint?.trim() || '',
         history_of_presenting_complaint: prescription.history_of_presenting_complaint?.trim() || '',
-        procedure_requests: procedureRequests,
-        lab_test_requests: labTestRequests,
-        radiology_test_requests: radiologyRequests,
+
+        // Procedure requests (embedded in prescription)
+        procedure_requests: procedureRequests.map(proc => ({
+          procedure_code: proc.procedure_code,
+          procedure_name: proc.procedure_name,
+          notes: proc.notes,
+          priority: proc.priority,
+          cost: proc.cost
+        })),
+
+        // Lab test requests (embedded in prescription)
+        lab_test_requests: labTestRequests.map(test => ({
+          lab_test_code: test.lab_test_code,
+          lab_test_name: test.lab_test_name,
+          notes: test.notes,
+          priority: test.priority,
+          clinical_history: test.clinical_history,
+          cost: test.cost
+        })),
+
+        // Radiology test requests (embedded in prescription)
+        radiology_test_requests: radiologyRequestsData.map(rad => ({
+          imaging_test_code: rad.imaging_test_code,
+          imaging_test_name: rad.imaging_test_name,
+          category: rad.category,
+          notes: rad.notes,
+          priority: rad.priority,
+          clinical_history: rad.clinical_history,
+          scheduled_date: rad.scheduled_date,
+          cost: rad.cost
+        })),
+
+        // Medicines
         items: validItems.map(item => ({
           medicine_name: item.medicine_name.trim(),
           dosage: item.dosage.trim(),
@@ -1974,6 +2062,7 @@ const AppointmentDetails = () => {
           instructions: item.instructions?.trim() || '',
           timing: item.timing || ''
         })),
+
         prescription_image: prescription.prescriptionImage,
         follow_up_date: prescription.followUpDate || null,
         is_repeatable: prescription.isRepeatable || false,
@@ -1988,10 +2077,49 @@ const AppointmentDetails = () => {
 
       const savedPrescription = prescriptionResponse.data;
 
+      // ========== CREATE SEPARATE RADIOLOGY REQUESTS (for lab workflow) ==========
+      const validRadiologyRequests = radiologyRequestsData.filter(r => r.imaging_test_id);
+
+      if (validRadiologyRequests.length > 0) {
+        for (const rad of validRadiologyRequests) {
+          try {
+            const radiologyRequestData = {
+              sourceType: admissionId ? 'IPD' : 'OPD',
+              patientId: appointment.patient_id?._id || appointment.patient_id,
+              doctorId: appointment.doctor_id?._id || appointment.doctor_id,
+              imagingTestId: rad.imaging_test_id,
+              clinical_indication: rad.clinical_history,
+              clinical_history: rad.clinical_history,
+              priority: rad.priority,
+              scheduledDate: rad.scheduled_date,
+              patient_notes: rad.notes,
+              cost: rad.cost
+            };
+
+            if (admissionId) {
+              radiologyRequestData.sourceType = 'IPD';
+              radiologyRequestData.admissionId = admissionId;
+            }
+
+            // This will automatically increment usage count in the backend
+            const radiologyRequestResponse = await axios.post(
+              `${import.meta.env.VITE_BACKEND_URL}/radiology/requests`,
+              radiologyRequestData
+            );
+
+            console.log(`Radiology request created for ${rad.imaging_test_name}:`, radiologyRequestResponse.data);
+          } catch (error) {
+            console.error('Error creating radiology request:', error);
+          }
+        }
+      }
+
+      // ========== COMPLETE APPOINTMENT ==========
       await axios.put(
         `${import.meta.env.VITE_BACKEND_URL}/appointments/${appointment._id}/complete`
       );
 
+      // ========== CALCULATE SALARY ==========
       setCalculatingSalary(true);
       let salaryInfoLocal = null;
       try {
@@ -2005,6 +2133,7 @@ const AppointmentDetails = () => {
         setCalculatingSalary(false);
       }
 
+      // ========== SUCCESS MESSAGE ==========
       let successMessage = 'Prescription saved successfully. ';
       if (procedureRequests.length > 0) {
         successMessage += ` ${procedureRequests.length} procedure(s) recommended.`;
@@ -2012,8 +2141,8 @@ const AppointmentDetails = () => {
       if (labTestRequests.length > 0) {
         successMessage += ` ${labTestRequests.length} lab test(s) recommended.`;
       }
-      if (radiologyRequests.length > 0) {
-        successMessage += ` ${radiologyRequests.length} radiology test(s) recommended.`;
+      if (validRadiologyRequests.length > 0) {
+        successMessage += ` ${validRadiologyRequests.length} radiology test(s) recommended.`;
       }
       successMessage += ` ${validItems.length} medicine(s) prescribed.`;
       if (salaryInfoLocal) {
@@ -2022,7 +2151,7 @@ const AppointmentDetails = () => {
       }
       setMessage(successMessage);
 
-      // Reset form
+      // ========== RESET FORM ==========
       setPrescription({
         diagnosis: '',
         notes: '',
@@ -2036,6 +2165,10 @@ const AppointmentDetails = () => {
         prescriptionImage: null
       });
 
+      // Reset ICD data
+      setIcd11Data(null);
+
+      // ========== NAVIGATE AFTER DELAY ==========
       setTimeout(() => {
         navigate('/dashboard/doctor/appointments', {
           state: {
@@ -2046,13 +2179,14 @@ const AppointmentDetails = () => {
             proceduresCount: procedureRequests.length,
             hasLabTests: labTestRequests.length > 0,
             labTestsCount: labTestRequests.length,
-            hasRadiology: radiologyRequests.length > 0,
-            radiologyCount: radiologyRequests.length,
+            hasRadiology: validRadiologyRequests.length > 0,
+            radiologyCount: validRadiologyRequests.length,
             medicineCount: validItems.length,
             salaryCredited: !!salaryInfoLocal
           }
         });
       }, 3000);
+
     } catch (err) {
       console.error('Error submitting prescription:', err);
       let errorMessage = 'Error submitting prescription.';
@@ -2061,6 +2195,9 @@ const AppointmentDetails = () => {
       else if (err.request) errorMessage = 'Network error. Please check your connection.';
       else errorMessage = err.message || 'Unknown error occurred.';
       setMessage(errorMessage);
+
+      // Scroll to top to show error
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } finally {
       setSubmitting(false);
     }

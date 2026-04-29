@@ -216,6 +216,13 @@ import RoomManagement from './pages/dashboard/admin/RoomManagement';
 import BedManagement from './pages/dashboard/admin/BedManagement';
 import AddDoctorRound from './pages/dashboard/staff/ipd/AddDoctorRound';
 import AddVitals from './pages/dashboard/staff/ipd/AddVitals';
+import ImagingTestsList from './pages/dashboard/admin/imaging-tests';
+import AddImagingTest from './pages/dashboard/admin/imaging-tests/add';
+import ImagingTestCategories from './pages/dashboard/admin/imaging-tests/categories';
+import RadiologyStaffList from './pages/dashboard/admin/radiology-staff';
+import AddRadiologyStaff from './pages/dashboard/admin/radiology-staff/add';
+import RadiologyRequestsList from './pages/dashboard/admin/radiology-requests';
+import RadiologyRequestDetails from './pages/dashboard/admin/radiology-requests/details';
 
 // Custom Layout Wrappers with Offline Banner
 const AdminLayout = ({ children }) => {
@@ -777,6 +784,77 @@ export default function App() {
                 <ProtectedRoute role="admin">
                   <AdminLayout>
                     <LabTestCategories />
+                  </AdminLayout>
+                </ProtectedRoute>
+              }
+            />
+            {/* ========== RADIOLOGY / IMAGING TESTS ROUTES ========== */}
+            <Route
+              path="/dashboard/admin/imaging-tests"
+              element={
+                <ProtectedRoute role="admin">
+                  <AdminLayout>
+                    <ImagingTestsList />
+                  </AdminLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard/admin/imaging-tests/add"
+              element={
+                <ProtectedRoute role="admin">
+                  <AdminLayout>
+                    <AddImagingTest />
+                  </AdminLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard/admin/imaging-tests/categories"
+              element={
+                <ProtectedRoute role="admin">
+                  <AdminLayout>
+                    <ImagingTestCategories />
+                  </AdminLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard/admin/radiology-staff"
+              element={
+                <ProtectedRoute role="admin">
+                  <AdminLayout>
+                    <RadiologyStaffList />
+                  </AdminLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard/admin/radiology-staff/add"
+              element={
+                <ProtectedRoute role="admin">
+                  <AdminLayout>
+                    <AddRadiologyStaff />
+                  </AdminLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard/admin/radiology-requests"
+              element={
+                <ProtectedRoute role="admin">
+                  <AdminLayout>
+                    <RadiologyRequestsList />
+                  </AdminLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard/admin/radiology-requests/:id"
+              element={
+                <ProtectedRoute role="admin">
+                  <AdminLayout>
+                    <RadiologyRequestDetails />
                   </AdminLayout>
                 </ProtectedRoute>
               }

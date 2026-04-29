@@ -10,6 +10,15 @@ import {
   FaUserInjured,
   FaFileInvoiceDollar,
   FaSignOutAlt,
+  FaXRay,
+  FaProcedures,
+  FaMicroscope,
+  FaUserMd,
+  FaUserNurse,
+  FaCalendarAlt,
+  FaMoneyBillWave,
+  FaCog,
+  FaTachometerAlt
 } from 'react-icons/fa';
 import { HomeIcon } from '@radix-ui/react-icons';
 import {
@@ -108,6 +117,18 @@ export const adminSidebar = [
       { label: 'Categories', path: '/dashboard/admin/lab-tests/categories' },
       { label: 'Add Pathology Staff', path: '/dashboard/admin/pathology-staff/add' },
       { label: 'Pathology Staff List', path: '/dashboard/admin/pathology-staff' },
+    ],
+  },
+  {
+    label: 'Radiology / Imaging',
+    icon: FaXRay,
+    path: '/dashboard/admin/imaging-tests',
+    submenu: [
+      { label: 'All Imaging Tests', path: '/dashboard/admin/imaging-tests' },
+      { label: 'Add Imaging Test', path: '/dashboard/admin/imaging-tests/add' },
+      { label: 'Radiology Staff', path: '/dashboard/admin/radiology-staff' },
+      { label: 'Add Radiology Staff', path: '/dashboard/admin/radiology-staff/add' },
+      { label: 'Radiology Requests', path: '/dashboard/admin/radiology-requests' },
     ],
   },
   {
