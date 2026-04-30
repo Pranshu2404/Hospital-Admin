@@ -247,8 +247,13 @@ function LabTestsManagement() {
 
   const fetchLabStaff = async () => {
     try {
-      const response = await apiClient.get('/pathology-staff');
-      setLabStaff(response.data.data || []);
+      const [staffRes, nursesRes] = await Promise.all([
+        apiClient.get('/staff').catch(() => ({ data: [] })),
+        apiClient.get('/nurses').catch(() => ({ data: [] }))
+      ]);
+      const staffList = Array.isArray(staffRes.data) ? staffRes.data : (staffRes.data.data || []);
+      const nursesList = Array.isArray(nursesRes.data) ? nursesRes.data : (nursesRes.data.data || []);
+      setLabStaff([...staffList, ...nursesList]);
     } catch (error) {
       console.error('Error fetching lab staff:', error);
     }
@@ -318,7 +323,7 @@ function LabTestsManagement() {
   const handleApprove = async (request) => {
     try {
       setProcessingAction(true);
-      await apiClient.patch(`/labrequests/requests/${request._id}/status`, { status: 'Approved' });
+      await apiClient.patch(`/lab/requests/${request._id}/status`, { status: 'Approved' });
       toast.success('Request approved! Ready for sample collection.');
       fetchLabRequests();
     } catch (error) {
@@ -346,7 +351,7 @@ function LabTestsManagement() {
       if (!selectedRequest) return;
       setProcessingAction(true);
       
-      await apiClient.patch(`/labrequests/requests/${selectedRequest._id}/status`, {
+      await apiClient.patch(`/lab/requests/${selectedRequest._id}/status`, {
         status: 'Sample Collected',
         notes: sampleData.notes
       });
@@ -374,7 +379,7 @@ function LabTestsManagement() {
       if (!selectedRequest) return;
       setProcessingAction(true);
       
-      await apiClient.patch(`/labrequests/requests/${selectedRequest._id}/status`, {
+      await apiClient.patch(`/lab/requests/${selectedRequest._id}/status`, {
         status: 'Processing',
         notes: processData.notes
       });
@@ -415,21 +420,20 @@ function LabTestsManagement() {
       if (completeData.report_file) {
         const formData = new FormData();
         formData.append('report', completeData.report_file);
-        const uploadResponse = await apiClient.post('/labreports/upload', formData, {
+        await apiClient.post(`/lab/requests/${selectedRequest._id}/upload`, formData, {
           headers: { 'Content-Type': 'multipart/form-data' }
         });
-        reportUrl = uploadResponse.data.file_url;
       }
       
       // Add results
-      await apiClient.post(`/labrequests/requests/${selectedRequest._id}/results`, {
+      await apiClient.post(`/lab/requests/${selectedRequest._id}/results`, {
         result_value: completeData.result_value,
         result_interpretation: completeData.result_interpretation,
         technician_notes: completeData.notes
       });
       
       // Update status to Completed
-      await apiClient.patch(`/labrequests/requests/${selectedRequest._id}/status`, {
+      await apiClient.patch(`/lab/requests/${selectedRequest._id}/status`, {
         status: 'Completed',
         notes: completeData.notes
       });
@@ -485,7 +489,7 @@ function LabTestsManagement() {
         notes: `Bill for lab test ${request.lab_test_name}`
       });
       
-      await apiClient.patch(`/labrequests/requests/${request._id}/billed`, {
+      await apiClient.patch(`/lab/requests/${request._id}/billed`, {
         invoiceId: billResponse.data.invoice?._id
       });
       
@@ -545,7 +549,7 @@ function LabTestsManagement() {
       if (!selectedRequest) return;
       setProcessingAction(true);
       
-      await apiClient.patch(`/labrequests/requests/${selectedRequest._id}/status`, {
+      await apiClient.patch(`/lab/requests/${selectedRequest._id}/status`, {
         status: 'Referred Out',
         is_referred_out: true,
         external_lab_details: externalLabData
@@ -581,7 +585,7 @@ function LabTestsManagement() {
       formData.append('report', uploadReportData.report_file);
       formData.append('notes', uploadReportData.notes);
       
-      const response = await apiClient.post(`/labrequests/requests/${selectedRequest._id}/upload`, formData, {
+      const response = await apiClient.post(`/lab/requests/${selectedRequest._id}/upload`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       
@@ -877,7 +881,7 @@ function LabTestsManagement() {
               <div className="p-6 space-y-4">
                 <div className="bg-purple-50 rounded-lg p-4"><div className="text-sm text-purple-700 mb-2">Test Information</div><div className="font-bold">{selectedRequest.lab_test_code} - {selectedRequest.lab_test_name}</div>{selectedRequest.specimen_type && <div className="text-sm text-purple-600 mt-1">Specimen: {selectedRequest.specimen_type}</div>}</div>
                 <div><label className="block text-sm font-semibold text-slate-700 mb-2">Sample ID</label><input type="text" value={sampleData.sample_id} onChange={(e) => setSampleData({ ...sampleData, sample_id: e.target.value })} className="w-full p-2.5 border border-slate-300 rounded-lg bg-slate-50" readOnly /></div>
-                <div><label className="block text-sm font-semibold text-slate-700 mb-2">Collected By</label><select value={sampleData.collected_by} onChange={(e) => setSampleData({ ...sampleData, collected_by: e.target.value })} className="w-full p-2.5 border border-slate-300 rounded-lg"><option value="">Select Staff</option>{labStaff.map(staff => (<option key={staff._id} value={staff._id}>{staff.userId?.name || staff.employeeId}</option>))}</select></div>
+                <div><label className="block text-sm font-semibold text-slate-700 mb-2">Collected By</label><select value={sampleData.collected_by} onChange={(e) => setSampleData({ ...sampleData, collected_by: e.target.value })} className="w-full p-2.5 border border-slate-300 rounded-lg"><option value="">Select Staff</option>{labStaff.map(staff => (<option key={staff._id} value={staff._id}>{staff.first_name} {staff.last_name} - {staff.role}</option>))}</select></div>
                 <div><label className="block text-sm font-semibold text-slate-700 mb-2">Notes</label><textarea value={sampleData.notes} onChange={(e) => setSampleData({ ...sampleData, notes: e.target.value })} className="w-full p-2.5 border border-slate-300 rounded-lg" rows="2" placeholder="Collection notes..." /></div>
               </div>
               <div className="p-6 border-t border-slate-100 flex justify-end gap-3"><button onClick={() => setShowCollectSampleModal(false)} className="px-4 py-2 text-slate-600 font-semibold rounded-lg">Cancel</button><button onClick={collectSample} disabled={processingAction} className="px-6 py-2 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700 flex items-center gap-2">{processingAction ? <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div> Processing...</> : <><FaCheck /> Confirm Collection</>}</button></div>
@@ -892,7 +896,7 @@ function LabTestsManagement() {
               <div className="p-6 border-b border-slate-100"><h3 className="text-xl font-bold text-slate-800 flex items-center gap-2"><FaPlayCircle className="text-indigo-500" /> Start Processing</h3><p className="text-slate-500 text-sm mt-1">{selectedRequest.lab_test_name}</p></div>
               <div className="p-6 space-y-4">
                 <div className="bg-indigo-50 rounded-lg p-4"><div className="font-bold">{selectedRequest.lab_test_code} - {selectedRequest.lab_test_name}</div>{selectedRequest.specimen_type && <div className="text-sm text-indigo-600 mt-1">Specimen: {selectedRequest.specimen_type}</div>}</div>
-                <div><label className="block text-sm font-semibold text-slate-700 mb-2">Processed By</label><select value={processData.performed_by} onChange={(e) => setProcessData({ ...processData, performed_by: e.target.value })} className="w-full p-2.5 border border-slate-300 rounded-lg"><option value="">Select Staff</option>{labStaff.map(staff => (<option key={staff._id} value={staff._id}>{staff.userId?.name || staff.employeeId}</option>))}</select></div>
+                <div><label className="block text-sm font-semibold text-slate-700 mb-2">Processed By</label><select value={processData.performed_by} onChange={(e) => setProcessData({ ...processData, performed_by: e.target.value })} className="w-full p-2.5 border border-slate-300 rounded-lg"><option value="">Select Staff</option>{labStaff.map(staff => (<option key={staff._id} value={staff._id}>{staff.first_name} {staff.last_name} - {staff.role}</option>))}</select></div>
                 <div><label className="block text-sm font-semibold text-slate-700 mb-2">Notes</label><textarea value={processData.notes} onChange={(e) => setProcessData({ ...processData, notes: e.target.value })} className="w-full p-2.5 border border-slate-300 rounded-lg" rows="2" placeholder="Processing notes..." /></div>
               </div>
               <div className="p-6 border-t border-slate-100 flex justify-end gap-3"><button onClick={() => setShowProcessModal(false)} className="px-4 py-2 text-slate-600 font-semibold rounded-lg">Cancel</button><button onClick={startProcessing} disabled={processingAction} className="px-6 py-2 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 flex items-center gap-2">{processingAction ? <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div> Processing...</> : <><FaPlayCircle /> Start Processing</>}</button></div>

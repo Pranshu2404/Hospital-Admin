@@ -195,8 +195,13 @@ function LabNurseDashboard() {
 
   const fetchLabStaff = async () => {
     try {
-      const response = await apiClient.get('/pathology-staff');
-      setLabStaff(response.data.data || []);
+      const [staffRes, nursesRes] = await Promise.all([
+        apiClient.get('/staff').catch(() => ({ data: [] })),
+        apiClient.get('/nurses').catch(() => ({ data: [] }))
+      ]);
+      const staffList = Array.isArray(staffRes.data) ? staffRes.data : (staffRes.data.data || []);
+      const nursesList = Array.isArray(nursesRes.data) ? nursesRes.data : (nursesRes.data.data || []);
+      setLabStaff([...staffList, ...nursesList]);
     } catch (error) {
       console.error('Error fetching lab staff:', error);
     }
@@ -453,9 +458,15 @@ function LabNurseDashboard() {
               <FaTag className="text-purple-500 text-sm" />
               <span className="font-bold text-slate-800">{test.lab_test_code}</span>
               <StatusBadge status={test.status} />
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-emerald-100 text-emerald-700 rounded-full">
-                <FaMoneyBillWave className="text-xs" /> Paid
-              </span>
+              {test.is_billed ? (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-emerald-100 text-emerald-700 rounded-full">
+                  <FaMoneyBillWave className="text-xs" /> Paid
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-amber-100 text-amber-700 rounded-full">
+                  <FaClock className="text-xs" /> Payment Pending
+                </span>
+              )}
             </div>
             <h4 className="text-lg font-semibold text-slate-900 mb-1">{test.lab_test_name}</h4>
             {test.category && (
@@ -474,9 +485,15 @@ function LabNurseDashboard() {
           </div>
           <div className="text-right">
             <div className="text-2xl font-bold text-emerald-700">₹{test.cost || 0}</div>
-            <div className="text-xs text-emerald-600 font-medium flex items-center gap-1">
-              <FaCheckCircle /> Payment Received
-            </div>
+            {test.is_billed ? (
+              <div className="text-xs text-emerald-600 font-medium flex items-center gap-1 justify-end">
+                <FaCheckCircle /> Payment Received
+              </div>
+            ) : (
+              <div className="text-xs text-amber-600 font-medium flex items-center gap-1 justify-end">
+                <FaClock /> Awaiting Payment
+              </div>
+            )}
           </div>
         </div>
 
@@ -579,10 +596,14 @@ function LabNurseDashboard() {
         <div className="mt-4 pt-3 border-t border-slate-100">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1">
-              <div className="w-8 h-8 rounded-full flex items-center justify-center bg-emerald-100 text-emerald-600">
-                <FaMoneyBillWave />
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                test.is_billed ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'
+              }`}>
+                {test.is_billed ? <FaMoneyBillWave /> : <FaClock />}
               </div>
-              <div className="text-xs font-medium text-emerald-600">Paid</div>
+              <div className={`text-xs font-medium ${test.is_billed ? 'text-emerald-600' : 'text-amber-600'}`}>
+                {test.is_billed ? 'Paid' : 'Payment Pending'}
+              </div>
             </div>
             <FaArrowRight className="text-slate-300" />
             <div className="flex items-center gap-1">
