@@ -19,7 +19,7 @@ import {
   FaUpload, FaFilePdf, FaImage, FaExternalLinkAlt,
   FaArrowLeft, FaUserMd as FaDoctor, FaUserInjured as FaPatient,
   FaFilter as FaFilterIcon, FaMoneyBillWave as FaPayment,
-  FaClipboardList, FaDollarSign, FaChartLine
+  FaClipboardList, FaDollarSign, FaChartLine, FaFilePrescription
 } from 'react-icons/fa';
 
 // Status Badge Component
@@ -43,15 +43,15 @@ const StatusBadge = ({ status }) => {
   );
 };
 
-const StatCard = ({ title, value, icon, colorClass, subtitle }) => (
-  <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 hover:shadow-md transition-all">
-    <div className="flex items-start justify-between">
+const StatCard = ({ title, value, icon, colorClass, borderClass = 'border-slate-100', subtitle }) => (
+  <div className={`bg-white p-6 rounded-xl shadow-sm border hover:shadow-md transition-all ${borderClass} border-l-4`}>
+    <div className="flex items-center justify-between">
       <div>
-        <h3 className="text-slate-500 text-sm font-medium uppercase tracking-wide">{title}</h3>
-        <p className="text-3xl font-bold text-slate-800 mt-2">{value}</p>
+        <h3 className="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">{title}</h3>
+        <p className="text-3xl font-bold text-slate-800">{value}</p>
         {subtitle && <p className="text-xs text-slate-500 mt-1">{subtitle}</p>}
       </div>
-      <div className={`p-3 rounded-full ${colorClass} bg-opacity-10 text-2xl`}>
+      <div className={`p-4 rounded-2xl ${colorClass} text-2xl shadow-inner`}>
         {icon}
       </div>
     </div>
@@ -192,7 +192,7 @@ function LabTestsManagement() {
   const fetchLabRequests = async () => {
     try {
       setLoading(true);
-      const response = await apiClient.get('/labrequests/requests');
+      const response = await apiClient.get('/lab/requests');
       console.log('Fetched lab requests:', response.data);
       
       const requests = response.data.data || response.data.requests || [];
@@ -247,7 +247,7 @@ function LabTestsManagement() {
 
   const fetchLabStaff = async () => {
     try {
-      const response = await apiClient.get('/labstaff');
+      const response = await apiClient.get('/pathology-staff');
       setLabStaff(response.data.data || []);
     } catch (error) {
       console.error('Error fetching lab staff:', error);
@@ -256,7 +256,7 @@ function LabTestsManagement() {
 
   const fetchCategories = async () => {
     try {
-      const response = await apiClient.get('/labtests?limit=500');
+      const response = await apiClient.get('/lab/tests?limit=500');
       const tests = response.data.data || [];
       const uniqueCategories = [...new Set(tests.map(t => t.category).filter(Boolean))];
       setCategories(uniqueCategories);
@@ -276,7 +276,7 @@ function LabTestsManagement() {
       if (req.status === 'Sample Collected') samplesCollected++;
       if (req.status === 'Processing') processing++;
       if (req.status === 'Referred Out') referredOut++;
-      if (req.status === 'Completed' && !req.is_billed) pendingBilling++;
+      if (!req.is_billed && req.status !== 'Cancelled') pendingBilling++;
       
       if (req.scheduled_date && new Date(req.scheduled_date).toISOString().split('T')[0] === today) todayRequests++;
       if (req.completed_date && new Date(req.completed_date).toISOString().split('T')[0] === today) completedToday++;
@@ -833,15 +833,15 @@ function LabTestsManagement() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-8 gap-4 mb-8">
-          <StatCard title="Pending Approval" value={stats.totalPending} icon={<FaClock />} colorClass="text-amber-500" />
-          <StatCard title="Approved" value={stats.totalApproved} icon={<FaCheckCircle />} colorClass="text-green-500" />
-          <StatCard title="Awaiting Payment" value={stats.pendingBilling} icon={<FaPayment />} colorClass="text-orange-500" />
-          <StatCard title="Samples Collected" value={stats.samplesCollected} icon={<FaVial />} colorClass="text-purple-500" />
-          <StatCard title="Processing" value={stats.processing} icon={<FaMicroscope />} colorClass="text-indigo-500" />
-          <StatCard title="Today's Schedule" value={stats.todayRequests} icon={<FaCalendarCheck />} colorClass="text-blue-500" />
-          <StatCard title="Completed Today" value={stats.completedToday} icon={<FaCheckCircle />} colorClass="text-emerald-500" />
-          <StatCard title="Revenue" value={`₹${stats.totalRevenue.toLocaleString()}`} icon={<FaChartLine />} colorClass="text-purple-500" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <StatCard title="Pending Approval" value={stats.totalPending} icon={<FaClock />} colorClass="text-amber-600 bg-amber-100" borderClass="border-amber-200" />
+          <StatCard title="Approved" value={stats.totalApproved} icon={<FaCheckCircle />} colorClass="text-green-600 bg-green-100" borderClass="border-green-200" />
+          <StatCard title="Awaiting Payment" value={stats.pendingBilling} icon={<FaPayment />} colorClass="text-orange-600 bg-orange-100" borderClass="border-orange-200" />
+          <StatCard title="Samples Collected" value={stats.samplesCollected} icon={<FaVial />} colorClass="text-purple-600 bg-purple-100" borderClass="border-purple-200" />
+          <StatCard title="Processing" value={stats.processing} icon={<FaMicroscope />} colorClass="text-indigo-600 bg-indigo-100" borderClass="border-indigo-200" />
+          <StatCard title="Today's Schedule" value={stats.todayRequests} icon={<FaCalendarCheck />} colorClass="text-blue-600 bg-blue-100" borderClass="border-blue-200" />
+          <StatCard title="Completed Today" value={stats.completedToday} icon={<FaCheckCircle />} colorClass="text-emerald-600 bg-emerald-100" borderClass="border-emerald-200" />
+          <StatCard title="Revenue" value={`₹${stats.totalRevenue.toLocaleString()}`} icon={<FaChartLine />} colorClass="text-rose-600 bg-rose-100" borderClass="border-rose-200" />
         </div>
 
         {/* Filters */}

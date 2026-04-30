@@ -1901,20 +1901,23 @@ const AppointmentDetails = () => {
           .map(async (proc) => {
             try {
               const procedureResponse = await axios.get(
-                `${import.meta.env.VITE_BACKEND_URL}/procedures/${proc.procedure_code}`
+                `${import.meta.env.VITE_BACKEND_URL}/procedures?search=${encodeURIComponent(proc.procedure_code)}`
               );
-              const procedureData = procedureResponse.data.data || procedureResponse.data;
-              await axios.post(`${import.meta.env.VITE_BACKEND_URL}/procedures/${proc.procedure_code}/increment-usage`);
+              const procedures = procedureResponse.data.data || procedureResponse.data || [];
+              const procedureData = procedures.find(p => p.code === proc.procedure_code);
+              
               return {
+                procedure_id: procedureData?._id || null,
                 procedure_code: proc.procedure_code,
                 procedure_name: proc.procedure_name,
                 notes: proc.notes?.trim() || '',
                 priority: proc.priority || 'Routine',
-                cost: procedureData.base_price || 0
+                cost: procedureData?.base_price || 0
               };
             } catch (error) {
               console.warn(`Could not fetch procedure ${proc.procedure_code}:`, error);
               return {
+                procedure_id: null,
                 procedure_code: proc.procedure_code,
                 procedure_name: proc.procedure_name,
                 notes: proc.notes?.trim() || '',
@@ -1932,21 +1935,24 @@ const AppointmentDetails = () => {
           .map(async (test) => {
             try {
               const labTestResponse = await axios.get(
-                `${import.meta.env.VITE_BACKEND_URL}/labtests/${test.lab_test_code}`
+                `${import.meta.env.VITE_BACKEND_URL}/lab/tests?search=${encodeURIComponent(test.lab_test_code)}`
               );
-              const labTestData = labTestResponse.data.data || labTestResponse.data;
-              await axios.post(`${import.meta.env.VITE_BACKEND_URL}/labtests/${test.lab_test_code}/increment-usage`);
+              const tests = labTestResponse.data.data || [];
+              const labTestData = tests.find(t => t.code === test.lab_test_code);
+              
               return {
+                lab_test_id: labTestData?._id || null,
                 lab_test_code: test.lab_test_code,
                 lab_test_name: test.lab_test_name,
                 notes: test.notes?.trim() || '',
                 priority: test.priority || 'Routine',
                 clinical_history: test.clinical_history || '',
-                cost: labTestData.base_price || 0
+                cost: labTestData?.base_price || 0
               };
             } catch (error) {
               console.warn(`Could not fetch lab test ${test.lab_test_code}:`, error);
               return {
+                lab_test_id: null,
                 lab_test_code: test.lab_test_code,
                 lab_test_name: test.lab_test_name,
                 notes: test.notes?.trim() || '',
@@ -2020,7 +2026,8 @@ const AppointmentDetails = () => {
         history_of_presenting_complaint: prescription.history_of_presenting_complaint?.trim() || '',
 
         // Procedure requests (embedded in prescription)
-        procedure_requests: procedureRequests.map(proc => ({
+        procedure_requests: procedureRequests.filter(p => p.procedure_id).map(proc => ({
+          procedure_id: proc.procedure_id,
           procedure_code: proc.procedure_code,
           procedure_name: proc.procedure_name,
           notes: proc.notes,
@@ -2029,7 +2036,8 @@ const AppointmentDetails = () => {
         })),
 
         // Lab test requests (embedded in prescription)
-        lab_test_requests: labTestRequests.map(test => ({
+        lab_test_requests: labTestRequests.filter(l => l.lab_test_id).map(test => ({
+          lab_test_id: test.lab_test_id,
           lab_test_code: test.lab_test_code,
           lab_test_name: test.lab_test_name,
           notes: test.notes,
@@ -2039,7 +2047,8 @@ const AppointmentDetails = () => {
         })),
 
         // Radiology test requests (embedded in prescription)
-        radiology_test_requests: radiologyRequestsData.map(rad => ({
+        radiology_test_requests: radiologyRequestsData.filter(r => r.imaging_test_id).map(rad => ({
+          imaging_test_id: rad.imaging_test_id,
           imaging_test_code: rad.imaging_test_code,
           imaging_test_name: rad.imaging_test_name,
           category: rad.category,
@@ -2077,43 +2086,8 @@ const AppointmentDetails = () => {
 
       const savedPrescription = prescriptionResponse.data;
 
-      // ========== CREATE SEPARATE RADIOLOGY REQUESTS (for lab workflow) ==========
-      const validRadiologyRequests = radiologyRequestsData.filter(r => r.imaging_test_id);
-
-      if (validRadiologyRequests.length > 0) {
-        for (const rad of validRadiologyRequests) {
-          try {
-            const radiologyRequestData = {
-              sourceType: admissionId ? 'IPD' : 'OPD',
-              patientId: appointment.patient_id?._id || appointment.patient_id,
-              doctorId: appointment.doctor_id?._id || appointment.doctor_id,
-              imagingTestId: rad.imaging_test_id,
-              clinical_indication: rad.clinical_history,
-              clinical_history: rad.clinical_history,
-              priority: rad.priority,
-              scheduledDate: rad.scheduled_date,
-              patient_notes: rad.notes,
-              cost: rad.cost
-            };
-
-            if (admissionId) {
-              radiologyRequestData.sourceType = 'IPD';
-              radiologyRequestData.admissionId = admissionId;
-            }
-
-            // This will automatically increment usage count in the backend
-            const radiologyRequestResponse = await axios.post(
-              `${import.meta.env.VITE_BACKEND_URL}/radiology/requests`,
-              radiologyRequestData
-            );
-
-            console.log(`Radiology request created for ${rad.imaging_test_name}:`, radiologyRequestResponse.data);
-          } catch (error) {
-            console.error('Error creating radiology request:', error);
-          }
-        }
-      }
-
+      // Radiology requests are automatically generated by the backend when the prescription is created,
+      // so we don't need to manually post them to /radiology/requests.
       // ========== COMPLETE APPOINTMENT ==========
       await axios.put(
         `${import.meta.env.VITE_BACKEND_URL}/appointments/${appointment._id}/complete`
@@ -2141,8 +2115,8 @@ const AppointmentDetails = () => {
       if (labTestRequests.length > 0) {
         successMessage += ` ${labTestRequests.length} lab test(s) recommended.`;
       }
-      if (validRadiologyRequests.length > 0) {
-        successMessage += ` ${validRadiologyRequests.length} radiology test(s) recommended.`;
+      if (radiologyRequestsData.length > 0) {
+        successMessage += ` ${radiologyRequestsData.length} radiology test(s) recommended.`;
       }
       successMessage += ` ${validItems.length} medicine(s) prescribed.`;
       if (salaryInfoLocal) {
@@ -2179,8 +2153,8 @@ const AppointmentDetails = () => {
             proceduresCount: procedureRequests.length,
             hasLabTests: labTestRequests.length > 0,
             labTestsCount: labTestRequests.length,
-            hasRadiology: validRadiologyRequests.length > 0,
-            radiologyCount: validRadiologyRequests.length,
+            hasRadiology: radiologyRequestsData.length > 0,
+            radiologyCount: radiologyRequestsData.length,
             medicineCount: validItems.length,
             salaryCredited: !!salaryInfoLocal
           }
@@ -2511,14 +2485,14 @@ const AppointmentDetails = () => {
                               </div>
                             </div>
 
-                            {rx.recommendedProcedures && rx.recommendedProcedures.length > 0 && (
+                            {rx.procedure_requests && rx.procedure_requests.length > 0 && (
                               <div className="bg-indigo-50 rounded-lg p-4 border border-indigo-200">
                                 <div className="flex items-start gap-3">
                                   <FaProcedures className="text-indigo-600 text-lg mt-1 flex-shrink-0" />
                                   <div className="flex-1">
                                     <h6 className="font-bold text-slate-800 mb-2">Recommended Procedures</h6>
                                     <div className="space-y-2">
-                                      {rx.recommendedProcedures.map((proc, i) => (
+                                      {rx.procedure_requests.map((proc, i) => (
                                         <div key={i} className="bg-white p-3 rounded border border-indigo-100">
                                           <div className="flex items-center justify-between mb-1">
                                             <span className="font-semibold text-slate-700">{proc.procedure_name}</span>
@@ -2537,14 +2511,14 @@ const AppointmentDetails = () => {
                               </div>
                             )}
 
-                            {rx.recommendedLabTests && rx.recommendedLabTests.length > 0 && (
+                            {rx.lab_test_requests && rx.lab_test_requests.length > 0 && (
                               <div className="bg-amber-50 rounded-lg p-4 border border-amber-200">
                                 <div className="flex items-start gap-3">
                                   <FaMicroscope className="text-amber-600 text-lg mt-1 flex-shrink-0" />
                                   <div className="flex-1">
                                     <h6 className="font-bold text-slate-800 mb-2">Recommended Lab Tests</h6>
                                     <div className="space-y-2">
-                                      {rx.recommendedLabTests.map((test, i) => (
+                                      {rx.lab_test_requests.map((test, i) => (
                                         <div key={i} className="bg-white p-3 rounded border border-amber-100">
                                           <div className="flex items-center justify-between mb-1">
                                             <span className="font-semibold text-slate-700">{test.lab_test_name}</span>
@@ -2560,6 +2534,35 @@ const AppointmentDetails = () => {
                                               <span className="bg-red-100 text-red-700 px-2 py-0.5 rounded">Fasting Required</span>
                                             )}
                                           </div>
+                                          {test.notes && (
+                                            <p className="text-xs text-slate-600 mt-1">{test.notes}</p>
+                                          )}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            {rx.radiology_test_requests && rx.radiology_test_requests.length > 0 && (
+                              <div className="bg-sky-50 rounded-lg p-4 border border-sky-200">
+                                <div className="flex items-start gap-3">
+                                  <FaStethoscope className="text-sky-600 text-lg mt-1 flex-shrink-0" />
+                                  <div className="flex-1">
+                                    <h6 className="font-bold text-slate-800 mb-2">Recommended Radiology Tests</h6>
+                                    <div className="space-y-2">
+                                      {rx.radiology_test_requests.map((test, i) => (
+                                        <div key={i} className="bg-white p-3 rounded border border-sky-100">
+                                          <div className="flex items-center justify-between mb-1">
+                                            <span className="font-semibold text-slate-700">{test.imaging_test_name}</span>
+                                            <span className="text-xs bg-sky-100 text-sky-700 px-2 py-0.5 rounded">
+                                              {test.imaging_test_code}
+                                            </span>
+                                          </div>
+                                          {test.category && (
+                                            <div className="text-xs text-slate-500 mt-1 uppercase tracking-wider">{test.category}</div>
+                                          )}
                                           {test.notes && (
                                             <p className="text-xs text-slate-600 mt-1">{test.notes}</p>
                                           )}

@@ -1,7 +1,7 @@
 // pages/dashboard/lab-nurse/LabNurseDashboard.jsx
 import React, { useState, useEffect, useMemo } from 'react';
 import Layout from '@/components/Layout';
-import { staffSidebar } from '@/constants/sidebarItems/staffSidebar';
+import { nurseSidebar } from '@/constants/sidebarItems/nurseSidebar';
 import apiClient from '@/api/apiClient';
 import { toast } from 'react-toastify';
 import {
@@ -122,7 +122,6 @@ function LabNurseDashboard() {
   // 3. Status is not 'Completed'
   const nurseLabTests = useMemo(() => {
     return labTests.filter(test => 
-      test.is_billed === true && 
       test.is_referred_out !== true &&
       test.status !== 'Completed' &&
       test.status !== 'Referred Out' // Exclude referred out tests
@@ -164,10 +163,28 @@ function LabNurseDashboard() {
   const fetchLabTests = async () => {
     try {
       setLoading(true);
-      const response = await apiClient.get('/prescriptions/with-lab-tests');
-      const testsData = response.data.labTests || response.data || [];
-      setLabTests(testsData);
-      calculateStats(testsData);
+      const response = await apiClient.get('/lab/requests');
+      const testsData = response.data.data || response.data || [];
+      
+      const transformedData = testsData.map(test => ({
+        ...test,
+        prescription_id: test.prescriptionId,
+        prescription_number: test.prescriptionId ? 'PRES-LINKED' : 'N/A', // If you have prescription details populated, map it here
+        patient: test.patientId,
+        doctor: test.doctorId,
+        appointment: test.appointmentId,
+        lab_test_code: test.testCode,
+        lab_test_name: test.testName,
+        is_billed: test.is_billed,
+        status: test.status,
+        cost: test.cost,
+        specimen_type: test.labTestId?.specimen_type,
+        fasting_required: test.labTestId?.fasting_required,
+        category: test.category
+      }));
+      
+      setLabTests(transformedData);
+      calculateStats(transformedData);
     } catch (error) {
       console.error('Error fetching lab tests:', error);
       toast.error('Failed to load lab tests');
@@ -209,8 +226,10 @@ function LabNurseDashboard() {
 
   const fetchCurrentNurse = async () => {
     try {
-      const response = await apiClient.get('/auth/me');
-      setCurrentNurse(response.data);
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        setCurrentNurse(JSON.parse(userStr));
+      }
     } catch (error) {
       console.error('Error fetching nurse info:', error);
     }
@@ -221,7 +240,6 @@ function LabNurseDashboard() {
     
     // Only count tests that are paid and not referred out
     const eligibleTests = testsData.filter(test => 
-      test.is_billed === true && 
       test.is_referred_out !== true
     );
     
@@ -324,13 +342,10 @@ function LabNurseDashboard() {
 
       setProcessingLabTest(true);
 
-      await apiClient.put(
-        `/prescriptions/${selectedLabTest.prescription_id}/lab-tests/${selectedLabTest._id}/status`,
+      await apiClient.patch(
+        `/lab/requests/${selectedLabTest._id}/status`,
         {
           status: 'Sample Collected',
-          sample_collected_at: sampleData.collection_date,
-          sample_id: sampleData.sample_id,
-          performed_by: sampleData.collected_by,
           notes: sampleData.notes
         }
       );
@@ -355,11 +370,10 @@ function LabNurseDashboard() {
     try {
       setProcessingLabTest(true);
       
-      await apiClient.put(
-        `/prescriptions/${labTest.prescription_id}/lab-tests/${labTest._id}/status`,
+      await apiClient.patch(
+        `/lab/requests/${labTest._id}/status`,
         {
           status: 'Processing',
-          performed_by: currentNurse?._id,
           notes: 'Sample received and processing started'
         }
       );
@@ -396,27 +410,11 @@ function LabNurseDashboard() {
 
       const formData = new FormData();
       formData.append('report', reportData.report_file);
-      formData.append('prescription_id', selectedLabTest.prescription_id);
-      formData.append('lab_test_id', selectedLabTest._id);
       formData.append('notes', reportData.notes);
 
-      const response = await apiClient.post('/lab-reports/upload', formData, {
+      await apiClient.post(`/lab/requests/${selectedLabTest._id}/upload`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-
-      const reportUrl = response.data.file_url;
-
-      // Mark test as completed with report URL
-      await apiClient.put(
-        `/prescriptions/${selectedLabTest.prescription_id}/lab-tests/${selectedLabTest._id}/status`,
-        {
-          status: 'Completed',
-          completed_date: new Date().toISOString(),
-          performed_by: currentNurse?._id,
-          report_url: reportUrl,
-          notes: reportData.notes || 'Report uploaded'
-        }
-      );
 
       toast.success('Report uploaded and test marked as completed!');
       setShowUploadReportModal(false);
@@ -735,7 +733,7 @@ function LabNurseDashboard() {
   }, [filteredLabTests]);
 
   return (
-    <Layout sidebarItems={staffSidebar} section="Staff">
+    <Layout sidebarItems={nurseSidebar} section="Nurse">
       <div className="min-h-screen bg-slate-50 p-6 font-sans">
         {/* Header */}
         <div className="mb-8">
