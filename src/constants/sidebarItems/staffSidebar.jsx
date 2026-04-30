@@ -14,6 +14,7 @@ import {
   FaBed, 
   FaMoneyBillWave, 
   FaFileAlt,
+  FaXRay,
 } from 'react-icons/fa';
 
 export const staffSidebar = [
@@ -59,6 +60,11 @@ export const staffSidebar = [
     label: 'Lab Tests',
     icon: FaFlask,
     path: '/dashboard/staff/lab-tests',
+  },
+  {
+    label: 'Radiology',
+    icon: FaXRay,
+    path: '/dashboard/staff/radiology',
   },
   {
     label: 'Billing',

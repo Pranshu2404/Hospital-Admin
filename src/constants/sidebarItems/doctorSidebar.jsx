@@ -11,6 +11,7 @@ import {
   FaUserInjured,
   FaStethoscope,
   FaHospitalUser,
+  FaXRay,
 } from 'react-icons/fa';
 import { DepartmentIcon } from '../../components/common/Icons';
 
@@ -38,6 +39,7 @@ export const doctorSidebar = [
   { label: 'My Patients', path: '/dashboard/doctor/patients', icon: FaUserFriends },
   { label: 'My Department', path: '/dashboard/doctor/department', icon: DepartmentIcon },
   { label: 'Reports & Tests', path: '/dashboard/doctor/reports', icon: FaUsers },
+  { label: 'Radiology Orders', path: '/dashboard/doctor/radiology', icon: FaXRay },
   { label: 'Fees & Collections', path:'/dashboard/doctor/salary', icon: FaMoneyBill},
   { label: 'Profile', path: '/dashboard/doctor/profile', icon: FaUserCircle },
   { label: 'Forgot Password', path: '/forgot-password', icon: FaLock }

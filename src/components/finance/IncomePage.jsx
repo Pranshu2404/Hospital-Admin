@@ -20,7 +20,8 @@ import {
   FaSyringe,
   FaHospital,
   FaClipboardList,
-  FaFlask
+  FaFlask,
+  FaXRay
 } from 'react-icons/fa';
 import {
   BarChart,
@@ -2300,6 +2301,106 @@ const RevenueStats = () => {
     );
   };
 
+  // ---------- Render: Radiology Revenue ----------
+  const [radData, setRadData] = useState(null);
+  const [radLoading, setRadLoading] = useState(false);
+
+  useEffect(() => {
+    if (activeTab === 'radiology') {
+      setRadLoading(true);
+      axios.get(`${baseUrl}/radiology/dashboard`)
+        .then(res => setRadData(res.data.data || res.data))
+        .catch(err => console.error('Error fetching radiology revenue:', err))
+        .finally(() => setRadLoading(false));
+    }
+  }, [activeTab]);
+
+  const renderRadiologyRevenue = () => {
+    if (radLoading) return <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600"></div></div>;
+    if (!radData) return <div className="text-center py-10 text-gray-500">No radiology data available. Click "Apply Filters" to load.</div>;
+
+    const totalRevenue = radData.revenue?.total || 0;
+    const billedCount = radData.revenue?.billedCount || radData.statusBreakdown?.Completed || 0;
+    const totalRequests = radData.totalRequests || 0;
+    const pendingCount = radData.statusBreakdown?.Pending || 0;
+    const completedCount = radData.statusBreakdown?.Completed || 0;
+    const reportedCount = radData.statusBreakdown?.Reported || 0;
+
+    return (
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="bg-gradient-to-r from-teal-50 to-teal-100 p-4 rounded-lg border border-teal-200">
+            <div className="flex items-center justify-between">
+              <div><p className="text-sm text-teal-600 font-medium">Radiology Revenue</p><p className="text-2xl font-bold text-gray-800">{formatCurrency(totalRevenue)}</p></div>
+              <FaXRay className="text-teal-500 text-2xl" />
+            </div>
+            <p className="text-xs text-gray-600 mt-1">{billedCount} billed requests</p>
+          </div>
+          <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-4 rounded-lg border border-blue-200">
+            <div className="flex items-center justify-between">
+              <div><p className="text-sm text-blue-600 font-medium">Total Requests</p><p className="text-2xl font-bold text-gray-800">{totalRequests}</p></div>
+              <FaClipboardList className="text-blue-500 text-2xl" />
+            </div>
+            <p className="text-xs text-gray-600 mt-1">{pendingCount} pending</p>
+          </div>
+          <div className="bg-gradient-to-r from-green-50 to-green-100 p-4 rounded-lg border border-green-200">
+            <div className="flex items-center justify-between">
+              <div><p className="text-sm text-green-600 font-medium">Completed</p><p className="text-2xl font-bold text-gray-800">{completedCount + reportedCount}</p></div>
+              <FaChartLine className="text-green-500 text-2xl" />
+            </div>
+            <p className="text-xs text-gray-600 mt-1">{reportedCount} with reports</p>
+          </div>
+          <div className="bg-gradient-to-r from-purple-50 to-purple-100 p-4 rounded-lg border border-purple-200">
+            <div className="flex items-center justify-between">
+              <div><p className="text-sm text-purple-600 font-medium">Avg per Request</p><p className="text-2xl font-bold text-gray-800">{formatCurrency(totalRequests > 0 ? totalRevenue / totalRequests : 0)}</p></div>
+              <FaMoneyBillWave className="text-purple-500 text-2xl" />
+            </div>
+          </div>
+        </div>
+
+        {radData.statusBreakdown && (
+          <div className="bg-white p-4 rounded-lg shadow border">
+            <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2"><FaXRay className="text-teal-500" /> Request Status Distribution</h3>
+            <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+              {Object.entries(radData.statusBreakdown || {}).map(([status, count]) => {
+                const colors = { Pending: 'bg-amber-100 text-amber-800', Approved: 'bg-green-100 text-green-800', Scheduled: 'bg-blue-100 text-blue-800', 'In Progress': 'bg-indigo-100 text-indigo-800', Completed: 'bg-emerald-100 text-emerald-800', Reported: 'bg-purple-100 text-purple-800', Cancelled: 'bg-red-100 text-red-800' };
+                return (
+                  <div key={status} className={`p-3 rounded-lg text-center ${colors[status] || 'bg-gray-100 text-gray-800'}`}>
+                    <p className="text-2xl font-bold">{count}</p>
+                    <p className="text-xs font-medium">{status}</p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {radData.topTests && radData.topTests.length > 0 && (
+          <div className="bg-white p-4 rounded-lg shadow border">
+            <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2"><FaClipboardList className="text-teal-500" /> Top Imaging Tests by Revenue</h3>
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead className="bg-gray-50">
+                  <tr><th className="px-4 py-2 text-left font-medium text-gray-600">Test Name</th><th className="px-4 py-2 text-left font-medium text-gray-600">Category</th><th className="px-4 py-2 text-right font-medium text-gray-600">Count</th><th className="px-4 py-2 text-right font-medium text-gray-600">Revenue</th></tr>
+                </thead>
+                <tbody className="divide-y">
+                  {radData.topTests.map((test, idx) => (
+                    <tr key={idx} className="hover:bg-gray-50">
+                      <td className="px-4 py-2 font-medium">{test.testName || test.name}</td>
+                      <td className="px-4 py-2 text-gray-600">{test.category || '—'}</td>
+                      <td className="px-4 py-2 text-right">{test.count}</td>
+                      <td className="px-4 py-2 text-right font-semibold text-teal-600">{formatCurrency(test.revenue || test.totalRevenue || 0)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   // ---------- Render: Detailed (UPDATED) ----------
   const renderDetailedReport = () => {
     if (!data) return null;
@@ -2486,6 +2587,8 @@ const RevenueStats = () => {
         return renderLabTestRevenue();
       case 'detailed':
         return renderDetailedReport();
+      case 'radiology':
+        return renderRadiologyRevenue();
       default:
         return renderOverview();
     }
@@ -3119,6 +3222,7 @@ const RevenueStats = () => {
             { id: 'monthly', label: 'Monthly Report', icon: <FaChartLine /> },
             { id: 'procedures', label: 'Procedure Revenue', icon: <FaSyringe /> },
             { id: 'labtests', label: 'Lab Test Revenue', icon: <FaFlask /> },
+            { id: 'radiology', label: 'Radiology Revenue', icon: <FaXRay /> },
             { id: 'doctor', label: 'Doctor Wise', icon: <FaUserMd /> },
             { id: 'department', label: 'Department Wise', icon: <FaBuilding /> },
             { id: 'detailed', label: 'Detailed Report', icon: <FaFileInvoice /> }

@@ -141,6 +141,8 @@ import PathologyPrescriptions from './pages/dashboard/pathology/prescriptions';
 import PathologyProfile from './pages/dashboard/pathology/profile';
 import LabTestsManagement from './pages/dashboard/staff/LabTestsManagement';
 import PathologyInvoice from './pages/dashboard/pathology/invoices';
+import RadiologyManagement from './pages/dashboard/staff/RadiologyManagement';
+import DoctorRadiologyOrders from './pages/dashboard/doctor/RadiologyOrders';
 
 // Demo pages (imported from admin pages)
 import DemoHome from './pages/dashboard/demo/index';
@@ -1089,6 +1091,16 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/dashboard/doctor/radiology"
+              element={
+                <ProtectedRoute role="doctor">
+                  <DoctorLayout>
+                    <DoctorRadiologyOrders />
+                  </DoctorLayout>
+                </ProtectedRoute>
+              }
+            />
 
             {/* Staff Routes with Tracker */}
             <Route
@@ -1269,6 +1281,16 @@ export default function App() {
                 <ProtectedRoute role="staff">
                   <StaffLayout>
                     <LabTestsManagement />
+                  </StaffLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard/staff/radiology"
+              element={
+                <ProtectedRoute role="staff">
+                  <StaffLayout>
+                    <RadiologyManagement />
                   </StaffLayout>
                 </ProtectedRoute>
               }
