@@ -12,7 +12,7 @@ import {
   FaCalendarCheck, FaNotesMedical, FaPrescriptionBottleAlt,
   FaClipboardCheck, FaTag, FaMoneyBillWave,
   FaReceipt, FaArrowRight, FaPlayCircle,
-  FaHistory, FaDownload, FaEnvelope, FaCheck, 
+  FaHistory, FaDownload, FaEnvelope, FaCheck,
   FaThermometerHalf, FaDna, FaHeartbeat, FaFilePrescription,
   FaUpload, FaFilePdf, FaImage, FaExternalLinkAlt, FaHospitalUser,
   FaSyringe, FaBoxes, FaClipboardList, FaUserClock, FaChartLine
@@ -72,20 +72,20 @@ function LabNurseDashboard() {
   const [selectedPrescription, setSelectedPrescription] = useState(null);
   const [processingLabTest, setProcessingLabTest] = useState(false);
   const [uploadingReport, setUploadingReport] = useState(false);
-  
+
   // Filters
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [dateFilter, setDateFilter] = useState({ start: '', end: '' });
-  
+
   // Modals
   const [showLabTestDetails, setShowLabTestDetails] = useState(false);
   const [showCollectSampleModal, setShowCollectSampleModal] = useState(false);
   const [showUploadReportModal, setShowUploadReportModal] = useState(false);
   const [showViewReportModal, setShowViewReportModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
-  
+
   // Form States
   const [sampleData, setSampleData] = useState({
     sample_id: '',
@@ -94,13 +94,15 @@ function LabNurseDashboard() {
     collected_by: '',
     notes: ''
   });
-  
+
   const [reportData, setReportData] = useState({
     report_file: null,
     report_file_name: '',
-    notes: ''
+    notes: '',
+    result_value: '',
+    result_interpretation: ''
   });
-  
+
   // Stats
   const [stats, setStats] = useState({
     readyForCollection: 0,
@@ -110,7 +112,7 @@ function LabNurseDashboard() {
     todayCollected: 0,
     totalRevenue: 0
   });
-  
+
   const [labStaff, setLabStaff] = useState([]);
   const [hospitalInfo, setHospitalInfo] = useState(null);
   const [categories, setCategories] = useState([]);
@@ -121,7 +123,7 @@ function LabNurseDashboard() {
   // 2. Not referred to external lab (is_referred_out !== true)
   // 3. Status is not 'Completed'
   const nurseLabTests = useMemo(() => {
-    return labTests.filter(test => 
+    return labTests.filter(test =>
       test.is_referred_out !== true &&
       test.status !== 'Completed' &&
       test.status !== 'Referred Out' // Exclude referred out tests
@@ -165,7 +167,7 @@ function LabNurseDashboard() {
       setLoading(true);
       const response = await apiClient.get('/lab/requests');
       const testsData = response.data.data || response.data || [];
-      
+
       const transformedData = testsData.map(test => ({
         ...test,
         prescription_id: test.prescriptionId,
@@ -182,7 +184,7 @@ function LabNurseDashboard() {
         fasting_required: test.labTestId?.fasting_required,
         category: test.category
       }));
-      
+
       setLabTests(transformedData);
       calculateStats(transformedData);
     } catch (error) {
@@ -242,12 +244,12 @@ function LabNurseDashboard() {
 
   const calculateStats = (testsData) => {
     const today = new Date().toISOString().split('T')[0];
-    
+
     // Only count tests that are paid and not referred out
-    const eligibleTests = testsData.filter(test => 
+    const eligibleTests = testsData.filter(test =>
       test.is_referred_out !== true
     );
-    
+
     let readyForCollection = 0;
     let samplesCollected = 0;
     let processing = 0;
@@ -260,12 +262,12 @@ function LabNurseDashboard() {
       if (test.status === 'Sample Collected') samplesCollected++;
       if (test.status === 'Processing') processing++;
       if (test.status === 'Completed') completed++;
-      
-      if (test.sample_collected_at && 
-          new Date(test.sample_collected_at).toISOString().split('T')[0] === today) {
+
+      if (test.sample_collected_at &&
+        new Date(test.sample_collected_at).toISOString().split('T')[0] === today) {
         todayCollected++;
       }
-      
+
       if (test.cost > 0) totalRevenue += test.cost;
     });
 
@@ -285,17 +287,17 @@ function LabNurseDashboard() {
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(test => {
-        const patientName = test.patient ? 
+        const patientName = test.patient ?
           `${test.patient.first_name || ''} ${test.patient.last_name || ''}`.toLowerCase() : '';
-        const doctorName = test.doctor ? 
+        const doctorName = test.doctor ?
           `${test.doctor.firstName || ''} ${test.doctor.lastName || ''}`.toLowerCase() : '';
         const prescriptionNo = test.prescription_number?.toLowerCase() || '';
         const testName = test.lab_test_name?.toLowerCase() || '';
         const testCode = test.lab_test_code?.toLowerCase() || '';
-        
+
         return patientName.includes(term) || doctorName.includes(term) ||
-               prescriptionNo.includes(term) || testName.includes(term) ||
-               testCode.includes(term);
+          prescriptionNo.includes(term) || testName.includes(term) ||
+          testCode.includes(term);
       });
     }
 
@@ -309,7 +311,7 @@ function LabNurseDashboard() {
 
     if (dateFilter.start || dateFilter.end) {
       filtered = filtered.filter(test => {
-        const scheduledDate = test.scheduled_date ? 
+        const scheduledDate = test.scheduled_date ?
           new Date(test.scheduled_date).toISOString().split('T')[0] : '';
         const matchesStart = !dateFilter.start || scheduledDate >= dateFilter.start;
         const matchesEnd = !dateFilter.end || scheduledDate <= dateFilter.end;
@@ -359,7 +361,7 @@ function LabNurseDashboard() {
       setShowCollectSampleModal(false);
       setShowSuccessModal(true);
       fetchLabTests();
-      
+
       // Reset success modal after 3 seconds
       setTimeout(() => setShowSuccessModal(false), 3000);
     } catch (error) {
@@ -374,7 +376,7 @@ function LabNurseDashboard() {
   const handleStartProcessing = async (labTest) => {
     try {
       setProcessingLabTest(true);
-      
+
       await apiClient.patch(
         `/lab/requests/${labTest._id}/status`,
         {
@@ -417,12 +419,36 @@ function LabNurseDashboard() {
       formData.append('report', reportData.report_file);
       formData.append('notes', reportData.notes);
 
+      // Upload report file
       await apiClient.post(`/lab/requests/${selectedLabTest._id}/upload`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
 
+      // Add results
+      await apiClient.post(`/lab/requests/${selectedLabTest._id}/results`, {
+        result_value: reportData.result_value,
+        result_interpretation: reportData.result_interpretation,
+        technician_notes: reportData.notes
+      });
+
+      // Update status to Completed
+      await apiClient.patch(`/lab/requests/${selectedLabTest._id}/status`, {
+        status: 'Completed',
+        notes: reportData.notes
+      });
+
       toast.success('Report uploaded and test marked as completed!');
       setShowUploadReportModal(false);
+
+      // Reset form
+      setReportData({
+        report_file: null,
+        report_file_name: '',
+        notes: '',
+        result_value: '',
+        result_interpretation: ''
+      });
+
       fetchLabTests();
     } catch (error) {
       console.error('Error uploading report:', error);
@@ -560,7 +586,7 @@ function LabNurseDashboard() {
           >
             <FaEye /> View Details
           </button>
-          
+
           {/* Step 1: Collect Sample */}
           {canCollectSample && (
             <button
@@ -570,7 +596,7 @@ function LabNurseDashboard() {
               <FaSyringe /> Step 1: Collect Sample
             </button>
           )}
-          
+
           {/* Step 2: Start Processing */}
           {canProcess && (
             <button
@@ -580,7 +606,7 @@ function LabNurseDashboard() {
               <FaPlayCircle /> Step 2: Start Processing
             </button>
           )}
-          
+
           {/* Step 3: Upload Report */}
           {canUploadReport && (
             <button
@@ -596,9 +622,8 @@ function LabNurseDashboard() {
         <div className="mt-4 pt-3 border-t border-slate-100">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                test.is_billed ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'
-              }`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${test.is_billed ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'
+                }`}>
                 {test.is_billed ? <FaMoneyBillWave /> : <FaClock />}
               </div>
               <div className={`text-xs font-medium ${test.is_billed ? 'text-emerald-600' : 'text-amber-600'}`}>
@@ -607,9 +632,8 @@ function LabNurseDashboard() {
             </div>
             <FaArrowRight className="text-slate-300" />
             <div className="flex items-center gap-1">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                test.sample_collected_at ? 'bg-purple-100 text-purple-600' : 'bg-slate-100 text-slate-400'
-              }`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${test.sample_collected_at ? 'bg-purple-100 text-purple-600' : 'bg-slate-100 text-slate-400'
+                }`}>
                 <FaSyringe />
               </div>
               <div className={`text-xs font-medium ${test.sample_collected_at ? 'text-purple-600' : 'text-slate-400'}`}>
@@ -618,9 +642,8 @@ function LabNurseDashboard() {
             </div>
             <FaArrowRight className="text-slate-300" />
             <div className="flex items-center gap-1">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                test.status === 'Processing' || test.status === 'Completed' ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-100 text-slate-400'
-              }`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${test.status === 'Processing' || test.status === 'Completed' ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-100 text-slate-400'
+                }`}>
                 <FaMicroscope />
               </div>
               <div className={`text-xs font-medium ${test.status === 'Processing' || test.status === 'Completed' ? 'text-indigo-600' : 'text-slate-400'}`}>
@@ -629,9 +652,8 @@ function LabNurseDashboard() {
             </div>
             <FaArrowRight className="text-slate-300" />
             <div className="flex items-center gap-1">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                test.status === 'Completed' ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-400'
-              }`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${test.status === 'Completed' ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-400'
+                }`}>
                 <FaCheckCircle />
               </div>
               <div className={`text-xs font-medium ${test.status === 'Completed' ? 'text-emerald-600' : 'text-slate-400'}`}>
@@ -715,7 +737,7 @@ function LabNurseDashboard() {
           <h4 className="font-bold text-slate-700 mb-4 flex items-center gap-2">
             <FaFlask /> Lab Tests to Process
           </h4>
-          
+
           {group.labTests && group.labTests.length > 0 ? (
             <div className="space-y-4">
               {group.labTests.map((test, index) => renderLabTestCard(test, index))}
@@ -733,7 +755,7 @@ function LabNurseDashboard() {
 
   const filteredGroupedLabTests = useMemo(() => {
     if (filteredLabTests.length === 0) return [];
-    
+
     const groups = {};
     filteredLabTests.forEach(test => {
       const prescriptionId = test.prescription_id;
@@ -771,47 +793,47 @@ function LabNurseDashboard() {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 mb-8">
-          <StatCard 
-            title="Ready for Collection" 
-            value={stats.readyForCollection} 
-            icon={<FaSyringe />} 
-            colorClass="text-purple-500" 
-            subtitle="Awaiting sample collection" 
+          <StatCard
+            title="Ready for Collection"
+            value={stats.readyForCollection}
+            icon={<FaSyringe />}
+            colorClass="text-purple-500"
+            subtitle="Awaiting sample collection"
           />
-          <StatCard 
-            title="Samples Collected" 
-            value={stats.samplesCollected} 
-            icon={<FaVial />} 
-            colorClass="text-indigo-500" 
-            subtitle="Ready for processing" 
+          <StatCard
+            title="Samples Collected"
+            value={stats.samplesCollected}
+            icon={<FaVial />}
+            colorClass="text-indigo-500"
+            subtitle="Ready for processing"
           />
-          <StatCard 
-            title="Processing" 
-            value={stats.processing} 
-            icon={<FaMicroscope />} 
-            colorClass="text-orange-500" 
-            subtitle="Tests in progress" 
+          <StatCard
+            title="Processing"
+            value={stats.processing}
+            icon={<FaMicroscope />}
+            colorClass="text-orange-500"
+            subtitle="Tests in progress"
           />
-          <StatCard 
-            title="Completed" 
-            value={stats.completed} 
-            icon={<FaCheckCircle />} 
-            colorClass="text-emerald-500" 
-            subtitle="Reports uploaded" 
+          <StatCard
+            title="Completed"
+            value={stats.completed}
+            icon={<FaCheckCircle />}
+            colorClass="text-emerald-500"
+            subtitle="Reports uploaded"
           />
-          <StatCard 
-            title="Today's Collection" 
-            value={stats.todayCollected} 
-            icon={<FaCalendarCheck />} 
-            colorClass="text-blue-500" 
-            subtitle="Samples collected today" 
+          <StatCard
+            title="Today's Collection"
+            value={stats.todayCollected}
+            icon={<FaCalendarCheck />}
+            colorClass="text-blue-500"
+            subtitle="Samples collected today"
           />
-          <StatCard 
-            title="Total Value" 
-            value={`₹${stats.totalRevenue.toLocaleString()}`} 
-            icon={<FaChartLine />} 
-            colorClass="text-teal-500" 
-            subtitle="From lab tests" 
+          <StatCard
+            title="Total Value"
+            value={`₹${stats.totalRevenue.toLocaleString()}`}
+            icon={<FaChartLine />}
+            colorClass="text-teal-500"
+            subtitle="From lab tests"
           />
         </div>
 
@@ -828,9 +850,9 @@ function LabNurseDashboard() {
                 className="pl-10 pr-4 py-2 border border-slate-300 rounded-lg w-full focus:ring-2 focus:ring-teal-500 focus:border-transparent"
               />
             </div>
-            <select 
-              value={statusFilter} 
-              onChange={(e) => setStatusFilter(e.target.value)} 
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
               className="p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500"
             >
               <option value="all">All Status</option>
@@ -839,28 +861,28 @@ function LabNurseDashboard() {
               <option value="Processing">Processing</option>
               <option value="Completed">Completed</option>
             </select>
-            <select 
-              value={categoryFilter} 
-              onChange={(e) => setCategoryFilter(e.target.value)} 
+            <select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
               className="p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500"
             >
               <option value="all">All Categories</option>
               {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
             </select>
             <div className="flex gap-2">
-              <input 
-                type="date" 
-                value={dateFilter.start} 
-                onChange={(e) => setDateFilter({ ...dateFilter, start: e.target.value })} 
-                className="p-2 border border-slate-300 rounded-lg flex-1" 
-                placeholder="Start Date" 
+              <input
+                type="date"
+                value={dateFilter.start}
+                onChange={(e) => setDateFilter({ ...dateFilter, start: e.target.value })}
+                className="p-2 border border-slate-300 rounded-lg flex-1"
+                placeholder="Start Date"
               />
-              <input 
-                type="date" 
-                value={dateFilter.end} 
-                onChange={(e) => setDateFilter({ ...dateFilter, end: e.target.value })} 
-                className="p-2 border border-slate-300 rounded-lg flex-1" 
-                placeholder="End Date" 
+              <input
+                type="date"
+                value={dateFilter.end}
+                onChange={(e) => setDateFilter({ ...dateFilter, end: e.target.value })}
+                className="p-2 border border-slate-300 rounded-lg flex-1"
+                placeholder="End Date"
               />
             </div>
           </div>
@@ -896,7 +918,7 @@ function LabNurseDashboard() {
                 </h3>
                 <p className="text-slate-500 text-sm mt-1">{selectedLabTest.lab_test_name}</p>
               </div>
-              
+
               <div className="p-6 space-y-4">
                 <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
                   <div className="text-sm text-purple-700 mb-2">Test Information</div>
@@ -908,23 +930,23 @@ function LabNurseDashboard() {
                     <div className="text-sm text-amber-600 mt-1">⚠️ Fasting Required</div>
                   )}
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-2">Sample ID</label>
                   <input
                     type="text"
                     value={sampleData.sample_id}
-                    onChange={(e) => setSampleData({...sampleData, sample_id: e.target.value})}
+                    onChange={(e) => setSampleData({ ...sampleData, sample_id: e.target.value })}
                     className="w-full p-2.5 border border-slate-300 rounded-lg bg-slate-50"
                     readOnly
                   />
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-2">Collected By</label>
                   <select
                     value={sampleData.collected_by}
-                    onChange={(e) => setSampleData({...sampleData, collected_by: e.target.value})}
+                    onChange={(e) => setSampleData({ ...sampleData, collected_by: e.target.value })}
                     className="w-full p-2.5 border border-slate-300 rounded-lg"
                   >
                     <option value="">Select Staff</option>
@@ -935,19 +957,19 @@ function LabNurseDashboard() {
                     ))}
                   </select>
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-2">Collection Notes</label>
                   <textarea
                     value={sampleData.notes}
-                    onChange={(e) => setSampleData({...sampleData, notes: e.target.value})}
+                    onChange={(e) => setSampleData({ ...sampleData, notes: e.target.value })}
                     className="w-full p-2.5 border border-slate-300 rounded-lg"
                     rows="3"
                     placeholder="Enter collection notes..."
                   />
                 </div>
               </div>
-              
+
               <div className="p-6 border-t border-slate-100 flex justify-end gap-3">
                 <button
                   onClick={() => setShowCollectSampleModal(false)}
@@ -979,71 +1001,135 @@ function LabNurseDashboard() {
         {/* Upload Report Modal */}
         {showUploadReportModal && selectedLabTest && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
-              <div className="p-6 border-b border-slate-100">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+              <div className="p-6 border-b border-slate-100 sticky top-0 bg-white">
                 <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
                   <FaUpload className="text-emerald-500" /> Upload Lab Report
                 </h3>
                 <p className="text-slate-500 text-sm mt-1">{selectedLabTest.lab_test_name}</p>
               </div>
-              
+
               <div className="p-6 space-y-4">
                 <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
                   <div className="text-sm text-emerald-700 mb-2">Test Information</div>
                   <div className="font-bold">{selectedLabTest.lab_test_code} - {selectedLabTest.lab_test_name}</div>
-                  <div className="text-sm text-emerald-600 mt-1">Status: Processing → Complete</div>
+                  <div className="text-sm text-emerald-600 mt-1">Status: Processing → Completed</div>
                 </div>
-                
+
+                {/* Result Value Field */}
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">Report File *</label>
-                  <input
-                    type="file"
-                    accept=".pdf,.jpg,.png,.jpeg"
-                    onChange={(e) => {
-                      const file = e.target.files[0];
-                      if (file) {
-                        setReportData({ 
-                          ...reportData, 
-                          report_file: file,
-                          report_file_name: file.name 
-                        });
-                      }
-                    }}
-                    className="w-full p-2.5 border border-slate-300 rounded-lg"
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">
+                    Result Value <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    value={reportData.result_value}
+                    onChange={(e) => setReportData({ ...reportData, result_value: e.target.value })}
+                    className="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    rows="3"
+                    placeholder="Enter test result value (e.g., 5.6 mg/dL, Normal, Positive, etc.)"
+                    required
                   />
-                  {reportData.report_file_name && (
-                    <p className="text-xs text-emerald-600 mt-1">
-                      Selected: {reportData.report_file_name}
-                    </p>
-                  )}
-                  <p className="text-xs text-slate-500 mt-2">
-                    Accepted formats: PDF, JPG, PNG (Max 10MB)
-                  </p>
                 </div>
-                
+
+                {/* Interpretation Field */}
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">Notes</label>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">
+                    Interpretation <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    value={reportData.result_interpretation}
+                    onChange={(e) => setReportData({ ...reportData, result_interpretation: e.target.value })}
+                    className="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    rows="3"
+                    placeholder="Enter interpretation notes (e.g., Within normal range, Abnormal, Requires follow-up)"
+                    required
+                  />
+                </div>
+
+                {/* Report File Upload */}
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">
+                    Report File <span className="text-red-500">*</span>
+                  </label>
+                  <div className="border-2 border-dashed border-slate-300 rounded-lg p-4 text-center hover:border-emerald-500 transition-colors">
+                    <input
+                      type="file"
+                      id="report-file-input"
+                      accept=".pdf,.jpg,.png,.jpeg"
+                      onChange={(e) => {
+                        const file = e.target.files[0];
+                        if (file) {
+                          if (file.size > 10 * 1024 * 1024) {
+                            toast.error('File size must be less than 10MB');
+                            return;
+                          }
+                          setReportData({
+                            ...reportData,
+                            report_file: file,
+                            report_file_name: file.name
+                          });
+                        }
+                      }}
+                      className="hidden"
+                    />
+                    <label
+                      htmlFor="report-file-input"
+                      className="cursor-pointer inline-flex flex-col items-center gap-2"
+                    >
+                      <FaUpload className="text-3xl text-slate-400" />
+                      <span className="text-sm text-slate-600">
+                        {reportData.report_file_name || 'Click to upload or drag and drop'}
+                      </span>
+                      <span className="text-xs text-slate-400">PDF, JPG, PNG (Max 10MB)</span>
+                    </label>
+                  </div>
+                  {reportData.report_file_name && (
+                    <div className="mt-2 flex items-center gap-2 text-sm text-emerald-600 bg-emerald-50 p-2 rounded-lg">
+                      <FaCheckCircle className="text-xs" />
+                      <span>Selected: {reportData.report_file_name}</span>
+                      <button
+                        onClick={() => setReportData({ ...reportData, report_file: null, report_file_name: '' })}
+                        className="ml-auto text-red-500 hover:text-red-700"
+                      >
+                        <FaTimesCircle />
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Notes Field */}
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">Additional Notes</label>
                   <textarea
                     value={reportData.notes}
-                    onChange={(e) => setReportData({...reportData, notes: e.target.value})}
-                    className="w-full p-2.5 border border-slate-300 rounded-lg"
-                    rows="3"
-                    placeholder="Enter report notes..."
+                    onChange={(e) => setReportData({ ...reportData, notes: e.target.value })}
+                    className="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    rows="2"
+                    placeholder="Enter any additional notes about the test or results..."
                   />
                 </div>
               </div>
-              
-              <div className="p-6 border-t border-slate-100 flex justify-end gap-3">
+
+              <div className="p-6 border-t border-slate-100 flex justify-end gap-3 sticky bottom-0 bg-white">
                 <button
-                  onClick={() => setShowUploadReportModal(false)}
-                  className="px-4 py-2 text-slate-600 font-semibold hover:bg-slate-50 rounded-lg"
+                  onClick={() => {
+                    setShowUploadReportModal(false);
+                    setReportData({
+                      report_file: null,
+                      report_file_name: '',
+                      notes: '',
+                      result_value: '',
+                      result_interpretation: ''
+                    });
+                  }}
+                  className="px-4 py-2 text-slate-600 font-semibold hover:bg-slate-50 rounded-lg transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={uploadReport}
-                  disabled={uploadingReport || !reportData.report_file}
-                  className="px-6 py-2 bg-gradient-to-r from-emerald-500 to-green-500 text-white font-semibold rounded-lg hover:from-emerald-600 hover:to-green-600 shadow-md flex items-center gap-2 disabled:opacity-70"
+                  disabled={uploadingReport || !reportData.report_file || !reportData.result_value || !reportData.result_interpretation}
+                  className="px-6 py-2 bg-gradient-to-r from-emerald-500 to-green-500 text-white font-semibold rounded-lg hover:from-emerald-600 hover:to-green-600 shadow-md flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed transition-all"
                 >
                   {uploadingReport ? (
                     <>
@@ -1085,7 +1171,7 @@ function LabNurseDashboard() {
                     <div><span className="font-semibold">Completed Date:</span> {selectedLabTest.completed_date ? new Date(selectedLabTest.completed_date).toLocaleString() : 'N/A'}</div>
                   </div>
                 </div>
-                
+
                 {selectedLabTest.report_url.toLowerCase().endsWith('.pdf') ? (
                   <div className="space-y-3">
                     <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
@@ -1114,15 +1200,15 @@ function LabNurseDashboard() {
                   </div>
                 ) : (
                   <>
-                    <img 
-                      src={selectedLabTest.report_url} 
-                      alt="Lab Report" 
+                    <img
+                      src={selectedLabTest.report_url}
+                      alt="Lab Report"
                       className="max-w-full rounded-lg shadow-md"
                     />
                     <div className="mt-4 flex justify-end">
-                      <a 
-                        href={selectedLabTest.report_url} 
-                        download 
+                      <a
+                        href={selectedLabTest.report_url}
+                        download
                         className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center gap-2"
                       >
                         <FaDownload /> Download Image
@@ -1154,12 +1240,12 @@ function LabNurseDashboard() {
                     <div className="mt-1"><StatusBadge status={selectedLabTest.status} /></div>
                   </div>
                 </div>
-                
+
                 <div>
                   <label className="text-xs text-slate-500 uppercase">Test Name</label>
                   <p className="font-bold text-lg">{selectedLabTest.lab_test_name}</p>
                 </div>
-                
+
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="text-xs text-slate-500 uppercase">Category</label>
@@ -1170,47 +1256,47 @@ function LabNurseDashboard() {
                     <p className="font-medium">{selectedLabTest.specimen_type || 'N/A'}</p>
                   </div>
                 </div>
-                
+
                 <div>
                   <label className="text-xs text-slate-500 uppercase">Cost</label>
                   <p className="text-2xl font-bold text-emerald-700">₹{selectedLabTest.cost || 0}</p>
                 </div>
-                
+
                 {selectedLabTest.fasting_required && (
                   <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
                     <p className="text-sm text-amber-700">⚠️ Fasting required for this test</p>
                   </div>
                 )}
-                
+
                 <div>
                   <label className="text-xs text-slate-500 uppercase">Patient</label>
                   <p className="font-medium">{selectedLabTest.patient?.first_name} {selectedLabTest.patient?.last_name}</p>
                 </div>
-                
+
                 <div>
                   <label className="text-xs text-slate-500 uppercase">Doctor</label>
                   <p className="font-medium">Dr. {selectedLabTest.doctor?.firstName} {selectedLabTest.doctor?.lastName}</p>
                 </div>
-                
+
                 <div>
                   <label className="text-xs text-slate-500 uppercase">Prescription</label>
                   <p className="font-medium">#{selectedLabTest.prescription_number}</p>
                 </div>
-                
+
                 {selectedLabTest.notes && (
                   <div>
                     <label className="text-xs text-slate-500 uppercase">Notes</label>
                     <p className="bg-slate-50 p-3 rounded-lg">{selectedLabTest.notes}</p>
                   </div>
                 )}
-                
+
                 {selectedLabTest.scheduled_date && (
                   <div>
                     <label className="text-xs text-slate-500 uppercase">Scheduled Date</label>
                     <p className="font-medium">{new Date(selectedLabTest.scheduled_date).toLocaleString()}</p>
                   </div>
                 )}
-                
+
                 {selectedLabTest.sample_collected_at && (
                   <div>
                     <label className="text-xs text-slate-500 uppercase">Sample Collected</label>
@@ -1220,14 +1306,14 @@ function LabNurseDashboard() {
                     )}
                   </div>
                 )}
-                
+
                 {selectedLabTest.completed_date && (
                   <div>
                     <label className="text-xs text-slate-500 uppercase">Completed Date</label>
                     <p className="font-medium">{new Date(selectedLabTest.completed_date).toLocaleString()}</p>
                   </div>
                 )}
-                
+
                 {selectedLabTest.performed_by && (
                   <div>
                     <label className="text-xs text-slate-500 uppercase">Performed By</label>
