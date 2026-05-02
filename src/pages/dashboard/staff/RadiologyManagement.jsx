@@ -7,8 +7,10 @@ import {
   FaCalendarAlt, FaUserMd, FaUserInjured, FaEye, FaFilePdf,
   FaMoneyBillWave, FaTachometerAlt, FaBrain, FaHeartbeat,
   FaProcedures, FaDownload, FaUpload, FaCheck, FaTimes,
-  FaArrowRight, FaExclamationTriangle, FaFilter, FaPlus
+  FaArrowRight, FaExclamationTriangle, FaFilter, FaPlus,
+  FaReceipt, FaFileInvoice, FaSpinner
 } from 'react-icons/fa';
+import { toast } from 'react-toastify';
 
 const BASE = import.meta.env.VITE_BACKEND_URL;
 
@@ -44,6 +46,12 @@ export default function RadiologyManagement() {
   const [uploadModal, setUploadModal] = useState({ show: false, req: null, file: null, findings: '', impression: '' });
   const [processing, setProcessing] = useState(false);
   const [msg, setMsg] = useState('');
+
+  // Payment/Billing States
+  const [paymentModal, setPaymentModal] = useState({ show: false, req: null, amount: 0, method: 'Cash', reference: '' });
+  const [generatedBill, setGeneratedBill] = useState(null);
+  const [generatedInvoice, setGeneratedInvoice] = useState(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   // Create order state
   const [showCreate, setShowCreate] = useState(false);
@@ -90,7 +98,7 @@ export default function RadiologyManagement() {
     if (!form.patientId || !form.doctorId || !form.imagingTestId) { alert('Patient, Doctor, and Imaging Test are required'); return; }
     setCreating(true);
     try {
-      await axios.post(`${BASE}/radiology/requests`, form);
+      const response = await axios.post(`${BASE}/radiology/requests`, form);
       setMsg('Radiology request created successfully!');
       setShowCreate(false);
       setForm({ patientId: '', doctorId: '', imagingTestId: '', sourceType: 'OPD', clinical_indication: '', clinical_history: '', priority: 'Routine', scheduledDate: '', patient_notes: '' });
@@ -136,6 +144,78 @@ export default function RadiologyManagement() {
     } catch (e) { console.error(e); alert('Failed to upload report'); } finally { setProcessing(false); }
   };
 
+  // ========== PAYMENT / BILLING FUNCTIONS ==========
+  
+  // Generate bill for radiology request
+  const generateBillForRequest = async (request, paymentMethod = 'Cash') => {
+    try {
+      const billItem = {
+        description: `${request.testCode} - ${request.testName}`,
+        amount: request.cost || 0,
+        quantity: 1,
+        item_type: 'Radiology',
+        radiology_test_code: request.testCode,
+        radiology_test_id: request._id,
+        prescription_id: request.prescriptionId
+      };
+      
+      const billResponse = await axios.post(`${BASE}/billing`, {
+        patient_id: request.patientId?._id || request.patientId,
+        appointment_id: request.appointmentId,
+        prescription_id: request.prescriptionId,
+        admission_id: request.admissionId,
+        items: [billItem],
+        total_amount: request.cost || 0,
+        subtotal: request.cost || 0,
+        discount: 0,
+        tax_amount: 0,
+        payment_method: paymentMethod,
+        status: paymentMethod !== 'Pending' ? 'Paid' : 'Generated',
+        notes: `Bill for radiology test ${request.testName}`
+      });
+      
+      // Mark request as billed
+      await axios.patch(`${BASE}/radiology/requests/${request._id}/billed`, {
+        invoiceId: billResponse.data.invoice?._id
+      });
+      
+      setGeneratedBill(billResponse.data.bill);
+      setGeneratedInvoice(billResponse.data.invoice);
+      setShowSuccessModal(true);
+      fetchRequests();
+      return billResponse.data;
+    } catch (error) {
+      console.error('Error generating bill:', error);
+      throw error;
+    }
+  };
+
+  // Collect Payment for radiology request
+  const handleCollectPayment = (request) => {
+    setPaymentModal({
+      show: true,
+      req: request,
+      amount: request.cost || 0,
+      method: 'Cash',
+      reference: ''
+    });
+  };
+
+  const processPayment = async () => {
+    if (!paymentModal.req) return;
+    setProcessing(true);
+    try {
+      await generateBillForRequest(paymentModal.req, paymentModal.method);
+      setPaymentModal({ show: false, req: null, amount: 0, method: 'Cash', reference: '' });
+      toast.success('Payment processed successfully!');
+    } catch (error) {
+      console.error('Error processing payment:', error);
+      alert('Failed to process payment');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
   const markBilled = async (req) => {
     try {
       await axios.patch(`${BASE}/radiology/requests/${req._id}/billed`, {});
@@ -143,6 +223,11 @@ export default function RadiologyManagement() {
       fetchRequests();
       setTimeout(() => setMsg(''), 3000);
     } catch (e) { console.error(e); }
+  };
+
+  // Helper to check if payment button should be shown
+  const needsPayment = (req) => {
+    return !req.is_billed && req.status !== 'Cancelled' && req.status !== 'Pending';
   };
 
   const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A';
@@ -159,7 +244,7 @@ export default function RadiologyManagement() {
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-6">
           <div>
             <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2"><FaXRay className="text-emerald-600" /> Radiology Management</h1>
-            <p className="text-slate-500 mt-1">Manage radiology requests, track workflow, upload reports</p>
+            <p className="text-slate-500 mt-1">Manage radiology requests, track workflow, upload reports, and process payments</p>
           </div>
           <button onClick={() => setShowCreate(true)} className="mt-4 md:mt-0 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 px-5 rounded-xl shadow-lg shadow-emerald-600/20 flex items-center gap-2 transition-colors">
             <FaPlus /> New Radiology Request
@@ -267,20 +352,33 @@ export default function RadiologyManagement() {
                 {/* Actions */}
                 <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-slate-100">
                   <button onClick={() => setDetailModal({ show: true, req })} className="px-3 py-1.5 text-sm bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg flex items-center gap-1"><FaEye /> Details</button>
+                  
                   {getNextStatuses(req.status).map(ns => (
                     <button key={ns} onClick={() => setStatusModal({ show: true, req, status: ns, notes: '' })}
                       className={`px-3 py-1.5 text-sm rounded-lg flex items-center gap-1 ${ns === 'Cancelled' ? 'bg-red-50 text-red-700 hover:bg-red-100' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'}`}>
                       {ns === 'Cancelled' ? <FaTimes /> : <FaCheck />} {ns}
                     </button>
                   ))}
+                  
                   {(req.status === 'Completed' || req.status === 'In Progress') && !req.report_url && (
                     <button onClick={() => setUploadModal({ show: true, req, file: null, findings: '', impression: '' })} className="px-3 py-1.5 text-sm bg-purple-50 text-purple-700 hover:bg-purple-100 rounded-lg flex items-center gap-1"><FaUpload /> Upload Report</button>
                   )}
+                  
                   {req.report_url && (
                     <a href={req.report_url} target="_blank" rel="noreferrer" className="px-3 py-1.5 text-sm bg-purple-50 text-purple-700 hover:bg-purple-100 rounded-lg flex items-center gap-1"><FaFilePdf /> View Report</a>
                   )}
+
+                  {/* PAYMENT BUTTON - Shows when payment is needed */}
+                  {needsPayment(req) && (
+                    <button onClick={() => handleCollectPayment(req)} className="px-3 py-1.5 text-sm bg-teal-50 text-teal-700 hover:bg-teal-100 rounded-lg flex items-center gap-1 font-semibold border border-teal-200">
+                      <FaMoneyBillWave /> Collect Payment
+                    </button>
+                  )}
+                  
                   {!req.is_billed && req.status !== 'Cancelled' && req.status !== 'Pending' && (
-                    <button onClick={() => markBilled(req)} className="px-3 py-1.5 text-sm bg-teal-50 text-teal-700 hover:bg-teal-100 rounded-lg flex items-center gap-1 font-semibold border border-teal-200"><FaMoneyBillWave /> Mark Billed</button>
+                    <button onClick={() => markBilled(req)} className="px-3 py-1.5 text-sm bg-slate-50 text-slate-600 hover:bg-slate-100 rounded-lg flex items-center gap-1">
+                      <FaCheck /> Mark Billed (Manual)
+                    </button>
                   )}
                 </div>
               </div>
@@ -288,6 +386,75 @@ export default function RadiologyManagement() {
           </div>
         )}
 
+        {/* ========== PAYMENT MODAL ========== */}
+        {paymentModal.show && paymentModal.req && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
+              <div className="p-6 border-b border-slate-100">
+                <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2"><FaMoneyBillWave className="text-teal-600" /> Collect Payment</h3>
+                <p className="text-slate-500 text-sm mt-1">{paymentModal.req.testName} - Radiology Test</p>
+              </div>
+              <div className="p-6 space-y-4">
+                <div className="bg-teal-50 rounded-lg p-4">
+                  <div className="text-sm text-teal-700 mb-2">Test Cost</div>
+                  <div className="text-3xl font-bold text-teal-800">₹{paymentModal.req.cost || 0}</div>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">Payment Amount</label>
+                  <input type="number" value={paymentModal.amount} onChange={e => setPaymentModal({...paymentModal, amount: Number(e.target.value)})} className="w-full p-3 border border-slate-300 rounded-lg text-lg font-bold" min="0" max={paymentModal.req.cost} />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">Payment Method</label>
+                  <select value={paymentModal.method} onChange={e => setPaymentModal({...paymentModal, method: e.target.value})} className="w-full p-2.5 border border-slate-300 rounded-lg">
+                    <option value="Cash">Cash</option>
+                    <option value="Card">Credit/Debit Card</option>
+                    <option value="UPI">UPI</option>
+                    <option value="Insurance">Insurance</option>
+                    <option value="Net Banking">Net Banking</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">Reference/Transaction ID</label>
+                  <input type="text" value={paymentModal.reference} onChange={e => setPaymentModal({...paymentModal, reference: e.target.value})} className="w-full p-2.5 border border-slate-300 rounded-lg" placeholder="Enter reference number" />
+                </div>
+              </div>
+              <div className="p-6 border-t border-slate-100 flex justify-end gap-3">
+                <button onClick={() => setPaymentModal({ show: false, req: null, amount: 0, method: 'Cash', reference: '' })} className="px-4 py-2 text-slate-600 font-semibold rounded-lg hover:bg-slate-100">Cancel</button>
+                <button onClick={processPayment} disabled={processing} className="px-6 py-2 bg-teal-600 text-white font-semibold rounded-lg hover:bg-teal-700 flex items-center gap-2">
+                  {processing ? <><FaSpinner className="animate-spin" /> Processing...</> : <><FaMoneyBillWave /> Process Payment</>}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ========== SUCCESS MODAL ========== */}
+        {showSuccessModal && generatedBill && generatedInvoice && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
+              <div className="p-6 border-b border-slate-100">
+                <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2"><FaCheckCircle className="text-emerald-500" /> Success!</h3>
+                <p className="text-slate-500 text-sm mt-1">Bill and Invoice created successfully</p>
+              </div>
+              <div className="p-6 space-y-4">
+                <div className="bg-emerald-50 rounded-lg p-4">
+                  <div className="text-sm text-emerald-700 mb-2">Bill Created</div>
+                  <div className="font-bold">Bill ID: {generatedBill._id?.slice(-8)}</div>
+                </div>
+                <div className="bg-purple-50 rounded-lg p-4">
+                  <div className="text-sm text-purple-700 mb-2">Invoice Generated</div>
+                  <div className="font-bold">Invoice #: {generatedInvoice.invoice_number || 'N/A'}</div>
+                  <div>Amount: ₹{generatedInvoice.total}</div>
+                </div>
+              </div>
+              <div className="p-6 border-t border-slate-100 flex justify-end">
+                <button onClick={() => setShowSuccessModal(false)} className="px-4 py-2 bg-purple-600 text-white font-semibold rounded-lg hover:bg-purple-700">Close</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ========== OTHER MODALS (Detail, Status, Upload, Create) ========== */}
         {/* Detail Modal */}
         {detailModal.show && detailModal.req && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -297,10 +464,11 @@ export default function RadiologyManagement() {
                 <button onClick={() => setDetailModal({ show: false, req: null })} className="p-2 hover:bg-slate-100 rounded-lg"><FaTimes className="text-slate-500" /></button>
               </div>
               <div className="p-6 space-y-4">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 flex-wrap">
                   <span className="font-mono bg-emerald-50 text-emerald-700 px-3 py-1 rounded font-bold">{detailModal.req.requestNumber}</span>
                   <StatusBadge status={detailModal.req.status} />
                   <PriorityBadge priority={detailModal.req.priority} />
+                  {detailModal.req.is_billed && <span className="px-2 py-0.5 text-xs bg-emerald-100 text-emerald-700 rounded-full">💰 Paid</span>}
                 </div>
                 <h3 className="text-2xl font-bold">{detailModal.req.testName}</h3>
                 <div className="grid grid-cols-2 gap-4">
@@ -326,8 +494,13 @@ export default function RadiologyManagement() {
                 {detailModal.req.impression && <div className="bg-purple-50 p-3 rounded-lg"><span className="text-xs font-semibold text-purple-700">IMPRESSION</span><p className="text-purple-800 mt-1">{detailModal.req.impression}</p></div>}
                 {detailModal.req.technician_notes && <div className="bg-amber-50 p-3 rounded-lg"><span className="text-xs font-semibold text-amber-700">TECHNICIAN NOTES</span><p className="text-amber-800 mt-1">{detailModal.req.technician_notes}</p></div>}
               </div>
-              <div className="sticky bottom-0 bg-white border-t px-6 py-4 flex justify-end">
+              <div className="sticky bottom-0 bg-white border-t px-6 py-4 flex justify-end gap-3">
                 <button onClick={() => setDetailModal({ show: false, req: null })} className="px-4 py-2 border border-slate-200 rounded-lg text-slate-700 hover:bg-slate-50">Close</button>
+                {needsPayment(detailModal.req) && (
+                  <button onClick={() => { setDetailModal({ show: false, req: null }); handleCollectPayment(detailModal.req); }} className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 flex items-center gap-2">
+                    <FaMoneyBillWave /> Collect Payment
+                  </button>
+                )}
               </div>
             </div>
           </div>

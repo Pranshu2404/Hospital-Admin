@@ -1937,7 +1937,7 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
         .fixed-calendar {
           position: fixed;
           top: 50%;
-          right: 20%;
+          right: 15%;
           transform: translateY(-50%);
           width: 350px;
           max-height: 80vh;

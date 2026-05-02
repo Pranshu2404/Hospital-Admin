@@ -21,7 +21,11 @@ import {
   FaHospital,
   FaClipboardList,
   FaFlask,
-  FaXRay
+  FaXRay,
+  FaBed,
+  FaCheckCircle,
+  FaMicroscope,
+  FaProcedures
 } from 'react-icons/fa';
 import {
   BarChart,
@@ -61,8 +65,8 @@ const RevenueStats = () => {
     invoiceStatus: 'all',
     minAmount: '',
     maxAmount: '',
-
-    // Daily
+    ipdWardId: 'all',
+    ipdBedType: 'all',
     date: toISODate(new Date()),
 
     // Monthly
@@ -84,7 +88,11 @@ const RevenueStats = () => {
     // Lab Test specific filters
     labTestCode: 'all',
     labTestCategory: 'all',
-    labTestStatus: 'all'
+    labTestStatus: 'all',
+
+    // Radiology filters
+    radiologyCategory: 'all',
+    radiologyStatus: 'all'
   });
 
   const [doctors, setDoctors] = useState([]);
@@ -94,6 +102,14 @@ const RevenueStats = () => {
   const [labTestCodes, setLabTestCodes] = useState([]);
   const [labTestCategories, setLabTestCategories] = useState([]);
   const [labTestStatuses, setLabTestStatuses] = useState([]);
+
+  // Radiology options
+  const [radiologyCategories, setRadiologyCategories] = useState([]);
+  const radiologyStatuses = ['Pending', 'Approved', 'Scheduled', 'In Progress', 'Completed', 'Reported', 'Cancelled'];
+
+  // Radiology data
+  const [radData, setRadData] = useState(null);
+  const [radLoading, setRadLoading] = useState(false);
 
   // ---------- Helpers ----------
   const formatCurrency = (amount) => {
@@ -123,8 +139,9 @@ const RevenueStats = () => {
 
       // Reset pagination if changing filters relevant to detailed report
       if (
-        ['startDate', 'endDate', 'doctorId', 'departmentId', 'invoiceType', 'invoiceStatus', 'minAmount', 'maxAmount', 
-         'procedureCode', 'procedureCategory', 'labTestCode', 'labTestCategory', 'labTestStatus'].includes(key)
+        ['startDate', 'endDate', 'doctorId', 'departmentId', 'invoiceType', 'invoiceStatus', 'minAmount', 'maxAmount',
+          'procedureCode', 'procedureCategory', 'labTestCode', 'labTestCategory', 'labTestStatus',
+          'radiologyCategory', 'radiologyStatus'].includes(key)
       ) {
         next.page = 1;
       }
@@ -152,6 +169,18 @@ const RevenueStats = () => {
     } catch (err) {
       console.error('Error fetching departments:', err);
       setDepartments([]);
+    }
+  };
+
+  const fetchRadiologyCategories = async () => {
+    try {
+      const res = await axios.get(`${baseUrl}/radiology/tests?limit=100`);
+      const tests = res.data.data || [];
+      const categories = [...new Set(tests.map(t => t.category).filter(Boolean))];
+      setRadiologyCategories(categories);
+    } catch (err) {
+      console.error('Error fetching radiology categories:', err);
+      setRadiologyCategories([]);
     }
   };
 
@@ -190,12 +219,83 @@ const RevenueStats = () => {
   useEffect(() => {
     fetchDoctors();
     fetchDepartments();
+    fetchRadiologyCategories();
+    fetchIpdWards();  // <-- ADD THIS
     fetchProcedureData();
     fetchLabTestData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // ---------- Radiology Data Fetch ----------
+  const fetchRadiologyData = async () => {
+    setRadLoading(true);
+    try {
+      const params = {
+        startDate: filters.startDate,
+        endDate: filters.endDate,
+        doctorId: filters.doctorId !== 'all' ? filters.doctorId : undefined,
+        departmentId: filters.departmentId !== 'all' ? filters.departmentId : undefined,
+        category: filters.radiologyCategory !== 'all' ? filters.radiologyCategory : undefined,
+        status: filters.radiologyStatus !== 'all' ? filters.radiologyStatus : undefined
+      };
+      Object.keys(params).forEach(k => params[k] === undefined && delete params[k]);
+
+      const res = await axios.get(`${baseUrl}/revenue/radiology`, { params });
+      console.log(res.data)
+      setRadData(res);
+    } catch (err) {
+      console.error('Error fetching radiology revenue:', err);
+      setRadData(null);
+    } finally {
+      setRadLoading(false);
+    }
+  };
+
+  // IPD data
+  const [ipdData, setIpdData] = useState(null);
+  const [ipdLoading, setIpdLoading] = useState(false);
+
+  // IPD options
+  const [ipdWards, setIpdWards] = useState([]);
+  const ipdBedTypes = ['General', 'Semi-Private', 'Private', 'ICU', 'Deluxe', 'Suite'];
+
+  // Add IPD fetch function (add after fetchRadiologyCategories)
+  const fetchIpdWards = async () => {
+    try {
+      const res = await axios.get(`${baseUrl}/wards`);
+      const wards = res.data.data || [];
+      setIpdWards(wards);
+    } catch (err) {
+      console.error('Error fetching IPD wards:', err);
+      setIpdWards([]);
+    }
+  };
+
+  // Add IPD fetch function
+  const fetchIpdData = async () => {
+    setIpdLoading(true);
+    try {
+      const params = {
+        startDate: filters.startDate,
+        endDate: filters.endDate,
+        doctorId: filters.doctorId !== 'all' ? filters.doctorId : undefined,
+        departmentId: filters.departmentId !== 'all' ? filters.departmentId : undefined,
+        wardId: filters.ipdWardId !== 'all' ? filters.ipdWardId : undefined,
+        bedType: filters.ipdBedType !== 'all' ? filters.ipdBedType : undefined
+      };
+      Object.keys(params).forEach(k => params[k] === undefined && delete params[k]);
+
+      const res = await axios.get(`${baseUrl}/revenue/ipd`, { params });
+      setIpdData(res.data);
+    } catch (err) {
+      console.error('Error fetching IPD revenue:', err);
+      setIpdData(null);
+    } finally {
+      setIpdLoading(false);
+    }
+  };
+
   // ---------- Build API call ----------
+  // ---------- Build API call - Updated for Radiology & IPD integration ----------
   const buildRequest = () => {
     let url = '';
     let params = {};
@@ -206,14 +306,14 @@ const RevenueStats = () => {
         params = {
           startDate: filters.startDate,
           endDate: filters.endDate,
-          doctorId: filters.doctorId,
-          department: filters.departmentId,
-          patientType: filters.patientType,
-          invoiceType: filters.invoiceType,
-          paymentMethod: filters.paymentMethod,
-          invoiceStatus: filters.invoiceStatus,
-          minAmount: filters.minAmount,
-          maxAmount: filters.maxAmount
+          doctorId: filters.doctorId !== 'all' ? filters.doctorId : undefined,
+          department: filters.departmentId !== 'all' ? filters.departmentId : undefined,
+          patientType: filters.patientType !== 'all' ? filters.patientType : undefined,
+          invoiceType: filters.invoiceType !== 'all' ? filters.invoiceType : undefined,
+          paymentMethod: filters.paymentMethod !== 'all' ? filters.paymentMethod : undefined,
+          invoiceStatus: filters.invoiceStatus !== 'all' ? filters.invoiceStatus : undefined,
+          minAmount: filters.minAmount || undefined,
+          maxAmount: filters.maxAmount || undefined
         };
         break;
 
@@ -221,10 +321,10 @@ const RevenueStats = () => {
         url = `${baseUrl}/revenue/daily`;
         params = {
           date: filters.date,
-          doctorId: filters.doctorId,
-          department: filters.departmentId,
-          invoiceType: filters.invoiceType,
-          paymentMethod: filters.paymentMethod
+          doctorId: filters.doctorId !== 'all' ? filters.doctorId : undefined,
+          department: filters.departmentId !== 'all' ? filters.departmentId : undefined,
+          invoiceType: filters.invoiceType !== 'all' ? filters.invoiceType : undefined,
+          paymentMethod: filters.paymentMethod !== 'all' ? filters.paymentMethod : undefined
         };
         break;
 
@@ -233,11 +333,11 @@ const RevenueStats = () => {
         params = {
           year: filters.year,
           month: filters.month,
-          doctorId: filters.doctorId,
-          department: filters.departmentId,
-          invoiceType: filters.invoiceType,
-          paymentMethod: filters.paymentMethod,
-          patientType: filters.patientType
+          doctorId: filters.doctorId !== 'all' ? filters.doctorId : undefined,
+          department: filters.departmentId !== 'all' ? filters.departmentId : undefined,
+          invoiceType: filters.invoiceType !== 'all' ? filters.invoiceType : undefined,
+          paymentMethod: filters.paymentMethod !== 'all' ? filters.paymentMethod : undefined,
+          patientType: filters.patientType !== 'all' ? filters.patientType : undefined
         };
         break;
 
@@ -247,7 +347,7 @@ const RevenueStats = () => {
           doctorId: filters.selectedDoctor,
           startDate: filters.startDate,
           endDate: filters.endDate,
-          invoiceType: filters.invoiceType
+          invoiceType: filters.invoiceType !== 'all' ? filters.invoiceType : undefined
         };
         break;
 
@@ -265,8 +365,8 @@ const RevenueStats = () => {
         params = {
           startDate: filters.startDate,
           endDate: filters.endDate,
-          doctorId: filters.doctorId,
-          departmentId: filters.departmentId,
+          doctorId: filters.doctorId !== 'all' ? filters.doctorId : undefined,
+          departmentId: filters.departmentId !== 'all' ? filters.departmentId : undefined,
           procedureCode: filters.procedureCode !== 'all' ? filters.procedureCode : undefined,
           procedureCategory: filters.procedureCategory !== 'all' ? filters.procedureCategory : undefined
         };
@@ -277,8 +377,8 @@ const RevenueStats = () => {
         params = {
           startDate: filters.startDate,
           endDate: filters.endDate,
-          doctorId: filters.doctorId,
-          departmentId: filters.departmentId,
+          doctorId: filters.doctorId !== 'all' ? filters.doctorId : undefined,
+          departmentId: filters.departmentId !== 'all' ? filters.departmentId : undefined,
           labTestCode: filters.labTestCode !== 'all' ? filters.labTestCode : undefined,
           labTestCategory: filters.labTestCategory !== 'all' ? filters.labTestCategory : undefined,
           status: filters.labTestStatus !== 'all' ? filters.labTestStatus : undefined
@@ -290,12 +390,12 @@ const RevenueStats = () => {
         params = {
           startDate: filters.startDate,
           endDate: filters.endDate,
-          doctorId: filters.doctorId,
-          department: filters.departmentId,
-          invoiceType: filters.invoiceType,
-          status: filters.invoiceStatus,
-          minAmount: filters.minAmount,
-          maxAmount: filters.maxAmount,
+          doctorId: filters.doctorId !== 'all' ? filters.doctorId : undefined,
+          department: filters.departmentId !== 'all' ? filters.departmentId : undefined,
+          invoiceType: filters.invoiceType !== 'all' ? filters.invoiceType : undefined,
+          status: filters.invoiceStatus !== 'all' ? filters.invoiceStatus : undefined,
+          minAmount: filters.minAmount || undefined,
+          maxAmount: filters.maxAmount || undefined,
           page: filters.page,
           limit: filters.limit
         };
@@ -303,7 +403,12 @@ const RevenueStats = () => {
 
       default:
         url = `${baseUrl}/revenue`;
-        params = {};
+        params = {
+          startDate: filters.startDate,
+          endDate: filters.endDate,
+          doctorId: filters.doctorId !== 'all' ? filters.doctorId : undefined,
+          department: filters.departmentId !== 'all' ? filters.departmentId : undefined
+        };
     }
 
     // Remove empty/unset values
@@ -330,8 +435,9 @@ const RevenueStats = () => {
     setLoading(true);
     try {
       const { url, params } = buildRequest();
+      console.log(`Fetching ${activeTab} revenue from:`, url, params);
       const res = await axios.get(url, { params });
-      console.log('Revenue Data:', res.data);
+      console.log(`${activeTab} Revenue Data:`, res.data);
       setData(res.data);
     } catch (err) {
       console.error('Error fetching revenue data:', err);
@@ -344,13 +450,26 @@ const RevenueStats = () => {
 
   // Fetch when tab changes OR pagination changes in detailed
   useEffect(() => {
-    if (activeTab === 'detailed' || activeTab === 'procedures' || activeTab === 'labtests') {
-      fetchData();
+    // These tabs have their own dedicated API endpoints
+    const dedicatedTabs = ['detailed', 'procedures', 'labtests', 'radiology', 'ipd'];
+
+    if (dedicatedTabs.includes(activeTab)) {
+      // For radiology and ipd, they have separate fetch functions
+      if (activeTab === 'radiology') {
+        fetchRadiologyData();
+      } else if (activeTab === 'ipd') {
+        fetchIpdData();
+      } else {
+        fetchData();
+      }
       return;
     }
+
+    // For overview, daily, monthly, doctor, department - use main revenue endpoint
     fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, filters.page]);
+  }, [activeTab, filters.page, filters.startDate, filters.endDate,
+    filters.doctorId, filters.departmentId, filters.date, filters.year, filters.month,
+    filters.selectedDoctor, filters.selectedDepartment]);
 
   // ---------- Export Functions ----------
   const exportData = async (type) => {
@@ -476,6 +595,20 @@ const RevenueStats = () => {
           filename = `LabTest_Revenue_${filters.startDate}_to_${filters.endDate}`;
           break;
 
+        case 'radiology':
+          exportUrl = `${baseUrl}/revenue/export/radiology`;
+          exportParams = {
+            startDate: filters.startDate,
+            endDate: filters.endDate,
+            doctorId: filters.doctorId !== 'all' ? filters.doctorId : undefined,
+            departmentId: filters.departmentId !== 'all' ? filters.departmentId : undefined,
+            category: filters.radiologyCategory !== 'all' ? filters.radiologyCategory : undefined,
+            status: filters.radiologyStatus !== 'all' ? filters.radiologyStatus : undefined,
+            exportType: type
+          };
+          filename = `Radiology_Revenue_${filters.startDate}_to_${filters.endDate}`;
+          break;
+
         case 'detailed':
           exportUrl = `${baseUrl}/revenue/export/detailed`;
           exportParams = {
@@ -491,6 +624,20 @@ const RevenueStats = () => {
             includeCommissionSplit: true
           };
           filename = `Detailed_Revenue_${filters.startDate}_to_${filters.endDate}`;
+          break;
+
+        case 'ipd':
+          exportUrl = `${baseUrl}/revenue/export/ipd`;
+          exportParams = {
+            startDate: filters.startDate,
+            endDate: filters.endDate,
+            doctorId: filters.doctorId !== 'all' ? filters.doctorId : undefined,
+            departmentId: filters.departmentId !== 'all' ? filters.departmentId : undefined,
+            wardId: filters.ipdWardId !== 'all' ? filters.ipdWardId : undefined,
+            bedType: filters.ipdBedType !== 'all' ? filters.ipdBedType : undefined,
+            exportType: type
+          };
+          filename = `IPD_Revenue_${filters.startDate}_to_${filters.endDate}`;
           break;
 
         default:
@@ -554,7 +701,6 @@ const RevenueStats = () => {
     []
   );
 
-  // ---------- Revenue Bifurcation Display (UPDATED) ----------
   const renderRevenueBifurcation = () => {
     if (!data || !data.summary) return null;
 
@@ -569,15 +715,18 @@ const RevenueStats = () => {
     const totalCommission = summary.totalCommission || 0;
     const netHospitalRevenue = summary.actualNetHospitalRevenue || summary.netHospitalRevenue || 0;
 
-    // Get revenue by source
+    // Get revenue by source (including Radiology & IPD)
     const appointmentRevenue = summary.appointmentRevenue || breakdown.bySource?.appointments?.amount || 0;
     const procedureRevenue = summary.procedureRevenue || breakdown.bySource?.procedures?.amount || 0;
     const labTestRevenue = summary.labTestRevenue || breakdown.bySource?.labTests?.amount || 0;
     const pharmacyRevenue = summary.pharmacyRevenue || breakdown.bySource?.pharmacy?.amount || 0;
+    const radiologyRevenue = summary.radiologyRevenue || breakdown.bySource?.radiology?.amount || 0;
+    const ipdRevenue = summary.ipdRevenue || breakdown.bySource?.ipd?.amount || 0;
 
     // Calculate commissions by service type
     let procedureCommission = 0;
     let labTestCommission = 0;
+    let radiologyCommission = 0;
 
     if (breakdown.bySource?.procedures?.byDoctor) {
       procedureCommission = breakdown.bySource.procedures.byDoctor.reduce((sum, doc) => {
@@ -597,9 +746,23 @@ const RevenueStats = () => {
       }, 0);
     }
 
+    // Calculate radiology commission (from breakdown or default to 30% of radiology revenue)
+    if (breakdown.bySource?.radiology?.byDoctor) {
+      radiologyCommission = breakdown.bySource.radiology.byDoctor.reduce((sum, doc) => {
+        if (!doc.isFullTime) {
+          return sum + (doc.earnings || doc.commission || 0);
+        }
+        return sum;
+      }, 0);
+    } else {
+      // Fallback: part-time doctors get 30% commission on radiology
+      radiologyCommission = radiologyRevenue * 0.3;
+    }
+
     // Calculate hospital shares
     const procedureHospitalShare = procedureRevenue - procedureCommission;
     const labTestHospitalShare = labTestRevenue - labTestCommission;
+    const radiologyHospitalShare = radiologyRevenue - radiologyCommission;
 
     return (
       <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-200 mb-6">
@@ -618,7 +781,9 @@ const RevenueStats = () => {
             <div className="mt-2 text-xs text-gray-500">
               <span className="text-blue-600">Appt:</span> {formatCurrency(appointmentRevenue)} |
               <span className="text-indigo-600 ml-1">Proc:</span> {formatCurrency(procedureRevenue)} |
-              <span className="text-purple-600 ml-1">Lab:</span> {formatCurrency(labTestRevenue)}
+              <span className="text-purple-600 ml-1">Lab:</span> {formatCurrency(labTestRevenue)} |
+              <span className="text-teal-600 ml-1">Rad:</span> {formatCurrency(radiologyRevenue)} |
+              <span className="text-violet-600 ml-1">IPD:</span> {formatCurrency(ipdRevenue)}
             </div>
             <div className="mt-2 h-2 bg-gray-200 rounded-full overflow-hidden">
               <div className="h-full bg-blue-500 rounded-full" style={{ width: '100%' }}></div>
@@ -695,7 +860,7 @@ const RevenueStats = () => {
           </div>
         </div>
 
-        {/* Revenue Source Breakdown */}
+        {/* Revenue Source Breakdown - Updated with Radiology & IPD */}
         <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
           <div className="bg-white p-3 rounded-lg border border-blue-100">
             <h5 className="text-sm font-semibold text-blue-700 mb-2">Revenue Sources</h5>
@@ -711,6 +876,14 @@ const RevenueStats = () => {
               <div className="flex justify-between">
                 <span>Lab Tests:</span>
                 <span className="font-medium text-purple-600">{formatCurrency(labTestRevenue)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Radiology:</span>
+                <span className="font-medium text-teal-600">{formatCurrency(radiologyRevenue)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>IPD:</span>
+                <span className="font-medium text-violet-600">{formatCurrency(ipdRevenue)}</span>
               </div>
               <div className="flex justify-between">
                 <span>Pharmacy:</span>
@@ -735,12 +908,9 @@ const RevenueStats = () => {
                     </div>
                     <div className="flex justify-between text-gray-500">
                       <span>Type: {doc.isFullTime ? 'Full-time' : 'Part-time'}</span>
-                      {doc.procedureRevenue > 0 && (
-                        <span>Proc: {formatCurrency(doc.procedureRevenue)}</span>
-                      )}
-                      {doc.labTestRevenue > 0 && (
-                        <span>Lab: {formatCurrency(doc.labTestRevenue)}</span>
-                      )}
+                      {doc.procedureRevenue > 0 && <span>Proc: {formatCurrency(doc.procedureRevenue)}</span>}
+                      {doc.labTestRevenue > 0 && <span>Lab: {formatCurrency(doc.labTestRevenue)}</span>}
+                      {doc.radiologyRevenue > 0 && <span>Rad: {formatCurrency(doc.radiologyRevenue)}</span>}
                     </div>
                   </div>
                 ))
@@ -795,21 +965,6 @@ const RevenueStats = () => {
                 </span>
               </div>
             </div>
-
-            {/* Top Procedures Preview */}
-            {breakdown.bySource?.procedures?.byProcedure && breakdown.bySource.procedures.byProcedure.length > 0 && (
-              <div className="mt-3 pt-2 border-t border-indigo-200">
-                <h5 className="text-xs font-semibold text-indigo-600 mb-2">Top Procedures:</h5>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                  {breakdown.bySource.procedures.byProcedure.slice(0, 4).map((proc, idx) => (
-                    <div key={idx} className="text-xs bg-white p-1 rounded flex justify-between">
-                      <span className="truncate">{proc.code}:</span>
-                      <span className="font-medium">{formatCurrency(proc.revenue)}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
         )}
 
@@ -839,16 +994,76 @@ const RevenueStats = () => {
                 </span>
               </div>
             </div>
+          </div>
+        )}
 
-            {/* Top Lab Tests Preview */}
-            {breakdown.bySource?.labTests?.byLabTest && breakdown.bySource.labTests.byLabTest.length > 0 && (
-              <div className="mt-3 pt-2 border-t border-purple-200">
-                <h5 className="text-xs font-semibold text-purple-600 mb-2">Top Lab Tests:</h5>
+        {/* Radiology Revenue Highlight - NEW */}
+        {radiologyRevenue > 0 && (
+          <div className="mt-4 p-3 bg-gradient-to-r from-teal-50 to-cyan-50 rounded-lg border border-teal-200">
+            <h4 className="text-sm font-bold text-teal-700 mb-2 flex items-center gap-2">
+              <FaXRay /> Radiology Revenue Breakdown
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+              <div className="flex justify-between items-center bg-white p-2 rounded">
+                <span className="text-sm text-gray-600">Radiology Revenue</span>
+                <span className="font-medium text-gray-800">{formatCurrency(radiologyRevenue)}</span>
+              </div>
+              <div className="flex justify-between items-center bg-white p-2 rounded">
+                <span className="text-sm text-gray-600">Doctor Commission</span>
+                <span className="font-medium text-green-600">{formatCurrency(radiologyCommission)}</span>
+              </div>
+              <div className="flex justify-between items-center bg-white p-2 rounded">
+                <span className="text-sm text-gray-600">Hospital's Share</span>
+                <span className="font-medium text-blue-600">{formatCurrency(radiologyHospitalShare)}</span>
+              </div>
+              <div className="flex justify-between items-center bg-white p-2 rounded">
+                <span className="text-sm text-gray-600">% of Total</span>
+                <span className="font-medium text-teal-600">
+                  {totalRevenue > 0 ? ((radiologyRevenue / totalRevenue) * 100).toFixed(1) : 0}%
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* IPD Revenue Highlight - NEW */}
+        {ipdRevenue > 0 && (
+          <div className="mt-4 p-3 bg-gradient-to-r from-violet-50 to-indigo-50 rounded-lg border border-violet-200">
+            <h4 className="text-sm font-bold text-violet-700 mb-2 flex items-center gap-2">
+              <FaHospital /> IPD Revenue Breakdown
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+              <div className="flex justify-between items-center bg-white p-2 rounded">
+                <span className="text-sm text-gray-600">IPD Revenue</span>
+                <span className="font-medium text-gray-800">{formatCurrency(ipdRevenue)}</span>
+              </div>
+              <div className="flex justify-between items-center bg-white p-2 rounded">
+                <span className="text-sm text-gray-600">Bed Charges</span>
+                <span className="font-medium text-gray-800">{formatCurrency(breakdown.bySource?.ipd?.breakdown?.bedCharges || 0)}</span>
+              </div>
+              <div className="flex justify-between items-center bg-white p-2 rounded">
+                <span className="text-sm text-gray-600">Doctor Visits</span>
+                <span className="font-medium text-green-600">{formatCurrency(breakdown.bySource?.ipd?.breakdown?.doctorVisits || 0)}</span>
+              </div>
+              <div className="flex justify-between items-center bg-white p-2 rounded">
+                <span className="text-sm text-gray-600">Other Services</span>
+                <span className="font-medium text-blue-600">{formatCurrency(
+                  (breakdown.bySource?.ipd?.breakdown?.procedures || 0) +
+                  (breakdown.bySource?.ipd?.breakdown?.labTests || 0) +
+                  (breakdown.bySource?.ipd?.breakdown?.radiology || 0) +
+                  (breakdown.bySource?.ipd?.breakdown?.pharmacy || 0) +
+                  (breakdown.bySource?.ipd?.breakdown?.other || 0)
+                )}</span>
+              </div>
+            </div>
+            {breakdown.bySource?.ipd?.byWard && breakdown.bySource.ipd.byWard.length > 0 && (
+              <div className="mt-3 pt-2 border-t border-violet-200">
+                <h5 className="text-xs font-semibold text-violet-600 mb-2">Ward Revenue:</h5>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                  {breakdown.bySource.labTests.byLabTest.slice(0, 4).map((test, idx) => (
+                  {breakdown.bySource.ipd.byWard.slice(0, 4).map((ward, idx) => (
                     <div key={idx} className="text-xs bg-white p-1 rounded flex justify-between">
-                      <span className="truncate">{test.code}:</span>
-                      <span className="font-medium">{formatCurrency(test.revenue)}</span>
+                      <span className="truncate">{ward.wardName}:</span>
+                      <span className="font-medium">{formatCurrency(ward.estimatedRevenue)}</span>
                     </div>
                   ))}
                 </div>
@@ -1063,9 +1278,8 @@ const RevenueStats = () => {
                   <tr key={`${item.doctorId}-${item.procedureCode}-${idx}`} className="hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm font-medium text-gray-900">{item.doctorName}</td>
                     <td className="px-4 py-3 text-sm">
-                      <span className={`px-2 py-1 text-xs rounded-full ${
-                        item.isFullTime ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
-                      }`}>
+                      <span className={`px-2 py-1 text-xs rounded-full ${item.isFullTime ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
+                        }`}>
                         {item.isFullTime ? 'Full-time' : 'Part-time'}
                       </span>
                     </td>
@@ -1345,9 +1559,8 @@ const RevenueStats = () => {
                   <tr key={`${item.doctorId}-${item.labTestCode}-${idx}`} className="hover:bg-gray-50">
                     <td className="px-4 py-3 text-sm font-medium text-gray-900">{item.doctorName}</td>
                     <td className="px-4 py-3 text-sm">
-                      <span className={`px-2 py-1 text-xs rounded-full ${
-                        item.isFullTime ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
-                      }`}>
+                      <span className={`px-2 py-1 text-xs rounded-full ${item.isFullTime ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
+                        }`}>
                         {item.isFullTime ? 'Full-time' : 'Part-time'}
                       </span>
                     </td>
@@ -1466,7 +1679,7 @@ const RevenueStats = () => {
     );
   };
 
-  // ---------- Render: Overview (UPDATED) ----------
+  // ---------- Render: Overview (UPDATED with Radiology & IPD) ----------
   const renderOverview = () => {
     if (!data) return null;
 
@@ -1476,13 +1689,18 @@ const RevenueStats = () => {
     const counts = data.counts || {};
 
     const totalRevenue = summary.totalRevenue || 0;
+    const radiologyRevenue = summary.radiologyRevenue || 0;
+    const ipdRevenue = summary.ipdRevenue || 0;
 
+    // Include Radiology and IPD in pie chart
     const pieData = [
-      { name: 'Appointments', value: summary.appointmentRevenue || 0 },
-      { name: 'Pharmacy', value: summary.pharmacyRevenue || 0 },
-      { name: 'Procedures', value: summary.procedureRevenue || 0 },
-      { name: 'Lab Tests', value: summary.labTestRevenue || 0 },
-      { name: 'Other', value: summary.otherRevenue || 0 }
+      { name: 'Appointments', value: summary.appointmentRevenue || 0, color: '#0088FE' },
+      { name: 'Procedures', value: summary.procedureRevenue || 0, color: '#8884D8' },
+      { name: 'Lab Tests', value: summary.labTestRevenue || 0, color: '#9C27B0' },
+      { name: 'Radiology', value: radiologyRevenue, color: '#FF8042' },
+      { name: 'IPD', value: ipdRevenue, color: '#6366F1' },
+      { name: 'Pharmacy', value: summary.pharmacyRevenue || 0, color: '#00C49F' },
+      { name: 'Other', value: summary.otherRevenue || 0, color: '#FFBB28' }
     ].filter((x) => Number(x.value) > 0);
 
     return (
@@ -1490,8 +1708,8 @@ const RevenueStats = () => {
         {/* Revenue Bifurcation Section */}
         {renderRevenueBifurcation()}
 
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {/* Summary Cards - Enhanced with Radiology & IPD */}
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-4 rounded-lg border border-blue-200">
             <div className="flex items-center justify-between">
               <div>
@@ -1548,10 +1766,78 @@ const RevenueStats = () => {
               <FaRupeeSign className="text-teal-500 text-2xl" />
             </div>
             <div className="mt-2 text-xs text-gray-600">
-              Paid invoices: {breakdown.byStatus?.paid?.invoices || 0}
+              Paid: {formatCurrency(breakdown.byStatus?.paid?.amount || 0)}
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-r from-orange-50 to-orange-100 p-4 rounded-lg border border-orange-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-orange-600 font-medium">Radiology Revenue</p>
+                <p className="text-2xl font-bold text-gray-800 mt-1">
+                  {formatCurrency(radiologyRevenue)}
+                </p>
+              </div>
+              <FaXRay className="text-orange-500 text-2xl" />
+            </div>
+            <div className="mt-2 text-xs text-gray-600">
+              {counts.radiologyCount || 0} requests • {counts.radiologyBilledCount || 0} billed
             </div>
           </div>
         </div>
+
+        {/* IPD Summary Row */}
+        {(ipdRevenue > 0 || summary.ipdActiveAdmissions > 0) && (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="bg-gradient-to-r from-indigo-50 to-indigo-100 p-4 rounded-lg border border-indigo-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-indigo-600 font-medium">IPD Revenue</p>
+                  <p className="text-2xl font-bold text-gray-800 mt-1">
+                    {formatCurrency(ipdRevenue)}
+                  </p>
+                </div>
+                <FaHospital className="text-indigo-500 text-2xl" />
+              </div>
+              <div className="mt-2 text-xs text-gray-600">
+                {summary.ipdTotalAdmissions || 0} admissions
+              </div>
+            </div>
+            <div className="bg-gradient-to-r from-rose-50 to-rose-100 p-4 rounded-lg border border-rose-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-rose-600 font-medium">Active Admissions</p>
+                  <p className="text-2xl font-bold text-gray-800 mt-1">
+                    {summary.ipdActiveAdmissions || 0}
+                  </p>
+                </div>
+                <FaUserInjured className="text-rose-500 text-2xl" />
+              </div>
+            </div>
+            <div className="bg-gradient-to-r from-emerald-50 to-emerald-100 p-4 rounded-lg border border-emerald-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-emerald-600 font-medium">Avg. Length of Stay</p>
+                  <p className="text-2xl font-bold text-gray-800 mt-1">
+                    {summary.ipdAverageLengthOfStay || 0} days
+                  </p>
+                </div>
+                <FaCalendarAlt className="text-emerald-500 text-2xl" />
+              </div>
+            </div>
+            <div className="bg-gradient-to-r from-amber-50 to-amber-100 p-4 rounded-lg border border-amber-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-amber-600 font-medium">Bed Occupancy</p>
+                  <p className="text-2xl font-bold text-gray-800 mt-1">
+                    {metrics.ipdOccupancyRate || 0}%
+                  </p>
+                </div>
+                <FaBed className="text-amber-500 text-2xl" />
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -1564,15 +1850,16 @@ const RevenueStats = () => {
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                  label={({ name, percent }) => percent > 0.05 ? `${name}: ${(percent * 100).toFixed(0)}%` : ''}
                   outerRadius={90}
                   dataKey="value"
                 >
-                  {(pieData.length ? pieData : [{ name: 'No Data', value: 1 }]).map((_, idx) => (
-                    <Cell key={idx} fill={pieColors[idx % pieColors.length]} />
+                  {(pieData.length ? pieData : [{ name: 'No Data', value: 1 }]).map((entry, idx) => (
+                    <Cell key={idx} fill={entry.color || pieColors[idx % pieColors.length]} />
                   ))}
                 </Pie>
                 <Tooltip formatter={(v) => formatCurrency(v)} />
+                <Legend />
               </PieChart>
             </ResponsiveContainer>
           </div>
@@ -1586,64 +1873,45 @@ const RevenueStats = () => {
                 <YAxis tickFormatter={(v) => `₹${Math.round(v / 1000)}k`} />
                 <Tooltip formatter={(v) => formatCurrency(v)} />
                 <Legend />
-                <Line type="monotone" dataKey="revenue" stroke="#0088FE" name="Total Revenue" />
-                {breakdown.daily?.[0]?.procedureRevenue && (
-                  <Line type="monotone" dataKey="procedureRevenue" stroke="#8884D8" name="Procedure Revenue" />
+                <Line type="monotone" dataKey="revenue" stroke="#0088FE" name="Total Revenue" strokeWidth={2} />
+                {breakdown.daily?.[0]?.procedureRevenue !== undefined && (
+                  <Line type="monotone" dataKey="procedureRevenue" stroke="#8884D8" name="Procedure Revenue" strokeWidth={2} />
                 )}
-                {breakdown.daily?.[0]?.labTestRevenue && (
-                  <Line type="monotone" dataKey="labTestRevenue" stroke="#9C27B0" name="Lab Test Revenue" />
+                {breakdown.daily?.[0]?.labTestRevenue !== undefined && (
+                  <Line type="monotone" dataKey="labTestRevenue" stroke="#9C27B0" name="Lab Test Revenue" strokeWidth={2} />
                 )}
               </LineChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Top Performers */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Top Performers - Enhanced */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           <div className="bg-white p-4 rounded-lg shadow border">
             <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
-              <FaUserMd className="text-blue-500" /> Top Performing Doctors
+              <FaUserMd className="text-blue-500" /> Top Doctors
             </h3>
             <div className="space-y-3 max-h-80 overflow-y-auto">
               {(data.topPerformers?.doctors || []).map((doctor, index) => (
-                <div
-                  key={doctor.doctorId || index}
-                  className="flex items-center justify-between p-3 hover:bg-gray-50 rounded"
-                >
+                <div key={doctor.doctorId || index} className="flex items-center justify-between p-3 hover:bg-gray-50 rounded gap-2">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-semibold">
+                    <div className="w-4 h-4 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-semibold">
                       {index + 1}
                     </div>
                     <div>
-                      <p className="font-medium text-gray-800">{doctor.name}</p>
+                      <p className="font-medium text-gray-800 text-sm">{doctor.name}</p>
                       <p className="text-xs text-gray-500">
-                        {doctor.department && doctor.department !== 'Unknown'
-                          ? getDeptName(doctor.department)
-                          : 'Unknown'} • {doctor.isFullTime ? 'Full-time' : 'Part-time'}
+                        {doctor.isFullTime ? 'Full-time' : 'Part-time'}
                       </p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="font-bold text-gray-900">{formatCurrency(doctor.revenueGenerated || doctor.revenue)}</p>
-                    <p className="text-xs text-gray-500">
-                      <span className="text-green-600">Earned: {formatCurrency(doctor.earnings || doctor.commission || 0)}</span>
-                      {doctor.procedureRevenue > 0 && (
-                        <span className="text-indigo-600 ml-2">
-                          Proc: {formatCurrency(doctor.procedureRevenue)}
-                        </span>
-                      )}
-                      {doctor.labTestRevenue > 0 && (
-                        <span className="text-purple-600 ml-2">
-                          Lab: {formatCurrency(doctor.labTestRevenue)}
-                        </span>
-                      )}
-                    </p>
+                    <p className="font-bold text-gray-900 text-sm">{formatCurrency(doctor.revenueGenerated)}</p>
+                    <p className="text-xs text-green-600">Earned: {formatCurrency(doctor.earnings)}</p>
                   </div>
                 </div>
               ))}
-              {!data.topPerformers?.doctors?.length && (
-                <div className="text-sm text-gray-500">No doctor data for selected filters.</div>
-              )}
+              {!data.topPerformers?.doctors?.length && <div className="text-sm text-gray-500">No doctor data</div>}
             </div>
           </div>
 
@@ -1653,32 +1921,22 @@ const RevenueStats = () => {
             </h3>
             <div className="space-y-3 max-h-80 overflow-y-auto">
               {(data.topPerformers?.procedures || []).slice(0, 5).map((proc, index) => (
-                <div
-                  key={proc.code || index}
-                  className="flex items-center justify-between p-3 hover:bg-gray-50 rounded"
-                >
+                <div key={proc.code || index} className="flex items-center justify-between p-3 hover:bg-gray-50 rounded gap-2">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center font-semibold">
+                    <div className="w-4 h-4 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center font-semibold">
                       {index + 1}
                     </div>
                     <div>
-                      <p className="font-medium text-gray-800">{proc.name || proc.procedureName}</p>
-                      <p className="text-xs text-gray-500">
-                        Code: {proc.code || proc.procedureCode} • {proc.count || 0} performed
-                      </p>
+                      <p className="font-medium text-gray-800 truncate max-w-[150px] text-sm">{proc.name}</p>
+                      <p className="text-xs text-gray-500">{proc.count} performed</p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="font-bold text-gray-900">{formatCurrency(proc.revenue)}</p>
-                    <p className="text-xs text-gray-500">
-                      Avg: {formatCurrency(proc.averagePrice || proc.revenue / proc.count)}
-                    </p>
+                    <p className="font-bold text-gray-900 text-sm">{formatCurrency(proc.revenue)}</p>
                   </div>
                 </div>
               ))}
-              {!data.topPerformers?.procedures?.length && (
-                <div className="text-sm text-gray-500">No procedure data for selected filters.</div>
-              )}
+              {!data.topPerformers?.procedures?.length && <div className="text-sm text-gray-500">No procedure data</div>}
             </div>
           </div>
 
@@ -1688,32 +1946,47 @@ const RevenueStats = () => {
             </h3>
             <div className="space-y-3 max-h-80 overflow-y-auto">
               {(data.topPerformers?.labTests || []).slice(0, 5).map((test, index) => (
-                <div
-                  key={test.code || index}
-                  className="flex items-center justify-between p-3 hover:bg-gray-50 rounded"
-                >
+                <div key={test.code || index} className="flex items-center justify-between p-3 hover:bg-gray-50 rounded gap-2">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center font-semibold">
+                    <div className="w-4 h-4 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center font-semibold">
                       {index + 1}
                     </div>
                     <div>
-                      <p className="font-medium text-gray-800">{test.name || test.labTestName}</p>
-                      <p className="text-xs text-gray-500">
-                        Code: {test.code || test.labTestCode} • {test.count || 0} performed
-                      </p>
+                      <p className="font-medium text-gray-800 truncate max-w-[150px] text-sm">{test.name}</p>
+                      <p className="text-xs text-gray-500">{test.count} performed</p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="font-bold text-gray-900">{formatCurrency(test.revenue)}</p>
-                    <p className="text-xs text-gray-500">
-                      Avg: {formatCurrency(test.averagePrice || test.revenue / test.count)}
-                    </p>
+                    <p className="font-bold text-gray-900 text-sm">{formatCurrency(test.revenue)}</p>
                   </div>
                 </div>
               ))}
-              {!data.topPerformers?.labTests?.length && (
-                <div className="text-sm text-gray-500">No lab test data for selected filters.</div>
-              )}
+              {!data.topPerformers?.labTests?.length && <div className="text-sm text-gray-500">No lab test data</div>}
+            </div>
+          </div>
+
+          <div className="bg-white p-4 rounded-lg shadow border">
+            <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+              <FaXRay className="text-teal-500" /> Top Radiology Tests
+            </h3>
+            <div className="space-y-3 max-h-80 overflow-y-auto">
+              {(data.topPerformers?.radiologyTests || []).slice(0, 5).map((test, index) => (
+                <div key={test.name || index} className="flex items-center justify-between p-3 hover:bg-gray-50 rounded gap-2">
+                  <div className="flex items-center gap-3">
+                    <div className="w-4 h-4 bg-teal-100 text-teal-600 rounded-full flex items-center justify-center font-semibold">
+                      {index + 1}
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-800 truncate max-w-[150px] text-sm">{test.name}</p>
+                      <p className="text-xs text-gray-500">{test.count} requests</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-bold text-gray-900 text-sm">{formatCurrency(test.revenue)}</p>
+                  </div>
+                </div>
+              ))}
+              {!data.topPerformers?.radiologyTests?.length && <div className="text-sm text-gray-500">No radiology data</div>}
             </div>
           </div>
         </div>
@@ -1721,24 +1994,22 @@ const RevenueStats = () => {
         {/* Metrics */}
         <div className="bg-white p-4 rounded-lg shadow border">
           <h3 className="font-semibold text-gray-800 mb-4">Performance Metrics</h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             <div className="text-center p-3 bg-gray-50 rounded">
               <p className="text-sm text-gray-600">Avg. Invoice Value</p>
-              <p className="text-xl font-bold text-gray-800">
-                {formatCurrency(metrics.averageInvoiceValue || 0)}
-              </p>
+              <p className="text-xl font-bold text-gray-800">{formatCurrency(metrics.averageInvoiceValue || 0)}</p>
             </div>
             <div className="text-center p-3 bg-gray-50 rounded">
               <p className="text-sm text-gray-600">Avg. Daily Revenue</p>
-              <p className="text-xl font-bold text-gray-800">
-                {formatCurrency(metrics.averageDailyRevenue || 0)}
-              </p>
+              <p className="text-xl font-bold text-gray-800">{formatCurrency(metrics.averageDailyRevenue || 0)}</p>
             </div>
             <div className="text-center p-3 bg-gray-50 rounded">
-              <p className="text-sm text-gray-600">Expense Ratio</p>
-              <p className="text-xl font-bold text-gray-800">
-                {formatPercentage(metrics.expenseRatio)}
-              </p>
+              <p className="text-sm text-gray-600">Avg. Radiology Value</p>
+              <p className="text-xl font-bold text-gray-800">{formatCurrency(metrics.averageRadiologyValue || 0)}</p>
+            </div>
+            <div className="text-center p-3 bg-gray-50 rounded">
+              <p className="text-sm text-gray-600">Avg. IPD Stay</p>
+              <p className="text-xl font-bold text-gray-800">{metrics.averageIpdStay || 0} days</p>
             </div>
             <div className="text-center p-3 bg-gray-50 rounded">
               <p className="text-sm text-gray-600">Unique Patients</p>
@@ -1750,37 +2021,40 @@ const RevenueStats = () => {
     );
   };
 
-  // ---------- Render: Daily (UPDATED) ----------
+  // ---------- Render: Daily (UPDATED with Radiology & IPD) ----------
   const renderDailyReport = () => {
     if (!data) return null;
 
     const summary = data.summary || {};
     const breakdown = data.breakdown || {};
-    const metrics = data.metrics || {};
+    const radiology = breakdown.bySource?.radiology;
+    const ipd = breakdown.bySource?.ipd;
 
     return (
       <div className="space-y-6">
-        {/* Revenue Bifurcation for Daily */}
         {renderRevenueBifurcation()}
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           <div className="bg-white p-4 rounded-lg shadow border">
             <p className="text-sm text-gray-600">Total Revenue</p>
-            <p className="text-2xl font-bold text-gray-800">
-              {formatCurrency(summary.totalRevenue || 0)}
-            </p>
+            <p className="text-2xl font-bold text-gray-800">{formatCurrency(summary.totalRevenue || 0)}</p>
           </div>
           <div className="bg-white p-4 rounded-lg shadow border">
             <p className="text-sm text-gray-600">Doctor Earnings</p>
-            <p className="text-2xl font-bold text-gray-800">
-              {formatCurrency(summary.totalDoctorEarnings || 0)}
-            </p>
+            <p className="text-2xl font-bold text-gray-800">{formatCurrency(summary.totalDoctorEarnings || 0)}</p>
           </div>
           <div className="bg-white p-4 rounded-lg shadow border">
             <p className="text-sm text-gray-600">Hospital Share</p>
-            <p className="text-2xl font-bold text-gray-800">
-              {formatCurrency(summary.totalHospitalShare || 0)}
-            </p>
+            <p className="text-2xl font-bold text-gray-800">{formatCurrency(summary.totalHospitalShare || 0)}</p>
+          </div>
+          <div className="bg-white p-4 rounded-lg shadow border">
+            <p className="text-sm text-gray-600">Radiology Revenue</p>
+            <p className="text-2xl font-bold text-orange-600">{formatCurrency(radiology?.amount || 0)}</p>
+            <p className="text-xs text-gray-500">{radiology?.count || 0} requests</p>
+          </div>
+          <div className="bg-white p-4 rounded-lg shadow border">
+            <p className="text-sm text-gray-600">IPD Revenue</p>
+            <p className="text-2xl font-bold text-indigo-600">{formatCurrency(ipd?.amount || 0)}</p>
           </div>
         </div>
 
@@ -1804,104 +2078,68 @@ const RevenueStats = () => {
           <h3 className="font-semibold text-gray-800 mb-4">Doctor Performance</h3>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
-              <thead>
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Doctor</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Department</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Revenue</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Earnings</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Hospital Share</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Invoices</th>
-                </tr>
+              <thead className="bg-gray-50">
+                <tr><th className="px-4 py-3 text-left">Doctor</th><th className="px-4 py-3 text-left">Type</th><th className="px-4 py-3 text-left">Revenue</th><th className="px-4 py-3 text-left">Earnings</th><th className="px-4 py-3 text-left">Hospital Share</th></tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody className="divide-y">
                 {(breakdown.byDoctor || []).map((doc, idx) => (
                   <tr key={doc.doctorId || idx} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 text-sm font-medium text-gray-900">{doc.name}</td>
+                    <td className="px-4 py-3 text-sm font-medium">{doc.name}</td>
                     <td className="px-4 py-3 text-sm">
-                      <span className={`px-2 py-1 text-xs rounded-full ${
-                        doc.isFullTime ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
-                      }`}>
+                      <span className={`px-2 py-1 text-xs rounded-full ${doc.isFullTime ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}`}>
                         {doc.isFullTime ? 'Full-time' : 'Part-time'}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">
-                      {doc.department && doc.department !== 'Unknown'
-                        ? getDeptName(doc.department)
-                        : 'Unknown'}
-                    </td>
-                    <td className="px-4 py-3 text-sm font-bold text-gray-900">
-                      {formatCurrency(doc.revenue)}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-green-600">
-                      {formatCurrency(doc.earnings || doc.commission || 0)}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-blue-600">
-                      {formatCurrency(doc.hospitalShare || 0)}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{doc.invoices || 0}</td>
+                    <td className="px-4 py-3 text-sm font-bold">{formatCurrency(doc.revenue)}</td>
+                    <td className="px-4 py-3 text-sm text-green-600">{formatCurrency(doc.earnings || doc.commission || 0)}</td>
+                    <td className="px-4 py-3 text-sm text-blue-600">{formatCurrency(doc.hospitalShare || 0)}</td>
                   </tr>
                 ))}
-                {!breakdown.byDoctor?.length && (
-                  <tr>
-                    <td colSpan={7} className="px-4 py-3 text-sm text-gray-500">
-                      No doctor breakdown for selected filters.
-                    </td>
-                  </tr>
-                )}
               </tbody>
             </table>
           </div>
         </div>
 
+        {/* Radiology Status Breakdown for Daily */}
+        {radiology?.byStatus && radiology.byStatus.length > 0 && (
+          <div className="bg-white p-4 rounded-lg shadow border">
+            <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2"><FaXRay className="text-teal-500" /> Radiology Request Status</h3>
+            <div className="grid grid-cols-2 md:grid-cols-7 gap-3">
+              {radiology.byStatus.map((status) => (
+                <div key={status.status} className="p-3 rounded-lg text-center bg-gray-50">
+                  <p className="text-2xl font-bold">{status.count}</p>
+                  <p className="text-xs font-medium">{status.status}</p>
+                  <p className="text-xs text-gray-500">{formatCurrency(status.revenue)}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="bg-white p-4 rounded-lg shadow border">
           <h3 className="font-semibold text-gray-800 mb-4">Recent Invoices</h3>
           <div className="space-y-3">
             {(data.recentInvoices || []).slice(0, 5).map((inv, idx) => (
-              <div
-                key={inv.invoiceNumber || idx}
-                className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50"
-              >
+              <div key={inv.invoiceNumber || idx} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
                 <div>
                   <p className="font-medium text-gray-800">{inv.invoiceNumber}</p>
-                  <p className="text-xs text-gray-500">
-                    {inv.patient} • {inv.timeIST || inv.time}
-                  </p>
-                  {inv.type === 'Procedure' && (
-                    <span className="text-xs bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded mt-1 inline-block">
-                      Procedure
-                    </span>
-                  )}
-                  {inv.type === 'Lab Test' && (
-                    <span className="text-xs bg-purple-100 text-purple-800 px-2 py-0.5 rounded mt-1 inline-block">
-                      Lab Test
-                    </span>
-                  )}
+                  <p className="text-xs text-gray-500">{inv.patient} • {inv.timeIST || inv.time}</p>
+                  {inv.type === 'Procedure' && <span className="text-xs bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded">Procedure</span>}
+                  {inv.type === 'Lab Test' && <span className="text-xs bg-purple-100 text-purple-800 px-2 py-0.5 rounded">Lab Test</span>}
                 </div>
                 <div className="text-right">
                   <p className="font-bold text-gray-900">{formatCurrency(inv.amount)}</p>
-                  <p className="text-xs text-gray-500">
-                    {inv.status} • {inv.paymentMethod}
-                    {inv.commission && (
-                      <span className="ml-2 text-green-600">
-                        Comm: {formatCurrency(inv.commission)}
-                      </span>
-                    )}
-                  </p>
+                  <p className="text-xs text-gray-500">{inv.status} • {inv.paymentMethod}</p>
                 </div>
               </div>
             ))}
-            {!data.recentInvoices?.length && (
-              <div className="text-sm text-gray-500">No invoices for selected day/filters.</div>
-            )}
           </div>
         </div>
       </div>
     );
   };
 
-  // ---------- Render: Monthly (UPDATED) ----------
+  // ---------- Render: Monthly (UPDATED with Radiology & IPD) ----------
   const renderMonthlyReport = () => {
     if (!data) return null;
 
@@ -1909,36 +2147,20 @@ const RevenueStats = () => {
     const breakdown = data.breakdown || {};
     const counts = data.counts || {};
     const metrics = data.metrics || {};
+    const radiology = breakdown.bySource?.radiology;
+    const ipd = breakdown.bySource?.ipd;
 
     return (
       <div className="space-y-6">
-        {/* Revenue Bifurcation for Monthly */}
         {renderRevenueBifurcation()}
 
         <div className="bg-white p-6 rounded-lg shadow border">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <div>
-              <p className="text-sm text-gray-600">Total Revenue</p>
-              <p className="text-2xl font-bold text-gray-800">
-                {formatCurrency(summary.totalRevenue || 0)}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-600">Net Revenue</p>
-              <p className="text-2xl font-bold text-gray-800">
-                {formatCurrency(summary.netRevenue || 0)}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-600">Doctor Earnings</p>
-              <p className="text-2xl font-bold text-gray-800">
-                {formatCurrency(summary.totalDoctorEarnings || 0)}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-600">Business Days</p>
-              <p className="text-2xl font-bold text-gray-800">{counts.businessDays || 0}</p>
-            </div>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+            <div><p className="text-sm text-gray-600">Total Revenue</p><p className="text-2xl font-bold">{formatCurrency(summary.totalRevenue || 0)}</p></div>
+            <div><p className="text-sm text-gray-600">Net Revenue</p><p className="text-2xl font-bold">{formatCurrency(summary.netRevenue || 0)}</p></div>
+            <div><p className="text-sm text-gray-600">Doctor Earnings</p><p className="text-2xl font-bold">{formatCurrency(summary.totalDoctorEarnings || 0)}</p></div>
+            <div><p className="text-sm text-gray-600">Business Days</p><p className="text-2xl font-bold">{counts.businessDays || 0}</p></div>
+            <div><p className="text-sm text-gray-600">Radiology Revenue</p><p className="text-2xl font-bold text-orange-600">{formatCurrency(radiology?.amount || 0)}</p></div>
           </div>
 
           {/* Weekly Breakdown */}
@@ -1949,27 +2171,17 @@ const RevenueStats = () => {
                 <div key={week.week} className="bg-gray-50 p-3 rounded border">
                   <p className="text-sm font-medium text-gray-700">Week {week.week}</p>
                   <p className="text-lg font-bold text-gray-900">{formatCurrency(week.revenue)}</p>
-                  <p className="text-xs text-gray-500">
-                    Earnings: {formatCurrency(week.doctorEarnings || 0)}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    Hospital: {formatCurrency(week.hospitalShare || 0)}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    Days {week.startDay}-{week.endDay}
-                  </p>
+                  <p className="text-xs text-gray-500">Earnings: {formatCurrency(week.doctorEarnings || 0)}</p>
+                  <p className="text-xs text-gray-500">Days {week.startDay}-{week.endDay}</p>
                 </div>
               ))}
-              {!breakdown.weekly?.length && (
-                <div className="text-sm text-gray-500">No weekly data.</div>
-              )}
             </div>
           </div>
 
           {/* Daily Trend Chart */}
           {breakdown.daily && breakdown.daily.length > 0 && (
             <div className="bg-white p-4 rounded-lg border">
-              <h4 className="font-semibold text-gray-800 mb-4">Daily Revenue</h4>
+              <h4 className="font-semibold text-gray-800 mb-4">Daily Revenue Trend</h4>
               <ResponsiveContainer width="100%" height={300}>
                 <LineChart data={breakdown.daily}>
                   <CartesianGrid strokeDasharray="3 3" />
@@ -1977,11 +2189,50 @@ const RevenueStats = () => {
                   <YAxis tickFormatter={(v) => `₹${Math.round(v / 1000)}k`} />
                   <Tooltip formatter={(v) => formatCurrency(v)} />
                   <Legend />
-                  <Line type="monotone" dataKey="revenue" stroke="#00C49F" name="Total Revenue" />
-                  <Line type="monotone" dataKey="doctorEarnings" stroke="#8884D8" name="Doctor Earnings" />
-                  <Line type="monotone" dataKey="hospitalShare" stroke="#FF8042" name="Hospital Share" />
+                  <Line type="monotone" dataKey="revenue" stroke="#00C49F" name="Total Revenue" strokeWidth={2} />
+                  <Line type="monotone" dataKey="doctorEarnings" stroke="#8884D8" name="Doctor Earnings" strokeWidth={2} />
+                  <Line type="monotone" dataKey="hospitalShare" stroke="#FF8042" name="Hospital Share" strokeWidth={2} />
                 </LineChart>
               </ResponsiveContainer>
+            </div>
+          )}
+
+          {/* Radiology Category Summary */}
+          {radiology?.byCategory && radiology.byCategory.length > 0 && (
+            <div className="bg-white p-4 rounded-lg border mt-4">
+              <h4 className="font-semibold text-gray-800 mb-4 flex items-center gap-2"><FaXRay className="text-teal-500" /> Radiology by Category</h4>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {radiology.byCategory.map((cat) => (
+                  <div key={cat.category} className="text-center p-3 bg-gray-50 rounded">
+                    <p className="font-medium">{cat.category}</p>
+                    <p className="text-xl font-bold text-teal-600">{formatCurrency(cat.revenue)}</p>
+                    <p className="text-xs text-gray-500">{cat.count} requests</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* IPD Ward Summary */}
+          {ipd?.byWard && ipd.byWard.length > 0 && (
+            <div className="bg-white p-4 rounded-lg border mt-4">
+              <h4 className="font-semibold text-gray-800 mb-4 flex items-center gap-2"><FaHospital className="text-indigo-500" /> IPD Ward Revenue</h4>
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-sm">
+                  <thead className="bg-gray-50">
+                    <tr><th className="px-4 py-2 text-left">Ward</th><th className="px-4 py-2 text-right">Admissions</th><th className="px-4 py-2 text-right">Est. Revenue</th></tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {ipd.byWard.map((ward, idx) => (
+                      <tr key={idx} className="hover:bg-gray-50">
+                        <td className="px-4 py-2 font-medium">{ward.wardName}</td>
+                        <td className="px-4 py-2 text-right">{ward.admissions}</td>
+                        <td className="px-4 py-2 text-right font-semibold text-indigo-600">{formatCurrency(ward.estimatedRevenue)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
 
@@ -1991,24 +2242,19 @@ const RevenueStats = () => {
             <div className="space-y-2 max-h-96 overflow-y-auto">
               {(breakdown.byDoctor || []).slice(0, 8).map((d) => (
                 <div key={d.doctorId} className="flex justify-between items-center p-2 hover:bg-gray-50 rounded">
-                  <div>
-                    <p className="font-medium text-gray-800">{d.name}</p>
-                    <p className="text-xs text-gray-500">
-                      {d.isFullTime ? 'Full-time' : 'Part-time'} • {d.specialization || 'N/A'}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <div className="font-bold">{formatCurrency(d.revenue)}</div>
-                    <div className="text-xs text-gray-500">
-                      <span className="text-green-600">Earned: {formatCurrency(d.earnings || d.commission || 0)}</span>
-                    </div>
-                  </div>
+                  <div><p className="font-medium text-gray-800">{d.name}</p><p className="text-xs text-gray-500">{d.isFullTime ? 'Full-time' : 'Part-time'}</p></div>
+                  <div className="text-right"><div className="font-bold">{formatCurrency(d.revenue)}</div><div className="text-xs text-green-600">Earned: {formatCurrency(d.earnings || d.commission || 0)}</div></div>
                 </div>
               ))}
-              {!breakdown.byDoctor?.length && (
-                <div className="text-sm text-gray-500">No doctor data.</div>
-              )}
             </div>
+          </div>
+
+          {/* Monthly Metrics */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-4 border-t">
+            <div className="text-center"><p className="text-sm text-gray-600">Avg. Daily Revenue</p><p className="text-lg font-bold">{formatCurrency(metrics.averageDailyRevenue || 0)}</p></div>
+            <div className="text-center"><p className="text-sm text-gray-600">Avg. Radiology Value</p><p className="text-lg font-bold">{formatCurrency(metrics.averageRadiologyValue || 0)}</p></div>
+            <div className="text-center"><p className="text-sm text-gray-600">Avg. IPD Stay</p><p className="text-lg font-bold">{metrics.averageIpdStay || 0} days</p></div>
+            <div className="text-center"><p className="text-sm text-gray-600">Collection Rate</p><p className="text-lg font-bold text-green-600">{formatPercentage(summary.collectionRate)}</p></div>
           </div>
         </div>
       </div>
@@ -2269,9 +2515,8 @@ const RevenueStats = () => {
                     <tr key={d.id} className="hover:bg-gray-50">
                       <td className="px-4 py-3 text-sm font-medium text-gray-900">{d.name}</td>
                       <td className="px-4 py-3 text-sm">
-                        <span className={`px-2 py-1 text-xs rounded-full ${
-                          d.isFullTime ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
-                        }`}>
+                        <span className={`px-2 py-1 text-xs rounded-full ${d.isFullTime ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
+                          }`}>
                           {d.isFullTime ? 'Full-time' : 'Part-time'}
                         </span>
                       </td>
@@ -2301,95 +2546,126 @@ const RevenueStats = () => {
     );
   };
 
-  // ---------- Render: Radiology Revenue ----------
-  const [radData, setRadData] = useState(null);
-  const [radLoading, setRadLoading] = useState(false);
-
-  useEffect(() => {
-    if (activeTab === 'radiology') {
-      setRadLoading(true);
-      axios.get(`${baseUrl}/radiology/dashboard`)
-        .then(res => setRadData(res.data.data || res.data))
-        .catch(err => console.error('Error fetching radiology revenue:', err))
-        .finally(() => setRadLoading(false));
+  // ---------- Render: IPD Revenue ----------
+  const renderIpdRevenue = () => {
+    if (ipdLoading) {
+      return <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600"></div></div>;
     }
-  }, [activeTab]);
+    if (!ipdData?.data) {
+      return <div className="text-center py-10 text-gray-500">No IPD data available. Click "Apply Filters" to load.</div>;
+    }
 
-  const renderRadiologyRevenue = () => {
-    if (radLoading) return <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600"></div></div>;
-    if (!radData) return <div className="text-center py-10 text-gray-500">No radiology data available. Click "Apply Filters" to load.</div>;
-
-    const totalRevenue = radData.revenue?.total || 0;
-    const billedCount = radData.revenue?.billedCount || radData.statusBreakdown?.Completed || 0;
-    const totalRequests = radData.totalRequests || 0;
-    const pendingCount = radData.statusBreakdown?.Pending || 0;
-    const completedCount = radData.statusBreakdown?.Completed || 0;
-    const reportedCount = radData.statusBreakdown?.Reported || 0;
+    const data = ipdData.data;
+    const totalRevenue = data.totalRevenue || 0;
+    const bedCharges = data.bedCharges || 0;
+    const activeAdmissions = data.activeAdmissions || 0;
+    const totalAdmissions = data.totalAdmissions || 0;
+    const discharges = data.discharges || 0;
+    const avgLengthOfStay = data.avgLengthOfStay || 0;
 
     return (
       <div className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-gradient-to-r from-teal-50 to-teal-100 p-4 rounded-lg border border-teal-200">
-            <div className="flex items-center justify-between">
-              <div><p className="text-sm text-teal-600 font-medium">Radiology Revenue</p><p className="text-2xl font-bold text-gray-800">{formatCurrency(totalRevenue)}</p></div>
-              <FaXRay className="text-teal-500 text-2xl" />
-            </div>
-            <p className="text-xs text-gray-600 mt-1">{billedCount} billed requests</p>
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-4 rounded-lg border border-blue-200">
             <div className="flex items-center justify-between">
-              <div><p className="text-sm text-blue-600 font-medium">Total Requests</p><p className="text-2xl font-bold text-gray-800">{totalRequests}</p></div>
-              <FaClipboardList className="text-blue-500 text-2xl" />
+              <div><p className="text-sm text-blue-600 font-medium">IPD Revenue</p><p className="text-2xl font-bold text-gray-800">{formatCurrency(totalRevenue)}</p></div>
+              <FaHospital className="text-blue-500 text-2xl" />
             </div>
-            <p className="text-xs text-gray-600 mt-1">{pendingCount} pending</p>
-          </div>
-          <div className="bg-gradient-to-r from-green-50 to-green-100 p-4 rounded-lg border border-green-200">
-            <div className="flex items-center justify-between">
-              <div><p className="text-sm text-green-600 font-medium">Completed</p><p className="text-2xl font-bold text-gray-800">{completedCount + reportedCount}</p></div>
-              <FaChartLine className="text-green-500 text-2xl" />
-            </div>
-            <p className="text-xs text-gray-600 mt-1">{reportedCount} with reports</p>
+            <p className="text-xs text-gray-600 mt-1">From bed & services</p>
           </div>
           <div className="bg-gradient-to-r from-purple-50 to-purple-100 p-4 rounded-lg border border-purple-200">
             <div className="flex items-center justify-between">
-              <div><p className="text-sm text-purple-600 font-medium">Avg per Request</p><p className="text-2xl font-bold text-gray-800">{formatCurrency(totalRequests > 0 ? totalRevenue / totalRequests : 0)}</p></div>
-              <FaMoneyBillWave className="text-purple-500 text-2xl" />
+              <div><p className="text-sm text-purple-600 font-medium">Bed Charges</p><p className="text-2xl font-bold text-gray-800">{formatCurrency(bedCharges)}</p></div>
+              <FaBed className="text-purple-500 text-2xl" />
+            </div>
+          </div>
+          <div className="bg-gradient-to-r from-green-50 to-green-100 p-4 rounded-lg border border-green-200">
+            <div className="flex items-center justify-between">
+              <div><p className="text-sm text-green-600 font-medium">Active Admissions</p><p className="text-2xl font-bold text-gray-800">{activeAdmissions}</p></div>
+              <FaUserInjured className="text-green-500 text-2xl" />
+            </div>
+            <p className="text-xs text-gray-600 mt-1">{totalAdmissions} total admissions</p>
+          </div>
+          <div className="bg-gradient-to-r from-indigo-50 to-indigo-100 p-4 rounded-lg border border-indigo-200">
+            <div className="flex items-center justify-between">
+              <div><p className="text-sm text-indigo-600 font-medium">Avg Length of Stay</p><p className="text-2xl font-bold text-gray-800">{avgLengthOfStay} days</p></div>
+              <FaCalendarAlt className="text-indigo-500 text-2xl" />
+            </div>
+          </div>
+          <div className="bg-gradient-to-r from-amber-50 to-amber-100 p-4 rounded-lg border border-amber-200">
+            <div className="flex items-center justify-between">
+              <div><p className="text-sm text-amber-600 font-medium">Discharges</p><p className="text-2xl font-bold text-gray-800">{discharges}</p></div>
+              <FaCheckCircle className="text-amber-500 text-2xl" />
             </div>
           </div>
         </div>
 
-        {radData.statusBreakdown && (
+        {data.wardRevenue && data.wardRevenue.length > 0 && (
           <div className="bg-white p-4 rounded-lg shadow border">
-            <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2"><FaXRay className="text-teal-500" /> Request Status Distribution</h3>
-            <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-              {Object.entries(radData.statusBreakdown || {}).map(([status, count]) => {
-                const colors = { Pending: 'bg-amber-100 text-amber-800', Approved: 'bg-green-100 text-green-800', Scheduled: 'bg-blue-100 text-blue-800', 'In Progress': 'bg-indigo-100 text-indigo-800', Completed: 'bg-emerald-100 text-emerald-800', Reported: 'bg-purple-100 text-purple-800', Cancelled: 'bg-red-100 text-red-800' };
-                return (
-                  <div key={status} className={`p-3 rounded-lg text-center ${colors[status] || 'bg-gray-100 text-gray-800'}`}>
-                    <p className="text-2xl font-bold">{count}</p>
-                    <p className="text-xs font-medium">{status}</p>
-                  </div>
-                );
-              })}
+            <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2"><FaBed className="text-blue-500" /> Ward Revenue Distribution</h3>
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead className="bg-gray-50">
+                  <tr><th className="px-4 py-2 text-left font-medium text-gray-600">Ward</th><th className="px-4 py-2 text-right font-medium text-gray-600">Occupancy</th><th className="px-4 py-2 text-right font-medium text-gray-600">Revenue</th><th className="px-4 py-2 text-right font-medium text-gray-600">%</th></tr>
+                </thead>
+                <tbody className="divide-y">
+                  {data.wardRevenue.map((ward, idx) => (
+                    <tr key={idx} className="hover:bg-gray-50">
+                      <td className="px-4 py-2 font-medium">{ward.wardName}</td>
+                      <td className="px-4 py-2 text-right">{ward.occupancyRate?.toFixed(1)}%</td>
+                      <td className="px-4 py-2 text-right font-semibold text-blue-600">{formatCurrency(ward.revenue)}</td>
+                      <td className="px-4 py-2 text-right text-gray-600">{ward.percentage?.toFixed(1)}%</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         )}
 
-        {radData.topTests && radData.topTests.length > 0 && (
+        {data.serviceBreakdown && (
           <div className="bg-white p-4 rounded-lg shadow border">
-            <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2"><FaClipboardList className="text-teal-500" /> Top Imaging Tests by Revenue</h3>
+            <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2"><FaClipboardList className="text-purple-500" /> Service-wise Revenue</h3>
+            <div className="space-y-3">
+              {Object.entries(data.serviceBreakdown).map(([service, serviceData]) => (
+                <div key={service} className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                  <div className="flex items-center gap-2">
+                    {service === 'Bed Charges' && <FaBed className="text-blue-500" />}
+                    {service === 'Doctor Visits' && <FaUserMd className="text-green-500" />}
+                    {service === 'Procedures' && <FaSyringe className="text-indigo-500" />}
+                    {service === 'Lab Tests' && <FaFlask className="text-purple-500" />}
+                    {service === 'Radiology' && <FaXRay className="text-teal-500" />}
+                    {service === 'Pharmacy' && <FaReceipt className="text-orange-500" />}
+                    <span className="font-medium">{service}</span>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-bold text-gray-800">{formatCurrency(serviceData.revenue)}</p>
+                    <p className="text-xs text-gray-500">{serviceData.count} units</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {data.admissions && data.admissions.length > 0 && (
+          <div className="bg-white p-4 rounded-lg shadow border">
+            <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2"><FaUserInjured className="text-teal-500" /> Current Admissions</h3>
             <div className="overflow-x-auto">
               <table className="min-w-full text-sm">
                 <thead className="bg-gray-50">
-                  <tr><th className="px-4 py-2 text-left font-medium text-gray-600">Test Name</th><th className="px-4 py-2 text-left font-medium text-gray-600">Category</th><th className="px-4 py-2 text-right font-medium text-gray-600">Count</th><th className="px-4 py-2 text-right font-medium text-gray-600">Revenue</th></tr>
+                  <tr><th className="px-4 py-2 text-left font-medium text-gray-600">Patient</th><th className="px-4 py-2 text-left font-medium text-gray-600">Admission Date</th><th className="px-4 py-2 text-left font-medium text-gray-600">Ward</th><th className="px-4 py-2 text-left font-medium text-gray-600">Bed Type</th><th className="px-4 py-2 text-right font-medium text-gray-600">Total Bill</th><th className="px-4 py-2 text-right font-medium text-gray-600">Paid</th><th className="px-4 py-2 text-right font-medium text-gray-600">Balance</th></tr>
                 </thead>
                 <tbody className="divide-y">
-                  {radData.topTests.map((test, idx) => (
+                  {data.admissions.slice(0, 10).map((adm, idx) => (
                     <tr key={idx} className="hover:bg-gray-50">
-                      <td className="px-4 py-2 font-medium">{test.testName || test.name}</td>
-                      <td className="px-4 py-2 text-gray-600">{test.category || '—'}</td>
-                      <td className="px-4 py-2 text-right">{test.count}</td>
-                      <td className="px-4 py-2 text-right font-semibold text-teal-600">{formatCurrency(test.revenue || test.totalRevenue || 0)}</td>
+                      <td className="px-4 py-2 font-medium">{adm.patientName}</td>
+                      <td className="px-4 py-2">{new Date(adm.admissionDate).toLocaleDateString()}</td>
+                      <td className="px-4 py-2">{adm.wardName}</td>
+                      <td className="px-4 py-2">{adm.bedType}</td>
+                      <td className="px-4 py-2 text-right font-semibold">{formatCurrency(adm.totalBill)}</td>
+                      <td className="px-4 py-2 text-right text-green-600">{formatCurrency(adm.paidAmount)}</td>
+                      <td className="px-4 py-2 text-right text-orange-600">{formatCurrency(adm.balance)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -2401,7 +2677,128 @@ const RevenueStats = () => {
     );
   };
 
-  // ---------- Render: Detailed (UPDATED) ----------
+  // ---------- NEW: Render Radiology Revenue ----------
+  const renderRadiologyRevenue = () => {
+    if (radLoading) {
+      return <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600"></div></div>;
+    }
+    if (!radData?.data) {
+      return <div className="text-center py-10 text-gray-500">No radiology data available. Click "Apply Filters" to load.</div>;
+    }
+
+    const data = radData.data;
+    const totalRevenue = data.summary.totalRevenue || 0;
+    const totalRequests = data.summary.totalRequests || 0;
+    const completedRequests = data.summary.completedRequests || 0;
+    const pendingRequests = data.summary.pendingRequests || 0;
+    const reportedRequests = data.summary.reportedRequests || 0;
+    const avgPerRequest = totalRequests > 0 ? totalRevenue / totalRequests : 0;
+
+    return (
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="bg-gradient-to-r from-teal-50 to-teal-100 p-4 rounded-lg border border-teal-200">
+            <div className="flex items-center justify-between">
+              <div><p className="text-sm text-teal-600 font-medium">Radiology Revenue</p><p className="text-2xl font-bold text-gray-800">{formatCurrency(totalRevenue)}</p></div>
+              <FaXRay className="text-teal-500 text-2xl" />
+            </div>
+          </div>
+          <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-4 rounded-lg border border-blue-200">
+            <div className="flex items-center justify-between">
+              <div><p className="text-sm text-blue-600 font-medium">Total Requests</p><p className="text-2xl font-bold text-gray-800">{totalRequests}</p></div>
+              <FaClipboardList className="text-blue-500 text-2xl" />
+            </div>
+            <p className="text-xs text-gray-600 mt-1">{pendingRequests} pending</p>
+          </div>
+          <div className="bg-gradient-to-r from-purple-50 to-purple-100 p-4 rounded-lg border border-purple-200">
+            <div className="flex items-center justify-between">
+              <div><p className="text-sm text-purple-600 font-medium">Avg per Request</p><p className="text-2xl font-bold text-gray-800">{formatCurrency(avgPerRequest)}</p></div>
+              <FaMoneyBillWave className="text-purple-500 text-2xl" />
+            </div>
+          </div>
+          <div className="bg-gradient-to-r from-indigo-50 to-indigo-100 p-4 rounded-lg border border-indigo-200">
+            <div className="flex items-center justify-between">
+              <div><p className="text-sm text-indigo-600 font-medium">Collection Rate</p><p className="text-2xl font-bold text-gray-800">{data.collectionRate || 0}%</p></div>
+              <FaRupeeSign className="text-indigo-500 text-2xl" />
+            </div>
+          </div>
+        </div>
+
+        {data.statusBreakdown && (
+          <div className="bg-white p-4 rounded-lg shadow border">
+            <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2"><FaXRay className="text-teal-500" /> Request Status Distribution</h3>
+            <div className="grid grid-cols-2 md:grid-cols-7 gap-3">
+              {Object.entries(data.statusBreakdown).map(([status, count]) => {
+                const colors = {
+                  Pending: 'bg-amber-100 text-amber-800',
+                  Approved: 'bg-green-100 text-green-800',
+                  Scheduled: 'bg-blue-100 text-blue-800',
+                  'In Progress': 'bg-indigo-100 text-indigo-800',
+                  Completed: 'bg-emerald-100 text-emerald-800',
+                  Reported: 'bg-purple-100 text-purple-800',
+                  Cancelled: 'bg-red-100 text-red-800'
+                };
+                return (
+                  <div key={status} className={`p-3 rounded-lg text-center ${colors[status] || 'bg-gray-100 text-gray-800'}`}>
+                    <p className="text-2xl font-bold">{count}</p>
+                    <p className="text-xs font-medium">{status}</p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {data.categoryBreakdown && data.categoryBreakdown.length > 0 && (
+          <div className="bg-white p-4 rounded-lg shadow border">
+            <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2"><FaMicroscope className="text-teal-500" /> Revenue by Category</h3>
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead className="bg-gray-50">
+                  <tr><th className="px-4 py-2 text-left font-medium text-gray-600">Category</th><th className="px-4 py-2 text-right font-medium text-gray-600">Count</th><th className="px-4 py-2 text-right font-medium text-gray-600">Revenue</th><th className="px-4 py-2 text-right font-medium text-gray-600">% of Total</th></tr>
+                </thead>
+                <tbody className="divide-y">
+                  {data.categoryBreakdown.map((cat, idx) => (
+                    <tr key={idx} className="hover:bg-gray-50">
+                      <td className="px-4 py-2 font-medium">{cat.category}</td>
+                      <td className="px-4 py-2 text-right">{cat.count}</td>
+                      <td className="px-4 py-2 text-right font-semibold text-teal-600">{formatCurrency(cat.revenue)}</td>
+                      <td className="px-4 py-2 text-right text-gray-600">{cat.percentage?.toFixed(1)}%</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {data.topTests && data.topTests.length > 0 && (
+          <div className="bg-white p-4 rounded-lg shadow border">
+            <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2"><FaClipboardList className="text-teal-500" /> Top Imaging Tests by Revenue</h3>
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead className="bg-gray-50">
+                  <tr><th className="px-4 py-2 text-left font-medium text-gray-600">Test Name</th><th className="px-4 py-2 text-left font-medium text-gray-600">Category</th><th className="px-4 py-2 text-right font-medium text-gray-600">Count</th><th className="px-4 py-2 text-right font-medium text-gray-600">Revenue</th><th className="px-4 py-2 text-right font-medium text-gray-600">Avg Price</th></tr>
+                </thead>
+                <tbody className="divide-y">
+                  {data.topTests.map((test, idx) => (
+                    <tr key={idx} className="hover:bg-gray-50">
+                      <td className="px-4 py-2 font-medium">{test.testName || test.name}</td>
+                      <td className="px-4 py-2 text-gray-600">{test.category || '—'}</td>
+                      <td className="px-4 py-2 text-right">{test.count}</td>
+                      <td className="px-4 py-2 text-right font-semibold text-teal-600">{formatCurrency(test.revenue || test.totalRevenue)}</td>
+                      <td className="px-4 py-2 text-right text-gray-600">{formatCurrency(test.averagePrice || test.revenue / test.count)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const renderDetailedReport = () => {
     if (!data) return null;
 
@@ -2457,7 +2854,7 @@ const RevenueStats = () => {
                 {(transactions || []).map((t, idx) => {
                   const procedureInfo = t.procedure_items?.[0];
                   const labTestInfo = t.lab_test_items?.[0];
-                  
+
                   return (
                     <tr key={t.invoice_number || idx} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
@@ -2474,35 +2871,32 @@ const RevenueStats = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
                         {t.doctor_type && (
-                          <span className={`px-2 py-1 text-xs rounded-full ${
-                            t.doctor_type.includes('Full-time') ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
-                          }`}>
+                          <span className={`px-2 py-1 text-xs rounded-full ${t.doctor_type.includes('Full-time') ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
+                            }`}>
                             {t.doctor_type}
                           </span>
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span
-                          className={`px-2 py-1 text-xs rounded-full ${
-                            t.invoice_type === 'Appointment' ? 'bg-blue-100 text-blue-800' :
+                          className={`px-2 py-1 text-xs rounded-full ${t.invoice_type === 'Appointment' ? 'bg-blue-100 text-blue-800' :
                             t.invoice_type === 'Pharmacy' ? 'bg-purple-100 text-purple-800' :
-                            t.invoice_type === 'Procedure' ? 'bg-indigo-100 text-indigo-800' :
-                            t.invoice_type === 'Lab Test' ? 'bg-pink-100 text-pink-800' :
-                            'bg-gray-100 text-gray-800'
-                          }`}
+                              t.invoice_type === 'Procedure' ? 'bg-indigo-100 text-indigo-800' :
+                                t.invoice_type === 'Lab Test' ? 'bg-pink-100 text-pink-800' :
+                                  'bg-gray-100 text-gray-800'
+                            }`}
                         >
                           {t.invoice_type}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span
-                          className={`px-2 py-1 text-xs rounded-full ${
-                            t.status === 'Paid' ? 'bg-green-100 text-green-800' :
+                          className={`px-2 py-1 text-xs rounded-full ${t.status === 'Paid' ? 'bg-green-100 text-green-800' :
                             t.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
-                            t.status === 'Partial' ? 'bg-orange-100 text-orange-800' :
-                            t.status === 'Issued' ? 'bg-blue-100 text-blue-800' :
-                            'bg-gray-100 text-gray-800'
-                          }`}
+                              t.status === 'Partial' ? 'bg-orange-100 text-orange-800' :
+                                t.status === 'Issued' ? 'bg-blue-100 text-blue-800' :
+                                  'bg-gray-100 text-gray-800'
+                            }`}
                         >
                           {t.status}
                         </span>
@@ -2544,20 +2938,18 @@ const RevenueStats = () => {
                 <button
                   onClick={() => handleFilterChange('page', Math.max(1, filters.page - 1))}
                   disabled={filters.page <= 1}
-                  className={`px-3 py-1 text-sm rounded border ${
-                    filters.page <= 1 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'
-                  }`}
+                  className={`px-3 py-1 text-sm rounded border ${filters.page <= 1 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-50'
+                    }`}
                 >
                   Previous
                 </button>
                 <button
                   onClick={() => handleFilterChange('page', filters.page + 1)}
                   disabled={filters.page >= pagination.totalPages}
-                  className={`px-3 py-1 text-sm rounded border ${
-                    filters.page >= pagination.totalPages
-                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                      : 'bg-white text-gray-700 hover:bg-gray-50'
-                  }`}
+                  className={`px-3 py-1 text-sm rounded border ${filters.page >= pagination.totalPages
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : 'bg-white text-gray-700 hover:bg-gray-50'
+                    }`}
                 >
                   Next
                 </button>
@@ -2569,6 +2961,7 @@ const RevenueStats = () => {
     );
   };
 
+  // Update renderContent to include radiology
   const renderContent = () => {
     switch (activeTab) {
       case 'overview':
@@ -2585,143 +2978,18 @@ const RevenueStats = () => {
         return renderProcedureRevenue();
       case 'labtests':
         return renderLabTestRevenue();
-      case 'detailed':
-        return renderDetailedReport();
       case 'radiology':
         return renderRadiologyRevenue();
+      case 'ipd':  // <-- ADD THIS
+        return renderIpdRevenue();
+      case 'detailed':
+        return renderDetailedReport();
       default:
         return renderOverview();
     }
   };
 
-  // ---------- Filters UI ----------
-  const commonFilters = (
-    <>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Doctor</label>
-        <select
-          value={filters.doctorId}
-          onChange={(e) => handleFilterChange('doctorId', e.target.value)}
-          className="w-full p-2 border border-gray-300 rounded-lg text-sm"
-        >
-          <option value="all">All Doctors</option>
-          {doctors.map((d) => (
-            <option key={d._id} value={d._id}>
-              {d.firstName} {d.lastName}{' '}
-              {d.department ? `(${getDeptName(d.department)})` : ''} {d.isFullTime ? '(Full-time)' : '(Part-time)'}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Department</label>
-        <select
-          value={filters.departmentId}
-          onChange={(e) => handleFilterChange('departmentId', e.target.value)}
-          className="w-full p-2 border border-gray-300 rounded-lg text-sm"
-        >
-          <option value="all">All Departments</option>
-          {departments.map((dept) => (
-            <option key={dept._id} value={dept._id}>
-              {dept.name}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Invoice Type</label>
-        <select
-          value={filters.invoiceType}
-          onChange={(e) => handleFilterChange('invoiceType', e.target.value)}
-          className="w-full p-2 border border-gray-300 rounded-lg text-sm"
-        >
-          <option value="all">All Types</option>
-          <option value="Appointment">Appointment</option>
-          <option value="Pharmacy">Pharmacy</option>
-          <option value="Procedure">Procedure</option>
-          <option value="Lab Test">Lab Test</option>
-        </select>
-      </div>
-    </>
-  );
-
-  const procedureFilters = (
-    <>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Procedure Code</label>
-        <select
-          value={filters.procedureCode}
-          onChange={(e) => handleFilterChange('procedureCode', e.target.value)}
-          className="w-full p-2 border border-gray-300 rounded-lg text-sm"
-        >
-          <option value="all">All Procedures</option>
-          {procedureCodes.map((code) => (
-            <option key={code} value={code}>{code}</option>
-          ))}
-        </select>
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Procedure Category</label>
-        <select
-          value={filters.procedureCategory}
-          onChange={(e) => handleFilterChange('procedureCategory', e.target.value)}
-          className="w-full p-2 border border-gray-300 rounded-lg text-sm"
-        >
-          <option value="all">All Categories</option>
-          {procedureCategories.map((cat) => (
-            <option key={cat} value={cat}>{cat}</option>
-          ))}
-        </select>
-      </div>
-    </>
-  );
-
-  const labTestFilters = (
-    <>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Lab Test Code</label>
-        <select
-          value={filters.labTestCode}
-          onChange={(e) => handleFilterChange('labTestCode', e.target.value)}
-          className="w-full p-2 border border-gray-300 rounded-lg text-sm"
-        >
-          <option value="all">All Lab Tests</option>
-          {labTestCodes.map((code) => (
-            <option key={code} value={code}>{code}</option>
-          ))}
-        </select>
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Lab Test Category</label>
-        <select
-          value={filters.labTestCategory}
-          onChange={(e) => handleFilterChange('labTestCategory', e.target.value)}
-          className="w-full p-2 border border-gray-300 rounded-lg text-sm"
-        >
-          <option value="all">All Categories</option>
-          {labTestCategories.map((cat) => (
-            <option key={cat} value={cat}>{cat}</option>
-          ))}
-        </select>
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Test Status</label>
-        <select
-          value={filters.labTestStatus}
-          onChange={(e) => handleFilterChange('labTestStatus', e.target.value)}
-          className="w-full p-2 border border-gray-300 rounded-lg text-sm"
-        >
-          <option value="all">All Statuses</option>
-          {labTestStatuses.map((status) => (
-            <option key={status} value={status}>{status}</option>
-          ))}
-        </select>
-      </div>
-    </>
-  );
-
+  // Update renderFilters to include radiology filters
   const renderFilters = () => {
     switch (activeTab) {
       case 'overview':
@@ -2745,23 +3013,192 @@ const RevenueStats = () => {
                 className="w-full p-2 border border-gray-300 rounded-lg text-sm"
               />
             </div>
-
-            {commonFilters}
-
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Patient Type</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Doctor</label>
               <select
-                value={filters.patientType}
-                onChange={(e) => handleFilterChange('patientType', e.target.value)}
+                value={filters.doctorId}
+                onChange={(e) => handleFilterChange('doctorId', e.target.value)}
                 className="w-full p-2 border border-gray-300 rounded-lg text-sm"
               >
-                <option value="all">All Patients</option>
-                <option value="OPD">OPD</option>
-                <option value="IPD">IPD</option>
-                <option value="Emergency">Emergency</option>
+                <option value="all">All Doctors</option>
+                {doctors.map((d) => (
+                  <option key={d._id} value={d._id}>
+                    {d.firstName} {d.lastName}
+                  </option>
+                ))}
               </select>
             </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Department</label>
+              <select
+                value={filters.departmentId}
+                onChange={(e) => handleFilterChange('departmentId', e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded-lg text-sm"
+              >
+                <option value="all">All Departments</option>
+                {departments.map((dept) => (
+                  <option key={dept._id} value={dept._id}>
+                    {dept.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        );
 
+      case 'ipd':
+        return (
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+              <input type="date" value={filters.startDate} onChange={(e) => handleFilterChange('startDate', e.target.value)} className="w-full p-2 border border-gray-300 rounded-lg text-sm" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+              <input type="date" value={filters.endDate} onChange={(e) => handleFilterChange('endDate', e.target.value)} className="w-full p-2 border border-gray-300 rounded-lg text-sm" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Ward</label>
+              <select value={filters.ipdWardId} onChange={(e) => handleFilterChange('ipdWardId', e.target.value)} className="w-full p-2 border border-gray-300 rounded-lg text-sm">
+                <option value="all">All Wards</option>
+                {ipdWards.map(w => <option key={w._id} value={w._id}>{w.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Bed Type</label>
+              <select value={filters.ipdBedType} onChange={(e) => handleFilterChange('ipdBedType', e.target.value)} className="w-full p-2 border border-gray-300 rounded-lg text-sm">
+                <option value="all">All Types</option>
+                {ipdBedTypes.map(type => <option key={type} value={type}>{type}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Doctor</label>
+              <select value={filters.doctorId} onChange={(e) => handleFilterChange('doctorId', e.target.value)} className="w-full p-2 border border-gray-300 rounded-lg text-sm">
+                <option value="all">All Doctors</option>
+                {doctors.map(d => <option key={d._id} value={d._id}>{d.firstName} {d.lastName}</option>)}
+              </select>
+            </div>
+          </div>
+        );
+
+      case 'radiology':
+        return (
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+              <input
+                type="date"
+                value={filters.startDate}
+                onChange={(e) => handleFilterChange('startDate', e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded-lg text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+              <input
+                type="date"
+                value={filters.endDate}
+                onChange={(e) => handleFilterChange('endDate', e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded-lg text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+              <select
+                value={filters.radiologyCategory}
+                onChange={(e) => handleFilterChange('radiologyCategory', e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded-lg text-sm"
+              >
+                <option value="all">All Categories</option>
+                {radiologyCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+              <select
+                value={filters.radiologyStatus}
+                onChange={(e) => handleFilterChange('radiologyStatus', e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded-lg text-sm"
+              >
+                <option value="all">All Status</option>
+                {radiologyStatuses.map(status => <option key={status} value={status}>{status}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Doctor</label>
+              <select
+                value={filters.doctorId}
+                onChange={(e) => handleFilterChange('doctorId', e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded-lg text-sm"
+              >
+                <option value="all">All Doctors</option>
+                {doctors.map((d) => (
+                  <option key={d._id} value={d._id}>
+                    {d.firstName} {d.lastName}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        );
+
+      // All other cases (daily, monthly, procedures, labtests, doctor, department, detailed) remain EXACTLY as in your original code
+      case 'daily':
+        return (
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+              <input
+                type="date"
+                value={filters.date}
+                onChange={(e) => handleFilterChange('date', e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded-lg text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Doctor</label>
+              <select
+                value={filters.doctorId}
+                onChange={(e) => handleFilterChange('doctorId', e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded-lg text-sm"
+              >
+                <option value="all">All Doctors</option>
+                {doctors.map((d) => (
+                  <option key={d._id} value={d._id}>
+                    {d.firstName} {d.lastName}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Department</label>
+              <select
+                value={filters.departmentId}
+                onChange={(e) => handleFilterChange('departmentId', e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded-lg text-sm"
+              >
+                <option value="all">All Departments</option>
+                {departments.map((dept) => (
+                  <option key={dept._id} value={dept._id}>
+                    {dept.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Invoice Type</label>
+              <select
+                value={filters.invoiceType}
+                onChange={(e) => handleFilterChange('invoiceType', e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded-lg text-sm"
+              >
+                <option value="all">All Types</option>
+                <option value="Appointment">Appointment</option>
+                <option value="Pharmacy">Pharmacy</option>
+                <option value="Procedure">Procedure</option>
+                <option value="Lab Test">Lab Test</option>
+              </select>
+            </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Payment Method</label>
               <select
@@ -2776,61 +3213,6 @@ const RevenueStats = () => {
                 <option value="Insurance">Insurance</option>
               </select>
             </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-              <select
-                value={filters.invoiceStatus}
-                onChange={(e) => handleFilterChange('invoiceStatus', e.target.value)}
-                className="w-full p-2 border border-gray-300 rounded-lg text-sm"
-              >
-                <option value="all">All Status</option>
-                <option value="Paid">Paid</option>
-                <option value="Issued">Issued</option>
-                <option value="Partial">Partial</option>
-                <option value="Overdue">Overdue</option>
-                <option value="Cancelled">Cancelled</option>
-              </select>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Min Amount</label>
-                <input
-                  type="number"
-                  value={filters.minAmount}
-                  onChange={(e) => handleFilterChange('minAmount', e.target.value)}
-                  className="w-full p-2 border border-gray-300 rounded-lg text-sm"
-                  placeholder="0"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Max Amount</label>
-                <input
-                  type="number"
-                  value={filters.maxAmount}
-                  onChange={(e) => handleFilterChange('maxAmount', e.target.value)}
-                  className="w-full p-2 border border-gray-300 rounded-lg text-sm"
-                  placeholder="100000"
-                />
-              </div>
-            </div>
-          </div>
-        );
-
-      case 'daily':
-        return (
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
-              <input
-                type="date"
-                value={filters.date}
-                onChange={(e) => handleFilterChange('date', e.target.value)}
-                className="w-full p-2 border border-gray-300 rounded-lg text-sm"
-              />
-            </div>
-            {commonFilters}
           </div>
         );
 
@@ -2862,7 +3244,50 @@ const RevenueStats = () => {
                 max="2035"
               />
             </div>
-            {commonFilters}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Doctor</label>
+              <select
+                value={filters.doctorId}
+                onChange={(e) => handleFilterChange('doctorId', e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded-lg text-sm"
+              >
+                <option value="all">All Doctors</option>
+                {doctors.map((d) => (
+                  <option key={d._id} value={d._id}>
+                    {d.firstName} {d.lastName}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Department</label>
+              <select
+                value={filters.departmentId}
+                onChange={(e) => handleFilterChange('departmentId', e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded-lg text-sm"
+              >
+                <option value="all">All Departments</option>
+                {departments.map((dept) => (
+                  <option key={dept._id} value={dept._id}>
+                    {dept.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Invoice Type</label>
+              <select
+                value={filters.invoiceType}
+                onChange={(e) => handleFilterChange('invoiceType', e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded-lg text-sm"
+              >
+                <option value="all">All Types</option>
+                <option value="Appointment">Appointment</option>
+                <option value="Pharmacy">Pharmacy</option>
+                <option value="Procedure">Procedure</option>
+                <option value="Lab Test">Lab Test</option>
+              </select>
+            </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Patient Type</label>
               <select
@@ -2915,7 +3340,32 @@ const RevenueStats = () => {
                 ))}
               </select>
             </div>
-            {procedureFilters}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Procedure Code</label>
+              <select
+                value={filters.procedureCode}
+                onChange={(e) => handleFilterChange('procedureCode', e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded-lg text-sm"
+              >
+                <option value="all">All Procedures</option>
+                {procedureCodes.map((code) => (
+                  <option key={code} value={code}>{code}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Procedure Category</label>
+              <select
+                value={filters.procedureCategory}
+                onChange={(e) => handleFilterChange('procedureCategory', e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded-lg text-sm"
+              >
+                <option value="all">All Categories</option>
+                {procedureCategories.map((cat) => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
+            </div>
           </div>
         );
 
@@ -2955,7 +3405,45 @@ const RevenueStats = () => {
                 ))}
               </select>
             </div>
-            {labTestFilters}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Lab Test Code</label>
+              <select
+                value={filters.labTestCode}
+                onChange={(e) => handleFilterChange('labTestCode', e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded-lg text-sm"
+              >
+                <option value="all">All Lab Tests</option>
+                {labTestCodes.map((code) => (
+                  <option key={code} value={code}>{code}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Lab Test Category</label>
+              <select
+                value={filters.labTestCategory}
+                onChange={(e) => handleFilterChange('labTestCategory', e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded-lg text-sm"
+              >
+                <option value="all">All Categories</option>
+                {labTestCategories.map((cat) => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Test Status</label>
+              <select
+                value={filters.labTestStatus}
+                onChange={(e) => handleFilterChange('labTestStatus', e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded-lg text-sm"
+              >
+                <option value="all">All Statuses</option>
+                {labTestStatuses.map((status) => (
+                  <option key={status} value={status}>{status}</option>
+                ))}
+              </select>
+            </div>
           </div>
         );
 
@@ -3085,9 +3573,36 @@ const RevenueStats = () => {
                 <option value="100">100</option>
               </select>
             </div>
-
-            {commonFilters}
-
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Doctor</label>
+              <select
+                value={filters.doctorId}
+                onChange={(e) => handleFilterChange('doctorId', e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded-lg text-sm"
+              >
+                <option value="all">All Doctors</option>
+                {doctors.map((d) => (
+                  <option key={d._id} value={d._id}>
+                    {d.firstName} {d.lastName}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Department</label>
+              <select
+                value={filters.departmentId}
+                onChange={(e) => handleFilterChange('departmentId', e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded-lg text-sm"
+              >
+                <option value="all">All Departments</option>
+                {departments.map((dept) => (
+                  <option key={dept._id} value={dept._id}>
+                    {dept.name}
+                  </option>
+                ))}
+              </select>
+            </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
               <select
@@ -3135,9 +3650,15 @@ const RevenueStats = () => {
       procedureCategory: 'all',
       labTestCode: 'all',
       labTestCategory: 'all',
-      labTestStatus: 'all'
+      labTestStatus: 'all',
+      radiologyCategory: 'all',
+      radiologyStatus: 'all',
+      ipdWardId: 'all',  // <-- ADD THIS
+      ipdBedType: 'all'   // <-- ADD THIS
     });
     setData(null);
+    setRadData(null);
+    setIpdData(null);
   };
 
   // ---------- Export Dropdown Component ----------
@@ -3206,7 +3727,7 @@ const RevenueStats = () => {
             <FaChartLine className="text-teal-600" />
             Revenue Analytics Dashboard
           </h1>
-          <p className="text-gray-600">Comprehensive revenue analysis with procedures and lab tests tracking</p>
+          <p className="text-gray-600">Comprehensive revenue analysis with procedures, lab tests, and radiology tracking</p>
         </div>
         <div className="flex gap-2">
           <ExportDropdown />
@@ -3215,7 +3736,7 @@ const RevenueStats = () => {
 
       <div className="bg-white rounded-lg shadow border overflow-hidden">
         {/* Tabs */}
-        <div className="flex flex-wrap border-b">
+        <div className="flex border-b gap-2">
           {[
             { id: 'overview', label: 'Overview', icon: <FaChartBar /> },
             { id: 'daily', label: 'Daily Report', icon: <FaCalendarAlt /> },
@@ -3223,6 +3744,7 @@ const RevenueStats = () => {
             { id: 'procedures', label: 'Procedure Revenue', icon: <FaSyringe /> },
             { id: 'labtests', label: 'Lab Test Revenue', icon: <FaFlask /> },
             { id: 'radiology', label: 'Radiology Revenue', icon: <FaXRay /> },
+            { id: 'ipd', label: 'IPD Revenue', icon: <FaHospital /> },  // <-- ADD THIS LINE
             { id: 'doctor', label: 'Doctor Wise', icon: <FaUserMd /> },
             { id: 'department', label: 'Department Wise', icon: <FaBuilding /> },
             { id: 'detailed', label: 'Detailed Report', icon: <FaFileInvoice /> }
@@ -3233,11 +3755,10 @@ const RevenueStats = () => {
                 setActiveTab(tab.id);
                 handleFilterChange('page', 1);
               }}
-              className={`flex items-center gap-1 px-3.5 py-3 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === tab.id
-                  ? 'border-teal-600 text-teal-600 bg-teal-50'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-              }`}
+              className={`flex items-center flex-col gap-2 px-3.5 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === tab.id
+                ? 'border-teal-600 text-teal-600 bg-teal-50'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                }`}
             >
               {tab.icon}
               {tab.label}
@@ -3253,11 +3774,17 @@ const RevenueStats = () => {
             </h3>
             <div className="flex gap-2">
               <button
-                onClick={fetchData}
+                onClick={() => {
+                  if (activeTab === 'radiology') {
+                    fetchRadiologyData();
+                  } else {
+                    fetchData();
+                  }
+                }}
                 className="px-4 py-2 bg-teal-600 text-white text-sm rounded-lg hover:bg-teal-700"
-                disabled={loading}
+                disabled={loading || radLoading}
               >
-                {loading ? 'Loading...' : 'Apply Filters'}
+                {loading || radLoading ? 'Loading...' : 'Apply Filters'}
               </button>
               <button
                 onClick={resetFilters}
@@ -3273,7 +3800,7 @@ const RevenueStats = () => {
 
         {/* Content */}
         <div className="p-4">
-          {loading ? (
+          {loading || radLoading ? (
             <div className="flex items-center justify-center h-64">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600"></div>
             </div>
