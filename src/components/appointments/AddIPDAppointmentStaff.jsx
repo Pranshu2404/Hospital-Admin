@@ -1253,7 +1253,6 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
     fetchCharges();
   }, [hospitalId, online]);
 
-  // Fetch doctor data with offline cache support
   useEffect(() => {
     const fetchDoctorData = async () => {
       if (formData.doctorId && hospitalId && formData.date) {
@@ -1263,47 +1262,58 @@ const AddIPDAppointmentStaff = ({ type = "ipd", fixedDoctorId, embedded = false,
           let appointments = [];
           let patients = [];
 
-          // Try to get doctor details from cache first
-          const cachedDoctor = await getDoctorChargesOffline(formData.doctorId);
-
-          if (cachedDoctor) {
-            doctorData = cachedDoctor;
-            console.log('Using cached doctor data');
-          } else if (online) {
+          // Get doctor details - try cache first, then API when online
+          if (online) {
             const doctorRes = await axios.get(
               `${import.meta.env.VITE_BACKEND_URL}/doctors/${formData.doctorId}`
             );
             doctorData = doctorRes.data;
+          } else {
+            const cachedDoctor = await getDoctorChargesOffline(formData.doctorId);
+            if (cachedDoctor) {
+              doctorData = cachedDoctor;
+            }
           }
 
           if (doctorData) {
             setDoctorDetails(doctorData);
           }
 
-          // Get working hours (with cache support)
-          const cachedHours = await getWorkingHours(formData.doctorId, formData.date);
-
-          if (cachedHours && cachedHours.length > 0) {
-            workingHours = cachedHours;
-            console.log('Using cached working hours');
-          } else if (online) {
+          // CRITICAL FIX: When online, ALWAYS fetch from API for working hours and appointments
+          if (online) {
             try {
               const scheduleRes = await axios.get(
                 `${import.meta.env.VITE_BACKEND_URL}/calendar/${hospitalId}/doctor/${formData.doctorId}/${formData.date}`
               );
               const scheduleData = scheduleRes.data;
+
+              // Use schedule working hours or fallback to doctor's timeSlots
               workingHours = scheduleData.workingHours || doctorData?.timeSlots || [];
               appointments = scheduleData.bookedAppointments || [];
+
               if (formData.type === "number-based") {
                 patients = scheduleData.bookedPatients || [];
               }
+
+              console.log("Schedule Data fetched:", {
+                workingHours: workingHours.length,
+                appointments: appointments.length
+              });
+
             } catch (err) {
               console.warn("No schedule found for this doctor/date, using default hours");
               workingHours = doctorData?.timeSlots || [];
             }
           } else {
-            // Offline with no cache - use default working hours from doctor data if available
-            workingHours = doctorData?.timeSlots || [];
+            // Offline mode - try cache first
+            const cachedHours = await getWorkingHours(formData.doctorId, formData.date);
+            if (cachedHours && cachedHours.length > 0) {
+              workingHours = cachedHours;
+              console.log('Using cached working hours');
+            } else {
+              workingHours = doctorData?.timeSlots || [];
+            }
+            appointments = []; // No appointments in offline mode
           }
 
           setDoctorWorkingHours(workingHours);
